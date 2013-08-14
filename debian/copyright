@@ -1,6 +1,6 @@
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: content-hub
-Source: https://launchpad.net/content-hub
+Upstream-Name: music-hub
+Source: https://launchpad.net/music-hub
 
 Files: *
 Copyright: 2013 Canonical Ltd.
