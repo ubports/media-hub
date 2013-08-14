@@ -55,6 +55,7 @@ include_directories(
 )
 
 add_subdirectory(include)
+add_subdirectory(doc)
 add_subdirectory(src)
 
 # There's no nice way to format this. Thanks CMake.
