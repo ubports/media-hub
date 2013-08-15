@@ -1,0 +1,33 @@
+Source: music-hub
+Priority: extra
+Maintainer: Thomas Voß (thomas.voss@canonical.com)
+Build-Depends: cmake,
+               debhelper (>= 9),
+               libboost-dev (>=1.53),
+               libgoogle-glog-dev,
+               dbus-cpp-dev,
+               dbus-test-runner,
+Standards-Version: 3.9.4
+Section: libs
+Homepage: https://launchpad.net/music-hub
+
+Package: libmusic-hub-dev
+Section: libdevel
+Architecture: any
+Depends: libmusic-hub0 (= ${binary:Version})
+Description: <insert up to 60 chars description>
+ <insert long description, indented with spaces>
+
+Package: libmusic-hub0
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: <insert up to 60 chars description>
+ <insert long description, indented with spaces>
+
+Package: libmusic-hub-doc
+Section: doc
+Architecture: all
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: <insert up to 60 chars description>
+ <insert long description, indented with spaces>
