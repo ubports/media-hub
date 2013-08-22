@@ -1,11 +1,10 @@
 #!/usr/bin/make -f
 # -*- makefile -*-
 
-# Uncomment this to turn on verbose mode.
-#export DH_VERBOSE=1
+export DPKG_GENSYMBOLS_CHECK_LEVEL=4
 
 %:
-	dh $@ -- -B build 
+	dh $@ --fail-missing -- -B build 
 
 override_dh_auto_test:
 	dbus-test-runner -t make -p "-C" -p "build" -p test

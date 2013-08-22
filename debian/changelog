@@ -1,5 +1,9 @@
 music-hub (0.0-0ubuntu1) UNRELEASED; urgency=low
 
+  [ Thomas Voß ]
   * Initial release. 
+
+  [ Timo Jyrinki ]
+  * Automatic snapshot from revision 2 (bootstrap)
 
  -- Thomas Voß <thomas.voss@canonical.com>  Wed, 14 Aug 2013 20:02:38 +0200
