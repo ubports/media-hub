@@ -1,9 +1,14 @@
-music-hub (0.0-0ubuntu1) UNRELEASED; urgency=low
+music-hub (0.0+13.10.20130823-0ubuntu1) saucy; urgency=low
 
   [ Thomas Voß ]
   * Initial release. 
 
   [ Timo Jyrinki ]
   * Automatic snapshot from revision 2 (bootstrap)
+  * Add COPYING, enable multi-arch and add missing copyright header.
+  * Final tweaks to the packaging.
 
- -- Thomas Voß <thomas.voss@canonical.com>  Wed, 14 Aug 2013 20:02:38 +0200
+  [ Ubuntu daily release ]
+  * Automatic snapshot from revision 5
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 23 Aug 2013 11:14:28 +0000
