@@ -5,8 +5,11 @@ Build-Depends: cmake,
                dbus-cpp-dev,
                dbus-test-runner,
                debhelper (>= 9),
+               doxygen,
                libboost-dev (>=1.53),
+               libdbus-1-dev,
                libgoogle-glog-dev,
+               pkg-config,
 Standards-Version: 3.9.4
 Section: libs
 Homepage: https://launchpad.net/music-hub
