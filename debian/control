@@ -20,6 +20,7 @@ Vcs-Bzr: https://code.launchpad.net/~phablet-team/music-hub/trunk
 Package: libmusic-hub-dev
 Section: libdevel
 Architecture: any
+Multi-Arch: same
 Depends: libmusic-hub0 (= ${binary:Version}),
          ${misc:Depends},
 Description: Simple and lightweight music playback service - development files
@@ -30,6 +31,7 @@ Description: Simple and lightweight music playback service - development files
 
 Package: libmusic-hub0
 Architecture: any
+Multi-Arch: same
 Depends: ${misc:Depends},
          ${shlibs:Depends},
 Description: Simple and lightweight music playback service
