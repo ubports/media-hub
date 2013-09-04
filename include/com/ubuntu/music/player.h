@@ -72,6 +72,8 @@ class Player
     
     bool can_seek();
     void seek_to(const std::chrono::microseconds& offset);
+
+    void stop();
     
     PlaybackStatus playback_status() const;
     Connection on_playback_status_changed(const std::function<void(PlaybackStatus)>& handler);

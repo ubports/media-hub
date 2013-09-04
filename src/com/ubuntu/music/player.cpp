@@ -82,6 +82,10 @@ void music::Player::seek_to(const std::chrono::microseconds& offset)
     (void) offset;
 }
 
+void music::Player::stop()
+{
+}
+
 music::Player::PlaybackStatus music::Player::playback_status() const
 {
     return Player::stopped;
