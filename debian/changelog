@@ -1,3 +1,13 @@
+music-hub (0.0+13.10.20130905-0ubuntu1) saucy; urgency=low
+
+  [ David Henningsson ]
+  * Merged "missing stop method" and "add missing c'tor".
+
+  [ Ubuntu daily release ]
+  * Automatic snapshot from revision 7
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 05 Sep 2013 04:54:12 +0000
+
 music-hub (0.0+13.10.20130823-0ubuntu1) saucy; urgency=low
 
   [ Thomas Voß ]
