@@ -19,7 +19,7 @@
 #define COM_UBUNTU_MUSIC_PLAYER_H_
 
 #include "com/ubuntu/music/connection.h"
-#include "com/ubuntu/music/track_list.h"
+#include "com/ubuntu/music/track.h"
 
 #include <chrono>
 #include <memory>
@@ -31,6 +31,7 @@ namespace ubuntu
 namespace music
 {
 class Service;
+class TrackList;
 
 class Player
 {
@@ -57,6 +58,8 @@ class Player
 
     Player& operator=(const Player&) = delete;
     bool operator==(const Player&) const = delete;
+
+    const std::shared_ptr<TrackList>& track_list() const;
 
     bool can_go_next();
     void next();
