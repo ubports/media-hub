@@ -19,11 +19,13 @@
 #ifndef MPRIS_PLAYER_H_
 #define MPRIS_PLAYER_H_
 
-#include "player.h"
+#include "macros.h"
 
 #include <org/freedesktop/dbus/types/any.h>
 #include <org/freedesktop/dbus/types/object_path.h>
 #include <org/freedesktop/dbus/types/variant.h>
+
+#include <boost/utility/identity_type.hpp>
 
 #include <string>
 #include <tuple>
@@ -35,39 +37,45 @@ namespace mpris
 {
 struct Player
 {
-    METHOD(Next, Player, SECONDS(1));
-    METHOD(Previous, Player, SECONDS(1));
-    METHOD(Pause, Player, SECONDS(1));
-    METHOD(PlayPause, Player, SECONDS(1));
-    METHOD(Stop, Player, SECONDS(1));
-    METHOD(Play, Player, SECONDS(1));
-    METHOD(Seek, Player, SECONDS(1));
-    METHOD(SetPosition, Player, SECONDS(1));
-    METHOD(OpenUri, Player, SECONDS(1));
+    static const std::string& name()
+    {
+        static const std::string s{"org.mpris.MediaPlayer2.Player"};
+        return s;
+    }
+
+    METHOD(Next, Player, std::chrono::seconds(1))
+    METHOD(Previous, Player, std::chrono::seconds(1))
+    METHOD(Pause, Player, std::chrono::seconds(1))
+    METHOD(PlayPause, Player, std::chrono::seconds(1))
+    METHOD(Stop, Player, std::chrono::seconds(1))
+    METHOD(Play, Player, std::chrono::seconds(1))
+    METHOD(Seek, Player, std::chrono::seconds(1))
+    METHOD(SetPosition, Player, std::chrono::seconds(1))
+    METHOD(OpenUri, Player, std::chrono::seconds(1))
 
     struct Signals
     {
-        SIGNAL(Seeked, Player, uint64_t);
+        SIGNAL(Seeked, Player, uint64_t)
     };
 
     struct Properties
     {
-        READABLE_PROPERTY(PlaybackStatus, Player, std::string);
-        WRITABLE_PROPERTY(LoopStatus, Player, std::string);
-        WRITABLE_PROPERTY(PlaybackRate, Player, double);
-        WRITABLE_PROPERTY(Rate, Player, double);
-        WRITABLE_PROPERTY(Shuffle, Player, bool);
-        READABLE_PROPERTY(MetaData, Player, std::map<std::string, dbus::types::Variant<dbus::types::Any>>);
-        WRITABLE_PROPERTY(Volume, Player, double);
-        READABLE_PROPERTY(Position, Player, uint64_t);
-        READABLE_PROPERTY(MinimumRate, Player, double);
-        READABLE_PROPERTY(MaximumRate, Player, double);
-        READABLE_PROPERTY(CanGoNext, Player, bool);
-        READABLE_PROPERTY(CanGoPrevious, Player, bool);
-        READABLE_PROPERTY(CanPlay, Player, bool);
-        READABLE_PROPERTY(CanPause, Player, bool);
-        READABLE_PROPERTY(CanSeek, Player, bool);
-        READABLE_PROPERTY(CanControl, Player, bool);
+        READABLE_PROPERTY(PlaybackStatus, Player, std::string)
+        WRITABLE_PROPERTY(LoopStatus, Player, std::string)
+        WRITABLE_PROPERTY(PlaybackRate, Player, double)
+        WRITABLE_PROPERTY(Rate, Player, double)
+        WRITABLE_PROPERTY(Shuffle, Player, bool)
+        READABLE_PROPERTY(MetaData, Player, BOOST_IDENTITY_TYPE((std::map<std::string, dbus::types::Variant<dbus::types::Any>>)))
+        WRITABLE_PROPERTY(Volume, Player, double)
+        READABLE_PROPERTY(Position, Player, uint64_t)
+        READABLE_PROPERTY(MinimumRate, Player, double)
+        READABLE_PROPERTY(MaximumRate, Player, double)
+        READABLE_PROPERTY(CanGoNext, Player, bool)
+        READABLE_PROPERTY(CanGoPrevious, Player, bool)
+        READABLE_PROPERTY(CanPlay, Player, bool)
+        READABLE_PROPERTY(CanPause, Player, bool)
+        READABLE_PROPERTY(CanSeek, Player, bool)
+        READABLE_PROPERTY(CanControl, Player, bool)
     };
 };
 }

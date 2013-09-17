@@ -18,8 +18,8 @@
 #ifndef COM_UBUNTU_MUSIC_PLAYER_H_
 #define COM_UBUNTU_MUSIC_PLAYER_H_
 
-#include "com/ubuntu/music/connection.h"
-#include "com/ubuntu/music/track.h"
+#include <com/ubuntu/music/connection.h>
+#include <com/ubuntu/music/track.h>
 
 #include <chrono>
 #include <memory>
@@ -54,62 +54,57 @@ class Player
     };
 
     Player(const Player&) = delete;
-    ~Player();
+    virtual ~Player() = default;
 
     Player& operator=(const Player&) = delete;
     bool operator==(const Player&) const = delete;
 
-    std::shared_ptr<TrackList> track_list();
+    virtual std::shared_ptr<TrackList> track_list() = 0;
 
-    bool can_go_next();
-    void next();
+    virtual bool can_go_next() = 0;
+    virtual void next() = 0;
     
-    bool can_go_previous();
-    void previous();
+    virtual bool can_go_previous() = 0;
+    virtual void previous() = 0;
     
-    bool can_play();
-    void play();
+    virtual bool can_play() = 0;
+    virtual void play() = 0;
     
-    bool can_pause();
-    void pause();
+    virtual bool can_pause() = 0;
+    virtual void pause() = 0;
     
-    bool can_seek();
-    void seek_to(const std::chrono::microseconds& offset);
+    virtual bool can_seek() = 0;
+    virtual void seek_to(const std::chrono::microseconds& offset) = 0;
 
-    void stop();
+    virtual void stop() = 0;
     
-    PlaybackStatus playback_status() const;
-    Connection on_playback_status_changed(const std::function<void(PlaybackStatus)>& handler);
+    virtual PlaybackStatus playback_status() const = 0;
+    virtual Connection on_playback_status_changed(const std::function<void(PlaybackStatus)>& handler) = 0;
     
-    LoopStatus loop_status() const;
-    void set_loop_status(LoopStatus new_status);
-    Connection on_loop_status_changed(const std::function<void(LoopStatus)>& handler);
+    virtual LoopStatus loop_status() const = 0;
+    virtual void set_loop_status(LoopStatus new_status) = 0;
+    virtual Connection on_loop_status_changed(const std::function<void(LoopStatus)>& handler) = 0;
 
-    PlaybackRate playback_rate() const;
-    void set_playback_rate(PlaybackRate rate);
-    Connection on_playback_rate_changed(const std::function<void(PlaybackRate)>& handler);
+    virtual PlaybackRate playback_rate() const = 0;
+    virtual void set_playback_rate(PlaybackRate rate) = 0;
+    virtual Connection on_playback_rate_changed(const std::function<void(PlaybackRate)>& handler) = 0;
 
-    bool is_shuffle() const;
-    void set_shuffle(bool b);
-    Connection on_shuffle_changed(const std::function<void(bool)>& handler);
+    virtual bool is_shuffle() const = 0;
+    virtual void set_shuffle(bool b) = 0;
+    virtual Connection on_shuffle_changed(const std::function<void(bool)>& handler) = 0;
 
-    Track::MetaData meta_data_for_current_track() const;
-    Connection on_meta_data_for_current_track_changed(const std::function<void(const Track::MetaData&)>& handler);
+    virtual Track::MetaData meta_data_for_current_track() const = 0;
+    virtual Connection on_meta_data_for_current_track_changed(const std::function<void(const Track::MetaData&)>& handler) = 0;
 
-    Volume volume() const;
-    void set_volume(Volume new_volume);
-    Connection on_volume_changed(const std::function<void(Volume)>& handler);
+    virtual Volume volume() const = 0;
+    virtual void set_volume(Volume new_volume) = 0;
+    virtual Connection on_volume_changed(const std::function<void(Volume)>& handler) = 0;
 
-    PlaybackRate minimum_playback_rate() const;
-    PlaybackRate maximum_playback_rate() const;
+    virtual PlaybackRate minimum_playback_rate() const = 0;
+    virtual PlaybackRate maximum_playback_rate() const = 0;
     
-  private:
-    friend class Service;
-
-    Player(const std::shared_ptr<Service>& parent);
-
-    struct Private;
-    std::unique_ptr<Private> d;
+  protected:
+    Player() = default;
 };
 }
 }

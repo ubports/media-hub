@@ -30,6 +30,7 @@ namespace music
 class Connection
 {
   private:
+    friend class TrackList;
     struct Private;
 
   public:

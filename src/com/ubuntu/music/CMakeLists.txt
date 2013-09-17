@@ -2,10 +2,12 @@ add_library(
   music_hub SHARED
   
   connection.cpp
-  player.cpp
   service.cpp
   track.cpp
   track_list.cpp
+
+  player_stub.cpp
+  service_stub.cpp
 )
 
 set_target_properties(

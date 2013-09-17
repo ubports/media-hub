@@ -16,15 +16,33 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#include <com/ubuntu/music/player.h>
+#ifndef COM_UBUNTU_MUSIC_SERVICE_SKELETON_H_
+#define COM_UBUNTU_MUSIC_SERVICE_SKELETON_H_
+
 #include <com/ubuntu/music/service.h>
 
-#include "service_stub.h"
+#include <memory>
 
-namespace music = com::ubuntu::music;
-
-const std::shared_ptr<music::Service> music::Service::Client::instance()
+namespace com
 {
-    static std::shared_ptr<music::Service> instance{new music::ServiceStub()};
-    return instance;
+namespace ubuntu
+{
+namespace music
+{
+class ServiceSkeleton : public Service
+{
+  public:
+    ServiceSkeleton();
+
+    std::shared_ptr<Player> create_session();
+
+  private:
+    struct Private;
+    std::unique_ptr<Private> d;
+};
 }
+}
+}
+}
+
+#endif // COM_UBUNTU_MUSIC_SERVICE_SKELETON_H_

@@ -37,16 +37,15 @@ class Service : public std::enable_shared_from_this<Service>
     };
 
     Service(const Service&) = delete;
-    ~Service();
+    virtual ~Service() = default;
 
     Service& operator=(const Service&) = delete;
     bool operator==(const Service&) const = delete;
 
-    std::shared_ptr<Player> create_session();
+    virtual std::shared_ptr<Player> create_session() = 0;
 
-  private:
-    friend struct Client;
-    Service();
+  protected:
+    Service() = default;
 };
 }
 }

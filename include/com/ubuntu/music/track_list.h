@@ -37,10 +37,8 @@ class TrackList
     typedef std::vector<Track>::const_iterator ConstIterator;
 
     TrackList();
-    TrackList(const TrackList& rhs);
     ~TrackList();
 
-    TrackList& operator=(const TrackList&);
     bool operator==(const TrackList&) const;
 
     bool is_editable();
@@ -64,7 +62,7 @@ class TrackList
     void go_to(const Track& track);
 
     Connection on_track_list_replaced(const std::function<void()>& slot);
-    Connection on_track_added(const std::function<void(const Track& t)>& slot);
+    Connection on_track_added(const std::function<void(const Track&)>& slot);
     Connection on_track_removed(const std::function<void(const Track& t)>& slot);
     Connection on_current_track_changed(const std::function<void(const Track&)>& slot);
     

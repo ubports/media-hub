@@ -30,10 +30,7 @@
         typedef Itf Interface; \
         static const std::string& name() \
         { \
-            static const std::string s \
-            { \
-                ##Name \
-            }; \
+            static const std::string s{#Name}; \
             return s; \
         } \
         inline static const std::chrono::milliseconds default_timeout() { return Timeout; } \
@@ -44,9 +41,9 @@
     { \
         inline static std::string name() \
         { \
-            return ##Name; \
+            return #Name; \
         }; \
-        typedef ItfInterface; \
+        typedef Itf Interface; \
         typedef ArgType ArgumentType; \
     };\
 
@@ -55,9 +52,9 @@
     { \
         inline static std::string name() \
         { \
-            return ##Name; \
+            return #Name; \
         }; \
-        typedef ItfInterface; \
+        typedef Itf Interface; \
         typedef Type ValueType; \
         static const bool readable = true; \
         static const bool writable = false; \
@@ -68,9 +65,9 @@
     { \
         inline static std::string name() \
         { \
-            return ##Name; \
+            return #Name; \
         }; \
-        typedef ItfInterface; \
+        typedef Itf Interface; \
         typedef Type ValueType; \
         static const bool readable = true; \
         static const bool writable = true; \

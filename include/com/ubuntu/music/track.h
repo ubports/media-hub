@@ -43,6 +43,7 @@ public:
         
         static const KeyType& track_id_key();
 
+        MetaData();
         ~MetaData();
         MetaData(const MetaData&);
         MetaData& operator=(const MetaData&);
@@ -54,12 +55,6 @@ public:
         void for_each(const std::function<void(const KeyType&, const ValueType&)>& f); 
 
       private:
-        friend class Player;
-        friend class Track;
-        friend class TrackList;
-
-        MetaData();
-        
         struct Private;
         std::unique_ptr<Private> d;
     };

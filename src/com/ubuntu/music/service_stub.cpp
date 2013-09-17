@@ -16,15 +16,23 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#include <com/ubuntu/music/player.h>
-#include <com/ubuntu/music/service.h>
-
 #include "service_stub.h"
 
 namespace music = com::ubuntu::music;
 
-const std::shared_ptr<music::Service> music::Service::Client::instance()
+struct music::ServiceStub::Private
 {
-    static std::shared_ptr<music::Service> instance{new music::ServiceStub()};
-    return instance;
+};
+
+music::ServiceStub::ServiceStub() : d(new Private())
+{
+}
+
+music::ServiceStub::~ServiceStub()
+{
+}
+    
+std::shared_ptr<music::Player> music::ServiceStub::create_session()
+{
+    return std::shared_ptr<music::Player>{};
 }
