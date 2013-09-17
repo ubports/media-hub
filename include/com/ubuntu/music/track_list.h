@@ -22,6 +22,7 @@
 
 #include <functional>
 #include <memory>
+#include <vector>
 
 namespace com
 {
@@ -32,6 +33,9 @@ namespace music
 class TrackList
 {
   public:
+    typedef std::vector<Track>::iterator Iterator;
+    typedef std::vector<Track>::const_iterator ConstIterator;
+
     TrackList();
     TrackList(const TrackList& rhs);
     ~TrackList();
@@ -41,9 +45,20 @@ class TrackList
 
     bool is_editable();
 
-    void add_track_with_uri(const Track::UriType& uri, const Track& after, bool make_current);
-    void remove_track(const Track& track);
+    std::size_t size() const;
 
+    Iterator begin();
+    ConstIterator begin() const;
+    Iterator end();
+    ConstIterator end() const;
+    Iterator find_for_uri(const Track::UriType& uri);
+    ConstIterator find_for_uri(const Track::UriType& uri) const;
+
+    void prepend_track_with_uri(const Track::UriType& uri, bool make_current);
+    void append_track_with_uri(const Track::UriType& uri, bool make_current);
+    void add_track_with_uri_at(const Track::UriType& uri, Iterator position, bool make_current);
+    void remove_track_at(Iterator at);
+    
     void for_each(const std::function<void(const Track&)> functor) const;
 
     void go_to(const Track& track);

@@ -26,6 +26,8 @@ namespace ubuntu
 {
 namespace music
 {
+class Player;
+
 class Service : public std::enable_shared_from_this<Service>
 {
   public:
@@ -41,7 +43,7 @@ class Service : public std::enable_shared_from_this<Service>
     bool operator==(const Service&) const = delete;
 
     std::shared_ptr<Player> create_session();
-    
+
   private:
     friend struct Client;
     Service();

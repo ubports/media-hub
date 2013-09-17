@@ -20,6 +20,7 @@
 
 #include "com/ubuntu/music/track.h"
 
+#include <algorithm>
 #include <functional>
 #include <memory>
 #include <vector>
@@ -66,18 +67,74 @@ bool music::TrackList::is_editable()
     return d->is_editable;
 }
 
-void music::TrackList::add_track_with_uri(const music::Track::UriType& uri, const music::Track& after, bool make_current)
+std::size_t music::TrackList::size() const
 {
-    (void) uri;
-    (void) after;
+    return d->tracks.size();
+}
+
+music::TrackList::Iterator music::TrackList::begin()
+{
+    return d->tracks.begin();
+}
+
+music::TrackList::ConstIterator music::TrackList::begin() const
+{
+    return d->tracks.begin();
+}
+
+music::TrackList::ConstIterator music::TrackList::end() const
+{
+    return d->tracks.end();
+}
+
+music::TrackList::Iterator music::TrackList::end()
+{
+    return d->tracks.end();
+}
+
+music::TrackList::ConstIterator music::TrackList::find_for_uri(const Track::UriType& uri) const
+{
+    return std::find_if(d->tracks.begin(), d->tracks.end(), [uri](const Track& track) { return track.uri() == uri; });
+}
+
+music::TrackList::Iterator music::TrackList::find_for_uri(const Track::UriType& uri)
+{
+    return std::find_if(d->tracks.begin(), d->tracks.end(), [uri](const Track& track) { return track.uri() == uri; });
+}
+
+void music::TrackList::prepend_track_with_uri(
+    const music::Track::UriType& uri,
+    bool make_current)
+{
+    add_track_with_uri_at(
+        uri,
+        begin(),
+        make_current);
+}
+
+void music::TrackList::append_track_with_uri(
+    const music::Track::UriType& uri,
+    bool make_current)
+{
+    add_track_with_uri_at(
+        uri,
+        end(),
+        make_current);
+}
+
+void music::TrackList::add_track_with_uri_at(
+    const music::Track::UriType& uri,
+    music::TrackList::Iterator at,
+    bool make_current)
+{    
+    d->tracks.insert(at, Track{uri, Track::MetaData{}});
     (void) make_current;
     // ToDo: Talk to service.
 }
 
-void music::TrackList::remove_track(const Track& track)
+void music::TrackList::remove_track_at(TrackList::Iterator at)
 {
-    (void) track;
-
+    d->tracks.erase(at);
     // TODO: Talk to actual service here.
 }
 

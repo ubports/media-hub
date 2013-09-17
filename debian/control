@@ -1,33 +1,56 @@
 Source: music-hub
-Priority: extra
-Maintainer: Thomas Voß (thomas.voss@canonical.com)
+Priority: optional
+Section: libs
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
 Build-Depends: cmake,
-               debhelper (>= 9),
-               libboost-dev (>=1.53),
-               libgoogle-glog-dev,
                dbus-cpp-dev,
                dbus-test-runner,
+               debhelper (>= 9),
+               doxygen,
+               libboost-dev (>=1.53),
+               libdbus-1-dev,
+               libgoogle-glog-dev,
+               pkg-config,
 Standards-Version: 3.9.4
-Section: libs
 Homepage: https://launchpad.net/music-hub
+# If you aren't a member of ~phablet-team but need to upload packaging changes,
+# just go ahead.  ~phablet-team will notice and sync up the code again.
+Vcs-Bzr: https://code.launchpad.net/~phablet-team/music-hub/trunk
 
 Package: libmusic-hub-dev
 Section: libdevel
 Architecture: any
-Depends: libmusic-hub0 (= ${binary:Version})
-Description: <insert up to 60 chars description>
- <insert long description, indented with spaces>
+Multi-Arch: same
+Pre-Depends: dpkg (>= 1.15.6~)
+Depends: libmusic-hub0 (= ${binary:Version}),
+         ${misc:Depends},
+Suggests: libmusic-hub-doc
+Description: Simple and lightweight music playback service - development files
+ Music Hub is a simple and lightweight service for music playback using
+ DBus.
+ .
+ This package contains the development files.
 
 Package: libmusic-hub0
-Section: libs
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: <insert up to 60 chars description>
- <insert long description, indented with spaces>
+Multi-Arch: same
+Pre-Depends: dpkg (>= 1.15.6~)
+Depends: ${misc:Depends},
+         ${shlibs:Depends},
+Description: Simple and lightweight music playback service
+ Music Hub is a simple and lightweight service for music playback using
+ DBus.
+ .
+ This package contains the library itself.
 
 Package: libmusic-hub-doc
 Section: doc
 Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: <insert up to 60 chars description>
- <insert long description, indented with spaces>
+Depends: ${misc:Depends},
+         ${shlibs:Depends},
+Recommends: libmusic-hub-dev
+Description: Simple and lightweight music playback service - documentation
+ Music Hub is a simple and lightweight service for music playback using
+ DBus.
+ .
+ This package contains the documentation.

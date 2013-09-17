@@ -27,6 +27,10 @@ const std::shared_ptr<music::Service> music::Service::Client::instance()
     return instance;
 }
 
+music::Service::Service()
+{
+}
+
 music::Service::~Service()
 {
 }

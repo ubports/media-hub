@@ -57,6 +57,7 @@ include_directories(
 add_subdirectory(include)
 add_subdirectory(doc)
 add_subdirectory(src)
+add_subdirectory(tests)
 
 # There's no nice way to format this. Thanks CMake.
 add_test(LGPL-required

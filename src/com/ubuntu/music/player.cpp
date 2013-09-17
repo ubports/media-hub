@@ -18,6 +18,7 @@
 
 #include "com/ubuntu/music/player.h"
 #include "com/ubuntu/music/service.h"
+#include "com/ubuntu/music/track_list.h"
 
 #include <limits>
 
@@ -26,14 +27,20 @@ namespace music = com::ubuntu::music;
 struct music::Player::Private
 {
     std::shared_ptr<Service> parent;
+    std::shared_ptr<TrackList> track_list;
 };
 
-music::Player::Player(const std::shared_ptr<Service>& parent) : d(new Private{parent})
+music::Player::Player(const std::shared_ptr<Service>& parent) : d(new Private{parent, std::make_shared<TrackList>()})
 {
 }
 
 music::Player::~Player()
 {
+}
+
+std::shared_ptr<music::TrackList> music::Player::track_list()
+{
+    return d->track_list;
 }
 
 bool music::Player::can_go_next()
@@ -80,6 +87,10 @@ bool music::Player::can_seek()
 void music::Player::seek_to(const std::chrono::microseconds& offset)
 {
     (void) offset;
+}
+
+void music::Player::stop()
+{
 }
 
 music::Player::PlaybackStatus music::Player::playback_status() const

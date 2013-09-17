@@ -56,6 +56,7 @@ public:
       private:
         friend class Player;
         friend class Track;
+        friend class TrackList;
 
         MetaData();
         
@@ -75,6 +76,9 @@ public:
     Connection on_meta_data_changed(const std::function<void(const MetaData&)>& f);
     
   private:
+    friend class Player;
+    friend class TrackList;
+
     explicit Track(const UriType& uri, const MetaData& meta_data);
 
     struct Private;
