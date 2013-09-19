@@ -18,7 +18,7 @@
 #ifndef COM_UBUNTU_MUSIC_TRACK_LIST_H_
 #define COM_UBUNTU_MUSIC_TRACK_LIST_H_
 
-#include "com/ubuntu/music/track.h"
+#include <com/ubuntu/music/track.h>
 
 #include <functional>
 #include <memory>
@@ -30,6 +30,8 @@ namespace ubuntu
 {
 namespace music
 {
+template<typename T> class Signal;
+
 class TrackList
 {
   public:
@@ -61,10 +63,10 @@ class TrackList
 
     void go_to(const Track& track);
 
-    Connection on_track_list_replaced(const std::function<void()>& slot);
-    Connection on_track_added(const std::function<void(const Track&)>& slot);
-    Connection on_track_removed(const std::function<void(const Track& t)>& slot);
-    Connection on_current_track_changed(const std::function<void(const Track&)>& slot);
+    // Connection on_track_list_replaced(const std::function<void()>& slot);
+    const Signal<Track>& on_track_added() const;
+    const Signal<Track>& on_track_removed() const;
+    const Signal<Track>& on_track_changed() const;
     
   private:
     struct Private;

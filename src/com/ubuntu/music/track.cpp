@@ -16,71 +16,13 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#include "com/ubuntu/music/track.h"
+#include <com/ubuntu/music/track.h>
+#include <com/ubuntu/music/property.h>
 
 #include <map>
 
 namespace music = com::ubuntu::music;
 
-const music::Track::MetaData::KeyType& music::Track::MetaData::track_id_key()
-{
-    static const KeyType key = "test";
-    return key;
-}
-
-struct music::Track::MetaData::Private
-{
-    std::map<music::Track::MetaData::KeyType, music::Track::MetaData::ValueType> lut; 
-
-    bool operator==(const Private& rhs) const
-    {
-        return lut == rhs.lut;
-    }
-};
-
-music::Track::MetaData::MetaData(const music::Track::MetaData& rhs) : d(new Private(*rhs.d))
-{
-}
-
-music::Track::MetaData::~MetaData()
-{
-}
-
-music::Track::MetaData& music::Track::MetaData::operator=(const music::Track::MetaData& rhs)
-{
-    *d = *rhs.d;
-    return *this;
-}
-
-bool music::Track::MetaData::operator==(const music::Track::MetaData& rhs) const
-{
-    return *d == *rhs.d;
-}
-        
-bool music::Track::MetaData::has_value_for_key(const music::Track::MetaData::KeyType& key) const
-{
-    return d->lut.count(key) > 0;
-}
-
-const music::Track::MetaData::ValueType& music::Track::MetaData::value_for_key(
-    const music::Track::MetaData::KeyType& key) const
-{
-    return d->lut.at(key);
-}
-
-void music::Track::MetaData::for_each(
-    const std::function<void(const music::Track::MetaData::KeyType&, const music::Track::MetaData::ValueType&)>& f)
-{
-    for (auto p : d->lut)
-    {
-        f(p.first, p.second);
-    }
-}
-
-music::Track::MetaData::MetaData() : d(new Private())
-{
-}
-        
 struct music::Track::Private
 {
     Private(const MetaData& meta_data,
@@ -89,14 +31,18 @@ struct music::Track::Private
     {
     }
 
-    bool operator==(const Private& rhs) const
+    Private(const Private& rhs) : meta_data(rhs.meta_data),
+                                  uri(rhs.uri)
     {
-        return
-                meta_data == rhs.meta_data &&
-                uri == rhs.uri;
     }
 
-    MetaData meta_data;
+    bool operator==(const Private& rhs) const
+    {
+        return meta_data == rhs.meta_data &&
+               uri == rhs.uri;
+    }
+
+    Property<MetaData> meta_data;
     Track::UriType uri;
 };
 
@@ -124,15 +70,9 @@ const music::Track::UriType& music::Track::uri() const
     return d->uri;
 }
 
-const music::Track::MetaData& music::Track::meta_data() const
+const music::Property<music::Track::MetaData>& music::Track::meta_data() const
 {
     return d->meta_data;
-}
-
-music::Connection music::Track::on_meta_data_changed(const std::function<void(const music::Track::MetaData&)>& f)
-{
-    (void) f;
-    return Connection(nullptr);
 }
     
 music::Track::Track(const music::Track::UriType& uri, const music::Track::MetaData& meta_data) : d(new Private(meta_data, uri))

@@ -16,14 +16,16 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#include <com/ubuntu/music/service.h>
+#ifndef THE_SESSION_BUS_H_
+#define THE_SESSION_BUS_H_
 
-#include "service_stub.h"
+#include <org/freedesktop/dbus/bus.h>
 
-namespace music = com::ubuntu::music;
-
-const std::shared_ptr<music::Service> music::Service::Client::instance()
+inline org::freedesktop::dbus::Bus::Ptr the_session_bus()
 {
-    static std::shared_ptr<music::Service> instance{new music::ServiceStub()};
-    return instance;
+    static org::freedesktop::dbus::Bus::Ptr bus
+            = std::make_shared<org::freedesktop::dbus::Bus>(org::freedesktop::dbus::WellKnownBus::session);
+    return bus;
 }
+
+#endif // THE_SESSION_BUS_H_

@@ -70,47 +70,34 @@ class PlayerStub : public org::freedesktop::dbus::Stub<Player>
 
     virtual std::shared_ptr<TrackList> track_list();
 
-    virtual bool can_go_next();
+    virtual bool open_uri(const Track::UriType& uri);
     virtual void next();
-    
-    virtual bool can_go_previous();
     virtual void previous();
-    
-    virtual bool can_play();
     virtual void play();
-    
-    virtual bool can_pause();
     virtual void pause();
-    
-    virtual bool can_seek();
     virtual void seek_to(const std::chrono::microseconds& offset);
-
     virtual void stop();
+
+    virtual const Property<bool>& can_play() const;
+    virtual const Property<bool>& can_pause() const;
+    virtual const Property<bool>& can_seek() const;
+    virtual const Property<bool>& can_go_previous() const;
+    virtual const Property<bool>& can_go_next() const;
+    virtual const Property<PlaybackStatus>& playback_status() const;    
+    virtual const Property<LoopStatus>& loop_status() const;
+    virtual const Property<PlaybackRate>& playback_rate() const;
+    virtual const Property<bool>& is_shuffle() const;
+    virtual const Property<Track::MetaData>& meta_data_for_current_track() const;
+    virtual const Property<Volume>& volume() const;
+    virtual const Property<PlaybackRate>& minimum_playback_rate() const;
+    virtual const Property<PlaybackRate>& maximum_playback_rate() const;
+        
+    virtual Property<LoopStatus>& loop_status();
+    virtual Property<PlaybackRate>& playback_rate();
+    virtual Property<bool>& is_shuffle();
+    virtual Property<Volume>& volume();
     
-    virtual PlaybackStatus playback_status() const;
-    virtual Connection on_playback_status_changed(const std::function<void(PlaybackStatus)>& handler);
-    
-    virtual LoopStatus loop_status() const;
-    virtual void set_loop_status(LoopStatus new_status);
-    virtual Connection on_loop_status_changed(const std::function<void(LoopStatus)>& handler);
-
-    virtual PlaybackRate playback_rate() const;
-    virtual void set_playback_rate(PlaybackRate rate);
-    virtual Connection on_playback_rate_changed(const std::function<void(PlaybackRate)>& handler);
-
-    virtual bool is_shuffle() const;
-    virtual void set_shuffle(bool b);
-    virtual Connection on_shuffle_changed(const std::function<void(bool)>& handler);
-
-    virtual Track::MetaData meta_data_for_current_track() const;
-    virtual Connection on_meta_data_for_current_track_changed(const std::function<void(const Track::MetaData&)>& handler);
-
-    virtual Volume volume() const;
-    virtual void set_volume(Volume new_volume);
-    virtual Connection on_volume_changed(const std::function<void(Volume)>& handler);
-
-    virtual PlaybackRate minimum_playback_rate() const;
-    virtual PlaybackRate maximum_playback_rate() const;
+    virtual const Signal<uint64_t>& seeked_to() const;
     
   private:
     struct Private;

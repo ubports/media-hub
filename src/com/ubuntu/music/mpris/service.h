@@ -16,14 +16,26 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#include <com/ubuntu/music/service.h>
+#ifndef MPRIS_SERVICE_H_
+#define MPRIS_SERVICE_H_
 
-#include "service_stub.h"
+#include "macros.h"
 
-namespace music = com::ubuntu::music;
+#include <chrono>
+#include <string>
 
-const std::shared_ptr<music::Service> music::Service::Client::instance()
+namespace mpris
 {
-    static std::shared_ptr<music::Service> instance{new music::ServiceStub()};
-    return instance;
+struct Service
+{
+    static const std::string& name()
+    {
+        static const std::string s{"org.mpris.MediaPlayer2.Ubuntu"};
+        return s;
+    }
+
+    METHOD(CreateSession, Service, std::chrono::seconds(1))
+};
 }
+
+#endif // MPRIS_SERVICE_H_

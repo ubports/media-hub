@@ -21,6 +21,7 @@
 #include "com/ubuntu/music/connection.h"
 
 #include <functional>
+#include <map>
 #include <memory>
 #include <string>
 
@@ -30,34 +31,14 @@ namespace ubuntu
 {
 namespace music
 {
+template<typename T> class Property;
+
 class Track
 {
 public:
     typedef std::string UriType;
 
-    class MetaData
-    {
-      public:
-        typedef std::string KeyType;
-        typedef std::string ValueType;
-        
-        static const KeyType& track_id_key();
-
-        MetaData();
-        ~MetaData();
-        MetaData(const MetaData&);
-        MetaData& operator=(const MetaData&);
-        bool operator==(const MetaData&) const;
-        
-        bool has_value_for_key(const KeyType& key) const;
-        const ValueType& value_for_key(const KeyType& key) const;
-
-        void for_each(const std::function<void(const KeyType&, const ValueType&)>& f); 
-
-      private:
-        struct Private;
-        std::unique_ptr<Private> d;
-    };
+    typedef std::map<std::string, std::string> MetaData;
 
     Track(const Track&);
     ~Track();
@@ -67,8 +48,7 @@ public:
 
     const UriType& uri() const;
 
-    const MetaData& meta_data() const;
-    Connection on_meta_data_changed(const std::function<void(const MetaData&)>& f);
+    const Property<MetaData>& meta_data() const;
     
   private:
     friend class Player;

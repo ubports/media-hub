@@ -2,6 +2,7 @@ add_library(
   music_hub SHARED
   
   connection.cpp
+  player.cpp
   service.cpp
   track.cpp
   track_list.cpp
@@ -28,4 +29,16 @@ target_link_libraries(
 install(
   TARGETS music_hub
   DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+add_executable(
+  music_hub_service
+  
+  player_skeleton.cpp
+)
+
+target_link_libraries(
+  music_hub_service
+  
+  music_hub
 )

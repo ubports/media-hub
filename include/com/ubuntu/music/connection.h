@@ -29,13 +29,11 @@ namespace music
 {
 class Connection
 {
-  private:
-    friend class TrackList;
-    struct Private;
-
   public:
-    Connection(const std::shared_ptr<Private>& d);
-    Connection(const Connection& rhs);    
+    typedef std::function<void()> Disconnector;
+
+    Connection(const Disconnector& disconnector);
+    Connection(const Connection& rhs);
     ~Connection();
 
     Connection& operator=(const Connection& rhs);
@@ -45,6 +43,7 @@ class Connection
     void disconnect();
     
   private:
+    struct Private;
     std::shared_ptr<Private> d;
 };
 

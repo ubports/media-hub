@@ -18,14 +18,42 @@
 
 #include "com/ubuntu/music/connection.h"
 
-#include "connection_private.h"
-
 #include <functional>
 #include <memory>
+#include <mutex>
 
 namespace music = com::ubuntu::music;
 
-music::Connection::Connection(const std::shared_ptr<music::Connection::Private>& p) : d(p)
+struct music::Connection::Private
+{
+    Private(const music::Connection::Disconnector& disconnector)
+            : disconnector(disconnector)
+    {
+    }
+
+    ~Private()
+    {
+        disconnect();
+    }
+
+    void disconnect()
+    {
+        static const music::Connection::Disconnector empty_disconnector{};
+
+        std::lock_guard<std::mutex> lg(guard);
+
+        if (!disconnector)
+            return;
+
+        disconnector();
+        disconnector = empty_disconnector;
+    }
+
+    std::mutex guard;
+    music::Connection::Disconnector disconnector;
+};
+
+music::Connection::Connection(const music::Connection::Disconnector& disconnector) : d(new Private(disconnector))
 {
 }
 
@@ -50,10 +78,10 @@ bool music::Connection::operator==(const music::Connection& rhs) const
 
 bool music::Connection::is_connected() const
 {
-    return d->connection.connected();
+    return (d->disconnector ? true : false);
 }
 
 void music::Connection::disconnect()
 {
-    d->connection.disconnect();
+    d->disconnect();
 }

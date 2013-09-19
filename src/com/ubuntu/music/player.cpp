@@ -16,14 +16,15 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#include <com/ubuntu/music/service.h>
-
-#include "service_stub.h"
+#include <com/ubuntu/music/player.h>
+#include <com/ubuntu/music/property.h>
 
 namespace music = com::ubuntu::music;
 
-const std::shared_ptr<music::Service> music::Service::Client::instance()
+music::Player::Player()
 {
-    static std::shared_ptr<music::Service> instance{new music::ServiceStub()};
-    return instance;
+}
+
+music::Player::~Player()
+{
 }

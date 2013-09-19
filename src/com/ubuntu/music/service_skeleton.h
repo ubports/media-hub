@@ -33,9 +33,7 @@ class ServiceSkeleton : public Service
 {
   public:
     ServiceSkeleton();
-
-    std::shared_ptr<Player> create_session();
-
+    
   private:
     struct Private;
     std::unique_ptr<Private> d;

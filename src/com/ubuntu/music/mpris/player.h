@@ -19,6 +19,8 @@
 #ifndef MPRIS_PLAYER_H_
 #define MPRIS_PLAYER_H_
 
+#include <com/ubuntu/music/track.h>
+
 #include "macros.h"
 
 #include <org/freedesktop/dbus/types/any.h>
@@ -39,7 +41,7 @@ struct Player
 {
     static const std::string& name()
     {
-        static const std::string s{"org.mpris.MediaPlayer2.Player"};
+        static const std::string s{"org.mpris.MediaPlayer2.UbuntuPlayer"};
         return s;
     }
 
@@ -65,7 +67,7 @@ struct Player
         WRITABLE_PROPERTY(PlaybackRate, Player, double)
         WRITABLE_PROPERTY(Rate, Player, double)
         WRITABLE_PROPERTY(Shuffle, Player, bool)
-        READABLE_PROPERTY(MetaData, Player, BOOST_IDENTITY_TYPE((std::map<std::string, dbus::types::Variant<dbus::types::Any>>)))
+        READABLE_PROPERTY(MetaData, Player, com::ubuntu::music::Track::MetaData)
         WRITABLE_PROPERTY(Volume, Player, double)
         READABLE_PROPERTY(Position, Player, uint64_t)
         READABLE_PROPERTY(MinimumRate, Player, double)

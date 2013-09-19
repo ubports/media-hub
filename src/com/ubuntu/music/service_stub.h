@@ -21,7 +21,35 @@
 
 #include <com/ubuntu/music/service.h>
 
+#include <org/freedesktop/dbus/stub.h>
+#include <org/freedesktop/dbus/traits/service.h>
+
 #include <memory>
+
+namespace org
+{
+namespace freedesktop
+{
+namespace dbus
+{
+namespace traits
+{
+template<>
+struct Service<com::ubuntu::music::Service>
+{
+    static const std::string& interface_name()
+    {
+        static const std::string s
+        {
+            "com.ubuntu.music.Service"
+        };
+        return s;
+    }
+};
+}
+}
+}
+}
 
 namespace com
 {
@@ -29,7 +57,7 @@ namespace ubuntu
 {
 namespace music
 {
-class ServiceStub : public Service
+class ServiceStub : public org::freedesktop::dbus::Stub<Service>
 {
   public:
     ServiceStub();

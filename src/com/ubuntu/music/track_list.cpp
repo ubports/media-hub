@@ -17,10 +17,9 @@
  */
 
 #include <com/ubuntu/music/connection.h>
+#include <com/ubuntu/music/signal.h>
 #include <com/ubuntu/music/track_list.h>
 #include <com/ubuntu/music/track.h>
-
-#include "connection_private.h"
 
 #include <boost/signals2.hpp>
 
@@ -35,10 +34,9 @@ struct music::TrackList::Private
 {
     std::vector<music::Track> tracks = std::vector<music::Track>{};
     bool is_editable = true;
-    boost::signals2::signal<void()> signal_track_list_replaced;
-    boost::signals2::signal<void(const music::Track&)> signal_track_added;
-    boost::signals2::signal<void(const music::Track&)> signal_track_removed;
-    boost::signals2::signal<void(const music::Track&)> signal_track_changed;
+    music::Signal<music::Track> track_added;
+    music::Signal<music::Track> track_removed;
+    music::Signal<music::Track> track_changed;
 
     bool operator==(const Private& rhs) const
     {
@@ -153,34 +151,18 @@ void music::TrackList::go_to(const music::Track& track)
     (void) track;
 }
 
-music::Connection music::TrackList::on_track_list_replaced(const std::function<void()>& slot)
+const music::Signal<music::Track>& music::TrackList::on_track_added() const
 {
-    return music::Connection{
-        std::shared_ptr<Connection::Private>(
-            new Connection::Private{
-                d->signal_track_list_replaced.connect(slot)})};
+    return d->track_added;
 }
 
-music::Connection music::TrackList::on_track_added(const std::function<void(const music::Track& t)>& slot)
+const music::Signal<music::Track>& music::TrackList::on_track_removed() const
 {
-    return music::Connection{
-        std::shared_ptr<Connection::Private>(
-            new Connection::Private{
-                d->signal_track_added.connect(slot)})};
+    return d->track_removed;
 }
 
-music::Connection music::TrackList::on_track_removed(const std::function<void(const music::Track& t)>& slot)
+const music::Signal<music::Track>& music::TrackList::on_track_changed() const
 {
-    return music::Connection{
-        std::shared_ptr<Connection::Private>(
-            new Connection::Private{
-                d->signal_track_removed.connect(slot)})};
+    return d->track_changed;
 }
 
-music::Connection music::TrackList::on_current_track_changed(const std::function<void(const music::Track&)>& slot)
-{
-    return music::Connection{
-        std::shared_ptr<Connection::Private>(
-            new Connection::Private{
-                d->signal_track_changed.connect(slot)})};
-}
