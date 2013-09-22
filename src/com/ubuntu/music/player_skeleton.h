@@ -21,38 +21,14 @@
 
 #include <com/ubuntu/music/player.h>
 
+#include "player_traits.h"
+
 #include "mpris/player.h"
 
 #include <org/freedesktop/dbus/skeleton.h>
-#include <org/freedesktop/dbus/traits/service.h>
 #include <org/freedesktop/dbus/types/object_path.h>
 
 #include <memory>
-
-namespace org
-{
-namespace freedesktop
-{
-namespace dbus
-{
-namespace traits
-{
-template<>
-struct Service<com::ubuntu::music::Player>
-{
-    static const std::string& interface_name()
-    {
-        static const std::string s
-        {
-            "com.ubuntu.music.Player"
-        };
-        return s;
-    }
-};
-}
-}
-}
-}
 
 namespace com
 {

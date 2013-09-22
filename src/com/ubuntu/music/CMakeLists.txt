@@ -1,5 +1,18 @@
 add_library(
-  music_hub SHARED
+  music-hub-common SHARED
+
+  the_session_bus.cpp
+)
+
+target_link_libraries(
+  music-hub-common
+
+  ${Boost_LIBRARIES}
+  ${DBUS_LIBRARIES}
+)
+
+add_library(
+  music-hub-client SHARED
   
   connection.cpp
   player.cpp
@@ -12,7 +25,7 @@ add_library(
 )
 
 set_target_properties(
-  music_hub
+  music-hub-client
 
   PROPERTIES
   VERSION ${UBUNTU_MUSIC_HUB_VERSION_MAJOR}.${UBUNTU_MUSIC_HUB_VERSION_MINOR}.${UBUNTU_MUSIC_HUB_VERSION_PATCH}
@@ -20,25 +33,32 @@ set_target_properties(
 )
 
 target_link_libraries(
-  music_hub
+  music-hub-client
+
+  music-hub-common
 
   ${DBUS_LIBRARIES}
   ${GLog_LIBRARY}
 )
 
 install(
-  TARGETS music_hub
+  TARGETS music-hub-client
   DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
-add_executable(
-  music_hub_service
+add_library(
+  music-hub-service
   
   player_skeleton.cpp
+  service_skeleton.cpp
+  service_implementation.cpp
 )
 
 target_link_libraries(
-  music_hub_service
-  
-  music_hub
+  music-hub-service
+
+  music-hub-common
+
+  ${DBUS_LIBRARIES}
+  ${GLog_LIBRARY}
 )

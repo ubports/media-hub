@@ -1,3 +1,7 @@
+include_directories(
+    ${CMAKE_SOURCE_DIR}/src
+)
+
 add_executable(
   service_acceptance_test
   service.cpp)
@@ -5,8 +9,11 @@ add_executable(
 target_link_libraries(
     service_acceptance_test
 
-    music_hub
-    
+    music-hub-common
+    music-hub-client
+    music-hub-service
+    music-hub-test-framework
+
     ${CMAKE_THREAD_LIBS_INIT}
     ${Boost_LIBRARIES}
     ${DBUS_LIBRARIES}

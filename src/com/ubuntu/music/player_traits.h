@@ -16,11 +16,35 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#ifndef THE_SESSION_BUS_H_
-#define THE_SESSION_BUS_H_
+#ifndef PLAYER_TRAITS_H_
+#define PLAYER_TRAITS_H_
 
-#include <org/freedesktop/dbus/bus.h>
+#include <org/freedesktop/dbus/traits/service.h>
 
-org::freedesktop::dbus::Bus::Ptr the_session_bus();
+namespace org
+{
+namespace freedesktop
+{
+namespace dbus
+{
+namespace traits
+{
+template<>
+struct Service<com::ubuntu::music::Player>
+{
+    static const std::string& interface_name()
+    {
+        static const std::string s
+        {
+            "com.ubuntu.music.Player"
+        };
+        return s;
+    }
+};
+}
+}
+}
+}
 
-#endif // THE_SESSION_BUS_H_
+
+#endif // PLAYER_TRAITS_H_

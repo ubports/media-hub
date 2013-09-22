@@ -15,12 +15,16 @@
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
+#ifndef COM_UBUNTU_MUSIC_PLAYER_CLIENT_CONFIGURATION_H_
+#define COM_UBUNTU_MUSIC_PLAYER_CLIENT_CONFIGURATION_H_
 
-#ifndef THE_SESSION_BUS_H_
-#define THE_SESSION_BUS_H_
+#include <com/ubuntu/music/player.h>
 
-#include <org/freedesktop/dbus/bus.h>
+#include <org/freedesktop/dbus/types/object_path.h>
 
-org::freedesktop::dbus::Bus::Ptr the_session_bus();
+struct com::ubuntu::music::Player::Configuration
+{
+    org::freedesktop::dbus::types::ObjectPath object_path;
+};
 
-#endif // THE_SESSION_BUS_H_
+#endif // COM_UBUNTU_MUSIC_PLAYER_CLIENT_CONFIGURATION_H_

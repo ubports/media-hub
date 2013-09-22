@@ -16,11 +16,24 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#ifndef THE_SESSION_BUS_H_
-#define THE_SESSION_BUS_H_
+#include "service_implementation.h"
 
-#include <org/freedesktop/dbus/bus.h>
+namespace music = com::ubuntu::music;
 
-org::freedesktop::dbus::Bus::Ptr the_session_bus();
+struct music::ServiceImplementation::Private
+{
+};
 
-#endif // THE_SESSION_BUS_H_
+music::ServiceImplementation::ServiceImplementation() : d(new Private())
+{
+
+}
+
+music::ServiceImplementation::~ServiceImplementation()
+{
+}
+
+std::shared_ptr<music::Player> music::ServiceImplementation::create_session(const music::Player::Configuration&)
+{
+    return std::shared_ptr<music::Player>();
+}

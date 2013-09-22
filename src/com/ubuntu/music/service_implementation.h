@@ -16,11 +16,31 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#ifndef THE_SESSION_BUS_H_
-#define THE_SESSION_BUS_H_
+#ifndef COM_UBUNTU_MUSIC_SERVICE_IMPLEMENTATION_H_
+#define COM_UBUNTU_MUSIC_SERVICE_IMPLEMENTATION_H_
 
-#include <org/freedesktop/dbus/bus.h>
+#include "service_skeleton.h"
 
-org::freedesktop::dbus::Bus::Ptr the_session_bus();
+namespace com
+{
+namespace ubuntu
+{
+namespace music
+{
+class ServiceImplementation : public ServiceSkeleton
+{
+  public:
+    ServiceImplementation ();
+    ~ServiceImplementation ();
 
-#endif // THE_SESSION_BUS_H_
+    std::shared_ptr<Player> create_session(const Player::Configuration&);
+
+  private:
+    struct Private;
+    std::shared_ptr<Private> d;
+};
+}
+}
+}
+
+#endif // COM_UBUNTU_MUSIC_SERVICE_IMPLEMENTATION_H_

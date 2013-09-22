@@ -373,9 +373,8 @@ music::Property<music::Player::Volume>& music::PlayerStub::volume()
     return d->properties.volume;
 }
 
-/*
-const Signal<uint64_t>& seeked_to() const
+const music::Signal<uint64_t>& music::PlayerStub::seeked_to() const
 {
-    return d->seeked_to;
+    static music::Signal<uint64_t> signal;
+    return signal;
 }
-*/

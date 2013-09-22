@@ -18,7 +18,13 @@
 
 #include <com/ubuntu/music/service.h>
 #include <com/ubuntu/music/player.h>
+#include <com/ubuntu/music/property.h>
 #include <com/ubuntu/music/track_list.h>
+
+#include "com/ubuntu/music/service_implementation.h"
+
+#include "../cross_process_sync.h"
+#include "../fork_and_run.h"
 
 #include <gtest/gtest.h>
 
@@ -74,37 +80,60 @@ struct WaitableStateTransition
 
 TEST(MusicService, accessing_and_creating_a_session_works)
 {
-    auto service = music::Service::Client::instance();
-    auto session = service->create_session();
+    test::CrossProcessSync sync_service_start;
 
-    //EXPECT_TRUE(session);
+    auto service = [&sync_service_start]()
+    {
+        auto service = std::make_shared<music::ServiceImplementation>();
+        std::thread t([&service](){service->run();});
+
+        sync_service_start.signal_ready();
+
+        if (t.joinable())
+            t.join();
+    };
+
+    auto client = [&sync_service_start]()
+    {
+        sync_service_start.wait_for_signal_ready();
+
+        auto service = music::Service::Client::instance();
+        auto session = service->create_session(music::Player::Client::default_configuration());
+
+        EXPECT_TRUE(session != nullptr);
+    };
+
+    test::fork_and_run(service, client);
 }
 
-TEST(MusicService, starting_playback_on_non_empty_playqueue_works)
+/*TEST(MusicService, starting_playback_on_non_empty_playqueue_works)
 {
-    static const music::Track::UriType uri{"file:///tmp/test.mp3"};
-    static const bool dont_make_current{false};
+    auto client = []()
+    {
+        static const music::Track::UriType uri{"file:///tmp/test.mp3"};
+        static const bool dont_make_current{false};
 
-    auto service = music::Service::Client::instance();
-    auto session = service->create_session();
+        auto service = music::Service::Client::instance();
+        auto session = service->create_session(music::Player::Client::default_configuration());
 
-    ASSERT_TRUE(session->can_play());
-    ASSERT_TRUE(session->track_list()->is_editable());
+        ASSERT_EQ(true, session->can_play());
+        ASSERT_EQ(true, session->track_list()->is_editable());
 
-    session->track_list()->append_track_with_uri(uri, dont_make_current);
-    
-    ASSERT_EQ(1, session->track_list()->size());
-    
-    WaitableStateTransition<music::Player::PlaybackStatus> state_transition(
-    WaitableStateTransition<music::Player::PlaybackStatus>::InitialState{music::Player::stopped},
-        WaitableStateTransition<music::Player::PlaybackStatus>::FinalState{music::Player::playing});
+        session->track_list()->append_track_with_uri(uri, dont_make_current);
 
-    session->on_playback_status_changed(
-        std::bind(&WaitableStateTransition<music::Player::PlaybackStatus>::trigger,
-                  std::ref(state_transition),
-                  std::placeholders::_1));
+        ASSERT_EQ(1, session->track_list()->size());
 
-    session->play();
+        WaitableStateTransition<music::Player::PlaybackStatus> state_transition(
+        WaitableStateTransition<music::Player::PlaybackStatus>::InitialState{music::Player::stopped},
+            WaitableStateTransition<music::Player::PlaybackStatus>::FinalState{music::Player::playing});
 
-    EXPECT_TRUE(state_transition.wait_for(std::chrono::milliseconds{500}));
-}
+        session->playback_status().changed().connect(
+            std::bind(&WaitableStateTransition<music::Player::PlaybackStatus>::trigger,
+                      std::ref(state_transition),
+                      std::placeholders::_1));
+
+        session->play();
+
+        EXPECT_TRUE(state_transition.wait_for(std::chrono::milliseconds{500}));
+    };
+}*/

@@ -21,6 +21,7 @@
 #include <com/ubuntu/music/connection.h>
 
 #include <functional>
+#include <list>
 #include <mutex>
 #include <set>
 
@@ -49,17 +50,13 @@ class Signal
     inline Connection connect(const Slot& slot) const
     {
         std::lock_guard<std::mutex> lg(d->guard);
-        auto result = d->slots.insert(slot);
+        auto result = d->slots.insert(d->slots.end(), slot);
 
-        if (result.second)
-            return Connection(
-                std::bind(
-                    &Private::disconnect_slot_for_iterator,
-                    d,
-                    result.first));
-
-        static const auto no_op = [](){};
-        return Connection(no_op);
+        return Connection(
+            std::bind(
+                &Private::disconnect_slot_for_iterator,
+                d,
+                result));
     }
 
     void operator()(const T& value)
@@ -74,14 +71,14 @@ class Signal
   private:
     struct Private
     {
-        void disconnect_slot_for_iterator(typename std::set<Slot>::iterator it)
+        void disconnect_slot_for_iterator(typename std::list<Slot>::iterator it)
         {
             std::lock_guard<std::mutex> lg(guard);
             slots.erase(it);
         }
         
         std::mutex guard;
-        std::set<Slot> slots;
+        std::list<Slot> slots;
     };
     std::shared_ptr<Private> d;
 };

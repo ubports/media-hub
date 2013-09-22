@@ -19,6 +19,8 @@
 #ifndef MPRIS_MACROS_H_
 #define MPRIS_MACROS_H_
 
+#include <org/freedesktop/dbus/types/object_path.h>
+
 #include <chrono>
 #include <string>
 
@@ -28,12 +30,12 @@
     struct Name \
     { \
         typedef Itf Interface; \
-        static const std::string& name() \
+        inline static const std::string& name() \
         { \
             static const std::string s{#Name}; \
             return s; \
         } \
-        inline static const std::chrono::milliseconds default_timeout() { return Timeout; } \
+        inline static const std::chrono::milliseconds default_timeout() { return std::chrono::milliseconds{2000}; } \
     };\
 
 #define SIGNAL(Name, Itf, ArgType) \

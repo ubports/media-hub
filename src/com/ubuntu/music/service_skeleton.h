@@ -21,6 +21,10 @@
 
 #include <com/ubuntu/music/service.h>
 
+#include "service_traits.h"
+
+#include <org/freedesktop/dbus/skeleton.h>
+
 #include <memory>
 
 namespace com
@@ -29,16 +33,19 @@ namespace ubuntu
 {
 namespace music
 {
-class ServiceSkeleton : public Service
+class ServiceSkeleton : public org::freedesktop::dbus::Skeleton<com::ubuntu::music::Service>
 {
   public:
     ServiceSkeleton();
-    
+    ~ServiceSkeleton();
+
+    void run();
+    void stop();
+
   private:
     struct Private;
-    std::unique_ptr<Private> d;
+    std::shared_ptr<Private> d;
 };
-}
 }
 }
 }

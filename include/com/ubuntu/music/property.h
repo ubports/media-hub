@@ -65,9 +65,19 @@ class Property
         return *this;
     }
 
-    inline bool operator==(const Property<T>& rhs) const
+    inline operator const T&() const
     {
-        return value == rhs.value;
+        return value;
+    }
+
+    friend inline bool operator==(const Property<T>& lhs, const T& rhs)
+    {
+        return lhs.value == rhs;
+    }
+
+    friend inline bool operator==(const Property<T>& lhs, const Property<T>& rhs)
+    {
+        return lhs.value == rhs.value;
     }
 
     inline virtual void set(const T& new_value)

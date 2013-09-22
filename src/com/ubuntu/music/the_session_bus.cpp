@@ -16,11 +16,24 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#ifndef THE_SESSION_BUS_H_
-#define THE_SESSION_BUS_H_
+#include "the_session_bus.h"
 
-#include <org/freedesktop/dbus/bus.h>
+#include <org/freedesktop/dbus/asio/executor.h>
 
-org::freedesktop::dbus::Bus::Ptr the_session_bus();
+namespace
+{
+std::once_flag once;
+}
 
-#endif // THE_SESSION_BUS_H_
+org::freedesktop::dbus::Bus::Ptr the_session_bus()
+{
+    static org::freedesktop::dbus::Bus::Ptr bus
+            = std::make_shared<org::freedesktop::dbus::Bus>(
+                org::freedesktop::dbus::WellKnownBus::session);
+    static org::freedesktop::dbus::Executor::Ptr executor
+            = std::make_shared<org::freedesktop::dbus::asio::Executor>(bus);
+
+    std::call_once(once, [](){bus->install_executor(executor);});
+
+    return bus;
+}

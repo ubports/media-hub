@@ -17,6 +17,7 @@
  */
 
 #include "service_stub.h"
+#include "service_traits.h"
 
 #include "player_stub.h"
 #include "the_session_bus.h"
@@ -28,14 +29,15 @@ namespace music = com::ubuntu::music;
 
 struct music::ServiceStub::Private
 {    
-    dbus::Bus::Ptr bus;
     dbus::Object::Ptr object;
 };
 
-music::ServiceStub::ServiceStub() : org::freedesktop::dbus::Stub<Service>(the_session_bus()),
-                                    d(new Private{
-                                        the_session_bus(),
-                                        access_service()->object_for_path(dbus::types::ObjectPath("/com/ubuntu/music/service"))})
+music::ServiceStub::ServiceStub()
+    : org::freedesktop::dbus::Stub<music::Service>(the_session_bus()),
+      d(new Private{
+        access_service()->object_for_path(
+            dbus::types::ObjectPath(
+                dbus::traits::Service<music::Service>::object_path()))})
 {
 }
 
@@ -43,9 +45,12 @@ music::ServiceStub::~ServiceStub()
 {
 }
     
-std::shared_ptr<music::Player> music::ServiceStub::create_session()
+std::shared_ptr<music::Player> music::ServiceStub::create_session(const music::Player::Configuration&)
 {
-    auto op = d->object->invoke_method_synchronously<mpris::Service::CreateSession, dbus::types::ObjectPath>();
+    auto op
+            = d->object->invoke_method_synchronously<
+                mpris::Service::CreateSession,
+                dbus::types::ObjectPath>();
 
     if (op.is_error())
         throw std::runtime_error("Problem creating session: " + op.error());

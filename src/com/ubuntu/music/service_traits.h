@@ -15,40 +15,46 @@
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
-#ifndef COM_UBUNTU_MUSIC_SERVICE_H_
-#define COM_UBUNTU_MUSIC_SERVICE_H_
 
-#include <com/ubuntu/music/player.h>
+#ifndef COM_UBUNTU_MUSIC_SERVICE_TRAITS_H_
+#define COM_UBUNTU_MUSIC_SERVICE_TRAITS_H_
 
-#include <memory>
+#include <com/ubuntu/music/service.h>
 
-namespace com
+#include <org/freedesktop/dbus/traits/service.h>
+
+namespace org
 {
-namespace ubuntu
+namespace freedesktop
 {
-namespace music
+namespace dbus
 {
-class Service : public std::enable_shared_from_this<Service>
+namespace traits
 {
-  public:
-    struct Client
+template<>
+struct Service<com::ubuntu::music::Service>
+{
+    inline static const std::string& interface_name()
     {
-        static const std::shared_ptr<Service> instance();
-    };
+        static const std::string s
+        {
+            "com.ubuntu.music.Service"
+        };
+        return s;
+    }
 
-    Service(const Service&) = delete;
-    virtual ~Service() = default;
-
-    Service& operator=(const Service&) = delete;
-    bool operator==(const Service&) const = delete;
-
-    virtual std::shared_ptr<Player> create_session(const Player::Configuration&) = 0;
-
-  protected:
-    Service() = default;
+    inline static const std::string& object_path()
+    {
+        static const std::string s
+        {
+            "/com/ubuntu/music/Service"
+        };
+        return s;
+    }
 };
 }
 }
 }
+}
 
-#endif // COM_UBUNTU_MUSIC_SERVICE_H_
+#endif // COM_UBUNTU_MUSIC_SERVICE_TRAITS_H_

@@ -19,7 +19,15 @@
 #include <com/ubuntu/music/player.h>
 #include <com/ubuntu/music/property.h>
 
+#include "player_configuration.h"
+
 namespace music = com::ubuntu::music;
+
+const music::Player::Configuration& music::Player::Client::default_configuration()
+{
+    static const music::Player::Configuration config;
+    return config;
+}
 
 music::Player::Player()
 {
@@ -28,3 +36,4 @@ music::Player::Player()
 music::Player::~Player()
 {
 }
+

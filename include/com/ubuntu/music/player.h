@@ -40,6 +40,15 @@ class Player
     typedef double PlaybackRate;
     typedef double Volume;
     
+    struct Configuration;
+
+    struct Client
+    {
+        Client() = delete;
+
+        static const Configuration& default_configuration();
+    };
+
     enum PlaybackStatus
     {
         playing,
