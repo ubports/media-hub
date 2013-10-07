@@ -1,5 +1,7 @@
 find_package(Threads)
 
+add_definitions(-DBOOST_NO_CXX11_SCOPED_ENUMS)
+
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
 option(
@@ -21,14 +23,28 @@ set (GTEST_INCLUDE_DIR "${GMOCK_SOURCE_DIR}/gtest/include" CACHE PATH "gtest sou
 add_subdirectory(${GMOCK_SOURCE_DIR} "${CMAKE_CURRENT_BINARY_DIR}/gmock")
 
 include_directories (
+  .
+  
   ${GMOCK_INCLUDE_DIR}
   ${GTEST_INCLUDE_DIR}
+)
+
+configure_file(
+    test_data.cpp.in
+    ${CMAKE_CURRENT_BINARY_DIR}/test_data.cpp
 )
 
 add_library(
     music-hub-test-framework
 
     cross_process_sync.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/test_data.cpp
+)
+
+target_link_libraries(
+    music-hub-test-framework
+    ${Boost_LIBRARIES}
 )
 
 add_subdirectory(acceptance-tests)
+add_subdirectory(unit-tests)

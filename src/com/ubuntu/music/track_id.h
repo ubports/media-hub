@@ -16,41 +16,23 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#ifndef MPRIS_SERVICE_H_
-#define MPRIS_SERVICE_H_
+#ifndef COM_UBUNTU_MUSIC_TRACK_ID_H_
+#define COM_UBUNTU_MUSIC_TRACK_ID_H_
 
-#include "macros.h"
+#include <org/freedesktop/dbus/types/object_path.h>
 
-#include <chrono>
-#include <string>
-
-namespace mpris
+namespace com
 {
-struct Service
+namespace ubuntu
 {
-    static const std::string& name()
-    {
-        static const std::string s{"com.ubuntu.music.Service"};
-        return s;
-    }
-
-    struct Errors
-    {
-        struct CreatingSession
-        {
-            static const std::string& name()
-            {
-                static const std::string s
-                {
-                    "com.ubuntu.music.Service.Error.CreatingSession"
-                };
-                return s;
-            }
-        };
-    };
-
-    METHOD(CreateSession, Service, std::chrono::seconds(1))
+namespace music
+{
+struct Track::Id
+{
+    org::freedesktop::dbus::types::ObjectPath object_path;
 };
 }
+}
+}
 
-#endif // MPRIS_SERVICE_H_
+#endif // COM_UBUNTU_MUSIC_TRACK_ID_H_

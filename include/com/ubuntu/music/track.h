@@ -20,10 +20,12 @@
 
 #include "com/ubuntu/music/connection.h"
 
+#include <chrono>
 #include <functional>
 #include <map>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace com
 {
@@ -38,24 +40,64 @@ class Track
 public:
     typedef std::string UriType;
 
-    typedef std::map<std::string, std::string> MetaData;
+    struct Id;
 
-    Track(const Track&);
-    ~Track();
+    Track(const Id& id);
+    Track(const Track&) = delete;
+    virtual ~Track();
 
     Track& operator=(const Track&);
     bool operator==(const Track&) const;
 
-    const UriType& uri() const;
+    virtual const Id& id() const;
 
-    const Property<MetaData>& meta_data() const;
-    
-  private:
-    friend class Player;
-    friend class TrackList;
+    typedef std::map<std::string, std::string> MetaData;
+    /*
+    class MetaData
+    {
+    public:
+        MetaData() = default;
+        MetaData(const MetaData&) = default;
+        ~MetaData() = default;
 
-    explicit Track(const UriType& uri, const MetaData& meta_data);
+        MetaData& operator=(const MetaData&) = default;
 
+        bool operator==(const MetaData&) const
+        {
+            return true;
+        }
+
+        bool operator!=(const MetaData&) const
+        {
+            return false;
+        }
+
+        struct NotImplementedFields
+        {
+            NotImplementedFields() = default;
+
+            virtual const UriType& uri() const = 0;
+            virtual const std::chrono::microseconds length() const = 0;
+            virtual const UriType& art_uri() const = 0;
+            virtual const std::string& album() const = 0;
+            virtual const std::vector<std::string>& album_artist() const = 0;
+            virtual const std::vector<std::string>& artist() const = 0;
+            virtual const std::string& as_text() const = 0;
+            virtual unsigned int audio_bpm() const = 0;
+            virtual float auto_rating() const = 0;
+            virtual const std::vector<std::string>& comment() const = 0;
+            virtual const std::vector<std::string>& composer() const = 0;
+            virtual unsigned int disc_number() const = 0;
+            virtual const std::vector<std::string>& genre() const = 0;
+            virtual const std::vector<std::string>& lyricist() const = 0;
+            virtual const std::string title() const = 0;
+            virtual unsigned int track_number() const = 0;
+            virtual unsigned int use_count() const = 0;
+            virtual float user_rating() const = 0;
+        };
+    };
+*/
+private:
     struct Private;
     std::unique_ptr<Private> d;
 };

@@ -1,3 +1,7 @@
+pkg_check_modules(PC_GSTREAMER_1_0 REQUIRED gstreamer-1.0)
+
+include_directories(${PC_GSTREAMER_1_0_INCLUDE_DIRS})
+
 add_library(
   music-hub-common SHARED
 
@@ -22,6 +26,7 @@ add_library(
 
   player_stub.cpp
   service_stub.cpp
+  track_list_stub.cpp
 )
 
 set_target_properties(
@@ -47,11 +52,17 @@ install(
 )
 
 add_library(
-  music-hub-service
-  
-  player_skeleton.cpp
-  service_skeleton.cpp
-  service_implementation.cpp
+    music-hub-service
+
+    engine.cpp
+    gstreamer/engine.cpp
+
+    player_skeleton.cpp
+    player_implementation.cpp
+    service_skeleton.cpp
+    service_implementation.cpp
+    track_list_skeleton.cpp
+    track_list_implementation.cpp
 )
 
 target_link_libraries(
@@ -61,4 +72,5 @@ target_link_libraries(
 
   ${DBUS_LIBRARIES}
   ${GLog_LIBRARY}
+  ${PC_GSTREAMER_1_0_LIBRARIES}
 )

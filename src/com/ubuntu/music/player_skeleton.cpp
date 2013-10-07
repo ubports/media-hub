@@ -19,176 +19,79 @@
 #include <com/ubuntu/music/property.h>
 
 #include "player_skeleton.h"
+#include "player_traits.h"
+#include "property_stub.h"
 #include "the_session_bus.h"
 
 #include "mpris/player.h"
 
 #include <org/freedesktop/dbus/stub.h>
-#include <org/freedesktop/dbus/traits/service.h>
 
 namespace dbus = org::freedesktop::dbus;
 namespace music = com::ubuntu::music;
 
-namespace
-{
-template<typename T, typename DBusProperty>
-struct PropertyStub : public music::Property<T>
-{
-    typedef music::Property<T> super;
-
-    PropertyStub(const std::shared_ptr<dbus::Property<DBusProperty>>& dbus_property)
-            : super(),
-              dbus_property(dbus_property)
-    {
-    }
-
-    const T& get() const
-    {
-        super::mutable_get() = dbus_property->value();
-        return super::get();
-    }
-
-    void set(const T& value)
-    {
-        dbus_property->value(value);
-        super::set(value);
-    }
-
-    std::shared_ptr<dbus::Property<DBusProperty>> dbus_property;
-};
-
-template<>
-struct PropertyStub<music::Player::PlaybackStatus, mpris::Player::Properties::PlaybackStatus> : public music::Property<music::Player::PlaybackStatus>
-{
-    typedef music::Property<music::Player::PlaybackStatus> super;
-
-    static const std::map<music::Player::PlaybackStatus, std::string>& playback_status_lut()
-    {
-        static const std::map<music::Player::PlaybackStatus, std::string> lut =
-        {
-            {music::Player::PlaybackStatus::playing, "playing"},
-            {music::Player::PlaybackStatus::paused, "paused"},
-            {music::Player::PlaybackStatus::stopped, "stopped"}
-        };
-
-        return lut;
-    }
-
-    static const std::map<std::string, music::Player::PlaybackStatus>& reverse_playback_status_lut()
-    {
-        static const std::map<std::string, music::Player::PlaybackStatus> lut =
-        {
-            {"playing", music::Player::PlaybackStatus::playing},
-            {"paused", music::Player::PlaybackStatus::paused},
-            {"stopped", music::Player::PlaybackStatus::stopped}
-        };
-
-        return lut;
-    }
-
-    PropertyStub(const std::shared_ptr<dbus::Property<mpris::Player::Properties::PlaybackStatus>>& dbus_property)
-            : super(),
-              dbus_property(dbus_property)
-    {
-    }
-
-    const music::Player::PlaybackStatus& get() const
-    {
-        auto value = dbus_property->value();
-        super::mutable_get() = reverse_playback_status_lut().at(value);
-        return super::get();
-    }
-
-    void set(const music::Player::PlaybackStatus& value)
-    {
-        dbus_property->value(playback_status_lut().at(value));
-        super::set(value);
-    }
-
-    std::shared_ptr<dbus::Property<mpris::Player::Properties::PlaybackStatus>> dbus_property;
-};
-
-template<>
-struct PropertyStub<music::Player::LoopStatus, mpris::Player::Properties::LoopStatus> : public music::Property<music::Player::LoopStatus>
-{
-    typedef music::Property<music::Player::LoopStatus> super;
-
-    static const std::map<music::Player::LoopStatus, std::string>& loop_status_lut()
-    {
-        static const std::map<music::Player::LoopStatus, std::string> lut =
-        {
-            {music::Player::LoopStatus::none, "none"},
-            {music::Player::LoopStatus::track, "track"},
-            {music::Player::LoopStatus::playlist, "playlist"}
-        };
-
-        return lut;
-    }
-
-    static const std::map<std::string, music::Player::LoopStatus>& reverse_loop_status_lut()
-    {
-        static const std::map<std::string, music::Player::LoopStatus> lut =
-        {
-            {"none", music::Player::LoopStatus::none},
-            {"track", music::Player::LoopStatus::track},
-            {"playlist", music::Player::LoopStatus::playlist}
-        };
-
-        return lut;
-    }
-
-    PropertyStub(const std::shared_ptr<dbus::Property<mpris::Player::Properties::LoopStatus>>& dbus_property)
-            : super(),
-              dbus_property(dbus_property)
-    {
-    }
-
-    const music::Player::LoopStatus& get() const
-    {
-        auto value = dbus_property->value();
-        super::mutable_get() = reverse_loop_status_lut().at(value);
-        return super::get();
-    }
-
-    void set(const music::Player::LoopStatus& value)
-    {
-        dbus_property->value(loop_status_lut().at(value));
-        super::set(value);
-    }
-
-    std::shared_ptr<dbus::Property<mpris::Player::Properties::LoopStatus>> dbus_property;
-};
-}
-
 struct music::PlayerSkeleton::Private
 {
-    void handle_next(DBusMessage*)
+    Private(music::PlayerSkeleton* player, const dbus::types::ObjectPath& session)
+        : impl(player),
+          object(impl->access_service()->add_object_for_path(session)),
+          properties
+          {
+              object->get_property<mpris::Player::Properties::CanPlay>(),
+              object->get_property<mpris::Player::Properties::CanPause>(),
+              object->get_property<mpris::Player::Properties::CanSeek>(),
+              object->get_property<mpris::Player::Properties::CanControl>(),
+              object->get_property<mpris::Player::Properties::CanGoNext>(),
+              object->get_property<mpris::Player::Properties::CanGoPrevious>(),
+              object->get_property<mpris::Player::Properties::PlaybackStatus>(),
+              object->get_property<mpris::Player::Properties::LoopStatus>(),
+              object->get_property<mpris::Player::Properties::PlaybackRate>(),
+              object->get_property<mpris::Player::Properties::Shuffle>(),
+              object->get_property<mpris::Player::Properties::MetaData>(),
+              object->get_property<mpris::Player::Properties::Volume>(),
+              object->get_property<mpris::Player::Properties::MinimumRate>(),
+              object->get_property<mpris::Player::Properties::MaximumRate>()
+          }
+    {
+    }
+
+    void handle_next(DBusMessage* msg)
     {
         impl->next();
+        auto reply = dbus::Message::make_method_return(msg);
+        impl->access_bus()->send(reply->get());
     }
 
-    void handle_previous(DBusMessage*)
+    void handle_previous(DBusMessage* msg)
     {
         impl->previous();
+        auto reply = dbus::Message::make_method_return(msg);
+        impl->access_bus()->send(reply->get());
     }
 
-    void handle_pause(DBusMessage*)
+    void handle_pause(DBusMessage* msg)
     {
         impl->pause();
+        auto reply = dbus::Message::make_method_return(msg);
+        impl->access_bus()->send(reply->get());
     }
 
     void handle_playpause(DBusMessage*)
     {
     }
 
-    void handle_stop(DBusMessage*)
+    void handle_stop(DBusMessage* msg)
     {
         impl->stop();
+        auto reply = dbus::Message::make_method_return(msg);
+        impl->access_bus()->send(reply->get());
     }
 
-    void handle_play(DBusMessage*)
+    void handle_play(DBusMessage* msg)
     {
         impl->play();
+        auto reply = dbus::Message::make_method_return(msg);
+        impl->access_bus()->send(reply->get());
     }
 
     void handle_seek(DBusMessage* msg)
@@ -211,11 +114,10 @@ struct music::PlayerSkeleton::Private
 
         auto reply = dbus::Message::make_method_return(msg);
         reply->writer() << impl->open_uri(uri);
-        bus->send(reply->get());
+        impl->access_bus()->send(reply->get());
     }
 
-    music::Player* impl;
-    dbus::Bus::Ptr bus;
+    music::PlayerSkeleton* impl;
     dbus::Object::Ptr object;
     struct
     {
@@ -245,29 +147,8 @@ struct music::PlayerSkeleton::Private
 
 music::PlayerSkeleton::PlayerSkeleton(
     const org::freedesktop::dbus::types::ObjectPath& session_path)
-        : dbus::Skeleton<Player>(the_session_bus()),
-          d(new Private{
-                  this, 
-                  the_session_bus(), 
-                  access_service()->add_object_for_path(session_path),
-                  {                      
-                      d->object->get_property<mpris::Player::Properties::CanPlay>(),
-                              d->object->get_property<mpris::Player::Properties::CanPause>(),
-                              d->object->get_property<mpris::Player::Properties::CanSeek>(),
-                              d->object->get_property<mpris::Player::Properties::CanControl>(),
-                              d->object->get_property<mpris::Player::Properties::CanGoNext>(),
-                              d->object->get_property<mpris::Player::Properties::CanGoPrevious>(),
-                              d->object->get_property<mpris::Player::Properties::PlaybackStatus>(),
-                              d->object->get_property<mpris::Player::Properties::LoopStatus>(),
-                              d->object->get_property<mpris::Player::Properties::PlaybackRate>(),
-                              d->object->get_property<mpris::Player::Properties::Shuffle>(),
-                              d->object->get_property<mpris::Player::Properties::MetaData>(),
-                              d->object->get_property<mpris::Player::Properties::Volume>(),
-                              d->object->get_property<mpris::Player::Properties::MinimumRate>(),
-                              d->object->get_property<mpris::Player::Properties::MaximumRate>()
-                              }
-
-                  })
+        : dbus::Skeleton<music::Player>(the_session_bus()),
+          d(new Private{this, session_path})
 {
     d->object->install_method_handler<mpris::Player::Next>(
         std::bind(&Private::handle_next,
@@ -392,6 +273,11 @@ music::Property<music::Player::Volume>& music::PlayerSkeleton::volume()
     return d->properties.volume;
 }
 
+music::Property<music::Player::PlaybackStatus>& music::PlayerSkeleton::playback_status()
+{
+    return d->properties.playback_status;
+}
+
 music::Property<bool>& music::PlayerSkeleton::can_play()
 {
     return d->properties.can_play;
@@ -430,4 +316,10 @@ music::Property<music::Player::PlaybackRate>& music::PlayerSkeleton::minimum_pla
 music::Property<music::Player::PlaybackRate>& music::PlayerSkeleton::maximum_playback_rate()
 {
     return d->properties.maximum_playback_rate;
+}
+
+const music::Signal<uint64_t>& music::PlayerSkeleton::seeked_to() const
+{
+    static const music::Signal<uint64_t> signal;
+    return signal;
 }

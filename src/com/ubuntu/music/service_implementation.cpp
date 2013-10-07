@@ -18,10 +18,14 @@
 
 #include "service_implementation.h"
 
+#include "player_configuration.h"
+#include "player_implementation.h"
+
 namespace music = com::ubuntu::music;
 
 struct music::ServiceImplementation::Private
 {
+    std::shared_ptr<music::Engine> engine;
 };
 
 music::ServiceImplementation::ServiceImplementation() : d(new Private())
@@ -33,7 +37,11 @@ music::ServiceImplementation::~ServiceImplementation()
 {
 }
 
-std::shared_ptr<music::Player> music::ServiceImplementation::create_session(const music::Player::Configuration&)
+std::shared_ptr<music::Player> music::ServiceImplementation::create_session(
+        const music::Player::Configuration& conf)
 {
-    return std::shared_ptr<music::Player>();
+    return std::make_shared<music::PlayerImplementation>(
+                conf.object_path,
+                shared_from_this(),
+                d->engine);
 }

@@ -25,8 +25,13 @@
 
 #include "../cross_process_sync.h"
 #include "../fork_and_run.h"
+#include "../waitable_state_transition.h"
+
+#include "test_data.h"
 
 #include <gtest/gtest.h>
+
+#include <cstdio>
 
 #include <condition_variable>
 #include <functional>
@@ -34,51 +39,9 @@
 
 namespace music = com::ubuntu::music;
 
-namespace
-{
-template<typename T>
-struct WaitableStateTransition
-{
-    struct InitialState { T value; };
-    struct FinalState { T value; };
 
-    WaitableStateTransition(const InitialState& initial_state, const FinalState& expected_final_state)
-            : expected_final_state(expected_final_state.value),
-              last_state(initial_state.value)
-    {
-    }
 
-    bool wait_for(const std::chrono::milliseconds& duration)
-    {
-        std::unique_lock<std::mutex> ul{mutex};
-
-        while (last_state != expected_final_state)
-        {
-            auto status = cv.wait_for(ul, duration);
-
-            if (status == std::cv_status::timeout)
-                return false;
-        }
-
-        return true;
-    }
-
-    void trigger(const T& new_state)
-    {   
-        last_state = new_state;
-
-        if (last_state == expected_final_state)
-            cv.notify_all();
-    }
-
-    T expected_final_state;
-    T last_state;
-    std::mutex mutex;
-    std::condition_variable cv;
-};
-}
-
-TEST(MusicService, accessing_and_creating_a_session_works)
+/*TEST(MusicService, accessing_and_creating_a_session_works)
 {
     test::CrossProcessSync sync_service_start;
 
@@ -103,37 +66,66 @@ TEST(MusicService, accessing_and_creating_a_session_works)
         EXPECT_TRUE(session != nullptr);
     };
 
-    test::fork_and_run(service, client);
-}
+    ASSERT_NO_FATAL_FAILURE(test::fork_and_run(service, client));
+}*/
 
-/*TEST(MusicService, starting_playback_on_non_empty_playqueue_works)
+TEST(MusicService, starting_playback_on_non_empty_playqueue_works)
 {
-    auto client = []()
+    const std::string test_file{"/tmp/test.mp3"};
+    std::remove(test_file.c_str()); ASSERT_TRUE(test::copy_test_mp3_file_to(test_file));
+
+    test::CrossProcessSync sync_service_start;
+
+    auto service = [&sync_service_start]()
     {
+        auto service = std::make_shared<music::ServiceImplementation>();
+        std::thread t([&service](){service->run();});
+
+        sync_service_start.signal_ready();
+
+        if (t.joinable())
+            t.join();
+    };
+
+    auto client = [&sync_service_start]()
+    {
+        sync_service_start.wait_for_signal_ready();
+
         static const music::Track::UriType uri{"file:///tmp/test.mp3"};
         static const bool dont_make_current{false};
 
         auto service = music::Service::Client::instance();
         auto session = service->create_session(music::Player::Client::default_configuration());
 
-        ASSERT_EQ(true, session->can_play());
-        ASSERT_EQ(true, session->track_list()->is_editable());
+        ASSERT_EQ(true, session->can_play().get());
+        ASSERT_EQ(true, session->can_play().get());
+        ASSERT_EQ(true, session->can_pause().get());
+        ASSERT_EQ(true, session->can_seek().get());
+        ASSERT_EQ(true, session->can_go_previous().get());
+        ASSERT_EQ(true, session->can_go_next().get());
+        ASSERT_EQ(music::Player::PlaybackStatus::stopped, session->playback_status());
+        ASSERT_EQ(music::Player::LoopStatus::none, session->loop_status());
+        ASSERT_NEAR(1.f, session->playback_rate().get(), 1E-5);
+        ASSERT_EQ(true, session->is_shuffle());
+        ASSERT_EQ(true, session->track_list()->can_edit_tracks().get());
 
-        session->track_list()->append_track_with_uri(uri, dont_make_current);
+        session->track_list()->add_track_with_uri_at(uri, music::TrackList::after_empty_track(), dont_make_current);
 
-        ASSERT_EQ(1, session->track_list()->size());
+        EXPECT_EQ(1, session->track_list()->tracks()->size());
 
-        WaitableStateTransition<music::Player::PlaybackStatus> state_transition(
-        WaitableStateTransition<music::Player::PlaybackStatus>::InitialState{music::Player::stopped},
-            WaitableStateTransition<music::Player::PlaybackStatus>::FinalState{music::Player::playing});
+        test::WaitableStateTransition<music::Player::PlaybackStatus>
+                state_transition(
+                    music::Player::stopped);
 
         session->playback_status().changed().connect(
-            std::bind(&WaitableStateTransition<music::Player::PlaybackStatus>::trigger,
+            std::bind(&test::WaitableStateTransition<music::Player::PlaybackStatus>::trigger,
                       std::ref(state_transition),
                       std::placeholders::_1));
 
         session->play();
 
-        EXPECT_TRUE(state_transition.wait_for(std::chrono::milliseconds{500}));
+        EXPECT_TRUE(state_transition.wait_for_state_for(music::Player::playing, std::chrono::milliseconds{500}));
     };
-}*/
+
+    ASSERT_NO_FATAL_FAILURE(test::fork_and_run(service, client));
+}

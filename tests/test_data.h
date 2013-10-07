@@ -16,41 +16,15 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#ifndef MPRIS_SERVICE_H_
-#define MPRIS_SERVICE_H_
+#ifndef TEST_DATA_H_
+#define TEST_DATA_H_
 
-#include "macros.h"
-
-#include <chrono>
 #include <string>
 
-namespace mpris
+namespace test
 {
-struct Service
-{
-    static const std::string& name()
-    {
-        static const std::string s{"com.ubuntu.music.Service"};
-        return s;
-    }
-
-    struct Errors
-    {
-        struct CreatingSession
-        {
-            static const std::string& name()
-            {
-                static const std::string s
-                {
-                    "com.ubuntu.music.Service.Error.CreatingSession"
-                };
-                return s;
-            }
-        };
-    };
-
-    METHOD(CreateSession, Service, std::chrono::seconds(1))
-};
+bool copy_test_mp3_file_to(const std::string& path);
+bool copy_test_ogg_file_to(const std::string& path);
 }
 
-#endif // MPRIS_SERVICE_H_
+#endif // TEST_DATA_H_

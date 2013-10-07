@@ -33,7 +33,6 @@ struct music::Connection::Private
 
     ~Private()
     {
-        disconnect();
     }
 
     void disconnect()
@@ -56,24 +55,9 @@ struct music::Connection::Private
 music::Connection::Connection(const music::Connection::Disconnector& disconnector) : d(new Private(disconnector))
 {
 }
-
-music::Connection::Connection(const music::Connection& rhs) : d(rhs.d)
-{
-}
     
 music::Connection::~Connection()
 {
-}
-
-music::Connection& music::Connection::operator=(const music::Connection& rhs)
-{
-    d = rhs.d;
-    return *this;
-}
-
-bool music::Connection::operator==(const music::Connection& rhs) const
-{
-    return d == rhs.d;
 }
 
 bool music::Connection::is_connected() const

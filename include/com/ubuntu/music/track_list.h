@@ -30,47 +30,40 @@ namespace ubuntu
 {
 namespace music
 {
+class Player;
+template<typename T> class Property;
 template<typename T> class Signal;
 
-class TrackList
+class TrackList : public std::enable_shared_from_this<TrackList>
 {
   public:
-    typedef std::vector<Track>::iterator Iterator;
-    typedef std::vector<Track>::const_iterator ConstIterator;
+    typedef std::vector<std::shared_ptr<Track>> Container;
+    typedef Container::iterator Iterator;
+    typedef Container::const_iterator ConstIterator;
 
-    TrackList();
+    static const Track::Id& after_empty_track();
+
+    TrackList(const TrackList&) = delete;
     ~TrackList();
 
-    bool operator==(const TrackList&) const;
+    TrackList& operator=(const TrackList&) = delete;
+    bool operator==(const TrackList&) const = delete;
 
-    bool is_editable();
+    virtual const Property<bool>& can_edit_tracks() const = 0;
+    virtual const Property<Container>& tracks() const = 0;
 
-    std::size_t size() const;
+    virtual void add_track_with_uri_at(const Track::UriType& uri, const Track::Id& position, bool make_current) = 0;
+    virtual void remove_track(const Track::Id& id) = 0;
 
-    Iterator begin();
-    ConstIterator begin() const;
-    Iterator end();
-    ConstIterator end() const;
-    Iterator find_for_uri(const Track::UriType& uri);
-    ConstIterator find_for_uri(const Track::UriType& uri) const;
+    virtual void go_to(const Track::Id& track) = 0;
 
-    void prepend_track_with_uri(const Track::UriType& uri, bool make_current);
-    void append_track_with_uri(const Track::UriType& uri, bool make_current);
-    void add_track_with_uri_at(const Track::UriType& uri, Iterator position, bool make_current);
-    void remove_track_at(Iterator at);
+    virtual const Signal<void>& on_track_list_replaced() const = 0;
+    virtual const Signal<std::shared_ptr<Track>>& on_track_added() const = 0;
+    virtual const Signal<std::shared_ptr<Track>>& on_track_removed() const = 0;
+    virtual const Signal<std::shared_ptr<Track>>& on_track_changed() const = 0;
     
-    void for_each(const std::function<void(const Track&)> functor) const;
-
-    void go_to(const Track& track);
-
-    // Connection on_track_list_replaced(const std::function<void()>& slot);
-    const Signal<Track>& on_track_added() const;
-    const Signal<Track>& on_track_removed() const;
-    const Signal<Track>& on_track_changed() const;
-    
-  private:
-    struct Private;
-    std::unique_ptr<Private> d;
+protected:
+    TrackList();
 };
 }
 }

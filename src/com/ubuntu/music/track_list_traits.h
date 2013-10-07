@@ -16,41 +16,34 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#ifndef MPRIS_SERVICE_H_
-#define MPRIS_SERVICE_H_
+#ifndef TRACK_LIST_TRAITS_H_
+#define TRACK_LIST_TRAITS_H_
 
-#include "macros.h"
+#include <org/freedesktop/dbus/traits/service.h>
 
-#include <chrono>
-#include <string>
-
-namespace mpris
+namespace org
 {
-struct Service
+namespace freedesktop
 {
-    static const std::string& name()
+namespace dbus
+{
+namespace traits
+{
+template<>
+struct Service<com::ubuntu::music::TrackList>
+{
+    static const std::string& interface_name()
     {
-        static const std::string s{"com.ubuntu.music.Service"};
+        static const std::string s
+        {
+            "com.ubuntu.music.Service.Player.TrackList"
+        };
         return s;
     }
-
-    struct Errors
-    {
-        struct CreatingSession
-        {
-            static const std::string& name()
-            {
-                static const std::string s
-                {
-                    "com.ubuntu.music.Service.Error.CreatingSession"
-                };
-                return s;
-            }
-        };
-    };
-
-    METHOD(CreateSession, Service, std::chrono::seconds(1))
 };
 }
+}
+}
+}
 
-#endif // MPRIS_SERVICE_H_
+#endif // TRACK_LIST_TRAITS_H_

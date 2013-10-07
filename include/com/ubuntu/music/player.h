@@ -34,7 +34,7 @@ class Service;
 template<typename T> class Signal;
 class TrackList;
 
-class Player
+class Player : public std::enable_shared_from_this<Player>
 {
   public:
     typedef double PlaybackRate;

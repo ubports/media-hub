@@ -21,6 +21,7 @@
 #include <com/ubuntu/music/connection.h>
 
 #include <functional>
+#include <iostream>
 #include <list>
 #include <mutex>
 #include <set>
@@ -35,6 +36,12 @@ template<typename T>
 class Signal
 {
   public:
+    static unsigned int& tag()
+    {
+        static unsigned int counter = 0;
+        return counter;
+    }
+
     typedef std::function<void(const T&)> Slot;
 
     inline Signal() : d(new Private())
@@ -77,6 +84,59 @@ class Signal
             slots.erase(it);
         }
         
+        std::mutex guard;
+        std::list<Slot> slots;
+        unsigned int counter = Signal<T>::tag()++;
+    };
+    std::shared_ptr<Private> d;
+};
+
+template<>
+class Signal<void>
+{
+  public:
+    typedef std::function<void()> Slot;
+
+    inline Signal() : d(new Private())
+    {
+    }
+
+    Signal(const Signal&) = delete;
+    inline ~Signal() = default;
+
+    Signal& operator=(const Signal&) = delete;
+    bool operator==(const Signal&) const = delete;
+
+    inline Connection connect(const Slot& slot) const
+    {
+        std::lock_guard<std::mutex> lg(d->guard);
+        auto result = d->slots.insert(d->slots.end(), slot);
+
+        return Connection(
+            std::bind(
+                &Private::disconnect_slot_for_iterator,
+                d,
+                result));
+    }
+
+    void operator()()
+    {
+        std::lock_guard<std::mutex> lg(d->guard);
+        for(auto slot : d->slots)
+        {
+            slot();
+        }
+    }
+
+  private:
+    struct Private
+    {
+        void disconnect_slot_for_iterator(typename std::list<Slot>::iterator it)
+        {
+            std::lock_guard<std::mutex> lg(guard);
+            slots.erase(it);
+        }
+
         std::mutex guard;
         std::list<Slot> slots;
     };

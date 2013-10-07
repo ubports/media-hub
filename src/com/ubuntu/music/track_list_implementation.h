@@ -16,41 +16,35 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#ifndef MPRIS_SERVICE_H_
-#define MPRIS_SERVICE_H_
+#ifndef COM_UBUNTU_MUSIC_TRACK_LIST_IMPLEMENTATION_H_
+#define COM_UBUNTU_MUSIC_TRACK_LIST_IMPLEMENTATION_H_
 
-#include "macros.h"
+#include "track_list_skeleton.h"
 
-#include <chrono>
-#include <string>
-
-namespace mpris
+namespace com
 {
-struct Service
+namespace ubuntu
 {
-    static const std::string& name()
-    {
-        static const std::string s{"com.ubuntu.music.Service"};
-        return s;
-    }
+namespace music
+{
+class TrackListImplementation : public TrackListSkeleton
+{
+public:
+    TrackListImplementation(
+            const org::freedesktop::dbus::types::ObjectPath& op);
+    ~TrackListImplementation();
 
-    struct Errors
-    {
-        struct CreatingSession
-        {
-            static const std::string& name()
-            {
-                static const std::string s
-                {
-                    "com.ubuntu.music.Service.Error.CreatingSession"
-                };
-                return s;
-            }
-        };
-    };
+    void add_track_with_uri_at(const Track::UriType& uri, const Track::Id& position, bool make_current);
+    void remove_track(const Track::Id& id);
 
-    METHOD(CreateSession, Service, std::chrono::seconds(1))
+    void go_to(const Track::Id& track);
+
+private:
+    struct Private;
+    std::unique_ptr<Private> d;
 };
 }
+}
+}
 
-#endif // MPRIS_SERVICE_H_
+#endif // COM_UBUNTU_MUSIC_TRACK_LIST_IMPLEMENTATION_H_

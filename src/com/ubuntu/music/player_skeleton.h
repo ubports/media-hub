@@ -1,6 +1,4 @@
-/*
- * Copyright © 2013 Canonical Ltd.
- *
+/**
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
  * as published by the Free Software Foundation.
@@ -38,7 +36,7 @@ namespace music
 {
 class Service;
 
-class PlayerSkeleton : public org::freedesktop::dbus::Skeleton<Player>
+class PlayerSkeleton : public org::freedesktop::dbus::Skeleton<com::ubuntu::music::Player>
 {
   public:
     ~PlayerSkeleton();
@@ -67,6 +65,7 @@ class PlayerSkeleton : public org::freedesktop::dbus::Skeleton<Player>
   protected:
     PlayerSkeleton(const org::freedesktop::dbus::types::ObjectPath& session_path);
 
+    virtual Property<PlaybackStatus>& playback_status();
     virtual Property<bool>& can_play();
     virtual Property<bool>& can_pause();
     virtual Property<bool>& can_seek();

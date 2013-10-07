@@ -19,15 +19,22 @@
 #include "service_skeleton.h"
 
 #include "mpris/service.h"
+#include "player_configuration.h"
 #include "the_session_bus.h"
 
 #include <org/freedesktop/dbus/message.h>
 #include <org/freedesktop/dbus/types/object_path.h>
 
+#include <map>
 #include <sstream>
 
 namespace dbus = org::freedesktop::dbus;
 namespace music = com::ubuntu::music;
+
+namespace
+{
+std::map<dbus::types::ObjectPath, std::shared_ptr<music::Player>> session_store;
+}
 
 struct music::ServiceSkeleton::Private
 {
@@ -51,11 +58,31 @@ struct music::ServiceSkeleton::Private
         ss << "/com/ubuntu/music/Service/sessions/" << session_counter++;
 
         dbus::types::ObjectPath op{ss.str()};
+        music::Player::Configuration config{op};
 
-        auto reply = dbus::Message::make_method_return(msg);
-        reply->writer() << op;
+        try
+        {
+            auto session = impl->create_session(config);
 
-        impl->access_bus()->send(reply->get());
+            bool inserted = false;
+            std::tie(std::ignore, inserted)
+                    = session_store.insert(std::make_pair(op, session));
+
+            if (!inserted)
+                throw std::runtime_error("Problem persisting session in session store.");
+
+            auto reply = dbus::Message::make_method_return(msg);
+            reply->writer() << op;
+
+            impl->access_bus()->send(reply->get());
+        } catch(const std::runtime_error& e)
+        {
+            auto reply = dbus::Message::make_error(
+                        msg,
+                        mpris::Service::Errors::CreatingSession::name(),
+                        e.what());
+            impl->access_bus()->send(reply->get());
+        }
     }
 
     music::ServiceSkeleton* impl;

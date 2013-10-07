@@ -36,7 +36,7 @@ struct Service<com::ubuntu::music::Player>
     {
         static const std::string s
         {
-            "com.ubuntu.music.Player"
+            "com.ubuntu.music.Service.Player"
         };
         return s;
     }

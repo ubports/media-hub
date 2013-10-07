@@ -19,34 +19,18 @@
 #include <com/ubuntu/music/track.h>
 #include <com/ubuntu/music/property.h>
 
+#include "track_id.h"
+
 #include <map>
 
 namespace music = com::ubuntu::music;
 
 struct music::Track::Private
 {
-    Private(const MetaData& meta_data,
-            const Track::UriType& uri) : meta_data(meta_data),
-                                         uri(uri)
-    {
-    }
-
-    Private(const Private& rhs) : meta_data(rhs.meta_data),
-                                  uri(rhs.uri)
-    {
-    }
-
-    bool operator==(const Private& rhs) const
-    {
-        return meta_data == rhs.meta_data &&
-               uri == rhs.uri;
-    }
-
-    Property<MetaData> meta_data;
-    Track::UriType uri;
+    music::Track::Id id;
 };
 
-music::Track::Track(const music::Track& rhs) : d(new Private(*rhs.d))
+music::Track::Track(const music::Track::Id& id) : d(new Private{id})
 {
 }
 
@@ -54,27 +38,7 @@ music::Track::~Track()
 {
 }
 
-music::Track& music::Track::operator=(const music::Track& rhs)
+const music::Track::Id& music::Track::id() const
 {
-    *d = *rhs.d;
-    return *this;
-}
-
-bool music::Track::operator==(const music::Track& rhs) const
-{
-    return *d == *rhs.d;
-}
-
-const music::Track::UriType& music::Track::uri() const
-{
-    return d->uri;
-}
-
-const music::Property<music::Track::MetaData>& music::Track::meta_data() const
-{
-    return d->meta_data;
-}
-    
-music::Track::Track(const music::Track::UriType& uri, const music::Track::MetaData& meta_data) : d(new Private(meta_data, uri))
-{
+    return d->id;
 }

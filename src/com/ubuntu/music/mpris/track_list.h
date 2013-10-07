@@ -35,23 +35,52 @@ namespace mpris
 {
 struct TrackList
 {
-    METHOD(GetTracksMetadata, TrackList, SECONDS(1));
-    METHOD(AddTrack, TrackList, SECONDS(1));
-    METHOD(RemoveTrack, TrackList, SECONDS(1));
-    METHOD(GoTo, TrackList, SECONDS(1));
+    static const std::string& name()
+    {
+        static const std::string s{"com.ubuntu.music.Service.Player.TrackList"};
+        return s;
+    }
+
+    METHOD(GetTracksMetadata, TrackList, SECONDS(1))
+    METHOD(AddTrack, TrackList, SECONDS(1))
+    METHOD(RemoveTrack, TrackList, SECONDS(1))
+    METHOD(GoTo, TrackList, SECONDS(1))
 
     struct Signals
     {
-        SIGNAL(TrackListReplaced, TrackList, std::tuple<std::vector<dbus::types::ObjectPath>, dbus::types::ObjectPath>);
-        SIGNAL(TrackAdded, TrackList, std::tuple<std::map<std::string, dbus::types::Variant<types::Any>>, dbus::types::ObjectPath>);
-        SIGNAL(TrackRemoved, TrackList, dbus::types::ObjectPath);
-        SIGNAL(TrackMetadataChanged, TrackList, std::tuple<std::map<std::string, dbus::types::Variant<dbus::types::Any>>, dbus::types::ObjectPath>);
+        SIGNAL
+        (
+            TrackListReplaced,
+            TrackList,
+            BOOST_IDENTITY_TYPE((std::tuple<std::vector<dbus::types::ObjectPath>, dbus::types::ObjectPath>))
+        )
+
+        SIGNAL
+        (
+            TrackAdded,
+            TrackList,
+            BOOST_IDENTITY_TYPE((std::tuple<std::map<std::string, dbus::types::Variant<dbus::types::Any>>, dbus::types::ObjectPath>))
+        )
+
+        SIGNAL
+        (
+            TrackRemoved,
+            TrackList,
+            dbus::types::ObjectPath
+        )
+
+        SIGNAL
+        (
+            TrackMetadataChanged,
+            TrackList,
+            BOOST_IDENTITY_TYPE((std::tuple<std::map<std::string, dbus::types::Variant<dbus::types::Any>>, dbus::types::ObjectPath>))
+        )
     };
 
     struct Properties
     {
-        READABLE_PROPERTY(Tracks, TrackList, std::vector<dbus::types::ObjectPath>);
-        READABLE_PROPERTY(CanEditTracks, TrackList, bool);
+        READABLE_PROPERTY(Tracks, TrackList, std::vector<dbus::types::ObjectPath>)
+        READABLE_PROPERTY(CanEditTracks, TrackList, bool)
     };
 };
 }

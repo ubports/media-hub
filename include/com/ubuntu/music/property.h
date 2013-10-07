@@ -20,6 +20,8 @@
 
 #include <com/ubuntu/music/signal.h>
 
+#include <iostream>
+
 namespace com
 {
 namespace ubuntu
@@ -57,27 +59,38 @@ class Property
     {
     }
 
-    inline ~Property() = default;
+    inline virtual ~Property() = default;
+
+    inline Property& operator=(const T& rhs)
+    {
+        set(rhs);
+        return *this;
+    }
 
     inline Property& operator=(const Property<T>& rhs)
     {
-        value = rhs.value;
+        set(rhs.value);
         return *this;
     }
 
     inline operator const T&() const
     {
-        return value;
+        return get();
+    }
+
+    inline const T* operator->() const
+    {
+        return &get();
     }
 
     friend inline bool operator==(const Property<T>& lhs, const T& rhs)
     {
-        return lhs.value == rhs;
+        return lhs.get() == rhs.get();
     }
 
     friend inline bool operator==(const Property<T>& lhs, const Property<T>& rhs)
     {
-        return lhs.value == rhs.value;
+        return lhs.get() == rhs.get();
     }
 
     inline virtual void set(const T& new_value)
@@ -99,12 +112,18 @@ class Property
         return signal_changed;
     }
 
-  protected:
-    inline Signal<T>& changed()
+    inline virtual bool update(const std::function<bool(T& t)>& update_functor)
     {
-        return signal_changed;
+        if (update_functor(mutable_get()))
+        {
+            set(value); signal_changed(value);
+            return true;
+        }
+
+        return false;
     }
-    
+
+  protected:    
     inline T& mutable_get() const
     {
         return value;
@@ -118,4 +137,4 @@ class Property
 }
 }
 
-#endif // COM_UBUNTU_MUSIC_SIGNAL_H_
+#endif // COM_UBUNTU_MUSIC_PROPERTY_H_

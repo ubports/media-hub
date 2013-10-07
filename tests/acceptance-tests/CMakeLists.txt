@@ -1,10 +1,13 @@
 include_directories(
+    .
     ${CMAKE_SOURCE_DIR}/src
 )
 
 add_executable(
-  service_acceptance_test
-  service.cpp)
+    service_acceptance_test
+    service.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/test_data.cpp
+  )
 
 target_link_libraries(
     service_acceptance_test

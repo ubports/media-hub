@@ -33,11 +33,7 @@ class Connection
     typedef std::function<void()> Disconnector;
 
     Connection(const Disconnector& disconnector);
-    Connection(const Connection& rhs);
     ~Connection();
-
-    Connection& operator=(const Connection& rhs);
-    bool operator==(const Connection& rhs) const;
 
     bool is_connected() const;
     void disconnect();

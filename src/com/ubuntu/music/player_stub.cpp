@@ -21,7 +21,10 @@
 #include <com/ubuntu/music/track_list.h>
 
 #include "player_stub.h"
+#include "player_traits.h"
+#include "property_stub.h"
 #include "the_session_bus.h"
+#include "track_list_stub.h"
 
 #include "mpris/player.h"
 
@@ -32,160 +35,30 @@
 namespace dbus = org::freedesktop::dbus;
 namespace music = com::ubuntu::music;
 
-namespace
-{
-template<typename T, typename DBusProperty>
-struct PropertyStub : public music::Property<T>
-{
-    typedef music::Property<T> super;
-
-    PropertyStub(const std::shared_ptr<dbus::Property<DBusProperty>>& dbus_property)
-            : super(),
-              dbus_property(dbus_property)
-    {
-    }
-
-    const T& get() const
-    {
-        super::mutable_get() = dbus_property->value();
-        return super::get();
-    }
-
-    void set(const T& value)
-    {
-        dbus_property->value(value);
-        super::set(value);
-    }
-
-    std::shared_ptr<dbus::Property<DBusProperty>> dbus_property;
-};
-
-template<>
-struct PropertyStub<music::Player::PlaybackStatus, mpris::Player::Properties::PlaybackStatus> : public music::Property<music::Player::PlaybackStatus>
-{
-    typedef music::Property<music::Player::PlaybackStatus> super;
-
-    static const std::map<music::Player::PlaybackStatus, std::string>& playback_status_lut()
-    {
-        static const std::map<music::Player::PlaybackStatus, std::string> lut =
-        {
-            {music::Player::PlaybackStatus::playing, "playing"},
-            {music::Player::PlaybackStatus::paused, "paused"},
-            {music::Player::PlaybackStatus::stopped, "stopped"}
-        };
-
-        return lut;
-    }
-
-    static const std::map<std::string, music::Player::PlaybackStatus>& reverse_playback_status_lut()
-    {
-        static const std::map<std::string, music::Player::PlaybackStatus> lut =
-        {
-            {"playing", music::Player::PlaybackStatus::playing},
-            {"paused", music::Player::PlaybackStatus::paused},
-            {"stopped", music::Player::PlaybackStatus::stopped}
-        };
-
-        return lut;
-    }
-
-    PropertyStub(const std::shared_ptr<dbus::Property<mpris::Player::Properties::PlaybackStatus>>& dbus_property)
-            : super(),
-              dbus_property(dbus_property)
-    {
-    }
-
-    const music::Player::PlaybackStatus& get() const
-    {
-        auto value = dbus_property->value();
-        super::mutable_get() = reverse_playback_status_lut().at(value);
-        return super::get();
-    }
-
-    void set(const music::Player::PlaybackStatus& value)
-    {
-        dbus_property->value(playback_status_lut().at(value));
-        super::set(value);
-    }
-
-    std::shared_ptr<dbus::Property<mpris::Player::Properties::PlaybackStatus>> dbus_property;
-};
-
-template<>
-struct PropertyStub<music::Player::LoopStatus, mpris::Player::Properties::LoopStatus> : public music::Property<music::Player::LoopStatus>
-{
-    typedef music::Property<music::Player::LoopStatus> super;
-
-    static const std::map<music::Player::LoopStatus, std::string>& loop_status_lut()
-    {
-        static const std::map<music::Player::LoopStatus, std::string> lut =
-        {
-            {music::Player::LoopStatus::none, "none"},
-            {music::Player::LoopStatus::track, "track"},
-            {music::Player::LoopStatus::playlist, "playlist"}
-        };
-
-        return lut;
-    }
-
-    static const std::map<std::string, music::Player::LoopStatus>& reverse_loop_status_lut()
-    {
-        static const std::map<std::string, music::Player::LoopStatus> lut =
-        {
-            {"none", music::Player::LoopStatus::none},
-            {"track", music::Player::LoopStatus::track},
-            {"playlist", music::Player::LoopStatus::playlist}
-        };
-
-        return lut;
-    }
-
-    PropertyStub(const std::shared_ptr<dbus::Property<mpris::Player::Properties::LoopStatus>>& dbus_property)
-            : super(),
-              dbus_property(dbus_property)
-    {
-    }
-
-    const music::Player::LoopStatus& get() const
-    {
-        auto value = dbus_property->value();
-        super::mutable_get() = reverse_loop_status_lut().at(value);
-        return super::get();
-    }
-
-    void set(const music::Player::LoopStatus& value)
-    {
-        dbus_property->value(loop_status_lut().at(value));
-        super::set(value);
-    }
-
-    std::shared_ptr<dbus::Property<mpris::Player::Properties::LoopStatus>> dbus_property;
-};
-}
-
 struct music::PlayerStub::Private
 {
     Private(const std::shared_ptr<Service>& parent,
             const std::shared_ptr<dbus::Service>& remote,
             const dbus::types::ObjectPath& path
             ) : parent(parent),
-                bus(the_session_bus()),
-                object(remote->object_for_path(path)),
-    properties{
-        object->get_property<mpris::Player::Properties::CanPlay>(),
-                object->get_property<mpris::Player::Properties::CanPause>(),
-                object->get_property<mpris::Player::Properties::CanSeek>(),
-                object->get_property<mpris::Player::Properties::CanControl>(),
-                object->get_property<mpris::Player::Properties::CanGoNext>(),
-                object->get_property<mpris::Player::Properties::CanGoPrevious>(),
-                object->get_property<mpris::Player::Properties::PlaybackStatus>(),
-                object->get_property<mpris::Player::Properties::LoopStatus>(),
-                object->get_property<mpris::Player::Properties::PlaybackRate>(),
-                object->get_property<mpris::Player::Properties::Shuffle>(),
-                object->get_property<mpris::Player::Properties::MetaData>(),
-                object->get_property<mpris::Player::Properties::Volume>(),
-                object->get_property<mpris::Player::Properties::MinimumRate>(),
-                object->get_property<mpris::Player::Properties::MaximumRate>()
+                path(path),
+                object(remote->object_for_path(path)),                
+                properties
+                {
+                    object->get_property<mpris::Player::Properties::CanPlay>(),
+                    object->get_property<mpris::Player::Properties::CanPause>(),
+                    object->get_property<mpris::Player::Properties::CanSeek>(),
+                    object->get_property<mpris::Player::Properties::CanControl>(),
+                    object->get_property<mpris::Player::Properties::CanGoNext>(),
+                    object->get_property<mpris::Player::Properties::CanGoPrevious>(),
+                    object->get_property<mpris::Player::Properties::PlaybackStatus>(),
+                    object->get_property<mpris::Player::Properties::LoopStatus>(),
+                    object->get_property<mpris::Player::Properties::PlaybackRate>(),
+                    object->get_property<mpris::Player::Properties::Shuffle>(),
+                    object->get_property<mpris::Player::Properties::MetaData>(),
+                    object->get_property<mpris::Player::Properties::Volume>(),
+                    object->get_property<mpris::Player::Properties::MinimumRate>(),
+                    object->get_property<mpris::Player::Properties::MaximumRate>()
                 }
     {
     }
@@ -194,6 +67,7 @@ struct music::PlayerStub::Private
     std::shared_ptr<TrackList> track_list;
 
     dbus::Bus::Ptr bus;
+    dbus::types::ObjectPath path;
     dbus::Object::Ptr object;
     
     struct
@@ -230,6 +104,12 @@ music::PlayerStub::~PlayerStub()
 
 std::shared_ptr<music::TrackList> music::PlayerStub::track_list()
 {
+    if (!d->track_list)
+    {
+        d->track_list = std::make_shared<music::TrackListStub>(
+                    shared_from_this(),
+                    dbus::types::ObjectPath(d->path.as_string() + "/TrackList"));
+    }
     return d->track_list;
 }
 
