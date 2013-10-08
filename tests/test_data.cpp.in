@@ -23,7 +23,6 @@
 bool test::copy_test_mp3_file_to(const std::string& dest)
 {
     static const std::string file{"@CMAKE_CURRENT_SOURCE_DIR@/test.mp3"};
-
     try
     {
         boost::filesystem::copy_file(

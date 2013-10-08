@@ -19,6 +19,7 @@
 #ifndef COM_UBUNTU_MUSIC_TRACK_LIST_IMPLEMENTATION_H_
 #define COM_UBUNTU_MUSIC_TRACK_LIST_IMPLEMENTATION_H_
 
+#include "engine.h"
 #include "track_list_skeleton.h"
 
 namespace com
@@ -31,8 +32,11 @@ class TrackListImplementation : public TrackListSkeleton
 {
 public:
     TrackListImplementation(
-            const org::freedesktop::dbus::types::ObjectPath& op);
+            const org::freedesktop::dbus::types::ObjectPath& op,
+            const std::shared_ptr<Engine::MetaDataExtractor>& extractor);
     ~TrackListImplementation();
+
+    Track::MetaData query_meta_data_for_track(const Track::Id& id);
 
     void add_track_with_uri_at(const Track::UriType& uri, const Track::Id& position, bool make_current);
     void remove_track(const Track::Id& id);

@@ -79,7 +79,7 @@ struct TrackList
 
     struct Properties
     {
-        READABLE_PROPERTY(Tracks, TrackList, std::vector<dbus::types::ObjectPath>)
+        READABLE_PROPERTY(Tracks, TrackList, std::vector<std::string>)
         READABLE_PROPERTY(CanEditTracks, TrackList, bool)
     };
 };

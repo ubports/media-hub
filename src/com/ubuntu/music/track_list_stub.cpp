@@ -24,7 +24,6 @@
 #include <com/ubuntu/music/track_list.h>
 
 #include "property_stub.h"
-#include "track_id.h"
 #include "track_list_traits.h"
 #include "the_session_bus.h"
 
@@ -62,9 +61,9 @@ struct music::TrackListStub::Private
     PropertyStub<TrackList::Container, mpris::TrackList::Properties::Tracks> tracks;
 
     Signal<void> on_track_list_replaced;
-    Signal<std::shared_ptr<Track>> on_track_added;
-    Signal<std::shared_ptr<Track>> on_track_removed;
-    Signal<std::shared_ptr<Track>> on_track_changed;
+    Signal<Track::Id> on_track_added;
+    Signal<Track::Id> on_track_removed;
+    Signal<Track::Id> on_track_changed;
 };
 
 music::TrackListStub::TrackListStub(
@@ -89,6 +88,24 @@ const music::Property<music::TrackList::Container>& music::TrackListStub::tracks
     return d->tracks;
 }
 
+music::Track::MetaData music::TrackListStub::query_meta_data_for_track(const music::Track::Id& id)
+{
+    auto op
+            = d->object->invoke_method_synchronously<
+                mpris::TrackList::GetTracksMetadata,
+                std::map<std::string, std::string>>(id);
+
+    if (op.is_error())
+        throw std::runtime_error("Problem querying meta data for track: " + op.error());
+
+    music::Track::MetaData md;
+    for(auto pair : op.value())
+    {
+        md.set(pair.first, pair.second);
+    }
+    return md;
+}
+
 void music::TrackListStub::add_track_with_uri_at(
         const music::Track::UriType& uri,
         const music::Track::Id& id,
@@ -96,7 +113,7 @@ void music::TrackListStub::add_track_with_uri_at(
 {
     auto op = d->object->invoke_method_synchronously<mpris::TrackList::AddTrack, void>(
                 uri,
-                id.object_path,
+                id,
                 make_current);
 
     if (op.is_error())
@@ -106,7 +123,7 @@ void music::TrackListStub::add_track_with_uri_at(
 void music::TrackListStub::remove_track(const music::Track::Id& track)
 {
     auto op = d->object->invoke_method_synchronously<mpris::TrackList::RemoveTrack, void>(
-                track.object_path);
+                track);
 
     if (op.is_error())
         throw std::runtime_error("Problem removing track: " + op.error());
@@ -115,7 +132,7 @@ void music::TrackListStub::remove_track(const music::Track::Id& track)
 void music::TrackListStub::go_to(const music::Track::Id& track)
 {
     auto op = d->object->invoke_method_synchronously<mpris::TrackList::GoTo, void>(
-                track.object_path);
+                track);
 
     if (op.is_error())
         throw std::runtime_error("Problem adding track: " + op.error());
@@ -126,17 +143,17 @@ const music::Signal<void>& music::TrackListStub::on_track_list_replaced() const
     return d->on_track_list_replaced;
 }
 
-const music::Signal<std::shared_ptr<music::Track>>& music::TrackListStub::on_track_added() const
+const music::Signal<music::Track::Id>& music::TrackListStub::on_track_added() const
 {
     return d->on_track_added;
 }
 
-const music::Signal<std::shared_ptr<music::Track>>& music::TrackListStub::on_track_removed() const
+const music::Signal<music::Track::Id>& music::TrackListStub::on_track_removed() const
 {
     return d->on_track_removed;
 }
 
-const music::Signal<std::shared_ptr<music::Track>>& music::TrackListStub::on_track_changed() const
+const music::Signal<music::Track::Id>& music::TrackListStub::on_track_changed() const
 {
     return d->on_track_changed;
 }

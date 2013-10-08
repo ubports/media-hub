@@ -29,8 +29,6 @@
 #include "mpris/player.h"
 #include "mpris/track_list.h"
 
-#include "track_id.h"
-
 namespace com
 {
 namespace ubuntu
@@ -73,6 +71,8 @@ struct PropertyStub<music::Player::PlaybackStatus, mpris::Player::Properties::Pl
     {
         static const std::map<Player::PlaybackStatus, std::string> lut =
         {
+            {Player::PlaybackStatus::null, "null"},
+            {Player::PlaybackStatus::ready, "ready"},
             {Player::PlaybackStatus::playing, "playing"},
             {Player::PlaybackStatus::paused, "paused"},
             {Player::PlaybackStatus::stopped, "stopped"}
@@ -85,6 +85,8 @@ struct PropertyStub<music::Player::PlaybackStatus, mpris::Player::Properties::Pl
     {
         static const std::map<std::string, Player::PlaybackStatus> lut =
         {
+            {"null", Player::PlaybackStatus::null},
+            {"ready", Player::PlaybackStatus::ready},
             {"playing", Player::PlaybackStatus::playing},
             {"paused", Player::PlaybackStatus::paused},
             {"stopped", Player::PlaybackStatus::stopped}
@@ -189,7 +191,7 @@ struct PropertyStub<TrackList::Container, mpris::TrackList::Properties::Tracks>
         for (auto path : remote_value)
         {
             super::mutable_get().push_back(
-                        std::make_shared<music::Track>(music::Track::Id{path}));
+                        music::Track::Id{path});
         }
         return super::get();
     }
@@ -200,7 +202,7 @@ struct PropertyStub<TrackList::Container, mpris::TrackList::Properties::Tracks>
 
         for (auto track : value)
         {
-            dbus_tracks.push_back(track->id().object_path);
+            dbus_tracks.push_back(track);
         }
 
         dbus_property->value(dbus_tracks);

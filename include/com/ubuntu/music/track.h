@@ -24,6 +24,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -39,8 +40,66 @@ class Track
 {
 public:
     typedef std::string UriType;
+    typedef std::string Id;
 
-    struct Id;
+    class MetaData
+    {
+    public:
+        bool operator==(const MetaData& rhs) const
+        {
+            return map == rhs.map;
+        }
+
+        bool operator!=(const MetaData& rhs) const
+        {
+            return map != rhs.map;
+        }
+
+        template<typename Tag>
+        std::size_t count() const
+        {
+            return count(Tag::name());
+        }
+
+        template<typename Tag>
+        void set(const typename Tag::ValueType& value)
+        {
+            std::stringstream ss; ss << value;
+            set(Tag::name(), ss.str());
+        }
+
+        template<typename Tag>
+        typename Tag::ValueType get() const
+        {
+            std::stringstream ss(get(Tag::name()));
+            typename Tag::ValueType value; ss >> value;
+
+            return std::move(value);
+        }
+
+        std::size_t count(const std::string& key) const
+        {
+            return map.count(key);
+        }
+
+        void set(const std::string& key, const std::string& value)
+        {
+            map[key] = value;
+        }
+
+        const std::string& get(const std::string& key) const
+        {
+            return map.at(key);
+        }
+
+        const std::map<std::string, std::string>& operator*() const
+        {
+            return map;
+        }
+
+    private:
+        std::map<std::string, std::string> map;
+    };
 
     Track(const Id& id);
     Track(const Track&) = delete;
@@ -50,8 +109,6 @@ public:
     bool operator==(const Track&) const;
 
     virtual const Id& id() const;
-
-    typedef std::map<std::string, std::string> MetaData;
     /*
     class MetaData
     {

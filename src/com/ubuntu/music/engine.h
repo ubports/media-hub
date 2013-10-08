@@ -70,14 +70,28 @@ public:
         static double min();
         static double max();
 
-        explicit Volume(double v = 1.);
+        explicit Volume(double v = max());
 
         bool operator!=(const Volume& rhs) const;
         bool operator==(const Volume& rhs) const;
 
-
         double value;
     };
+
+    class MetaDataExtractor
+    {
+    public:
+        virtual Track::MetaData meta_data_for_track_with_uri(const Track::UriType& uri) = 0;
+
+    protected:
+        MetaDataExtractor() = default;
+        MetaDataExtractor(const MetaDataExtractor&) = delete;
+        virtual ~MetaDataExtractor() = default;
+
+        MetaDataExtractor& operator=(const MetaDataExtractor&) = delete;
+    };
+
+    virtual const std::shared_ptr<MetaDataExtractor>& meta_data_extractor() const = 0;
 
     virtual const Property<State>& state() const = 0;
 

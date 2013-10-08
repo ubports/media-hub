@@ -37,17 +37,25 @@ public:
             const org::freedesktop::dbus::types::ObjectPath& op);
     ~TrackListSkeleton();
 
+    bool has_next() const;
+    const Track::Id& next();
+
     const Property<bool>& can_edit_tracks() const;
     const Property<Container>& tracks() const;
 
     const Signal<void>& on_track_list_replaced() const;
-    const Signal<std::shared_ptr<Track>>& on_track_added() const;
-    const Signal<std::shared_ptr<Track>>& on_track_removed() const;
-    const Signal<std::shared_ptr<Track>>& on_track_changed() const;
+    const Signal<Track::Id>& on_track_added() const;
+    const Signal<Track::Id>& on_track_removed() const;
+    const Signal<Track::Id>& on_track_changed() const;
 
-protected:
+protected:    
     Property<bool>& can_edit_tracks();
     Property<Container>& tracks();
+
+    Signal<void>& on_track_list_replaced();
+    Signal<Track::Id>& on_track_added();
+    Signal<Track::Id>& on_track_removed();
+    Signal<Track::Id>& on_track_changed();
 
 private:
     struct Private;

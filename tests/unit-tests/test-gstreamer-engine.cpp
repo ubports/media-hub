@@ -57,17 +57,17 @@ TEST(GStreamerEngine, setting_uri_and_starting_playback_works)
                 [](const std::tuple<music::Track::UriType, music::Track::MetaData>& md)
                 {
                     if (0 < std::get<1>(md).count(music::Engine::Xesam::album()))
-                        EXPECT_EQ("Test", std::get<1>(md).at(music::Engine::Xesam::album()));
+                        EXPECT_EQ("Test", std::get<1>(md).get(music::Engine::Xesam::album()));
                     if (0 < std::get<1>(md).count(music::Engine::Xesam::album_artist()))
-                        EXPECT_EQ("Test", std::get<1>(md).at(music::Engine::Xesam::album_artist()));
+                        EXPECT_EQ("Test", std::get<1>(md).get(music::Engine::Xesam::album_artist()));
                     if (0 < std::get<1>(md).count(music::Engine::Xesam::artist()))
-                        EXPECT_EQ("Test", std::get<1>(md).at(music::Engine::Xesam::artist()));
+                        EXPECT_EQ("Test", std::get<1>(md).get(music::Engine::Xesam::artist()));
                     if (0 < std::get<1>(md).count(music::Engine::Xesam::disc_number()))
-                        EXPECT_EQ("42", std::get<1>(md).at(music::Engine::Xesam::disc_number()));
+                        EXPECT_EQ("42", std::get<1>(md).get(music::Engine::Xesam::disc_number()));
                     if (0 < std::get<1>(md).count(music::Engine::Xesam::genre()))
-                        EXPECT_EQ("Test", std::get<1>(md).at(music::Engine::Xesam::genre()));
+                        EXPECT_EQ("Test", std::get<1>(md).get(music::Engine::Xesam::genre()));
                     if (0 < std::get<1>(md).count(music::Engine::Xesam::track_number()))
-                        EXPECT_EQ("42", std::get<1>(md).at(music::Engine::Xesam::track_number()));
+                        EXPECT_EQ("42", std::get<1>(md).get(music::Engine::Xesam::track_number()));
                 });
 
     engine.state().changed().connect(
@@ -144,15 +144,68 @@ TEST(GStreamerEngine, adjusting_volume_works)
                 com::ubuntu::music::Engine::State::ready);
 
     gstreamer::Engine engine;
-
+    engine.state().changed().connect(
+                std::bind(
+                    &test::WaitableStateTransition<com::ubuntu::music::Engine::State>::trigger,
+                    std::ref(wst),
+                    std::placeholders::_1));
     EXPECT_TRUE(engine.open_resource_for_uri(test_file_uri));
     EXPECT_TRUE(engine.play());
     EXPECT_TRUE(wst.wait_for_state_for(
                     com::ubuntu::music::Engine::State::playing,
                     std::chrono::milliseconds{4000}));
 
-    music::Engine::Volume half{0.5};
-    engine.volume().set(music::Engine::Volume{0.5});
-    EXPECT_EQ(half, engine.volume());
+    std::thread t([&]()
+    {
+        for(unsigned i = 0; i < 100; i++)
+        {
+            for (double v = 0.; v < 1.1; v += 0.1)
+            {
+                try
+                {
+                    music::Engine::Volume volume{v};
+                    engine.volume() = volume;
+                    EXPECT_EQ(volume, engine.volume());
+                } catch(...)
+                {
+                }
+            }
+        }
+    });
+
+    std::this_thread::sleep_for(std::chrono::seconds{5});
+
+    if (t.joinable())
+        t.join();
+}
+
+TEST(GStreamerEngine, provides_non_null_meta_data_extractor)
+{
+    gstreamer::Engine engine;
+    EXPECT_NE(nullptr, engine.meta_data_extractor());
+}
+
+TEST(GStreamerEngine, meta_data_extractor_provides_correct_tags)
+{
+    const std::string test_file{"/tmp/test.ogg"};
+    const std::string test_file_uri{"file:///tmp/test.ogg"};
+    std::remove(test_file.c_str());
+    ASSERT_TRUE(test::copy_test_ogg_file_to(test_file));
+
+    gstreamer::Engine engine;
+    auto md = engine.meta_data_extractor()->meta_data_for_track_with_uri(test_file_uri);
+
+    if (0 < md.count(music::Engine::Xesam::album()))
+        EXPECT_EQ("Test", md.get(music::Engine::Xesam::album()));
+    if (0 < md.count(music::Engine::Xesam::album_artist()))
+        EXPECT_EQ("Test", md.get(music::Engine::Xesam::album_artist()));
+    if (0 < md.count(music::Engine::Xesam::artist()))
+        EXPECT_EQ("Test", md.get(music::Engine::Xesam::artist()));
+    if (0 < md.count(music::Engine::Xesam::disc_number()))
+        EXPECT_EQ("42", md.get(music::Engine::Xesam::disc_number()));
+    if (0 < md.count(music::Engine::Xesam::genre()))
+        EXPECT_EQ("Test", md.get(music::Engine::Xesam::genre()));
+    if (0 < md.count(music::Engine::Xesam::track_number()))
+        EXPECT_EQ("42", md.get(music::Engine::Xesam::track_number()));
 }
 

@@ -51,6 +51,8 @@ class Player : public std::enable_shared_from_this<Player>
 
     enum PlaybackStatus
     {
+        null,
+        ready,
         playing,
         paused,
         stopped

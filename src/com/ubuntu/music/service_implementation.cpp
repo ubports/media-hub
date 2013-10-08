@@ -21,10 +21,15 @@
 #include "player_configuration.h"
 #include "player_implementation.h"
 
+#include "gstreamer/engine.h"
+
 namespace music = com::ubuntu::music;
 
 struct music::ServiceImplementation::Private
 {
+    Private() : engine(std::make_shared<gstreamer::Engine>())
+    {
+    }
     std::shared_ptr<music::Engine> engine;
 };
 

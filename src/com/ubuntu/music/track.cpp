@@ -19,8 +19,6 @@
 #include <com/ubuntu/music/track.h>
 #include <com/ubuntu/music/property.h>
 
-#include "track_id.h"
-
 #include <map>
 
 namespace music = com::ubuntu::music;

@@ -18,13 +18,12 @@
 
 #include <com/ubuntu/music/track_list.h>
 
-#include "track_id.h"
 
 namespace music = com::ubuntu::music;
 
 const music::Track::Id& music::TrackList::after_empty_track()
 {
-    static const music::Track::Id id{org::freedesktop::dbus::types::ObjectPath{"/org/mpris/MediaPlayer2/TrackList/NoTrack"}};
+    static const music::Track::Id id{"/org/mpris/MediaPlayer2/TrackList/NoTrack"};
     return id;
 }
 

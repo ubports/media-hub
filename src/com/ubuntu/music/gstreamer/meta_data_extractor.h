@@ -16,46 +16,102 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
+#ifndef GSTREAMER_META_DATA_EXTRACTOR_H_
+#define GSTREAMER_META_DATA_EXTRACTOR_H_
+
+#include "../engine.h"
+
 #include "bus.h"
-#include "engine.h"
-#include "meta_data_extractor.h"
-#include "playbin.h"
 
-#include <cassert>
+#include <gst/gst.h>
 
-namespace music = com::ubuntu::music;
+#include <exception>
+#include <future>
 
 namespace gstreamer
 {
-struct Init
+class MetaDataExtractor : public com::ubuntu::music::Engine::MetaDataExtractor
 {
-    Init()
+public:
+    MetaDataExtractor()
+        : pipe(gst_pipeline_new("meta_data_extractor_pipeline")),
+          decoder(gst_element_factory_make ("uridecodebin", NULL)),
+          bus(GST_ELEMENT_BUS(pipe))
     {
-        gst_init(nullptr, nullptr);
+        gst_bin_add(GST_BIN(pipe), decoder);
+
+        auto sink = gst_element_factory_make ("fakesink", NULL);
+        gst_bin_add (GST_BIN (pipe), sink);
+
+        g_signal_connect (decoder, "pad-added", G_CALLBACK (on_new_pad), sink);
     }
 
-    ~Init()
+    ~MetaDataExtractor()
     {
-        gst_deinit();
-    }
-} init;
-}
-
-struct gstreamer::Engine::Private
-{
-    void about_to_finish()
-    {
-        state = Engine::State::ready;
+        gst_element_set_state(pipe, GST_STATE_NULL);
+        // gst_object_unref(pipe);
     }
 
-    void on_playbin_state_changed(
-            const gstreamer::Bus::Message::Detail::StateChanged&)
+    com::ubuntu::music::Track::MetaData meta_data_for_track_with_uri(const com::ubuntu::music::Track::UriType& uri)
     {
+        if (!gst_uri_is_valid(uri.c_str()))
+            throw std::runtime_error("Invalid uri");
+
+        com::ubuntu::music::Track::MetaData meta_data;
+        std::promise<com::ubuntu::music::Track::MetaData> promise;
+        std::future<com::ubuntu::music::Track::MetaData> future{promise.get_future()};
+
+        com::ubuntu::music::ScopedConnection on_new_message_connection
+        {
+            bus.on_new_message.connect(
+                    [&](const gstreamer::Bus::Message& msg)
+                    {
+                        std::cout << __PRETTY_FUNCTION__ << gst_message_type_get_name(msg.type) << std::endl;
+                        if (msg.type == GST_MESSAGE_TAG)
+                        {
+                            MetaDataExtractor::on_tag_available(msg.detail.tag, meta_data);
+                        } else if (msg.type == GST_MESSAGE_ASYNC_DONE)
+                        {
+                            promise.set_value(meta_data);
+                        }
+                    })
+        };
+
+        g_object_set(decoder, "uri", uri.c_str(), NULL);
+        gst_element_set_state(pipe, GST_STATE_PAUSED);
+
+        if (std::future_status::ready != future.wait_for(std::chrono::seconds(2)))
+        {
+            gst_element_set_state(pipe, GST_STATE_NULL);
+            throw std::runtime_error("Problem extracting meta data for track");
+        } else
+        {
+            gst_element_set_state(pipe, GST_STATE_NULL);
+        }
+
+        return future.get();
     }
 
-    void on_tag_available(const gstreamer::Bus::Message::Detail::Tag& tag)
+private:
+    static void on_new_pad(GstElement*, GstPad* pad, GstElement* fakesink)
     {
-        music::Track::MetaData md;
+        GstPad *sinkpad;
+
+        sinkpad = gst_element_get_static_pad (fakesink, "sink");
+
+        if (!gst_pad_is_linked (sinkpad)) {
+            if (gst_pad_link (pad, sinkpad) != GST_PAD_LINK_OK)
+                g_error ("Failed to link pads!");
+        }
+
+        gst_object_unref (sinkpad);
+    }
+
+    static void on_tag_available(
+            const gstreamer::Bus::Message::Detail::Tag& tag,
+            com::ubuntu::music::Track::MetaData& md)
+    {
+        namespace music = com::ubuntu::music;
 
         gst_tag_list_foreach(
                     tag.tag_list,
@@ -154,130 +210,12 @@ struct gstreamer::Engine::Private
                         ss.str());
         },
         &md);
-
-        track_meta_data.set(std::make_tuple(playbin.uri(), md));
     }
 
-    void on_volume_changed(const music::Engine::Volume& new_volume)
-    {
-        playbin.set_volume(new_volume.value);
-    }
-
-    Private()
-        : meta_data_extractor(new gstreamer::MetaDataExtractor()),
-          volume(music::Engine::Volume(1.)),
-          about_to_finish_connection(
-              playbin.signals.about_to_finish.connect(
-                  std::bind(
-                      &Private::about_to_finish,
-                      this))),
-          on_state_changed_connection(
-              playbin.signals.on_state_changed.connect(
-                  std::bind(
-                      &Private::on_playbin_state_changed,
-                      this,
-                      std::placeholders::_1))),
-          on_tag_available_connection(
-              playbin.signals.on_tag_available.connect(
-                  std::bind(
-                      &Private::on_tag_available,
-                      this,
-                      std::placeholders::_1))),
-          on_volume_changed_connection(
-              volume.changed().connect(
-                  std::bind(
-                      &Private::on_volume_changed,
-                      this,
-                      std::placeholders::_1)))
-    {
-    }
-
-    std::shared_ptr<Engine::MetaDataExtractor> meta_data_extractor;
-    music::Property<Engine::State> state;
-    music::Property<std::tuple<music::Track::UriType, music::Track::MetaData>> track_meta_data;
-    music::Property<music::Engine::Volume> volume;
-    gstreamer::Playbin playbin;
-    music::ScopedConnection about_to_finish_connection;
-    music::ScopedConnection on_state_changed_connection;
-    music::ScopedConnection on_tag_available_connection;
-    music::ScopedConnection on_volume_changed_connection;
+    GstElement* pipe;
+    GstElement* decoder;
+    Bus bus;
 };
-
-gstreamer::Engine::Engine() : d(new Private{})
-{
-    d->state = music::Engine::State::ready;
 }
 
-gstreamer::Engine::~Engine()
-{
-    stop();
-}
-
-const std::shared_ptr<music::Engine::MetaDataExtractor>& gstreamer::Engine::meta_data_extractor() const
-{
-    return d->meta_data_extractor;
-}
-
-const music::Property<music::Engine::State>& gstreamer::Engine::state() const
-{
-    return d->state;
-}
-
-bool gstreamer::Engine::open_resource_for_uri(const music::Track::UriType& uri)
-{
-    d->playbin.set_uri(uri);
-    return true;
-}
-
-bool gstreamer::Engine::play()
-{
-    auto result = d->playbin.set_state_and_wait(GST_STATE_PLAYING);
-
-    if (result)
-    {
-        d->state = music::Engine::State::playing;
-    }
-
-    return result;
-}
-
-bool gstreamer::Engine::stop()
-{
-    auto result = d->playbin.set_state_and_wait(GST_STATE_NULL);
-
-    if (result)
-        d->state = music::Engine::State::stopped;
-
-    return result;
-}
-
-bool gstreamer::Engine::pause()
-{
-    auto result = d->playbin.set_state_and_wait(GST_STATE_PAUSED);
-
-    if (result)
-        d->state = music::Engine::State::paused;
-
-    return result;
-}
-
-bool gstreamer::Engine::seek_to(const std::chrono::microseconds& ts)
-{
-    return d->playbin.seek(ts);
-}
-
-const com::ubuntu::music::Property<com::ubuntu::music::Engine::Volume>& gstreamer::Engine::volume() const
-{
-    return d->volume;
-}
-
-com::ubuntu::music::Property<com::ubuntu::music::Engine::Volume>& gstreamer::Engine::volume()
-{
-    return d->volume;
-}
-
-const music::Property<std::tuple<music::Track::UriType, music::Track::MetaData>>&
-gstreamer::Engine::track_meta_data() const
-{
-    return d->track_meta_data;
-}
+#endif // GSTREAMER_META_DATA_EXTRACTOR_H_

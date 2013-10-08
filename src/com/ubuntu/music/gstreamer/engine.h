@@ -28,6 +28,8 @@ public:
     Engine();
     ~Engine();
 
+    const std::shared_ptr<MetaDataExtractor>& meta_data_extractor() const;
+
     const com::ubuntu::music::Property<State>& state() const;
 
     bool open_resource_for_uri(const com::ubuntu::music::Track::UriType& uri);

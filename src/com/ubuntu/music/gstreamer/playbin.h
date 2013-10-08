@@ -124,7 +124,7 @@ struct Playbin
         g_object_set(
                     pipeline,
                     "volume",
-                    &new_volume,
+                    new_volume,
                     NULL);
     }
 

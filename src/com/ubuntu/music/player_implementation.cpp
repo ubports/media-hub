@@ -16,6 +16,8 @@
  */
 
 #include "player_implementation.h"
+
+#include "engine.h"
 #include "track_list_implementation.h"
 
 #include <com/ubuntu/music/property.h>
@@ -24,7 +26,35 @@ namespace music = com::ubuntu::music;
 
 struct music::PlayerImplementation::Private
 {
+    Private(PlayerImplementation* parent,
+            const dbus::types::ObjectPath& session_path,
+            const std::shared_ptr<music::Service>& service,
+            const std::shared_ptr<music::Engine>& engine)
+        : parent(parent),
+          service(service),
+          engine(engine),
+          session_path(session_path),
+          track_list(
+              new music::TrackListImplementation(
+                  session_path.as_string() + "/TrackList",
+                  engine->meta_data_extractor()))
+    {
+        engine->state().changed().connect(
+                    [parent](const Engine::State& state)
+                    {
+            switch(state)
+            {
+            case Engine::State::ready: parent->playback_status().set(music::Player::ready); break;
+            case Engine::State::playing: parent->playback_status().set(music::Player::playing); break;
+            case Engine::State::stopped: parent->playback_status().set(music::Player::stopped); break;
+            case Engine::State::paused: parent->playback_status().set(music::Player::paused); break;
+            default:
+                break;
+            };
+                    });
+    }
 
+    PlayerImplementation* parent;
     std::shared_ptr<Service> service;
     std::shared_ptr<Engine> engine;
     dbus::types::ObjectPath session_path;
@@ -36,13 +66,11 @@ music::PlayerImplementation::PlayerImplementation(
         const std::shared_ptr<Service>& service,
         const std::shared_ptr<Engine>& engine)
     : music::PlayerSkeleton(session_path),
-      d(new Private
-        {
-            service,
-            engine,
+      d(new Private(
+            this,
             session_path,
-            std::make_shared<music::TrackListImplementation>(session_path.as_string() + "/TrackList")
-        })
+            service,
+            engine))
 {
     // Initializing default values for properties
     can_play().set(true);
@@ -52,7 +80,7 @@ music::PlayerImplementation::PlayerImplementation(
     can_go_next().set(true);
     is_shuffle().set(true);
     playback_rate().set(1.f);
-    playback_status().set(Player::PlaybackStatus::stopped);
+    playback_status().set(Player::PlaybackStatus::null);
     loop_status().set(Player::LoopStatus::none);
 }
 
@@ -65,9 +93,10 @@ std::shared_ptr<music::TrackList> music::PlayerImplementation::track_list()
     return d->track_list;
 }
 
-bool music::PlayerImplementation::open_uri(const Track::UriType&)
+bool music::PlayerImplementation::open_uri(const Track::UriType& uri)
 {
-    return false;
+    std::cout << __PRETTY_FUNCTION__ << ": " << uri << std::endl;
+    return d->engine->open_resource_for_uri(uri);
 }
 
 void music::PlayerImplementation::next()
@@ -80,17 +109,25 @@ void music::PlayerImplementation::previous()
 
 void music::PlayerImplementation::play()
 {
-
+    /*if (playback_status() == music::Player::null)
+    {
+        if (d->track_list->has_next())
+            if (open_uri(d->track_list->next()->))
+    }*/
+    d->engine->play();
 }
 
 void music::PlayerImplementation::pause()
 {
+    d->engine->pause();
 }
 
 void music::PlayerImplementation::stop()
 {
+    d->engine->stop();
 }
 
-void music::PlayerImplementation::seek_to(const std::chrono::microseconds&)
+void music::PlayerImplementation::seek_to(const std::chrono::microseconds& ms)
 {
+    d->engine->seek_to(ms);
 }

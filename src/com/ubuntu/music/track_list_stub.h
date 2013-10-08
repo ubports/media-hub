@@ -44,15 +44,17 @@ public:
     const Property<bool>& can_edit_tracks() const;
     const Property<Container>& tracks() const;
 
+    Track::MetaData query_meta_data_for_track(const Track::Id& id);
+
     void add_track_with_uri_at(const Track::UriType& uri, const Track::Id& position, bool make_current);
     void remove_track(const Track::Id& id);
 
     void go_to(const Track::Id& track);
 
     const Signal<void>& on_track_list_replaced() const;
-    const Signal<std::shared_ptr<Track>>& on_track_added() const;
-    const Signal<std::shared_ptr<Track>>& on_track_removed() const;
-    const Signal<std::shared_ptr<Track>>& on_track_changed() const;
+    const Signal<Track::Id>& on_track_added() const;
+    const Signal<Track::Id>& on_track_removed() const;
+    const Signal<Track::Id>& on_track_changed() const;
 
 private:
     struct Private;
