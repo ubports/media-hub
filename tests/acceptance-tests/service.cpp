@@ -112,7 +112,7 @@ TEST(MusicService, remotely_querying_track_meta_data_works)
     ASSERT_NO_FATAL_FAILURE(test::fork_and_run(service, client));
 }
 
-TEST(MusicService, play_pause_seek_after_open_uri_works)
+TEST(MusicService, DISABLED_play_pause_seek_after_open_uri_works)
 {
     const std::string test_file{"/tmp/test.mp3"};
     std::remove(test_file.c_str());
@@ -181,7 +181,7 @@ TEST(MusicService, play_pause_seek_after_open_uri_works)
 }
 
 
-TEST(MusicService, starting_playback_on_non_empty_playqueue_works)
+TEST(MusicService, DISABLED_starting_playback_on_non_empty_playqueue_works)
 {
     const std::string test_file{"/tmp/test.mp3"};
     std::remove(test_file.c_str());
