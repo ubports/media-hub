@@ -11,6 +11,7 @@ Build-Depends: cmake,
                libboost-dev (>=1.53),
                libdbus-1-dev,
                libgoogle-glog-dev,
+               libgstreamer1.0-dev,
                pkg-config,
 Standards-Version: 3.9.4
 Homepage: https://launchpad.net/music-hub
