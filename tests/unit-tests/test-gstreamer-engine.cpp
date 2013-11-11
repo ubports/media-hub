@@ -36,6 +36,14 @@
 
 namespace music = com::ubuntu::music;
 
+struct EnsureFakeAudioSinkEnvVarIsSet
+{
+    EnsureFakeAudioSinkEnvVarIsSet()
+    {
+        ::setenv("COM_UBUNTU_MUSIC_SERVICE_AUDIO_SINK_NAME", "fakesink", 1);
+    }
+} ensure_fake_audio_sink_env_var_is_set;
+
 TEST(GStreamerEngine, construction_and_deconstruction_works)
 {
     gstreamer::Engine engine;
