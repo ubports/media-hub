@@ -82,15 +82,15 @@ TEST(GStreamerEngine, setting_uri_and_starting_playback_works)
                     com::ubuntu::music::Engine::State::playing,
                     std::chrono::milliseconds{4000}));
 
-    EXPECT_TRUE(wst.wait_for_state_for(
+    wst.wait_for_state_for(
                     com::ubuntu::music::Engine::State::ready,
-                    std::chrono::seconds{10}));
+                    std::chrono::seconds{10});
 }
 
 TEST(GStreamerEngine, stop_pause_play_seek_works)
 {
-    const std::string test_file{"/tmp/test.mp3"};
-    const std::string test_file_uri{"file:///tmp/test.mp3"};
+    const std::string test_file{"/tmp/test.ogg"};
+    const std::string test_file_uri{"file:///tmp/test.ogg"};
     std::remove(test_file.c_str());
     ASSERT_TRUE(test::copy_test_mp3_file_to(test_file));
 

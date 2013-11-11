@@ -117,6 +117,19 @@ struct Playbin
         flags &= ~GST_PLAY_FLAG_TEXT;
         flags &= ~GST_PLAY_FLAG_VIDEO;
         g_object_set (pipeline, "flags", flags, nullptr);
+
+        if (::getenv("COM_UBUNTU_MUSIC_SERVICE_AUDIO_SINK_NAME") != nullptr)
+        {
+            auto audio_sink = gst_element_factory_make (
+                        ::getenv("COM_UBUNTU_MUSIC_SERVICE_AUDIO_SINK_NAME"),
+                        "audio-sink");
+
+            g_object_set(
+                        pipeline,
+                        "audio-sink",
+                        audio_sink,
+                        NULL);
+        }
     }
 
     void set_volume(double new_volume)

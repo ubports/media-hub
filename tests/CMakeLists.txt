@@ -46,5 +46,10 @@ target_link_libraries(
     ${Boost_LIBRARIES}
 )
 
+set(
+    CTEST_ENVIRONMENT
+    "COM_UBUNTU_MUSIC_SERVICE_AUDIO_SINK_NAME=fakesink"
+)
+
 add_subdirectory(acceptance-tests)
 add_subdirectory(unit-tests)

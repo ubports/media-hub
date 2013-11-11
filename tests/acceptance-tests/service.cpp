@@ -141,7 +141,6 @@ TEST(MusicService, DISABLED_play_pause_seek_after_open_uri_works)
         auto session = service->create_session(music::Player::Client::default_configuration());
 
         ASSERT_EQ(true, session->can_play().get());
-        ASSERT_EQ(true, session->can_play().get());
         ASSERT_EQ(true, session->can_pause().get());
         ASSERT_EQ(true, session->can_seek().get());
         ASSERT_EQ(true, session->can_go_previous().get());
