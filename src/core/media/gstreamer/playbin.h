@@ -118,10 +118,10 @@ struct Playbin
         flags &= ~GST_PLAY_FLAG_VIDEO;
         g_object_set (pipeline, "flags", flags, nullptr);
 
-        if (::getenv("COM_UBUNTU_MUSIC_SERVICE_AUDIO_SINK_NAME") != nullptr)
+        if (::getenv("CORE_UBUNTU_MEDIA_SERVICE_AUDIO_SINK_NAME") != nullptr)
         {
             auto audio_sink = gst_element_factory_make (
-                        ::getenv("COM_UBUNTU_MUSIC_SERVICE_AUDIO_SINK_NAME"),
+                        ::getenv("CORE_UBUNTU_MEDIA_SERVICE_AUDIO_SINK_NAME"),
                         "audio-sink");
 
             g_object_set(
@@ -203,15 +203,15 @@ struct Playbin
 
     GstElement* pipeline;
     gstreamer::Bus bus;
-    com::ubuntu::music::Connection on_new_message_connection;
+    core::ubuntu::media::Connection on_new_message_connection;
     struct
     {
-        com::ubuntu::music::Signal<void> about_to_finish;
-        com::ubuntu::music::Signal<Bus::Message::Detail::ErrorWarningInfo> on_error;
-        com::ubuntu::music::Signal<Bus::Message::Detail::ErrorWarningInfo> on_warning;
-        com::ubuntu::music::Signal<Bus::Message::Detail::ErrorWarningInfo> on_info;
-        com::ubuntu::music::Signal<Bus::Message::Detail::Tag> on_tag_available;
-        com::ubuntu::music::Signal<Bus::Message::Detail::StateChanged> on_state_changed;
+        core::ubuntu::media::Signal<void> about_to_finish;
+        core::ubuntu::media::Signal<Bus::Message::Detail::ErrorWarningInfo> on_error;
+        core::ubuntu::media::Signal<Bus::Message::Detail::ErrorWarningInfo> on_warning;
+        core::ubuntu::media::Signal<Bus::Message::Detail::ErrorWarningInfo> on_info;
+        core::ubuntu::media::Signal<Bus::Message::Detail::Tag> on_tag_available;
+        core::ubuntu::media::Signal<Bus::Message::Detail::StateChanged> on_state_changed;
     } signals;
 };
 }

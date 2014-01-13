@@ -16,17 +16,17 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#ifndef COM_UBUNTU_MUSIC_TRACK_LIST_IMPLEMENTATION_H_
-#define COM_UBUNTU_MUSIC_TRACK_LIST_IMPLEMENTATION_H_
+#ifndef CORE_UBUNTU_MEDIA_TRACK_LIST_IMPLEMENTATION_H_
+#define CORE_UBUNTU_MEDIA_TRACK_LIST_IMPLEMENTATION_H_
 
 #include "engine.h"
 #include "track_list_skeleton.h"
 
-namespace com
+namespace core
 {
 namespace ubuntu
 {
-namespace music
+namespace media
 {
 class TrackListImplementation : public TrackListSkeleton
 {
@@ -51,4 +51,4 @@ private:
 }
 }
 
-#endif // COM_UBUNTU_MUSIC_TRACK_LIST_IMPLEMENTATION_H_
+#endif // CORE_UBUNTU_MEDIA_TRACK_LIST_IMPLEMENTATION_H_

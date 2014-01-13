@@ -16,16 +16,16 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#ifndef COM_UBUNTU_MUSIC_SERVICE_IMPLEMENTATION_H_
-#define COM_UBUNTU_MUSIC_SERVICE_IMPLEMENTATION_H_
+#ifndef CORE_UBUNTU_MEDIA_SERVICE_IMPLEMENTATION_H_
+#define CORE_UBUNTU_MEDIA_SERVICE_IMPLEMENTATION_H_
 
 #include "service_skeleton.h"
 
-namespace com
+namespace core
 {
 namespace ubuntu
 {
-namespace music
+namespace media
 {
 class ServiceImplementation : public ServiceSkeleton
 {
@@ -43,4 +43,4 @@ class ServiceImplementation : public ServiceSkeleton
 }
 }
 
-#endif // COM_UBUNTU_MUSIC_SERVICE_IMPLEMENTATION_H_
+#endif // CORE_UBUNTU_MEDIA_SERVICE_IMPLEMENTATION_H_

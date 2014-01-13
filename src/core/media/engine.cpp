@@ -20,144 +20,144 @@
 
 #include <exception>
 
-namespace music = com::ubuntu::music;
+namespace media = core::ubuntu::media;
 
-const std::string& music::Engine::Xesam::album()
+const std::string& media::Engine::Xesam::album()
 {
     static const std::string s{"xesam:album"};
     return s;
 }
 
-const std::string& music::Engine::Xesam::album_artist()
+const std::string& media::Engine::Xesam::album_artist()
 {
     static const std::string s{"xesam:album_artist"};
     return s;
 }
 
-const std::string& music::Engine::Xesam::artist()
+const std::string& media::Engine::Xesam::artist()
 {
     static const std::string s{"xesam:artist"};
     return s;
 }
 
-const std::string& music::Engine::Xesam::as_text()
+const std::string& media::Engine::Xesam::as_text()
 {
     static const std::string s{"xesam:as_text"};
     return s;
 }
 
-const std::string& music::Engine::Xesam::audio_bpm()
+const std::string& media::Engine::Xesam::audio_bpm()
 {
     static const std::string s{"xesam:audio_bmp"};
     return s;
 }
 
-const std::string& music::Engine::Xesam::auto_rating()
+const std::string& media::Engine::Xesam::auto_rating()
 {
     static const std::string s{"xesam:autoRating"};
     return s;
 }
 
-const std::string& music::Engine::Xesam::comment()
+const std::string& media::Engine::Xesam::comment()
 {
     static const std::string s{"xesam:comment"};
     return s;
 }
 
-const std::string& music::Engine::Xesam::composer()
+const std::string& media::Engine::Xesam::composer()
 {
     static const std::string s{"xesam:composer"};
     return s;
 }
 
-const std::string& music::Engine::Xesam::content_created()
+const std::string& media::Engine::Xesam::content_created()
 {
     static const std::string s{"xesam:contentCreated"};
     return s;
 }
 
-const std::string& music::Engine::Xesam::disc_number()
+const std::string& media::Engine::Xesam::disc_number()
 {
     static const std::string s{"xesam:discNumber"};
     return s;
 }
 
-const std::string& music::Engine::Xesam::first_used()
+const std::string& media::Engine::Xesam::first_used()
 {
     static const std::string s{"xesam:firstUsed"};
     return s;
 }
 
-const std::string& music::Engine::Xesam::genre()
+const std::string& media::Engine::Xesam::genre()
 {
     static const std::string s{"xesam:genre"};
     return s;
 }
 
-const std::string& music::Engine::Xesam::last_used()
+const std::string& media::Engine::Xesam::last_used()
 {
     static const std::string s{"xesam:lastUsed"};
     return s;
 }
 
-const std::string& music::Engine::Xesam::lyricist()
+const std::string& media::Engine::Xesam::lyricist()
 {
     static const std::string s{"xesam:lyricist"};
     return s;
 }
 
-const std::string& music::Engine::Xesam::title()
+const std::string& media::Engine::Xesam::title()
 {
     static const std::string s{"xesam:title"};
     return s;
 }
 
-const std::string& music::Engine::Xesam::track_number()
+const std::string& media::Engine::Xesam::track_number()
 {
     static const std::string s{"xesam:trackNumber"};
     return s;
 }
 
-const std::string& music::Engine::Xesam::url()
+const std::string& media::Engine::Xesam::url()
 {
     static const std::string s{"xesam:url"};
     return s;
 }
 
-const std::string& music::Engine::Xesam::use_count()
+const std::string& media::Engine::Xesam::use_count()
 {
     static const std::string s{"xesam:useCount"};
     return s;
 }
 
-const std::string& music::Engine::Xesam::user_rating()
+const std::string& media::Engine::Xesam::user_rating()
 {
     static const std::string s{"xesam:userRating"};
     return s;
 }
 
-double music::Engine::Volume::min()
+double media::Engine::Volume::min()
 {
     return 0.;
 }
 
-double music::Engine::Volume::max()
+double media::Engine::Volume::max()
 {
     return 1.;
 }
 
-music::Engine::Volume::Volume(double v) : value(v)
+media::Engine::Volume::Volume(double v) : value(v)
 {
     if (value < min() || value > max())
         throw std::runtime_error("Value exceeds limits");
 }
 
-bool music::Engine::Volume::operator!=(const music::Engine::Volume& rhs) const
+bool media::Engine::Volume::operator!=(const media::Engine::Volume& rhs) const
 {
     return value != rhs.value;
 }
 
-bool music::Engine::Volume::operator==(const music::Engine::Volume& rhs) const
+bool media::Engine::Volume::operator==(const media::Engine::Volume& rhs) const
 {
     return value == rhs.value;
 }

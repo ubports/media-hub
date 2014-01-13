@@ -15,18 +15,18 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#ifndef COM_UBUNTU_MUSIC_PLAYER_IMPLEMENTATION_H_
-#define COM_UBUNTU_MUSIC_PLAYER_IMPLEMENTATION_H_
+#ifndef CORE_UBUNTU_MEDIA_PLAYER_IMPLEMENTATION_H_
+#define CORE_UBUNTU_MEDIA_PLAYER_IMPLEMENTATION_H_
 
 #include "player_skeleton.h"
 
 #include <memory>
 
-namespace com
+namespace core
 {
 namespace ubuntu
 {
-namespace music
+namespace media
 {
 class Engine;
 class Service;
@@ -57,5 +57,5 @@ private:
 }
 }
 }
-#endif // COM_UBUNTU_MUSIC_PLAYER_IMPLEMENTATION_H_
+#endif // CORE_UBUNTU_MEDIA_PLAYER_IMPLEMENTATION_H_
 

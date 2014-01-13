@@ -15,8 +15,8 @@
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
-#ifndef COM_UBUNTU_MUSIC_TRACK_H_
-#define COM_UBUNTU_MUSIC_TRACK_H_
+#ifndef CORE_UBUNTU_MEDIA_TRACK_H_
+#define CORE_UBUNTU_MEDIA_TRACK_H_
 
 #include "core/media/connection.h"
 
@@ -28,11 +28,11 @@
 #include <string>
 #include <vector>
 
-namespace com
+namespace core
 {
 namespace ubuntu
 {
-namespace music
+namespace media
 {
 template<typename T> class Property;
 
@@ -162,4 +162,4 @@ private:
 }
 }
 
-#endif // COM_UBUNTU_MUSIC_TRACK_H_
+#endif // CORE_UBUNTU_MEDIA_TRACK_H_

@@ -14,8 +14,8 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#ifndef COM_UBUNTU_MUSIC_PLAYER_SKELETON_H_
-#define COM_UBUNTU_MUSIC_PLAYER_SKELETON_H_
+#ifndef CORE_UBUNTU_MEDIA_PLAYER_SKELETON_H_
+#define CORE_UBUNTU_MEDIA_PLAYER_SKELETON_H_
 
 #include <core/media/player.h>
 
@@ -28,15 +28,15 @@
 
 #include <memory>
 
-namespace com
+namespace core
 {
 namespace ubuntu
 {
-namespace music
+namespace media
 {
 class Service;
 
-class PlayerSkeleton : public org::freedesktop::dbus::Skeleton<com::ubuntu::music::Player>
+class PlayerSkeleton : public org::freedesktop::dbus::Skeleton<core::ubuntu::media::Player>
 {
   public:
     ~PlayerSkeleton();
@@ -46,7 +46,7 @@ class PlayerSkeleton : public org::freedesktop::dbus::Skeleton<com::ubuntu::musi
     virtual const Property<bool>& can_seek() const;
     virtual const Property<bool>& can_go_previous() const;
     virtual const Property<bool>& can_go_next() const;
-    virtual const Property<PlaybackStatus>& playback_status() const;    
+    virtual const Property<PlaybackStatus>& playback_status() const;
     virtual const Property<LoopStatus>& loop_status() const;
     virtual const Property<PlaybackRate>& playback_rate() const;
     virtual const Property<bool>& is_shuffle() const;
@@ -54,12 +54,12 @@ class PlayerSkeleton : public org::freedesktop::dbus::Skeleton<com::ubuntu::musi
     virtual const Property<Volume>& volume() const;
     virtual const Property<PlaybackRate>& minimum_playback_rate() const;
     virtual const Property<PlaybackRate>& maximum_playback_rate() const;
-        
+
     virtual Property<LoopStatus>& loop_status();
     virtual Property<PlaybackRate>& playback_rate();
     virtual Property<bool>& is_shuffle();
     virtual Property<Volume>& volume();
-    
+
     virtual const Signal<uint64_t>& seeked_to() const;
 
   protected:
@@ -83,4 +83,4 @@ class PlayerSkeleton : public org::freedesktop::dbus::Skeleton<com::ubuntu::musi
 }
 }
 
-#endif // COM_UBUNTU_MUSIC_PLAYER_SKELETON_H_
+#endif // CORE_UBUNTU_MEDIA_PLAYER_SKELETON_H_

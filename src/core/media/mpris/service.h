@@ -30,7 +30,7 @@ struct Service
 {
     static const std::string& name()
     {
-        static const std::string s{"com.ubuntu.music.Service"};
+        static const std::string s{"core.ubuntu.media.Service"};
         return s;
     }
 
@@ -42,7 +42,7 @@ struct Service
             {
                 static const std::string s
                 {
-                    "com.ubuntu.music.Service.Error.CreatingSession"
+                    "core.ubuntu.media.Service.Error.CreatingSession"
                 };
                 return s;
             }

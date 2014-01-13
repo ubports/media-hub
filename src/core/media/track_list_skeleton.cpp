@@ -37,11 +37,11 @@
 #include <limits>
 
 namespace dbus = org::freedesktop::dbus;
-namespace music = com::ubuntu::music;
+namespace media = core::ubuntu::media;
 
-struct music::TrackListSkeleton::Private
+struct media::TrackListSkeleton::Private
 {
-    Private(music::TrackListSkeleton* impl,
+    Private(media::TrackListSkeleton* impl,
             dbus::Object::Ptr object)
         : impl(impl),
           object(object),
@@ -54,7 +54,7 @@ struct music::TrackListSkeleton::Private
     void handle_get_tracks_metadata(DBusMessage* msg)
     {
         auto in = dbus::Message::from_raw_message(msg);
-        music::Track::Id track;
+        media::Track::Id track;
         in->reader() >> track;
 
         auto meta_data = impl->query_meta_data_for_track(track);
@@ -67,7 +67,7 @@ struct music::TrackListSkeleton::Private
     void handle_add_track_with_uri_at(DBusMessage* msg)
     {
         auto in = dbus::Message::from_raw_message(msg);
-        Track::UriType uri; music::Track::Id after; bool make_current;
+        Track::UriType uri; media::Track::Id after; bool make_current;
         in->reader() >> uri >> after >> make_current;
 
         impl->add_track_with_uri_at(uri, after, make_current);
@@ -79,7 +79,7 @@ struct music::TrackListSkeleton::Private
     void handle_remove_track(DBusMessage* msg)
     {
         auto in = dbus::Message::from_raw_message(msg);
-        music::Track::Id track;
+        media::Track::Id track;
         in->reader() >> track;
 
         impl->remove_track(track);
@@ -91,7 +91,7 @@ struct music::TrackListSkeleton::Private
     void handle_go_to(DBusMessage* msg)
     {
         auto in = dbus::Message::from_raw_message(msg);
-        music::Track::Id track;
+        media::Track::Id track;
         in->reader() >> track;
 
         impl->go_to(track);
@@ -100,10 +100,10 @@ struct music::TrackListSkeleton::Private
         impl->access_bus()->send(reply->get());
     }
 
-    music::TrackListSkeleton* impl;
+    media::TrackListSkeleton* impl;
     dbus::Object::Ptr object;
 
-    PropertyStub<bool, mpris::TrackList::Properties::CanEditTracks> can_edit_tracks;    
+    PropertyStub<bool, mpris::TrackList::Properties::CanEditTracks> can_edit_tracks;
     PropertyStub<TrackList::Container, mpris::TrackList::Properties::Tracks> tracks;
     TrackList::ConstIterator current_track;
 
@@ -113,9 +113,9 @@ struct music::TrackListSkeleton::Private
     Signal<Track::Id> on_track_changed;
 };
 
-music::TrackListSkeleton::TrackListSkeleton(
+media::TrackListSkeleton::TrackListSkeleton(
         const dbus::types::ObjectPath& op)
-    : dbus::Skeleton<music::TrackList>(the_session_bus()),
+    : dbus::Skeleton<media::TrackList>(the_session_bus()),
       d(new Private(this, access_service()->add_object_for_path(op)))
 {
     d->object->install_method_handler<mpris::TrackList::GetTracksMetadata>(
@@ -139,76 +139,76 @@ music::TrackListSkeleton::TrackListSkeleton(
                   std::placeholders::_1));
 }
 
-music::TrackListSkeleton::~TrackListSkeleton()
+media::TrackListSkeleton::~TrackListSkeleton()
 {
 }
 
-bool music::TrackListSkeleton::has_next() const
+bool media::TrackListSkeleton::has_next() const
 {
     return std::next(d->current_track) != d->tracks.get().end();
 }
 
-const music::Track::Id& music::TrackListSkeleton::next()
+const media::Track::Id& media::TrackListSkeleton::next()
 {
     return *(d->current_track = std::next(d->current_track));
 }
 
-const music::Property<bool>& music::TrackListSkeleton::can_edit_tracks() const
+const media::Property<bool>& media::TrackListSkeleton::can_edit_tracks() const
 {
     return d->can_edit_tracks;
 }
 
-music::Property<bool>& music::TrackListSkeleton::can_edit_tracks()
+media::Property<bool>& media::TrackListSkeleton::can_edit_tracks()
 {
     return d->can_edit_tracks;
 }
 
-music::Property<music::TrackList::Container>& music::TrackListSkeleton::tracks()
+media::Property<media::TrackList::Container>& media::TrackListSkeleton::tracks()
 {
     return d->tracks;
 }
 
-const music::Property<music::TrackList::Container>& music::TrackListSkeleton::tracks() const
+const media::Property<media::TrackList::Container>& media::TrackListSkeleton::tracks() const
 {
     return d->tracks;
 }
 
-const music::Signal<void>& music::TrackListSkeleton::on_track_list_replaced() const
+const media::Signal<void>& media::TrackListSkeleton::on_track_list_replaced() const
 {
     return d->on_track_list_replaced;
 }
 
-const music::Signal<music::Track::Id>& music::TrackListSkeleton::on_track_added() const
+const media::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_added() const
 {
     return d->on_track_added;
 }
 
-const music::Signal<music::Track::Id>& music::TrackListSkeleton::on_track_removed() const
+const media::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_removed() const
 {
     return d->on_track_removed;
 }
 
-const music::Signal<music::Track::Id>& music::TrackListSkeleton::on_track_changed() const
+const media::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_changed() const
 {
     return d->on_track_changed;
 }
 
-music::Signal<void>& music::TrackListSkeleton::on_track_list_replaced()
+media::Signal<void>& media::TrackListSkeleton::on_track_list_replaced()
 {
     return d->on_track_list_replaced;
 }
 
-music::Signal<music::Track::Id>& music::TrackListSkeleton::on_track_added()
+media::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_added()
 {
     return d->on_track_added;
 }
 
-music::Signal<music::Track::Id>& music::TrackListSkeleton::on_track_removed()
+media::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_removed()
 {
     return d->on_track_removed;
 }
 
-music::Signal<music::Track::Id>& music::TrackListSkeleton::on_track_changed()
+media::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_changed()
 {
     return d->on_track_changed;
 }

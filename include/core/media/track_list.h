@@ -15,8 +15,8 @@
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
-#ifndef COM_UBUNTU_MUSIC_TRACK_LIST_H_
-#define COM_UBUNTU_MUSIC_TRACK_LIST_H_
+#ifndef CORE_UBUNTU_MEDIA_TRACK_LIST_H_
+#define CORE_UBUNTU_MEDIA_TRACK_LIST_H_
 
 #include <core/media/track.h>
 
@@ -24,11 +24,11 @@
 #include <list>
 #include <memory>
 
-namespace com
+namespace core
 {
 namespace ubuntu
 {
-namespace music
+namespace media
 {
 class Player;
 template<typename T> class Property;
@@ -62,7 +62,7 @@ class TrackList : public std::enable_shared_from_this<TrackList>
     virtual const Signal<Track::Id>& on_track_added() const = 0;
     virtual const Signal<Track::Id>& on_track_removed() const = 0;
     virtual const Signal<Track::Id>& on_track_changed() const = 0;
-    
+
 protected:
     TrackList();
 };
@@ -70,4 +70,4 @@ protected:
 }
 }
 
-#endif // COM_UBUNTU_MUSIC_TRACK_LIST_H_
+#endif // CORE_UBUNTU_MEDIA_TRACK_LIST_H_

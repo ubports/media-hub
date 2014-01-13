@@ -16,8 +16,8 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#ifndef COM_UBUNTU_MUSIC_PLAYER_STUB_H_
-#define COM_UBUNTU_MUSIC_PLAYER_STUB_H_
+#ifndef CORE_UBUNTU_MEDIA_PLAYER_STUB_H_
+#define CORE_UBUNTU_MEDIA_PLAYER_STUB_H_
 
 #include <core/media/player.h>
 
@@ -25,11 +25,11 @@
 
 #include <memory>
 
-namespace com
+namespace core
 {
 namespace ubuntu
 {
-namespace music
+namespace media
 {
 class Service;
 
@@ -57,7 +57,7 @@ class PlayerStub : public org::freedesktop::dbus::Stub<Player>
     virtual const Property<bool>& can_seek() const;
     virtual const Property<bool>& can_go_previous() const;
     virtual const Property<bool>& can_go_next() const;
-    virtual const Property<PlaybackStatus>& playback_status() const;    
+    virtual const Property<PlaybackStatus>& playback_status() const;
     virtual const Property<LoopStatus>& loop_status() const;
     virtual const Property<PlaybackRate>& playback_rate() const;
     virtual const Property<bool>& is_shuffle() const;
@@ -65,14 +65,14 @@ class PlayerStub : public org::freedesktop::dbus::Stub<Player>
     virtual const Property<Volume>& volume() const;
     virtual const Property<PlaybackRate>& minimum_playback_rate() const;
     virtual const Property<PlaybackRate>& maximum_playback_rate() const;
-        
+
     virtual Property<LoopStatus>& loop_status();
     virtual Property<PlaybackRate>& playback_rate();
     virtual Property<bool>& is_shuffle();
     virtual Property<Volume>& volume();
-    
+
     virtual const Signal<uint64_t>& seeked_to() const;
-    
+
   private:
     struct Private;
     std::unique_ptr<Private> d;
@@ -81,4 +81,4 @@ class PlayerStub : public org::freedesktop::dbus::Stub<Player>
 }
 }
 
-#endif // COM_UBUNTU_MUSIC_PLAYER_STUB_H_
+#endif // CORE_UBUNTU_MEDIA_PLAYER_STUB_H_

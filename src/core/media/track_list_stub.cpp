@@ -37,13 +37,13 @@
 #include <limits>
 
 namespace dbus = org::freedesktop::dbus;
-namespace music = com::ubuntu::music;
+namespace media = core::ubuntu::media;
 
-struct music::TrackListStub::Private
+struct media::TrackListStub::Private
 {
     Private(
             TrackListStub* impl,
-            const std::shared_ptr<music::Player>& parent,
+            const std::shared_ptr<media::Player>& parent,
             const dbus::types::ObjectPath& op)
         : impl(impl),
           parent(parent),
@@ -54,7 +54,7 @@ struct music::TrackListStub::Private
     }
 
     TrackListStub* impl;
-    std::shared_ptr<music::Player> parent;
+    std::shared_ptr<media::Player> parent;
     dbus::Object::Ptr object;
 
     PropertyStub<bool, mpris::TrackList::Properties::CanEditTracks> can_edit_tracks;
@@ -66,29 +66,29 @@ struct music::TrackListStub::Private
     Signal<Track::Id> on_track_changed;
 };
 
-music::TrackListStub::TrackListStub(
-        const std::shared_ptr<music::Player>& parent,
+media::TrackListStub::TrackListStub(
+        const std::shared_ptr<media::Player>& parent,
         const org::freedesktop::dbus::types::ObjectPath& op)
-    : dbus::Stub<music::TrackList>(the_session_bus()),
+    : dbus::Stub<media::TrackList>(the_session_bus()),
       d(new Private(this, parent, op))
 {
 }
 
-music::TrackListStub::~TrackListStub()
+media::TrackListStub::~TrackListStub()
 {
 }
 
-const music::Property<bool>& music::TrackListStub::can_edit_tracks() const
+const media::Property<bool>& media::TrackListStub::can_edit_tracks() const
 {
     return d->can_edit_tracks;
 }
 
-const music::Property<music::TrackList::Container>& music::TrackListStub::tracks() const
+const media::Property<media::TrackList::Container>& media::TrackListStub::tracks() const
 {
     return d->tracks;
 }
 
-music::Track::MetaData music::TrackListStub::query_meta_data_for_track(const music::Track::Id& id)
+media::Track::MetaData media::TrackListStub::query_meta_data_for_track(const media::Track::Id& id)
 {
     auto op
             = d->object->invoke_method_synchronously<
@@ -98,7 +98,7 @@ music::Track::MetaData music::TrackListStub::query_meta_data_for_track(const mus
     if (op.is_error())
         throw std::runtime_error("Problem querying meta data for track: " + op.error());
 
-    music::Track::MetaData md;
+    media::Track::MetaData md;
     for(auto pair : op.value())
     {
         md.set(pair.first, pair.second);
@@ -106,9 +106,9 @@ music::Track::MetaData music::TrackListStub::query_meta_data_for_track(const mus
     return md;
 }
 
-void music::TrackListStub::add_track_with_uri_at(
-        const music::Track::UriType& uri,
-        const music::Track::Id& id,
+void media::TrackListStub::add_track_with_uri_at(
+        const media::Track::UriType& uri,
+        const media::Track::Id& id,
         bool make_current)
 {
     auto op = d->object->invoke_method_synchronously<mpris::TrackList::AddTrack, void>(
@@ -120,7 +120,7 @@ void music::TrackListStub::add_track_with_uri_at(
         throw std::runtime_error("Problem adding track: " + op.error());
 }
 
-void music::TrackListStub::remove_track(const music::Track::Id& track)
+void media::TrackListStub::remove_track(const media::Track::Id& track)
 {
     auto op = d->object->invoke_method_synchronously<mpris::TrackList::RemoveTrack, void>(
                 track);
@@ -129,7 +129,7 @@ void music::TrackListStub::remove_track(const music::Track::Id& track)
         throw std::runtime_error("Problem removing track: " + op.error());
 }
 
-void music::TrackListStub::go_to(const music::Track::Id& track)
+void media::TrackListStub::go_to(const media::Track::Id& track)
 {
     auto op = d->object->invoke_method_synchronously<mpris::TrackList::GoTo, void>(
                 track);
@@ -138,22 +138,22 @@ void music::TrackListStub::go_to(const music::Track::Id& track)
         throw std::runtime_error("Problem adding track: " + op.error());
 }
 
-const music::Signal<void>& music::TrackListStub::on_track_list_replaced() const
+const media::Signal<void>& media::TrackListStub::on_track_list_replaced() const
 {
     return d->on_track_list_replaced;
 }
 
-const music::Signal<music::Track::Id>& music::TrackListStub::on_track_added() const
+const media::Signal<media::Track::Id>& media::TrackListStub::on_track_added() const
 {
     return d->on_track_added;
 }
 
-const music::Signal<music::Track::Id>& music::TrackListStub::on_track_removed() const
+const media::Signal<media::Track::Id>& media::TrackListStub::on_track_removed() const
 {
     return d->on_track_removed;
 }
 
-const music::Signal<music::Track::Id>& music::TrackListStub::on_track_changed() const
+const media::Signal<media::Track::Id>& media::TrackListStub::on_track_changed() const
 {
     return d->on_track_changed;
 }

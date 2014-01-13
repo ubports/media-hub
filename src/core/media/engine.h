@@ -15,19 +15,19 @@
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
-#ifndef COM_UBUNTU_MUSIC_ENGINE_H_
-#define COM_UBUNTU_MUSIC_ENGINE_H_
+#ifndef CORE_UBUNTU_MEDIA_ENGINE_H_
+#define CORE_UBUNTU_MEDIA_ENGINE_H_
 
 #include <core/media/property.h>
 #include <core/media/track.h>
 
 #include <chrono>
 
-namespace com
+namespace core
 {
 namespace ubuntu
 {
-namespace music
+namespace media
 {
 class Engine
 {
@@ -111,4 +111,4 @@ public:
 }
 }
 
-#endif // COM_UBUNTU_MUSIC_ENGINE_H_
+#endif // CORE_UBUNTU_MEDIA_ENGINE_H_

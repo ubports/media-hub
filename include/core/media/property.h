@@ -15,18 +15,18 @@
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
-#ifndef COM_UBUNTU_MUSIC_PROPERTY_H_
-#define COM_UBUNTU_MUSIC_PROPERTY_H_
+#ifndef CORE_UBUNTU_MEDIA_PROPERTY_H_
+#define CORE_UBUNTU_MEDIA_PROPERTY_H_
 
 #include <core/media/signal.h>
 
 #include <iostream>
 
-namespace com
+namespace core
 {
 namespace ubuntu
 {
-namespace music
+namespace media
 {
 template<typename T>
 class Property
@@ -43,7 +43,7 @@ class Property
 
     inline static const T& default_value()
     {
-        return mutable_default_value(); 
+        return mutable_default_value();
     }
 
     inline static void set_default_value(const T& new_default_value)
@@ -123,7 +123,7 @@ class Property
         return false;
     }
 
-  protected:    
+  protected:
     inline T& mutable_get() const
     {
         return value;
@@ -137,4 +137,4 @@ class Property
 }
 }
 
-#endif // COM_UBUNTU_MUSIC_PROPERTY_H_
+#endif // CORE_UBUNTU_MEDIA_PROPERTY_H

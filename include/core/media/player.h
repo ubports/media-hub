@@ -15,19 +15,19 @@
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
-#ifndef COM_UBUNTU_MUSIC_PLAYER_H_
-#define COM_UBUNTU_MUSIC_PLAYER_H_
+#ifndef CORE_UBUNTU_MEDIA_PLAYER_H_
+#define CORE_UBUNTU_MEDIA_PLAYER_H_
 
 #include <core/media/track.h>
 
 #include <chrono>
 #include <memory>
 
-namespace com
+namespace core
 {
 namespace ubuntu
 {
-namespace music
+namespace media
 {
 template<typename T> class Property;
 class Service;
@@ -39,7 +39,7 @@ class Player : public std::enable_shared_from_this<Player>
   public:
     typedef double PlaybackRate;
     typedef double Volume;
-    
+
     struct Configuration;
 
     struct Client
@@ -86,7 +86,7 @@ class Player : public std::enable_shared_from_this<Player>
     virtual const Property<bool>& can_seek() const = 0;
     virtual const Property<bool>& can_go_previous() const = 0;
     virtual const Property<bool>& can_go_next() const = 0;
-    virtual const Property<PlaybackStatus>& playback_status() const = 0;    
+    virtual const Property<PlaybackStatus>& playback_status() const = 0;
     virtual const Property<LoopStatus>& loop_status() const = 0;
     virtual const Property<PlaybackRate>& playback_rate() const = 0;
     virtual const Property<bool>& is_shuffle() const = 0;
@@ -94,12 +94,12 @@ class Player : public std::enable_shared_from_this<Player>
     virtual const Property<Volume>& volume() const = 0;
     virtual const Property<PlaybackRate>& minimum_playback_rate() const = 0;
     virtual const Property<PlaybackRate>& maximum_playback_rate() const = 0;
-        
+
     virtual Property<LoopStatus>& loop_status() = 0;
     virtual Property<PlaybackRate>& playback_rate() = 0;
     virtual Property<bool>& is_shuffle() = 0;
     virtual Property<Volume>& volume() = 0;
-    
+
     virtual const Signal<uint64_t>& seeked_to() const = 0;
 
   protected:
@@ -110,4 +110,4 @@ class Player : public std::enable_shared_from_this<Player>
 }
 }
 
-#endif // COM_UBUNTU_MUSIC_PLAYER_H_
+#endif // CORE_UBUNTU_MEDIA_PLAYER_H_

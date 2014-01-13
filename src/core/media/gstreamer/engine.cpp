@@ -23,7 +23,7 @@
 
 #include <cassert>
 
-namespace music = com::ubuntu::music;
+namespace media = core::ubuntu::media;
 
 namespace gstreamer
 {
@@ -55,7 +55,7 @@ struct gstreamer::Engine::Private
 
     void on_tag_available(const gstreamer::Bus::Message::Detail::Tag& tag)
     {
-        music::Track::MetaData md;
+        media::Track::MetaData md;
 
         gst_tag_list_foreach(
                     tag.tag_list,
@@ -67,21 +67,21 @@ struct gstreamer::Engine::Private
 
             static const std::map<std::string, std::string> gstreamer_to_mpris_tag_lut =
             {
-                {GST_TAG_ALBUM, music::Engine::Xesam::album()},
-                {GST_TAG_ALBUM_ARTIST, music::Engine::Xesam::album_artist()},
-                {GST_TAG_ARTIST, music::Engine::Xesam::artist()},
-                {GST_TAG_LYRICS, music::Engine::Xesam::as_text()},
-                {GST_TAG_COMMENT, music::Engine::Xesam::comment()},
-                {GST_TAG_COMPOSER, music::Engine::Xesam::composer()},
-                {GST_TAG_DATE, music::Engine::Xesam::content_created()},
-                {GST_TAG_ALBUM_VOLUME_NUMBER, music::Engine::Xesam::disc_number()},
-                {GST_TAG_GENRE, music::Engine::Xesam::genre()},
-                {GST_TAG_TITLE, music::Engine::Xesam::title()},
-                {GST_TAG_TRACK_NUMBER, music::Engine::Xesam::track_number()},
-                {GST_TAG_USER_RATING, music::Engine::Xesam::user_rating()}
+                {GST_TAG_ALBUM, media::Engine::Xesam::album()},
+                {GST_TAG_ALBUM_ARTIST, media::Engine::Xesam::album_artist()},
+                {GST_TAG_ARTIST, media::Engine::Xesam::artist()},
+                {GST_TAG_LYRICS, media::Engine::Xesam::as_text()},
+                {GST_TAG_COMMENT, media::Engine::Xesam::comment()},
+                {GST_TAG_COMPOSER, media::Engine::Xesam::composer()},
+                {GST_TAG_DATE, media::Engine::Xesam::content_created()},
+                {GST_TAG_ALBUM_VOLUME_NUMBER, media::Engine::Xesam::disc_number()},
+                {GST_TAG_GENRE, media::Engine::Xesam::genre()},
+                {GST_TAG_TITLE, media::Engine::Xesam::title()},
+                {GST_TAG_TRACK_NUMBER, media::Engine::Xesam::track_number()},
+                {GST_TAG_USER_RATING, media::Engine::Xesam::user_rating()}
             };
 
-            auto md = static_cast<music::Track::MetaData*>(user_data);
+            auto md = static_cast<media::Track::MetaData*>(user_data);
             std::stringstream ss;
 
             switch(gst_tag_get_type(tag))
@@ -158,14 +158,14 @@ struct gstreamer::Engine::Private
         track_meta_data.set(std::make_tuple(playbin.uri(), md));
     }
 
-    void on_volume_changed(const music::Engine::Volume& new_volume)
+    void on_volume_changed(const media::Engine::Volume& new_volume)
     {
         playbin.set_volume(new_volume.value);
     }
 
     Private()
         : meta_data_extractor(new gstreamer::MetaDataExtractor()),
-          volume(music::Engine::Volume(1.)),
+          volume(media::Engine::Volume(1.)),
           about_to_finish_connection(
               playbin.signals.about_to_finish.connect(
                   std::bind(
@@ -193,19 +193,19 @@ struct gstreamer::Engine::Private
     }
 
     std::shared_ptr<Engine::MetaDataExtractor> meta_data_extractor;
-    music::Property<Engine::State> state;
-    music::Property<std::tuple<music::Track::UriType, music::Track::MetaData>> track_meta_data;
-    music::Property<music::Engine::Volume> volume;
+    media::Property<Engine::State> state;
+    media::Property<std::tuple<media::Track::UriType, media::Track::MetaData>> track_meta_data;
+    media::Property<media::Engine::Volume> volume;
     gstreamer::Playbin playbin;
-    music::ScopedConnection about_to_finish_connection;
-    music::ScopedConnection on_state_changed_connection;
-    music::ScopedConnection on_tag_available_connection;
-    music::ScopedConnection on_volume_changed_connection;
+    media::ScopedConnection about_to_finish_connection;
+    media::ScopedConnection on_state_changed_connection;
+    media::ScopedConnection on_tag_available_connection;
+    media::ScopedConnection on_volume_changed_connection;
 };
 
 gstreamer::Engine::Engine() : d(new Private{})
 {
-    d->state = music::Engine::State::ready;
+    d->state = media::Engine::State::ready;
 }
 
 gstreamer::Engine::~Engine()
@@ -213,17 +213,17 @@ gstreamer::Engine::~Engine()
     stop();
 }
 
-const std::shared_ptr<music::Engine::MetaDataExtractor>& gstreamer::Engine::meta_data_extractor() const
+const std::shared_ptr<media::Engine::MetaDataExtractor>& gstreamer::Engine::meta_data_extractor() const
 {
     return d->meta_data_extractor;
 }
 
-const music::Property<music::Engine::State>& gstreamer::Engine::state() const
+const media::Property<media::Engine::State>& gstreamer::Engine::state() const
 {
     return d->state;
 }
 
-bool gstreamer::Engine::open_resource_for_uri(const music::Track::UriType& uri)
+bool gstreamer::Engine::open_resource_for_uri(const media::Track::UriType& uri)
 {
     d->playbin.set_uri(uri);
     return true;
@@ -235,7 +235,7 @@ bool gstreamer::Engine::play()
 
     if (result)
     {
-        d->state = music::Engine::State::playing;
+        d->state = media::Engine::State::playing;
     }
 
     return result;
@@ -246,7 +246,7 @@ bool gstreamer::Engine::stop()
     auto result = d->playbin.set_state_and_wait(GST_STATE_NULL);
 
     if (result)
-        d->state = music::Engine::State::stopped;
+        d->state = media::Engine::State::stopped;
 
     return result;
 }
@@ -256,7 +256,7 @@ bool gstreamer::Engine::pause()
     auto result = d->playbin.set_state_and_wait(GST_STATE_PAUSED);
 
     if (result)
-        d->state = music::Engine::State::paused;
+        d->state = media::Engine::State::paused;
 
     return result;
 }
@@ -266,17 +266,17 @@ bool gstreamer::Engine::seek_to(const std::chrono::microseconds& ts)
     return d->playbin.seek(ts);
 }
 
-const com::ubuntu::music::Property<com::ubuntu::music::Engine::Volume>& gstreamer::Engine::volume() const
+const core::ubuntu::media::Property<core::ubuntu::media::Engine::Volume>& gstreamer::Engine::volume() const
 {
     return d->volume;
 }
 
-com::ubuntu::music::Property<com::ubuntu::music::Engine::Volume>& gstreamer::Engine::volume()
+core::ubuntu::media::Property<core::ubuntu::media::Engine::Volume>& gstreamer::Engine::volume()
 {
     return d->volume;
 }
 
-const music::Property<std::tuple<music::Track::UriType, music::Track::MetaData>>&
+const media::Property<std::tuple<media::Track::UriType, media::Track::MetaData>>&
 gstreamer::Engine::track_meta_data() const
 {
     return d->track_meta_data;

@@ -15,14 +15,14 @@
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
-#ifndef COM_UBUNTU_MUSIC_GSTREAMER_ENGINE_H_
-#define COM_UBUNTU_MUSIC_GSTREAMER_ENGINE_H_
+#ifndef CORE_UBUNTU_MEDIA_GSTREAMER_ENGINE_H_
+#define CORE_UBUNTU_MEDIA_GSTREAMER_ENGINE_H_
 
 #include "../engine.h"
 
 namespace gstreamer
 {
-class Engine : public com::ubuntu::music::Engine
+class Engine : public core::ubuntu::media::Engine
 {
 public:
     Engine();
@@ -30,19 +30,19 @@ public:
 
     const std::shared_ptr<MetaDataExtractor>& meta_data_extractor() const;
 
-    const com::ubuntu::music::Property<State>& state() const;
+    const core::ubuntu::media::Property<State>& state() const;
 
-    bool open_resource_for_uri(const com::ubuntu::music::Track::UriType& uri);
+    bool open_resource_for_uri(const core::ubuntu::media::Track::UriType& uri);
 
     bool play();
     bool stop();
     bool pause();
     bool seek_to(const std::chrono::microseconds& ts);
 
-    const com::ubuntu::music::Property<com::ubuntu::music::Engine::Volume>& volume() const;
-    com::ubuntu::music::Property<com::ubuntu::music::Engine::Volume>& volume();
+    const core::ubuntu::media::Property<core::ubuntu::media::Engine::Volume>& volume() const;
+    core::ubuntu::media::Property<core::ubuntu::media::Engine::Volume>& volume();
 
-    const com::ubuntu::music::Property<std::tuple<com::ubuntu::music::Track::UriType, com::ubuntu::music::Track::MetaData>>& track_meta_data() const;
+    const core::ubuntu::media::Property<std::tuple<core::ubuntu::media::Track::UriType, core::ubuntu::media::Track::MetaData>>& track_meta_data() const;
 
 private:
     struct Private;
@@ -50,4 +50,4 @@ private:
 };
 }
 
-#endif // COM_UBUNTU_MUSIC_GSTREAMER_ENGINE_H_
+#endif // CORE_UBUNTU_MEDIA_GSTREAMER_ENGINE_H_

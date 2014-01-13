@@ -19,7 +19,7 @@
 #ifndef CODEC_H_
 #define CODEC_H_
 
-#include <com/ubuntu/music/track.h>
+#include <core/media/track.h>
 
 #include <org/freedesktop/dbus/codec.h>
 
@@ -32,7 +32,7 @@ namespace dbus
 namespace helper
 {
 template<>
-struct TypeMapper<com::ubuntu::music::Track::MetaData>
+struct TypeMapper<core::ubuntu::media::Track::MetaData>
 {
     constexpr static ArgumentType type_value()
     {
@@ -56,18 +56,18 @@ struct TypeMapper<com::ubuntu::music::Track::MetaData>
 }
 
 template<>
-struct Codec<com::ubuntu::music::Track::MetaData>
+struct Codec<core::ubuntu::media::Track::MetaData>
 {
-    static void encode_argument(DBusMessageIter* out, const com::ubuntu::music::Track::MetaData& in)
+    static void encode_argument(DBusMessageIter* out, const core::ubuntu::media::Track::MetaData& in)
     {
-        Codec<typename com::ubuntu::location::units::Quantity<T>::value_type>::encode_argument(out, in.value());
+        Codec<typename core::ubuntu::location::units::Quantity<T>::value_type>::encode_argument(out, in.value());
     }
 
     static void decode_argument(DBusMessageIter* out, com::ubuntu::location::units::Quantity<T>& in)
     {
-        typename com::ubuntu::location::units::Quantity<T>::value_type value;
+        typename core::ubuntu::location::units::Quantity<T>::value_type value;
         Codec<typename com::ubuntu::location::units::Quantity<T>::value_type>::decode_argument(out, value);
-        in = com::ubuntu::location::units::Quantity<T>::from_value(value);
+        in = core::ubuntu::location::units::Quantity<T>::from_value(value);
         dbus_message_iter_next(out);
     }
 };

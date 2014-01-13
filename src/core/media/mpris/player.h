@@ -41,7 +41,7 @@ struct Player
 {
     static const std::string& name()
     {
-        static const std::string s{"com.ubuntu.music.Service.Player"};
+        static const std::string s{"core.ubuntu.media.Service.Player"};
         return s;
     }
 

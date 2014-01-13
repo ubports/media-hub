@@ -16,8 +16,8 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#ifndef COM_UBUNTU_MUSIC_SERVICE_SKELETON_H_
-#define COM_UBUNTU_MUSIC_SERVICE_SKELETON_H_
+#ifndef CORE_UBUNTU_MEDIA_SERVICE_SKELETON_H_
+#define CORE_UBUNTU_MEDIA_SERVICE_SKELETON_H_
 
 #include <core/media/service.h>
 
@@ -27,13 +27,13 @@
 
 #include <memory>
 
-namespace com
+namespace core
 {
 namespace ubuntu
 {
-namespace music
+namespace media
 {
-class ServiceSkeleton : public org::freedesktop::dbus::Skeleton<com::ubuntu::music::Service>
+class ServiceSkeleton : public org::freedesktop::dbus::Skeleton<core::ubuntu::media::Service>
 {
   public:
     ServiceSkeleton();
@@ -50,4 +50,4 @@ class ServiceSkeleton : public org::freedesktop::dbus::Skeleton<com::ubuntu::mus
 }
 }
 
-#endif // COM_UBUNTU_MUSIC_SERVICE_SKELETON_H_
+#endif // CORE_UBUNTU_MEDIA_SERVICE_SKELETON_H_

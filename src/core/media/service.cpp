@@ -20,10 +20,10 @@
 
 #include "service_stub.h"
 
-namespace music = com::ubuntu::music;
+namespace media = core::ubuntu::media;
 
-const std::shared_ptr<music::Service> music::Service::Client::instance()
+const std::shared_ptr<media::Service> media::Service::Client::instance()
 {
-    static std::shared_ptr<music::Service> instance{new music::ServiceStub()};
+    static std::shared_ptr<media::Service> instance{new media::ServiceStub()};
     return instance;
 }

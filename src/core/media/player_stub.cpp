@@ -33,16 +33,16 @@
 #include <limits>
 
 namespace dbus = org::freedesktop::dbus;
-namespace music = com::ubuntu::music;
+namespace media = core::ubuntu::media;
 
-struct music::PlayerStub::Private
+struct media::PlayerStub::Private
 {
     Private(const std::shared_ptr<Service>& parent,
             const std::shared_ptr<dbus::Service>& remote,
             const dbus::types::ObjectPath& path
             ) : parent(parent),
                 path(path),
-                object(remote->object_for_path(path)),                
+                object(remote->object_for_path(path)),
                 properties
                 {
                     object->get_property<mpris::Player::Properties::CanPlay>(),
@@ -90,7 +90,7 @@ struct music::PlayerStub::Private
     } properties;
 };
 
-music::PlayerStub::PlayerStub(
+media::PlayerStub::PlayerStub(
     const std::shared_ptr<Service>& parent,
     const dbus::types::ObjectPath& object_path)
         : dbus::Stub<Player>(the_session_bus()),
@@ -98,29 +98,29 @@ music::PlayerStub::PlayerStub(
 {
 }
 
-music::PlayerStub::~PlayerStub()
+media::PlayerStub::~PlayerStub()
 {
 }
 
-std::shared_ptr<music::TrackList> music::PlayerStub::track_list()
+std::shared_ptr<media::TrackList> media::PlayerStub::track_list()
 {
     if (!d->track_list)
     {
-        d->track_list = std::make_shared<music::TrackListStub>(
+        d->track_list = std::make_shared<media::TrackListStub>(
                     shared_from_this(),
                     dbus::types::ObjectPath(d->path.as_string() + "/TrackList"));
     }
     return d->track_list;
 }
 
-bool music::PlayerStub::open_uri(const music::Track::UriType& uri)
+bool media::PlayerStub::open_uri(const media::Track::UriType& uri)
 {
-    auto op = d->object->invoke_method_synchronously<mpris::Player::OpenUri, music::Track::UriType>(uri);
+    auto op = d->object->invoke_method_synchronously<mpris::Player::OpenUri, media::Track::UriType>(uri);
 
     return op.is_error();
 }
 
-void music::PlayerStub::next()
+void media::PlayerStub::next()
 {
     auto op = d->object->invoke_method_synchronously<mpris::Player::Next, void>();
 
@@ -128,7 +128,7 @@ void music::PlayerStub::next()
         throw std::runtime_error("Problem switching to next track on remote object");
 }
 
-void music::PlayerStub::previous()
+void media::PlayerStub::previous()
 {
     auto op = d->object->invoke_method_synchronously<mpris::Player::Previous, void>();
 
@@ -136,7 +136,7 @@ void music::PlayerStub::previous()
         throw std::runtime_error("Problem switching to previous track on remote object");
 }
 
-void music::PlayerStub::play()
+void media::PlayerStub::play()
 {
     auto op = d->object->invoke_method_synchronously<mpris::Player::Play, void>();
 
@@ -144,7 +144,7 @@ void music::PlayerStub::play()
         throw std::runtime_error("Problem starting playback on remote object");
 }
 
-void music::PlayerStub::pause()
+void media::PlayerStub::pause()
 {
     auto op = d->object->invoke_method_synchronously<mpris::Player::Pause, void>();
 
@@ -152,7 +152,7 @@ void music::PlayerStub::pause()
         throw std::runtime_error("Problem pausing playback on remote object");
 }
 
-void music::PlayerStub::seek_to(const std::chrono::microseconds& offset)
+void media::PlayerStub::seek_to(const std::chrono::microseconds& offset)
 {
     auto op = d->object->invoke_method_synchronously<mpris::Player::Seek, void, uint64_t>(offset.count());
 
@@ -160,7 +160,7 @@ void music::PlayerStub::seek_to(const std::chrono::microseconds& offset)
         throw std::runtime_error("Problem seeking on remote object");
 }
 
-void music::PlayerStub::stop()
+void media::PlayerStub::stop()
 {
     auto op = d->object->invoke_method_synchronously<mpris::Player::Stop, void>();
 
@@ -168,93 +168,93 @@ void music::PlayerStub::stop()
         throw std::runtime_error("Problem stopping playback on remote object");
 }
 
-const music::Property<bool>& music::PlayerStub::can_play() const 
+const media::Property<bool>& media::PlayerStub::can_play() const 
 {
     return d->properties.can_play;
 }
 
-const music::Property<bool>& music::PlayerStub::can_pause() const
+const media::Property<bool>& media::PlayerStub::can_pause() const
 {
     return d->properties.can_pause;
 }
 
-const music::Property<bool>& music::PlayerStub::can_seek() const
+const media::Property<bool>& media::PlayerStub::can_seek() const
 {
     return d->properties.can_seek;
 }
 
-const music::Property<bool>& music::PlayerStub::can_go_previous() const
+const media::Property<bool>& media::PlayerStub::can_go_previous() const
 {
     return d->properties.can_go_previous;
 }
 
-const music::Property<bool>& music::PlayerStub::can_go_next() const
+const media::Property<bool>& media::PlayerStub::can_go_next() const
 {
     return d->properties.can_go_next;
 }
 
-const music::Property<music::Player::PlaybackStatus>& music::PlayerStub::playback_status() const
+const media::Property<media::Player::PlaybackStatus>& media::PlayerStub::playback_status() const
 {
     return d->properties.playback_status;
 }
 
-const music::Property<music::Player::LoopStatus>& music::PlayerStub::loop_status() const
+const media::Property<media::Player::LoopStatus>& media::PlayerStub::loop_status() const
 {
     return d->properties.loop_status;
 }
 
-const music::Property<music::Player::PlaybackRate>& music::PlayerStub::playback_rate() const
+const media::Property<media::Player::PlaybackRate>& media::PlayerStub::playback_rate() const
 {
     return d->properties.playback_rate;
 }
 
-const music::Property<bool>& music::PlayerStub::is_shuffle() const
+const media::Property<bool>& media::PlayerStub::is_shuffle() const
 {
     return d->properties.is_shuffle;
 }
 
-const music::Property<music::Track::MetaData>& music::PlayerStub::meta_data_for_current_track() const
+const media::Property<media::Track::MetaData>& media::PlayerStub::meta_data_for_current_track() const
 {
     return d->properties.meta_data_for_current_track;
 }
 
-const music::Property<music::Player::Volume>& music::PlayerStub::volume() const
+const media::Property<media::Player::Volume>& media::PlayerStub::volume() const
 {
     return d->properties.volume;
 }
 
-const music::Property<music::Player::PlaybackRate>& music::PlayerStub::minimum_playback_rate() const
+const media::Property<media::Player::PlaybackRate>& media::PlayerStub::minimum_playback_rate() const
 {
     return d->properties.minimum_playback_rate;
 }
 
-const music::Property<music::Player::PlaybackRate>& music::PlayerStub::maximum_playback_rate() const
+const media::Property<media::Player::PlaybackRate>& media::PlayerStub::maximum_playback_rate() const
 {
     return d->properties.maximum_playback_rate;
 }
 
-music::Property<music::Player::LoopStatus>& music::PlayerStub::loop_status()
+media::Property<media::Player::LoopStatus>& media::PlayerStub::loop_status()
 {
     return d->properties.loop_status;
 }
 
-music::Property<music::Player::PlaybackRate>& music::PlayerStub::playback_rate()
+media::Property<media::Player::PlaybackRate>& media::PlayerStub::playback_rate()
 {
     return d->properties.playback_rate;
 }
 
-music::Property<bool>& music::PlayerStub::is_shuffle()
+media::Property<bool>& media::PlayerStub::is_shuffle()
 {
     return d->properties.is_shuffle;
 }
 
-music::Property<music::Player::Volume>& music::PlayerStub::volume()
+media::Property<media::Player::Volume>& media::PlayerStub::volume()
 {
     return d->properties.volume;
 }
 
-const music::Signal<uint64_t>& music::PlayerStub::seeked_to() const
+const media::Signal<uint64_t>& media::PlayerStub::seeked_to() const
 {
-    static music::Signal<uint64_t> signal;
+    static media::Signal<uint64_t> signal;
     return signal;
 }

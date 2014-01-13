@@ -15,17 +15,17 @@
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
-#ifndef COM_UBUNTU_MUSIC_CONNECTION_H_
-#define COM_UBUNTU_MUSIC_CONNECTION_H_
+#ifndef CORE_UBUNTU_MEDIA_CONNECTION_H_
+#define CORE_UBUNTU_MEDIA_CONNECTION_H_
 
 #include <functional>
 #include <memory>
 
-namespace com
+namespace core
 {
 namespace ubuntu
 {
-namespace music
+namespace media
 {
 class Connection
 {

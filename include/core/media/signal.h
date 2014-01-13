@@ -15,8 +15,8 @@
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
-#ifndef COM_UBUNTU_MUSIC_SIGNAL_H_
-#define COM_UBUNTU_MUSIC_SIGNAL_H_
+#ifndef CORE_UBUNTU_MEDIA_SIGNAL_H_
+#define CORE_UBUNTU_MEDIA_SIGNAL_H_
 
 #include <core/media/connection.h>
 
@@ -26,11 +26,11 @@
 #include <mutex>
 #include <set>
 
-namespace com
+namespace core
 {
 namespace ubuntu
 {
-namespace music
+namespace media
 {
 template<typename T>
 class Signal
@@ -83,7 +83,7 @@ class Signal
             std::lock_guard<std::mutex> lg(guard);
             slots.erase(it);
         }
-        
+
         std::mutex guard;
         std::list<Slot> slots;
         unsigned int counter = Signal<T>::tag()++;
@@ -146,4 +146,4 @@ class Signal<void>
 }
 }
 
-#endif // COM_UBUNTU_MUSIC_SIGNAL_H_
+#endif // CORE_UBUNTU_MEDIA_SIGNAL_H_

@@ -30,13 +30,13 @@ namespace dbus
 namespace traits
 {
 template<>
-struct Service<com::ubuntu::music::Player>
+struct Service<core::ubuntu::media::Player>
 {
     static const std::string& interface_name()
     {
         static const std::string s
         {
-            "com.ubuntu.music.Service.Player"
+            "core.ubuntu.media.Service.Player"
         };
         return s;
     }

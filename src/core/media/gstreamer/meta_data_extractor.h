@@ -30,7 +30,7 @@
 
 namespace gstreamer
 {
-class MetaDataExtractor : public com::ubuntu::music::Engine::MetaDataExtractor
+class MetaDataExtractor : public core::ubuntu::media::Engine::MetaDataExtractor
 {
 public:
     MetaDataExtractor()
@@ -52,16 +52,16 @@ public:
         // gst_object_unref(pipe);
     }
 
-    com::ubuntu::music::Track::MetaData meta_data_for_track_with_uri(const com::ubuntu::music::Track::UriType& uri)
+    core::ubuntu::media::Track::MetaData meta_data_for_track_with_uri(const core::ubuntu::media::Track::UriType& uri)
     {
         if (!gst_uri_is_valid(uri.c_str()))
             throw std::runtime_error("Invalid uri");
 
-        com::ubuntu::music::Track::MetaData meta_data;
-        std::promise<com::ubuntu::music::Track::MetaData> promise;
-        std::future<com::ubuntu::music::Track::MetaData> future{promise.get_future()};
+        core::ubuntu::media::Track::MetaData meta_data;
+        std::promise<core::ubuntu::media::Track::MetaData> promise;
+        std::future<core::ubuntu::media::Track::MetaData> future{promise.get_future()};
 
-        com::ubuntu::music::ScopedConnection on_new_message_connection
+        core::ubuntu::media::ScopedConnection on_new_message_connection
         {
             bus.on_new_message.connect(
                     [&](const gstreamer::Bus::Message& msg)
@@ -109,9 +109,9 @@ private:
 
     static void on_tag_available(
             const gstreamer::Bus::Message::Detail::Tag& tag,
-            com::ubuntu::music::Track::MetaData& md)
+            core::ubuntu::media::Track::MetaData& md)
     {
-        namespace music = com::ubuntu::music;
+        namespace media = core::ubuntu::media;
 
         gst_tag_list_foreach(
                     tag.tag_list,
@@ -123,21 +123,21 @@ private:
 
             static const std::map<std::string, std::string> gstreamer_to_mpris_tag_lut =
             {
-                {GST_TAG_ALBUM, music::Engine::Xesam::album()},
-                {GST_TAG_ALBUM_ARTIST, music::Engine::Xesam::album_artist()},
-                {GST_TAG_ARTIST, music::Engine::Xesam::artist()},
-                {GST_TAG_LYRICS, music::Engine::Xesam::as_text()},
-                {GST_TAG_COMMENT, music::Engine::Xesam::comment()},
-                {GST_TAG_COMPOSER, music::Engine::Xesam::composer()},
-                {GST_TAG_DATE, music::Engine::Xesam::content_created()},
-                {GST_TAG_ALBUM_VOLUME_NUMBER, music::Engine::Xesam::disc_number()},
-                {GST_TAG_GENRE, music::Engine::Xesam::genre()},
-                {GST_TAG_TITLE, music::Engine::Xesam::title()},
-                {GST_TAG_TRACK_NUMBER, music::Engine::Xesam::track_number()},
-                {GST_TAG_USER_RATING, music::Engine::Xesam::user_rating()}
+                {GST_TAG_ALBUM, media::Engine::Xesam::album()},
+                {GST_TAG_ALBUM_ARTIST, media::Engine::Xesam::album_artist()},
+                {GST_TAG_ARTIST, media::Engine::Xesam::artist()},
+                {GST_TAG_LYRICS, media::Engine::Xesam::as_text()},
+                {GST_TAG_COMMENT, media::Engine::Xesam::comment()},
+                {GST_TAG_COMPOSER, media::Engine::Xesam::composer()},
+                {GST_TAG_DATE, media::Engine::Xesam::content_created()},
+                {GST_TAG_ALBUM_VOLUME_NUMBER, media::Engine::Xesam::disc_number()},
+                {GST_TAG_GENRE, media::Engine::Xesam::genre()},
+                {GST_TAG_TITLE, media::Engine::Xesam::title()},
+                {GST_TAG_TRACK_NUMBER, media::Engine::Xesam::track_number()},
+                {GST_TAG_USER_RATING, media::Engine::Xesam::user_rating()}
             };
 
-            auto md = static_cast<music::Track::MetaData*>(user_data);
+            auto md = static_cast<media::Track::MetaData*>(user_data);
             std::stringstream ss;
 
             switch(gst_tag_get_type(tag))

@@ -16,8 +16,8 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#ifndef COM_UBUNTU_MUSIC_SERVICE_STUB_H_
-#define COM_UBUNTU_MUSIC_SERVICE_STUB_H_
+#ifndef CORE_UBUNTU_MEDIA_SERVICE_STUB_H_
+#define CORE_UBUNTU_MEDIA_SERVICE_STUB_H_
 
 #include <core/media/service.h>
 
@@ -27,18 +27,18 @@
 
 #include <memory>
 
-namespace com
+namespace core
 {
 namespace ubuntu
 {
-namespace music
+namespace media
 {
-class ServiceStub : public org::freedesktop::dbus::Stub<com::ubuntu::music::Service>
+class ServiceStub : public org::freedesktop::dbus::Stub<core::ubuntu::media::Service>
 {
   public:
     ServiceStub();
     ~ServiceStub();
-    
+
     std::shared_ptr<Player> create_session(const Player::Configuration&);
 
   private:
@@ -49,4 +49,4 @@ class ServiceStub : public org::freedesktop::dbus::Stub<com::ubuntu::music::Serv
 }
 }
 
-#endif // COM_UBUNTU_MUSIC_SERVICE_STUB_H_
+#endif // CORE_UBUNTU_MEDIA_SERVICE_STUB_H_

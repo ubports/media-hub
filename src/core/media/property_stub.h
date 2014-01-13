@@ -16,8 +16,8 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#ifndef COM_UBUNTU_MUSIC_PROPERTY_STUB_H_
-#define COM_UBUNTU_MUSIC_PROPERTY_STUB_H_
+#ifndef CORE_UBUNTU_MEDIA_PROPERTY_STUB_H_
+#define CORE_UBUNTU_MEDIA_PROPERTY_STUB_H_
 
 #include <core/media/player.h>
 #include <core/media/property.h>
@@ -29,17 +29,17 @@
 #include "mpris/player.h"
 #include "mpris/track_list.h"
 
-namespace com
+namespace core
 {
 namespace ubuntu
 {
-namespace music
+namespace media
 {
 
 template<typename T, typename DBusProperty>
 struct PropertyStub : public Property<T>
 {
-    typedef music::Property<T> super;
+    typedef media::Property<T> super;
 
     PropertyStub(const std::shared_ptr<org::freedesktop::dbus::Property<DBusProperty>>& dbus_property)
             : super(),
@@ -63,9 +63,9 @@ struct PropertyStub : public Property<T>
 };
 
 template<>
-struct PropertyStub<music::Player::PlaybackStatus, mpris::Player::Properties::PlaybackStatus> : public music::Property<music::Player::PlaybackStatus>
+struct PropertyStub<media::Player::PlaybackStatus, mpris::Player::Properties::PlaybackStatus> : public media::Property<media::Player::PlaybackStatus>
 {
-    typedef music::Property<Player::PlaybackStatus> super;
+    typedef media::Property<Player::PlaybackStatus> super;
 
     static const std::map<Player::PlaybackStatus, std::string>& playback_status_lut()
     {
@@ -191,7 +191,7 @@ struct PropertyStub<TrackList::Container, mpris::TrackList::Properties::Tracks>
         for (auto path : remote_value)
         {
             super::mutable_get().push_back(
-                        music::Track::Id{path});
+                        media::Track::Id{path});
         }
         return super::get();
     }
@@ -241,4 +241,4 @@ struct PropertyStub<Track::MetaData, mpris::Player::Properties::MetaData>
 }
 }
 }
-#endif // COM_UBUNTU_MUSIC_PROPERTY_STUB_H_
+#endif // CORE_UBUNTU_MEDIA_PROPERTY_STUB_H_

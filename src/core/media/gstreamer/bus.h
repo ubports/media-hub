@@ -338,7 +338,7 @@ public:
     }
 
     GstBus* bus;
-    com::ubuntu::music::Signal<Message> on_new_message;
+    core::ubuntu::media::Signal<Message> on_new_message;
 };
 }
 

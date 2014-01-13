@@ -22,20 +22,20 @@
 
 #include <core/media/property.h>
 
-namespace music = com::ubuntu::music;
+namespace media = core::ubuntu::media;
 
-struct music::PlayerImplementation::Private
+struct media::PlayerImplementation::Private
 {
     Private(PlayerImplementation* parent,
             const dbus::types::ObjectPath& session_path,
-            const std::shared_ptr<music::Service>& service,
-            const std::shared_ptr<music::Engine>& engine)
+            const std::shared_ptr<media::Service>& service,
+            const std::shared_ptr<media::Engine>& engine)
         : parent(parent),
           service(service),
           engine(engine),
           session_path(session_path),
           track_list(
-              new music::TrackListImplementation(
+              new media::TrackListImplementation(
                   session_path.as_string() + "/TrackList",
                   engine->meta_data_extractor()))
     {
@@ -44,10 +44,10 @@ struct music::PlayerImplementation::Private
                     {
             switch(state)
             {
-            case Engine::State::ready: parent->playback_status().set(music::Player::ready); break;
-            case Engine::State::playing: parent->playback_status().set(music::Player::playing); break;
-            case Engine::State::stopped: parent->playback_status().set(music::Player::stopped); break;
-            case Engine::State::paused: parent->playback_status().set(music::Player::paused); break;
+            case Engine::State::ready: parent->playback_status().set(media::Player::ready); break;
+            case Engine::State::playing: parent->playback_status().set(media::Player::playing); break;
+            case Engine::State::stopped: parent->playback_status().set(media::Player::stopped); break;
+            case Engine::State::paused: parent->playback_status().set(media::Player::paused); break;
             default:
                 break;
             };
@@ -61,11 +61,11 @@ struct music::PlayerImplementation::Private
     std::shared_ptr<TrackListImplementation> track_list;
 };
 
-music::PlayerImplementation::PlayerImplementation(
+media::PlayerImplementation::PlayerImplementation(
         const dbus::types::ObjectPath& session_path,
         const std::shared_ptr<Service>& service,
         const std::shared_ptr<Engine>& engine)
-    : music::PlayerSkeleton(session_path),
+    : media::PlayerSkeleton(session_path),
       d(new Private(
             this,
             session_path,
@@ -84,32 +84,32 @@ music::PlayerImplementation::PlayerImplementation(
     loop_status().set(Player::LoopStatus::none);
 }
 
-music::PlayerImplementation::~PlayerImplementation()
+media::PlayerImplementation::~PlayerImplementation()
 {
 }
 
-std::shared_ptr<music::TrackList> music::PlayerImplementation::track_list()
+std::shared_ptr<media::TrackList> media::PlayerImplementation::track_list()
 {
     return d->track_list;
 }
 
-bool music::PlayerImplementation::open_uri(const Track::UriType& uri)
+bool media::PlayerImplementation::open_uri(const Track::UriType& uri)
 {
     std::cout << __PRETTY_FUNCTION__ << ": " << uri << std::endl;
     return d->engine->open_resource_for_uri(uri);
 }
 
-void music::PlayerImplementation::next()
+void media::PlayerImplementation::next()
 {
 }
 
-void music::PlayerImplementation::previous()
+void media::PlayerImplementation::previous()
 {
 }
 
-void music::PlayerImplementation::play()
+void media::PlayerImplementation::play()
 {
-    /*if (playback_status() == music::Player::null)
+    /*if (playback_status() == media::Player::null)
     {
         if (d->track_list->has_next())
             if (open_uri(d->track_list->next()->))
@@ -117,17 +117,17 @@ void music::PlayerImplementation::play()
     d->engine->play();
 }
 
-void music::PlayerImplementation::pause()
+void media::PlayerImplementation::pause()
 {
     d->engine->pause();
 }
 
-void music::PlayerImplementation::stop()
+void media::PlayerImplementation::stop()
 {
     d->engine->stop();
 }
 
-void music::PlayerImplementation::seek_to(const std::chrono::microseconds& ms)
+void media::PlayerImplementation::seek_to(const std::chrono::microseconds& ms)
 {
     d->engine->seek_to(ms);
 }

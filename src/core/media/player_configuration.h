@@ -15,16 +15,16 @@
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
-#ifndef COM_UBUNTU_MUSIC_PLAYER_CLIENT_CONFIGURATION_H_
-#define COM_UBUNTU_MUSIC_PLAYER_CLIENT_CONFIGURATION_H_
+#ifndef CORE_UBUNTU_MEDIA_PLAYER_CLIENT_CONFIGURATION_H_
+#define CORE_UBUNTU_MEDIA_PLAYER_CLIENT_CONFIGURATION_H_
 
 #include <core/media/player.h>
 
 #include <org/freedesktop/dbus/types/object_path.h>
 
-struct com::ubuntu::music::Player::Configuration
+struct core::ubuntu::media::Player::Configuration
 {
     org::freedesktop::dbus::types::ObjectPath object_path;
 };
 
-#endif // COM_UBUNTU_MUSIC_PLAYER_CLIENT_CONFIGURATION_H_
+#endif // CORE_UBUNTU_MEDIA_PLAYER_CLIENT_CONFIGURATION_H_

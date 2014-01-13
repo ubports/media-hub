@@ -25,27 +25,27 @@
 #include "mpris/service.h"
 
 namespace dbus = org::freedesktop::dbus;
-namespace music = com::ubuntu::music;
+namespace media = core::ubuntu::media;
 
-struct music::ServiceStub::Private
-{    
+struct media::ServiceStub::Private
+{
     dbus::Object::Ptr object;
 };
 
-music::ServiceStub::ServiceStub()
-    : org::freedesktop::dbus::Stub<music::Service>(the_session_bus()),
+media::ServiceStub::ServiceStub()
+    : org::freedesktop::dbus::Stub<media::Service>(the_session_bus()),
       d(new Private{
         access_service()->object_for_path(
             dbus::types::ObjectPath(
-                dbus::traits::Service<music::Service>::object_path()))})
+                dbus::traits::Service<media::Service>::object_path()))})
 {
 }
 
-music::ServiceStub::~ServiceStub()
+media::ServiceStub::~ServiceStub()
 {
 }
-    
-std::shared_ptr<music::Player> music::ServiceStub::create_session(const music::Player::Configuration&)
+
+std::shared_ptr<media::Player> media::ServiceStub::create_session(const media::Player::Configuration&)
 {
     auto op
             = d->object->invoke_method_synchronously<
@@ -55,5 +55,5 @@ std::shared_ptr<music::Player> music::ServiceStub::create_session(const music::P
     if (op.is_error())
         throw std::runtime_error("Problem creating session: " + op.error());
 
-    return std::shared_ptr<music::Player>(new music::PlayerStub(shared_from_this(), op.value()));
+    return std::shared_ptr<media::Player>(new media::PlayerStub(shared_from_this(), op.value()));
 }

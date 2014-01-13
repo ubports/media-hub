@@ -28,11 +28,11 @@
 #include <org/freedesktop/dbus/stub.h>
 
 namespace dbus = org::freedesktop::dbus;
-namespace music = com::ubuntu::music;
+namespace media = core::ubuntu::media;
 
-struct music::PlayerSkeleton::Private
+struct media::PlayerSkeleton::Private
 {
-    Private(music::PlayerSkeleton* player, const dbus::types::ObjectPath& session)
+    Private(media::PlayerSkeleton* player, const dbus::types::ObjectPath& session)
         : impl(player),
           object(impl->access_service()->add_object_for_path(session)),
           properties
@@ -117,7 +117,7 @@ struct music::PlayerSkeleton::Private
         impl->access_bus()->send(reply->get());
     }
 
-    music::PlayerSkeleton* impl;
+    media::PlayerSkeleton* impl;
     dbus::Object::Ptr object;
     struct
     {
@@ -145,9 +145,9 @@ struct music::PlayerSkeleton::Private
 
 };
 
-music::PlayerSkeleton::PlayerSkeleton(
+media::PlayerSkeleton::PlayerSkeleton(
     const org::freedesktop::dbus::types::ObjectPath& session_path)
-        : dbus::Skeleton<music::Player>(the_session_bus()),
+        : dbus::Skeleton<media::Player>(the_session_bus()),
           d(new Private{this, session_path})
 {
     d->object->install_method_handler<mpris::Player::Next>(
@@ -184,142 +184,142 @@ music::PlayerSkeleton::PlayerSkeleton(
                   std::placeholders::_1));
 }
 
-music::PlayerSkeleton::~PlayerSkeleton()
+media::PlayerSkeleton::~PlayerSkeleton()
 {
 }
 
-const music::Property<bool>& music::PlayerSkeleton::can_play() const 
+const media::Property<bool>& media::PlayerSkeleton::can_play() const 
 {
     return d->properties.can_play;
 }
 
-const music::Property<bool>& music::PlayerSkeleton::can_pause() const
+const media::Property<bool>& media::PlayerSkeleton::can_pause() const
 {
     return d->properties.can_pause;
 }
 
-const music::Property<bool>& music::PlayerSkeleton::can_seek() const
+const media::Property<bool>& media::PlayerSkeleton::can_seek() const
 {
     return d->properties.can_seek;
 }
 
-const music::Property<bool>& music::PlayerSkeleton::can_go_previous() const
+const media::Property<bool>& media::PlayerSkeleton::can_go_previous() const
 {
     return d->properties.can_go_previous;
 }
 
-const music::Property<bool>& music::PlayerSkeleton::can_go_next() const
+const media::Property<bool>& media::PlayerSkeleton::can_go_next() const
 {
     return d->properties.can_go_next;
 }
 
-const music::Property<music::Player::PlaybackStatus>& music::PlayerSkeleton::playback_status() const
+const media::Property<media::Player::PlaybackStatus>& media::PlayerSkeleton::playback_status() const
 {
     return d->properties.playback_status;
 }
 
-const music::Property<music::Player::LoopStatus>& music::PlayerSkeleton::loop_status() const
+const media::Property<media::Player::LoopStatus>& media::PlayerSkeleton::loop_status() const
 {
     return d->properties.loop_status;
 }
 
-const music::Property<music::Player::PlaybackRate>& music::PlayerSkeleton::playback_rate() const
+const media::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::playback_rate() const
 {
     return d->properties.playback_rate;
 }
 
-const music::Property<bool>& music::PlayerSkeleton::is_shuffle() const
+const media::Property<bool>& media::PlayerSkeleton::is_shuffle() const
 {
     return d->properties.is_shuffle;
 }
 
-const music::Property<music::Track::MetaData>& music::PlayerSkeleton::meta_data_for_current_track() const
+const media::Property<media::Track::MetaData>& media::PlayerSkeleton::meta_data_for_current_track() const
 {
     return d->properties.meta_data_for_current_track;
 }
 
-const music::Property<music::Player::Volume>& music::PlayerSkeleton::volume() const
+const media::Property<media::Player::Volume>& media::PlayerSkeleton::volume() const
 {
     return d->properties.volume;
 }
 
-const music::Property<music::Player::PlaybackRate>& music::PlayerSkeleton::minimum_playback_rate() const
+const media::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::minimum_playback_rate() const
 {
     return d->properties.minimum_playback_rate;
 }
 
-const music::Property<music::Player::PlaybackRate>& music::PlayerSkeleton::maximum_playback_rate() const
+const media::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::maximum_playback_rate() const
 {
     return d->properties.maximum_playback_rate;
 }
 
-music::Property<music::Player::LoopStatus>& music::PlayerSkeleton::loop_status()
+media::Property<media::Player::LoopStatus>& media::PlayerSkeleton::loop_status()
 {
     return d->properties.loop_status;
 }
 
-music::Property<music::Player::PlaybackRate>& music::PlayerSkeleton::playback_rate()
+media::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::playback_rate()
 {
     return d->properties.playback_rate;
 }
 
-music::Property<bool>& music::PlayerSkeleton::is_shuffle()
+media::Property<bool>& media::PlayerSkeleton::is_shuffle()
 {
     return d->properties.is_shuffle;
 }
 
-music::Property<music::Player::Volume>& music::PlayerSkeleton::volume()
+media::Property<media::Player::Volume>& media::PlayerSkeleton::volume()
 {
     return d->properties.volume;
 }
 
-music::Property<music::Player::PlaybackStatus>& music::PlayerSkeleton::playback_status()
+media::Property<media::Player::PlaybackStatus>& media::PlayerSkeleton::playback_status()
 {
     return d->properties.playback_status;
 }
 
-music::Property<bool>& music::PlayerSkeleton::can_play()
+media::Property<bool>& media::PlayerSkeleton::can_play()
 {
     return d->properties.can_play;
 }
 
-music::Property<bool>& music::PlayerSkeleton::can_pause()
+media::Property<bool>& media::PlayerSkeleton::can_pause()
 {
     return d->properties.can_pause;
 }
 
-music::Property<bool>& music::PlayerSkeleton::can_seek()
+media::Property<bool>& media::PlayerSkeleton::can_seek()
 {
     return d->properties.can_seek;
 }
 
-music::Property<bool>& music::PlayerSkeleton::can_go_previous()
+media::Property<bool>& media::PlayerSkeleton::can_go_previous()
 {
     return d->properties.can_go_previous;
 }
 
-music::Property<bool>& music::PlayerSkeleton::can_go_next()
+media::Property<bool>& media::PlayerSkeleton::can_go_next()
 {
     return d->properties.can_go_next;
 }
 
-music::Property<music::Track::MetaData>& music::PlayerSkeleton::meta_data_for_current_track()
+media::Property<media::Track::MetaData>& media::PlayerSkeleton::meta_data_for_current_track()
 {
     return d->properties.meta_data_for_current_track;
 }
 
-music::Property<music::Player::PlaybackRate>& music::PlayerSkeleton::minimum_playback_rate()
+media::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::minimum_playback_rate()
 {
     return d->properties.minimum_playback_rate;
 }
 
-music::Property<music::Player::PlaybackRate>& music::PlayerSkeleton::maximum_playback_rate()
+media::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::maximum_playback_rate()
 {
     return d->properties.maximum_playback_rate;
 }
 
-const music::Signal<uint64_t>& music::PlayerSkeleton::seeked_to() const
+const media::Signal<uint64_t>& media::PlayerSkeleton::seeked_to() const
 {
-    static const music::Signal<uint64_t> signal;
+    static const media::Signal<uint64_t> signal;
     return signal;
 }

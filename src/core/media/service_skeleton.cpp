@@ -29,19 +29,19 @@
 #include <sstream>
 
 namespace dbus = org::freedesktop::dbus;
-namespace music = com::ubuntu::music;
+namespace media = core::ubuntu::media;
 
 namespace
 {
-std::map<dbus::types::ObjectPath, std::shared_ptr<music::Player>> session_store;
+std::map<dbus::types::ObjectPath, std::shared_ptr<media::Player>> session_store;
 }
 
-struct music::ServiceSkeleton::Private
+struct media::ServiceSkeleton::Private
 {
-    Private(music::ServiceSkeleton* impl)
+    Private(media::ServiceSkeleton* impl)
         : impl(impl),
           object(impl->access_service()->add_object_for_path(
-                     dbus::traits::Service<music::Service>::object_path()))
+                     dbus::traits::Service<media::Service>::object_path()))
     {
         object->install_method_handler<mpris::Service::CreateSession>(
                     std::bind(
@@ -55,10 +55,10 @@ struct music::ServiceSkeleton::Private
         static unsigned int session_counter = 0;
 
         std::stringstream ss;
-        ss << "/com/ubuntu/music/Service/sessions/" << session_counter++;
+        ss << "/core/ubuntu/media/Service/sessions/" << session_counter++;
 
         dbus::types::ObjectPath op{ss.str()};
-        music::Player::Configuration config{op};
+        media::Player::Configuration config{op};
 
         try
         {
@@ -85,27 +85,27 @@ struct music::ServiceSkeleton::Private
         }
     }
 
-    music::ServiceSkeleton* impl;
+    media::ServiceSkeleton* impl;
     dbus::Object::Ptr object;
 
 };
 
-music::ServiceSkeleton::ServiceSkeleton()
-    : dbus::Skeleton<music::Service>(the_session_bus()),
+media::ServiceSkeleton::ServiceSkeleton()
+    : dbus::Skeleton<media::Service>(the_session_bus()),
       d(new Private(this))
 {
 }
 
-music::ServiceSkeleton::~ServiceSkeleton()
+media::ServiceSkeleton::~ServiceSkeleton()
 {
 }
 
-void music::ServiceSkeleton::run()
+void media::ServiceSkeleton::run()
 {
     access_bus()->run();
 }
 
-void music::ServiceSkeleton::stop()
+void media::ServiceSkeleton::stop()
 {
     access_bus()->stop();
 }

@@ -34,13 +34,13 @@
 #include <functional>
 #include <thread>
 
-namespace music = com::ubuntu::music;
+namespace media = core::ubuntu::media;
 
 struct EnsureFakeAudioSinkEnvVarIsSet
 {
     EnsureFakeAudioSinkEnvVarIsSet()
     {
-        ::setenv("COM_UBUNTU_MUSIC_SERVICE_AUDIO_SINK_NAME", "fakesink", 1);
+        ::setenv("CORE_UBUNTU_MEDIA_SERVICE_AUDIO_SINK_NAME", "fakesink", 1);
     }
 } ensure_fake_audio_sink_env_var_is_set;
 
@@ -56,42 +56,42 @@ TEST(GStreamerEngine, setting_uri_and_starting_playback_works)
     std::remove(test_file.c_str());
     ASSERT_TRUE(test::copy_test_ogg_file_to(test_file));
 
-    test::WaitableStateTransition<com::ubuntu::music::Engine::State> wst(
-                com::ubuntu::music::Engine::State::ready);
+    test::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
+                core::ubuntu::media::Engine::State::ready);
 
     gstreamer::Engine engine;
 
     engine.track_meta_data().changed().connect(
-                [](const std::tuple<music::Track::UriType, music::Track::MetaData>& md)
+                [](const std::tuple<media::Track::UriType, media::Track::MetaData>& md)
                 {
-                    if (0 < std::get<1>(md).count(music::Engine::Xesam::album()))
-                        EXPECT_EQ("Test", std::get<1>(md).get(music::Engine::Xesam::album()));
-                    if (0 < std::get<1>(md).count(music::Engine::Xesam::album_artist()))
-                        EXPECT_EQ("Test", std::get<1>(md).get(music::Engine::Xesam::album_artist()));
-                    if (0 < std::get<1>(md).count(music::Engine::Xesam::artist()))
-                        EXPECT_EQ("Test", std::get<1>(md).get(music::Engine::Xesam::artist()));
-                    if (0 < std::get<1>(md).count(music::Engine::Xesam::disc_number()))
-                        EXPECT_EQ("42", std::get<1>(md).get(music::Engine::Xesam::disc_number()));
-                    if (0 < std::get<1>(md).count(music::Engine::Xesam::genre()))
-                        EXPECT_EQ("Test", std::get<1>(md).get(music::Engine::Xesam::genre()));
-                    if (0 < std::get<1>(md).count(music::Engine::Xesam::track_number()))
-                        EXPECT_EQ("42", std::get<1>(md).get(music::Engine::Xesam::track_number()));
+                    if (0 < std::get<1>(md).count(media::Engine::Xesam::album()))
+                        EXPECT_EQ("Test", std::get<1>(md).get(media::Engine::Xesam::album()));
+                    if (0 < std::get<1>(md).count(media::Engine::Xesam::album_artist()))
+                        EXPECT_EQ("Test", std::get<1>(md).get(media::Engine::Xesam::album_artist()));
+                    if (0 < std::get<1>(md).count(media::Engine::Xesam::artist()))
+                        EXPECT_EQ("Test", std::get<1>(md).get(media::Engine::Xesam::artist()));
+                    if (0 < std::get<1>(md).count(media::Engine::Xesam::disc_number()))
+                        EXPECT_EQ("42", std::get<1>(md).get(media::Engine::Xesam::disc_number()));
+                    if (0 < std::get<1>(md).count(media::Engine::Xesam::genre()))
+                        EXPECT_EQ("Test", std::get<1>(md).get(media::Engine::Xesam::genre()));
+                    if (0 < std::get<1>(md).count(media::Engine::Xesam::track_number()))
+                        EXPECT_EQ("42", std::get<1>(md).get(media::Engine::Xesam::track_number()));
                 });
 
     engine.state().changed().connect(
                 std::bind(
-                    &test::WaitableStateTransition<com::ubuntu::music::Engine::State>::trigger,
+                    &test::WaitableStateTransition<core::ubuntu::media::Engine::State>::trigger,
                     std::ref(wst),
                     std::placeholders::_1));
 
     EXPECT_TRUE(engine.open_resource_for_uri(test_file_uri));
     EXPECT_TRUE(engine.play());
     EXPECT_TRUE(wst.wait_for_state_for(
-                    com::ubuntu::music::Engine::State::playing,
+                    core::ubuntu::media::Engine::State::playing,
                     std::chrono::milliseconds{4000}));
 
     wst.wait_for_state_for(
-                    com::ubuntu::music::Engine::State::ready,
+                    core::ubuntu::media::Engine::State::ready,
                     std::chrono::seconds{10});
 }
 
@@ -102,29 +102,29 @@ TEST(GStreamerEngine, stop_pause_play_seek_works)
     std::remove(test_file.c_str());
     ASSERT_TRUE(test::copy_test_mp3_file_to(test_file));
 
-    test::WaitableStateTransition<com::ubuntu::music::Engine::State> wst(
-                com::ubuntu::music::Engine::State::ready);
+    test::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
+                core::ubuntu::media::Engine::State::ready);
 
     gstreamer::Engine engine;
 
     engine.state().changed().connect(
                 std::bind(
-                    &test::WaitableStateTransition<com::ubuntu::music::Engine::State>::trigger,
+                    &test::WaitableStateTransition<core::ubuntu::media::Engine::State>::trigger,
                     std::ref(wst),
                     std::placeholders::_1));
 
     EXPECT_TRUE(engine.open_resource_for_uri(test_file_uri));
     EXPECT_TRUE(engine.play());
     EXPECT_TRUE(wst.wait_for_state_for(
-                    com::ubuntu::music::Engine::State::playing,
+                    core::ubuntu::media::Engine::State::playing,
                     std::chrono::milliseconds{4000}));
     EXPECT_TRUE(engine.stop());
     EXPECT_TRUE(wst.wait_for_state_for(
-                    com::ubuntu::music::Engine::State::stopped,
+                    core::ubuntu::media::Engine::State::stopped,
                     std::chrono::milliseconds{4000}));
     EXPECT_TRUE(engine.pause());
     EXPECT_TRUE(wst.wait_for_state_for(
-                    com::ubuntu::music::Engine::State::paused,
+                    core::ubuntu::media::Engine::State::paused,
                     std::chrono::milliseconds{4000}));
 
     EXPECT_TRUE(engine.seek_to(std::chrono::seconds{10}));
@@ -133,11 +133,11 @@ TEST(GStreamerEngine, stop_pause_play_seek_works)
 
     EXPECT_TRUE(engine.play());
     EXPECT_TRUE(wst.wait_for_state_for(
-                    com::ubuntu::music::Engine::State::playing,
+                    core::ubuntu::media::Engine::State::playing,
                     std::chrono::milliseconds{4000}));
 
     EXPECT_TRUE(wst.wait_for_state_for(
-                    com::ubuntu::music::Engine::State::ready,
+                    core::ubuntu::media::Engine::State::ready,
                     std::chrono::seconds{40}));
 }
 
@@ -148,19 +148,19 @@ TEST(GStreamerEngine, adjusting_volume_works)
     std::remove(test_file.c_str());
     ASSERT_TRUE(test::copy_test_mp3_file_to(test_file));
 
-    test::WaitableStateTransition<com::ubuntu::music::Engine::State> wst(
-                com::ubuntu::music::Engine::State::ready);
+    test::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
+                core::ubuntu::media::Engine::State::ready);
 
     gstreamer::Engine engine;
     engine.state().changed().connect(
                 std::bind(
-                    &test::WaitableStateTransition<com::ubuntu::music::Engine::State>::trigger,
+                    &test::WaitableStateTransition<core::ubuntu::media::Engine::State>::trigger,
                     std::ref(wst),
                     std::placeholders::_1));
     EXPECT_TRUE(engine.open_resource_for_uri(test_file_uri));
     EXPECT_TRUE(engine.play());
     EXPECT_TRUE(wst.wait_for_state_for(
-                    com::ubuntu::music::Engine::State::playing,
+                    core::ubuntu::media::Engine::State::playing,
                     std::chrono::milliseconds{4000}));
 
     std::thread t([&]()
@@ -171,7 +171,7 @@ TEST(GStreamerEngine, adjusting_volume_works)
             {
                 try
                 {
-                    music::Engine::Volume volume{v};
+                    media::Engine::Volume volume{v};
                     engine.volume() = volume;
                     EXPECT_EQ(volume, engine.volume());
                 } catch(...)
@@ -203,17 +203,17 @@ TEST(GStreamerEngine, meta_data_extractor_provides_correct_tags)
     gstreamer::Engine engine;
     auto md = engine.meta_data_extractor()->meta_data_for_track_with_uri(test_file_uri);
 
-    if (0 < md.count(music::Engine::Xesam::album()))
-        EXPECT_EQ("Test", md.get(music::Engine::Xesam::album()));
-    if (0 < md.count(music::Engine::Xesam::album_artist()))
-        EXPECT_EQ("Test", md.get(music::Engine::Xesam::album_artist()));
-    if (0 < md.count(music::Engine::Xesam::artist()))
-        EXPECT_EQ("Test", md.get(music::Engine::Xesam::artist()));
-    if (0 < md.count(music::Engine::Xesam::disc_number()))
-        EXPECT_EQ("42", md.get(music::Engine::Xesam::disc_number()));
-    if (0 < md.count(music::Engine::Xesam::genre()))
-        EXPECT_EQ("Test", md.get(music::Engine::Xesam::genre()));
-    if (0 < md.count(music::Engine::Xesam::track_number()))
-        EXPECT_EQ("42", md.get(music::Engine::Xesam::track_number()));
+    if (0 < md.count(media::Engine::Xesam::album()))
+        EXPECT_EQ("Test", md.get(media::Engine::Xesam::album()));
+    if (0 < md.count(media::Engine::Xesam::album_artist()))
+        EXPECT_EQ("Test", md.get(media::Engine::Xesam::album_artist()));
+    if (0 < md.count(media::Engine::Xesam::artist()))
+        EXPECT_EQ("Test", md.get(media::Engine::Xesam::artist()));
+    if (0 < md.count(media::Engine::Xesam::disc_number()))
+        EXPECT_EQ("42", md.get(media::Engine::Xesam::disc_number()));
+    if (0 < md.count(media::Engine::Xesam::genre()))
+        EXPECT_EQ("Test", md.get(media::Engine::Xesam::genre()));
+    if (0 < md.count(media::Engine::Xesam::track_number()))
+        EXPECT_EQ("42", md.get(media::Engine::Xesam::track_number()));
 }
 

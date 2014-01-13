@@ -18,19 +18,18 @@
 
 #include <core/media/track_list.h>
 
+namespace media = core::ubuntu::media;
 
-namespace music = com::ubuntu::music;
-
-const music::Track::Id& music::TrackList::after_empty_track()
+const media::Track::Id& media::TrackList::after_empty_track()
 {
-    static const music::Track::Id id{"/org/mpris/MediaPlayer2/TrackList/NoTrack"};
+    static const media::Track::Id id{"/org/mpris/MediaPlayer2/TrackList/NoTrack"};
     return id;
 }
 
-music::TrackList::TrackList()
+media::TrackList::TrackList()
 {
 }
 
-music::TrackList::~TrackList()
+media::TrackList::~TrackList()
 {
 }

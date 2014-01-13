@@ -23,29 +23,29 @@
 
 #include "gstreamer/engine.h"
 
-namespace music = com::ubuntu::music;
+namespace media = core::ubuntu::media;
 
-struct music::ServiceImplementation::Private
+struct media::ServiceImplementation::Private
 {
     Private() : engine(std::make_shared<gstreamer::Engine>())
     {
     }
-    std::shared_ptr<music::Engine> engine;
+    std::shared_ptr<media::Engine> engine;
 };
 
-music::ServiceImplementation::ServiceImplementation() : d(new Private())
+media::ServiceImplementation::ServiceImplementation() : d(new Private())
 {
 
 }
 
-music::ServiceImplementation::~ServiceImplementation()
+media::ServiceImplementation::~ServiceImplementation()
 {
 }
 
-std::shared_ptr<music::Player> music::ServiceImplementation::create_session(
-        const music::Player::Configuration& conf)
+std::shared_ptr<media::Player> media::ServiceImplementation::create_session(
+        const media::Player::Configuration& conf)
 {
-    return std::make_shared<music::PlayerImplementation>(
+    return std::make_shared<media::PlayerImplementation>(
                 conf.object_path,
                 shared_from_this(),
                 d->engine);

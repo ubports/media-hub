@@ -21,22 +21,22 @@
 
 #include <map>
 
-namespace music = com::ubuntu::music;
+namespace media = core::ubuntu::media;
 
-struct music::Track::Private
+struct media::Track::Private
 {
-    music::Track::Id id;
+    media::Track::Id id;
 };
 
-music::Track::Track(const music::Track::Id& id) : d(new Private{id})
+media::Track::Track(const media::Track::Id& id) : d(new Private{id})
 {
 }
 
-music::Track::~Track()
+media::Track::~Track()
 {
 }
 
-const music::Track::Id& music::Track::id() const
+const media::Track::Id& media::Track::id() const
 {
     return d->id;
 }

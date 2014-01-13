@@ -15,8 +15,8 @@
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
-#ifndef COM_UBUNTU_MUSIC_TRACK_LIST_SKELETON_H_
-#define COM_UBUNTU_MUSIC_TRACK_LIST_SKELETON_H_
+#ifndef CORE_UBUNTU_MEDIA_TRACK_LIST_SKELETON_H_
+#define CORE_UBUNTU_MEDIA_TRACK_LIST_SKELETON_H_
 
 #include <core/media/track_list.h>
 
@@ -24,13 +24,13 @@
 
 #include <org/freedesktop/dbus/skeleton.h>
 
-namespace com
+namespace core
 {
 namespace ubuntu
 {
-namespace music
+namespace media
 {
-class TrackListSkeleton : public org::freedesktop::dbus::Skeleton<com::ubuntu::music::TrackList>
+class TrackListSkeleton : public org::freedesktop::dbus::Skeleton<core::ubuntu::media::TrackList>
 {
 public:
     TrackListSkeleton(
@@ -48,7 +48,7 @@ public:
     const Signal<Track::Id>& on_track_removed() const;
     const Signal<Track::Id>& on_track_changed() const;
 
-protected:    
+protected:
     Property<bool>& can_edit_tracks();
     Property<Container>& tracks();
 
@@ -64,4 +64,4 @@ private:
 }
 }
 }
-#endif // COM_UBUNTU_MUSIC_PROPERTY_H_
+#endif // CORE_UBUNTU_MEDIA_PROPERTY_H_

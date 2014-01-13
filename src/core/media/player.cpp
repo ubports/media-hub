@@ -21,19 +21,19 @@
 
 #include "player_configuration.h"
 
-namespace music = com::ubuntu::music;
+namespace media = core::ubuntu::media;
 
-const music::Player::Configuration& music::Player::Client::default_configuration()
+const media::Player::Configuration& media::Player::Client::default_configuration()
 {
-    static const music::Player::Configuration config;
+    static const media::Player::Configuration config;
     return config;
 }
 
-music::Player::Player()
+media::Player::Player()
 {
 }
 
-music::Player::~Player()
+media::Player::~Player()
 {
 }
 

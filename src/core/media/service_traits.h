@@ -16,8 +16,8 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#ifndef COM_UBUNTU_MUSIC_SERVICE_TRAITS_H_
-#define COM_UBUNTU_MUSIC_SERVICE_TRAITS_H_
+#ifndef CORE_UBUNTU_MEDIA_SERVICE_TRAITS_H_
+#define CORE_UBUNTU_MEDIA_SERVICE_TRAITS_H_
 
 #include <core/media/service.h>
 
@@ -32,13 +32,13 @@ namespace dbus
 namespace traits
 {
 template<>
-struct Service<com::ubuntu::music::Service>
+struct Service<core::ubuntu::media::Service>
 {
     inline static const std::string& interface_name()
     {
         static const std::string s
         {
-            "com.ubuntu.music.Service"
+            "core.ubuntu.media.Service"
         };
         return s;
     }
@@ -47,7 +47,7 @@ struct Service<com::ubuntu::music::Service>
     {
         static const std::string s
         {
-            "/com/ubuntu/music/Service"
+            "/core/ubuntu/media/Service"
         };
         return s;
     }
@@ -57,4 +57,4 @@ struct Service<com::ubuntu::music::Service>
 }
 }
 
-#endif // COM_UBUNTU_MUSIC_SERVICE_TRAITS_H_
+#endif // CORE_UBUNTU_MEDIA_SERVICE_TRAITS_H_

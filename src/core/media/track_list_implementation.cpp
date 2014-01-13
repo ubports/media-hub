@@ -23,31 +23,31 @@
 #include <core/media/property.h>
 
 namespace dbus = org::freedesktop::dbus;
-namespace music = com::ubuntu::music;
+namespace media = core::ubuntu::media;
 
-struct music::TrackListImplementation::Private
+struct media::TrackListImplementation::Private
 {
     typedef std::map<Track::Id, std::tuple<Track::UriType, Track::MetaData>> MetaDataCache;
 
     dbus::types::ObjectPath path;
     MetaDataCache meta_data_cache;
-    std::shared_ptr<music::Engine::MetaDataExtractor> extractor;
+    std::shared_ptr<media::Engine::MetaDataExtractor> extractor;
 };
 
-music::TrackListImplementation::TrackListImplementation(
+media::TrackListImplementation::TrackListImplementation(
         const dbus::types::ObjectPath& op,
-        const std::shared_ptr<music::Engine::MetaDataExtractor>& extractor)
-    : music::TrackListSkeleton(op),
+        const std::shared_ptr<media::Engine::MetaDataExtractor>& extractor)
+    : media::TrackListSkeleton(op),
       d(new Private{op, Private::MetaDataCache{}, extractor})
 {
     can_edit_tracks().set(true);
 }
 
-music::TrackListImplementation::~TrackListImplementation()
+media::TrackListImplementation::~TrackListImplementation()
 {
 }
 
-music::Track::MetaData music::TrackListImplementation::query_meta_data_for_track(const music::Track::Id& id)
+media::Track::MetaData media::TrackListImplementation::query_meta_data_for_track(const media::Track::Id& id)
 {
     auto it = d->meta_data_cache.find(id);
 
@@ -57,9 +57,9 @@ music::Track::MetaData music::TrackListImplementation::query_meta_data_for_track
     return std::get<1>(it->second);
 }
 
-void music::TrackListImplementation::add_track_with_uri_at(
-        const music::Track::UriType& uri,
-        const music::Track::Id& position,
+void media::TrackListImplementation::add_track_with_uri_at(
+        const media::Track::UriType& uri,
+        const media::Track::Id& position,
         bool make_current)
 {
     static size_t track_counter = 0;
@@ -68,7 +68,7 @@ void music::TrackListImplementation::add_track_with_uri_at(
     Track::Id id{ss.str()};
 
     auto result = tracks().update([this, id, position, make_current](TrackList::Container& container)
-    {        
+    {
         auto it = std::find(container.begin(), container.end(), position);
         container.insert(it, id);
         return true;
@@ -93,7 +93,7 @@ void music::TrackListImplementation::add_track_with_uri_at(
     }
 }
 
-void music::TrackListImplementation::remove_track(const music::Track::Id& id)
+void media::TrackListImplementation::remove_track(const media::Track::Id& id)
 {
     auto result = tracks().update([id](TrackList::Container& container)
     {
@@ -110,7 +110,7 @@ void music::TrackListImplementation::remove_track(const music::Track::Id& id)
 
 }
 
-void music::TrackListImplementation::go_to(const music::Track::Id& track)
+void media::TrackListImplementation::go_to(const media::Track::Id& track)
 {
     (void) track;
 }

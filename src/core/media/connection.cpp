@@ -22,11 +22,11 @@
 #include <memory>
 #include <mutex>
 
-namespace music = com::ubuntu::music;
+namespace media = core::ubuntu::media;
 
-struct music::Connection::Private
+struct media::Connection::Private
 {
-    Private(const music::Connection::Disconnector& disconnector)
+    Private(const media::Connection::Disconnector& disconnector)
             : disconnector(disconnector)
     {
     }
@@ -37,7 +37,7 @@ struct music::Connection::Private
 
     void disconnect()
     {
-        static const music::Connection::Disconnector empty_disconnector{};
+        static const media::Connection::Disconnector empty_disconnector{};
 
         std::lock_guard<std::mutex> lg(guard);
 
@@ -49,23 +49,23 @@ struct music::Connection::Private
     }
 
     std::mutex guard;
-    music::Connection::Disconnector disconnector;
+    media::Connection::Disconnector disconnector;
 };
 
-music::Connection::Connection(const music::Connection::Disconnector& disconnector) : d(new Private(disconnector))
-{
-}
-    
-music::Connection::~Connection()
+media::Connection::Connection(const media::Connection::Disconnector& disconnector) : d(new Private(disconnector))
 {
 }
 
-bool music::Connection::is_connected() const
+media::Connection::~Connection()
+{
+}
+
+bool media::Connection::is_connected() const
 {
     return (d->disconnector ? true : false);
 }
 
-void music::Connection::disconnect()
+void media::Connection::disconnect()
 {
     d->disconnect();
 }

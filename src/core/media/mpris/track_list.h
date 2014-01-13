@@ -37,7 +37,7 @@ struct TrackList
 {
     static const std::string& name()
     {
-        static const std::string s{"com.ubuntu.music.Service.Player.TrackList"};
+        static const std::string s{"core.ubuntu.media.Service.Player.TrackList"};
         return s;
     }
 
