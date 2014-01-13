@@ -16,12 +16,12 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#include <com/ubuntu/music/service.h>
-#include <com/ubuntu/music/player.h>
-#include <com/ubuntu/music/property.h>
-#include <com/ubuntu/music/track_list.h>
+#include <core/media/service.h>
+#include <core/media/player.h>
+#include <core/media/property.h>
+#include <core/media/track_list.h>
 
-#include "com/ubuntu/music/gstreamer/engine.h"
+#include "core/media/gstreamer/engine.h"
 
 #include "../test_data.h"
 #include "../waitable_state_transition.h"

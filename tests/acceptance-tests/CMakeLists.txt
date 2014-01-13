@@ -1,5 +1,5 @@
 include_directories(
-    .
+
     ${CMAKE_SOURCE_DIR}/src
 )
 
@@ -19,7 +19,7 @@ target_link_libraries(
     ${CMAKE_THREAD_LIBS_INIT}
     ${Boost_LIBRARIES}
     ${DBUS_LIBRARIES}
-    
+
     gmock
     gmock_main
     gtest

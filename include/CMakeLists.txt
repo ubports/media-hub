@@ -1,4 +1,4 @@
 install(
-  DIRECTORY com
+  DIRECTORY core
   DESTINATION include/
 )
