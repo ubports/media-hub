@@ -54,3 +54,21 @@ bool test::copy_test_ogg_file_to(const std::string& dest)
 
     return true;
 }
+
+bool test::copy_test_avi_file_to(const std::string& dest)
+{
+    static const std::string file{"@CMAKE_CURRENT_SOURCE_DIR@/h264.avi"};
+
+    try
+    {
+        boost::filesystem::copy_file(
+            file,
+            dest,
+            boost::filesystem::copy_option::overwrite_if_exists);
+    } catch (const boost::filesystem::filesystem_error& e)
+    {
+        return false;
+    }
+
+    return true;
+}

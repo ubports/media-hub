@@ -63,7 +63,9 @@ struct Playbin
         if (!pipeline)
             throw std::runtime_error("Could not create pipeline for playbin.");
 
-        setup_pipeline_for_audio();
+        // Add audio and/or video sink elements depending on environment variables
+        // being set or not set
+        setup_pipeline_for_audio_video();
 
         g_signal_connect(
                     pipeline,
@@ -109,13 +111,13 @@ struct Playbin
         return bus;
     }
 
-    void setup_pipeline_for_audio()
+    void setup_pipeline_for_audio_video()
     {
         gint flags;
-        g_object_get(pipeline, "flags", &flags, nullptr);
+        g_object_get (pipeline, "flags", &flags, nullptr);
         flags |= GST_PLAY_FLAG_AUDIO;
+        flags |= GST_PLAY_FLAG_VIDEO;
         flags &= ~GST_PLAY_FLAG_TEXT;
-        flags &= ~GST_PLAY_FLAG_VIDEO;
         g_object_set (pipeline, "flags", flags, nullptr);
 
         if (::getenv("CORE_UBUNTU_MEDIA_SERVICE_AUDIO_SINK_NAME") != nullptr)
@@ -124,10 +126,25 @@ struct Playbin
                         ::getenv("CORE_UBUNTU_MEDIA_SERVICE_AUDIO_SINK_NAME"),
                         "audio-sink");
 
-            g_object_set(
+            g_object_set (
                         pipeline,
                         "audio-sink",
                         audio_sink,
+                        NULL);
+        }
+
+        if (::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME") != nullptr)
+        {
+            auto video_sink = gst_element_factory_make (
+                        ::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME"),
+                        "video-sink");
+
+            std::cout << "video_sink: " << ::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME") << std::endl;
+
+            g_object_set (
+                        pipeline,
+                        "video-sink",
+                        video_sink,
                         NULL);
         }
     }

@@ -25,6 +25,7 @@ namespace test
 {
 bool copy_test_mp3_file_to(const std::string& path);
 bool copy_test_ogg_file_to(const std::string& path);
+bool copy_test_avi_file_to(const std::string& path);
 }
 
 #endif // TEST_DATA_H_

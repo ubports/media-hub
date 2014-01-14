@@ -44,12 +44,28 @@ struct EnsureFakeAudioSinkEnvVarIsSet
     }
 } ensure_fake_audio_sink_env_var_is_set;
 
+struct EnsureFakeVideoSinkEnvVarIsSet
+{
+    EnsureFakeVideoSinkEnvVarIsSet()
+    {
+        ::setenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME", "fakesink", 1);
+    }
+};
+
+struct EnsureMirVideoSinkEnvVarIsSet
+{
+    EnsureMirVideoSinkEnvVarIsSet()
+    {
+        ::setenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME", "mirsink", 1);
+    }
+};
+
 TEST(GStreamerEngine, construction_and_deconstruction_works)
 {
     gstreamer::Engine engine;
 }
 
-TEST(GStreamerEngine, setting_uri_and_starting_playback_works)
+TEST(GStreamerEngine, setting_uri_and_starting_audio_only_playback_works)
 {
     const std::string test_file{"/tmp/test.ogg"};
     const std::string test_file_uri{"file:///tmp/test.ogg"};
@@ -95,12 +111,102 @@ TEST(GStreamerEngine, setting_uri_and_starting_playback_works)
                     std::chrono::seconds{10});
 }
 
-TEST(GStreamerEngine, stop_pause_play_seek_works)
+TEST(GStreamerEngine, setting_uri_and_starting_video_playback_works)
+{
+    const std::string test_file{"/tmp/h264.avi"};
+    const std::string test_file_uri{"file:///tmp/h264.avi"};
+    std::remove(test_file.c_str());
+    ASSERT_TRUE(test::copy_test_avi_file_to(test_file));
+    // Make sure a video sink is added to the pipeline
+    const EnsureFakeVideoSinkEnvVarIsSet efs;
+
+    test::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
+                core::ubuntu::media::Engine::State::ready);
+
+    gstreamer::Engine engine;
+
+    engine.track_meta_data().changed().connect(
+                [](const std::tuple<media::Track::UriType, media::Track::MetaData>& md)
+                {
+                    if (0 < std::get<1>(md).count(media::Engine::Xesam::album()))
+                        EXPECT_EQ("Test series", std::get<1>(md).get(media::Engine::Xesam::album()));
+                    if (0 < std::get<1>(md).count(media::Engine::Xesam::artist()))
+                        EXPECT_EQ("Canonical", std::get<1>(md).get(media::Engine::Xesam::artist()));
+                    if (0 < std::get<1>(md).count(media::Engine::Xesam::genre()))
+                        EXPECT_EQ("Documentary", std::get<1>(md).get(media::Engine::Xesam::genre()));
+                });
+
+    engine.state().changed().connect(
+                std::bind(
+                    &test::WaitableStateTransition<core::ubuntu::media::Engine::State>::trigger,
+                    std::ref(wst),
+                    std::placeholders::_1));
+
+    EXPECT_TRUE(engine.open_resource_for_uri(test_file_uri));
+    EXPECT_TRUE(engine.play());
+    EXPECT_TRUE(wst.wait_for_state_for(
+                    core::ubuntu::media::Engine::State::playing,
+                    std::chrono::milliseconds{4000}));
+
+    wst.wait_for_state_for(
+                    core::ubuntu::media::Engine::State::ready,
+                    std::chrono::seconds{10});
+}
+
+TEST(GStreamerEngine, stop_pause_play_seek_audio_only_works)
 {
     const std::string test_file{"/tmp/test.ogg"};
     const std::string test_file_uri{"file:///tmp/test.ogg"};
     std::remove(test_file.c_str());
     ASSERT_TRUE(test::copy_test_mp3_file_to(test_file));
+
+    test::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
+                core::ubuntu::media::Engine::State::ready);
+
+    gstreamer::Engine engine;
+
+    engine.state().changed().connect(
+                std::bind(
+                    &test::WaitableStateTransition<core::ubuntu::media::Engine::State>::trigger,
+                    std::ref(wst),
+                    std::placeholders::_1));
+
+    EXPECT_TRUE(engine.open_resource_for_uri(test_file_uri));
+    EXPECT_TRUE(engine.play());
+    EXPECT_TRUE(wst.wait_for_state_for(
+                    core::ubuntu::media::Engine::State::playing,
+                    std::chrono::milliseconds{4000}));
+    EXPECT_TRUE(engine.stop());
+    EXPECT_TRUE(wst.wait_for_state_for(
+                    core::ubuntu::media::Engine::State::stopped,
+                    std::chrono::milliseconds{4000}));
+    EXPECT_TRUE(engine.pause());
+    EXPECT_TRUE(wst.wait_for_state_for(
+                    core::ubuntu::media::Engine::State::paused,
+                    std::chrono::milliseconds{4000}));
+
+    EXPECT_TRUE(engine.seek_to(std::chrono::seconds{10}));
+    EXPECT_TRUE(engine.seek_to(std::chrono::seconds{0}));
+    EXPECT_TRUE(engine.seek_to(std::chrono::seconds{25}));
+
+    EXPECT_TRUE(engine.play());
+    EXPECT_TRUE(wst.wait_for_state_for(
+                    core::ubuntu::media::Engine::State::playing,
+                    std::chrono::milliseconds{4000}));
+
+    EXPECT_TRUE(wst.wait_for_state_for(
+                    core::ubuntu::media::Engine::State::ready,
+                    std::chrono::seconds{40}));
+}
+
+TEST(GStreamerEngine, stop_pause_play_seek_video_works)
+{
+    const std::string test_file{"/tmp/h264.avi"};
+    const std::string test_file_uri{"file:///tmp/h264.avi"};
+    std::remove(test_file.c_str());
+    ASSERT_TRUE(test::copy_test_avi_file_to(test_file));
+    // Make sure a video sink is added to the pipeline
+    const EnsureFakeVideoSinkEnvVarIsSet efs;
 
     test::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
                 core::ubuntu::media::Engine::State::ready);
