@@ -11,15 +11,15 @@ add_executable(
 target_link_libraries(
     test-gstreamer-engine
 
-    music-hub-common
-    music-hub-client
-    music-hub-service
-    music-hub-test-framework
+    media-hub-common
+    media-hub-client
+    media-hub-service
+    media-hub-test-framework
 
     ${CMAKE_THREAD_LIBS_INIT}
     ${Boost_LIBRARIES}
     ${DBUS_LIBRARIES}
-    
+
     gmock
     gmock_main
     gtest

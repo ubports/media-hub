@@ -3,20 +3,20 @@ pkg_check_modules(PC_GSTREAMER_1_0 REQUIRED gstreamer-1.0)
 include_directories(${PC_GSTREAMER_1_0_INCLUDE_DIRS})
 
 add_library(
-  music-hub-common SHARED
+  media-hub-common SHARED
 
   the_session_bus.cpp
 )
 
 target_link_libraries(
-  music-hub-common
+  media-hub-common
 
   ${Boost_LIBRARIES}
   ${DBUS_LIBRARIES}
 )
 
 add_library(
-  music-hub-client SHARED
+  media-hub-client SHARED
 
   connection.cpp
   player.cpp
@@ -30,29 +30,29 @@ add_library(
 )
 
 set_target_properties(
-  music-hub-client
+  media-hub-client
 
   PROPERTIES
-  VERSION ${UBUNTU_MUSIC_HUB_VERSION_MAJOR}.${UBUNTU_MUSIC_HUB_VERSION_MINOR}.${UBUNTU_MUSIC_HUB_VERSION_PATCH}
-  SOVERSION ${UBUNTU_MUSIC_HUB_VERSION_MAJOR}
+  VERSION ${UBUNTU_MEDIA_HUB_VERSION_MAJOR}.${UBUNTU_MEDIA_HUB_VERSION_MINOR}.${UBUNTU_MEDIA_HUB_VERSION_PATCH}
+  SOVERSION ${UBUNTU_MEDIA_HUB_VERSION_MAJOR}
 )
 
 target_link_libraries(
-  music-hub-client
+  media-hub-client
 
-  music-hub-common
+  media-hub-common
 
   ${DBUS_LIBRARIES}
   ${GLog_LIBRARY}
 )
 
 install(
-  TARGETS music-hub-client
+  TARGETS media-hub-client media-hub-common
   DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
 add_library(
-    music-hub-service
+    media-hub-service
 
     engine.cpp
     gstreamer/engine.cpp
@@ -66,11 +66,35 @@ add_library(
 )
 
 target_link_libraries(
-  music-hub-service
+  media-hub-service
 
-  music-hub-common
+  media-hub-common
 
   ${DBUS_LIBRARIES}
   ${GLog_LIBRARY}
   ${PC_GSTREAMER_1_0_LIBRARIES}
+)
+
+include_directories(${PROJECT_SOURCE_DIR}/src/)
+
+add_executable(
+  media-hub-server
+
+  server/server.cpp
+)
+
+target_link_libraries(
+  media-hub-server
+
+  media-hub-service
+  media-hub-client
+
+  ${DBUS_LIBRARIES}
+  ${GLog_LIBRARY}
+  ${PC_GSTREAMER_1_0_LIBRARIES}
+)
+
+install(
+  TARGETS media-hub-server
+  DESTINATION ${CMAKE_INSTALL_BINDIR}
 )

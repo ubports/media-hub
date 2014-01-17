@@ -11,10 +11,10 @@ add_executable(
 target_link_libraries(
     service_acceptance_test
 
-    music-hub-common
-    music-hub-client
-    music-hub-service
-    music-hub-test-framework
+    media-hub-common
+    media-hub-client
+    media-hub-service
+    media-hub-test-framework
 
     ${CMAKE_THREAD_LIBS_INIT}
     ${Boost_LIBRARIES}
@@ -25,8 +25,8 @@ target_link_libraries(
     gtest
 )
 
-if (MUSIC_HUB_ENABLE_DBUS_TEST_RUNNER)
+if (MEDIA_HUB_ENABLE_DBUS_TEST_RUNNER)
   add_test(service_acceptance_test ${DBUS_TEST_RUNNER_EXECUTABLE} --task=${CMAKE_CURRENT_BINARY_DIR}/service_acceptance_test)
-else (MUSIC_HUB_ENABLE_DBUS_TEST_RUNNER)
+else (MEDIA_HUB_ENABLE_DBUS_TEST_RUNNER)
   add_test(service_acceptance_test ${CMAKE_CURRENT_BINARY_DIR}/service_acceptance_test)
-endif (MUSIC_HUB_ENABLE_DBUS_TEST_RUNNER)
+endif (MEDIA_HUB_ENABLE_DBUS_TEST_RUNNER)

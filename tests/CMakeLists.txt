@@ -5,15 +5,15 @@ add_definitions(-DBOOST_NO_CXX11_SCOPED_ENUMS)
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
 option(
-    MUSIC_HUB_ENABLE_DBUS_TEST_RUNNER 
+    MEDIA_HUB_ENABLE_DBUS_TEST_RUNNER 
     "Rely on dbus test runner to start a private session for testing purposes" 
     ON
 )
 
-if (MUSIC_HUB_ENABLE_DBUS_TEST_RUNNER)
+if (MEDIA_HUB_ENABLE_DBUS_TEST_RUNNER)
     find_program(DBUS_TEST_RUNNER_EXECUTABLE dbus-test-runner)
     message(STATUS "Executing test suite under dbus-test-runner")
-endif (MUSIC_HUB_ENABLE_DBUS_TEST_RUNNER)
+endif (MEDIA_HUB_ENABLE_DBUS_TEST_RUNNER)
 
 # Build with system gmock and embedded gtest
 set (GMOCK_INCLUDE_DIR "/usr/include/gmock/include" CACHE PATH "gmock source include directory")
@@ -35,20 +35,20 @@ configure_file(
 )
 
 add_library(
-    music-hub-test-framework
+    media-hub-test-framework
 
     cross_process_sync.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/test_data.cpp
 )
 
 target_link_libraries(
-    music-hub-test-framework
+    media-hub-test-framework
     ${Boost_LIBRARIES}
 )
 
 set(
     CTEST_ENVIRONMENT
-    "COM_UBUNTU_MUSIC_SERVICE_AUDIO_SINK_NAME=fakesink"
+    "COM_UBUNTU_MEDIA_SERVICE_AUDIO_SINK_NAME=fakesink"
 )
 
 add_subdirectory(acceptance-tests)

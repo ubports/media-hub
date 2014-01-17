@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 2.8)
 
-project(ubuntu-music-hub)
+project(ubuntu-media-hub)
 
-set(UBUNTU_MUSIC_HUB_VERSION_MAJOR 0)
-set(UBUNTU_MUSIC_HUB_VERSION_MINOR 0)
-set(UBUNTU_MUSIC_HUB_VERSION_PATCH 1)
+set(UBUNTU_MEDIA_HUB_VERSION_MAJOR 0)
+set(UBUNTU_MEDIA_HUB_VERSION_MINOR 0)
+set(UBUNTU_MEDIA_HUB_VERSION_PATCH 1)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror -Wall -pedantic -Wextra -fPIC -pthread")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Werror -Wall -fno-strict-aliasing -pedantic -Wextra -fPIC -pthread")
@@ -50,7 +50,7 @@ include_directories(
   ${DBUS_INCLUDE_DIRS}
   ${DBUS_CPP_INCLUDE_DIRS}/dbus
   ${GLog_INCLUDE_DIR}
-  
+
   include/
 )
 
