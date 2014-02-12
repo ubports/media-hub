@@ -19,7 +19,7 @@
 #ifndef GSTREAMER_BUS_H_
 #define GSTREAMER_BUS_H_
 
-#include <core/media/signal.h>
+#include <core/property.h>
 
 #include <gst/gst.h>
 
@@ -39,10 +39,6 @@ public:
     {
         ~Message()
         {
-            if (cleanup)
-                cleanup();
-
-            gst_message_unref(message);
         }
 
         Message(GstMessage* msg)
@@ -338,7 +334,7 @@ public:
     }
 
     GstBus* bus;
-    core::ubuntu::media::Signal<Message> on_new_message;
+    core::Signal<Message> on_new_message;
 };
 }
 

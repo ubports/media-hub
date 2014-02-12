@@ -35,7 +35,7 @@ class PlayerImplementation : public PlayerSkeleton
 {
 public:
     PlayerImplementation(
-            const org::freedesktop::dbus::types::ObjectPath& session_path,
+            const core::dbus::types::ObjectPath& session_path,
             const std::shared_ptr<Service>& service,
             const std::shared_ptr<Engine>& engine);
     ~PlayerImplementation();

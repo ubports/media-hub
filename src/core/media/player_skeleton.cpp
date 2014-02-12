@@ -16,8 +16,7 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#include <core/media/property.h>
-
+#include "codec.h"
 #include "player_skeleton.h"
 #include "player_traits.h"
 #include "property_stub.h"
@@ -25,9 +24,11 @@
 
 #include "mpris/player.h"
 
-#include <org/freedesktop/dbus/stub.h>
+#include <core/dbus/object.h>
+#include <core/dbus/property.h>
+#include <core/dbus/stub.h>
 
-namespace dbus = org::freedesktop::dbus;
+namespace dbus = core::dbus;
 namespace media = core::ubuntu::media;
 
 struct media::PlayerSkeleton::Private
@@ -55,87 +56,85 @@ struct media::PlayerSkeleton::Private
     {
     }
 
-    void handle_next(DBusMessage* msg)
+    void handle_next(const core::dbus::Message::Ptr& msg)
     {
         impl->next();
         auto reply = dbus::Message::make_method_return(msg);
-        impl->access_bus()->send(reply->get());
+        impl->access_bus()->send(reply);
     }
 
-    void handle_previous(DBusMessage* msg)
+    void handle_previous(const core::dbus::Message::Ptr& msg)
     {
         impl->previous();
         auto reply = dbus::Message::make_method_return(msg);
-        impl->access_bus()->send(reply->get());
+        impl->access_bus()->send(reply);
     }
 
-    void handle_pause(DBusMessage* msg)
+    void handle_pause(const core::dbus::Message::Ptr& msg)
     {
         impl->pause();
         auto reply = dbus::Message::make_method_return(msg);
-        impl->access_bus()->send(reply->get());
+        impl->access_bus()->send(reply);
     }
 
     void handle_playpause(DBusMessage*)
     {
     }
 
-    void handle_stop(DBusMessage* msg)
+    void handle_stop(const core::dbus::Message::Ptr& msg)
     {
         impl->stop();
         auto reply = dbus::Message::make_method_return(msg);
-        impl->access_bus()->send(reply->get());
+        impl->access_bus()->send(reply);
     }
 
-    void handle_play(DBusMessage* msg)
+    void handle_play(const core::dbus::Message::Ptr& msg)
     {
         impl->play();
         auto reply = dbus::Message::make_method_return(msg);
-        impl->access_bus()->send(reply->get());
+        impl->access_bus()->send(reply);
     }
 
-    void handle_seek(DBusMessage* msg)
+    void handle_seek(const core::dbus::Message::Ptr& in)
     {
-        auto in = dbus::Message::from_raw_message(msg);
         uint64_t ticks;
         in->reader() >> ticks; 
         impl->seek_to(std::chrono::microseconds(ticks));
     }
 
-    void handle_set_position(DBusMessage*)
+    void handle_set_position(const core::dbus::Message::Ptr&)
     {
     }
 
-    void handle_open_uri(DBusMessage* msg)
+    void handle_open_uri(const core::dbus::Message::Ptr& in)
     {
-        auto in = dbus::Message::from_raw_message(msg);
         Track::UriType uri;
         in->reader() >> uri;
 
-        auto reply = dbus::Message::make_method_return(msg);
+        auto reply = dbus::Message::make_method_return(in);
         reply->writer() << impl->open_uri(uri);
-        impl->access_bus()->send(reply->get());
+        impl->access_bus()->send(reply);
     }
 
     media::PlayerSkeleton* impl;
     dbus::Object::Ptr object;
     struct
     {
-        PropertyStub<bool, mpris::Player::Properties::CanPlay> can_play;
-        PropertyStub<bool, mpris::Player::Properties::CanPause> can_pause;
-        PropertyStub<bool, mpris::Player::Properties::CanSeek> can_seek;
-        PropertyStub<bool, mpris::Player::Properties::CanControl> can_control;
-        PropertyStub<bool, mpris::Player::Properties::CanGoNext> can_go_next;
-        PropertyStub<bool, mpris::Player::Properties::CanGoPrevious> can_go_previous;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanPlay>> can_play;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanPause>> can_pause;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanSeek>> can_seek;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanControl>> can_control;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanGoNext>> can_go_next;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanGoPrevious>> can_go_previous;
         
-        PropertyStub<Player::PlaybackStatus, mpris::Player::Properties::PlaybackStatus> playback_status;
-        PropertyStub<Player::LoopStatus, mpris::Player::Properties::LoopStatus> loop_status;
-        PropertyStub<Player::PlaybackRate, mpris::Player::Properties::PlaybackRate> playback_rate;
-        PropertyStub<bool, mpris::Player::Properties::Shuffle> is_shuffle;
-        PropertyStub<Track::MetaData, mpris::Player::Properties::MetaData> meta_data_for_current_track;
-        PropertyStub<Player::Volume, mpris::Player::Properties::Volume> volume;
-        PropertyStub<Player::PlaybackRate, mpris::Player::Properties::MinimumRate> minimum_playback_rate;
-        PropertyStub<Player::PlaybackRate, mpris::Player::Properties::MaximumRate> maximum_playback_rate;        
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::PlaybackStatus>> playback_status;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::LoopStatus>> loop_status;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::PlaybackRate>> playback_rate;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Shuffle>> is_shuffle;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MetaData>> meta_data_for_current_track;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Volume>> volume;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MinimumRate>> minimum_playback_rate;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MaximumRate>> maximum_playback_rate;
     } properties;
 
     /*struct
@@ -146,7 +145,7 @@ struct media::PlayerSkeleton::Private
 };
 
 media::PlayerSkeleton::PlayerSkeleton(
-    const org::freedesktop::dbus::types::ObjectPath& session_path)
+    const core::dbus::types::ObjectPath& session_path)
         : dbus::Skeleton<media::Player>(the_session_bus()),
           d(new Private{this, session_path})
 {
@@ -188,138 +187,138 @@ media::PlayerSkeleton::~PlayerSkeleton()
 {
 }
 
-const media::Property<bool>& media::PlayerSkeleton::can_play() const 
+const core::Property<bool>& media::PlayerSkeleton::can_play() const
 {
-    return d->properties.can_play;
+    return *d->properties.can_play;
 }
 
-const media::Property<bool>& media::PlayerSkeleton::can_pause() const
+const core::Property<bool>& media::PlayerSkeleton::can_pause() const
 {
-    return d->properties.can_pause;
+    return *d->properties.can_pause;
 }
 
-const media::Property<bool>& media::PlayerSkeleton::can_seek() const
+const core::Property<bool>& media::PlayerSkeleton::can_seek() const
 {
-    return d->properties.can_seek;
+    return *d->properties.can_seek;
 }
 
-const media::Property<bool>& media::PlayerSkeleton::can_go_previous() const
+const core::Property<bool>& media::PlayerSkeleton::can_go_previous() const
 {
-    return d->properties.can_go_previous;
+    return *d->properties.can_go_previous;
 }
 
-const media::Property<bool>& media::PlayerSkeleton::can_go_next() const
+const core::Property<bool>& media::PlayerSkeleton::can_go_next() const
 {
-    return d->properties.can_go_next;
+    return *d->properties.can_go_next;
 }
 
-const media::Property<media::Player::PlaybackStatus>& media::PlayerSkeleton::playback_status() const
+const core::Property<media::Player::PlaybackStatus>& media::PlayerSkeleton::playback_status() const
 {
-    return d->properties.playback_status;
+    return *d->properties.playback_status;
 }
 
-const media::Property<media::Player::LoopStatus>& media::PlayerSkeleton::loop_status() const
+const core::Property<media::Player::LoopStatus>& media::PlayerSkeleton::loop_status() const
 {
-    return d->properties.loop_status;
+    return *d->properties.loop_status;
 }
 
-const media::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::playback_rate() const
+const core::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::playback_rate() const
 {
-    return d->properties.playback_rate;
+    return *d->properties.playback_rate;
 }
 
-const media::Property<bool>& media::PlayerSkeleton::is_shuffle() const
+const core::Property<bool>& media::PlayerSkeleton::is_shuffle() const
 {
-    return d->properties.is_shuffle;
+    return *d->properties.is_shuffle;
 }
 
-const media::Property<media::Track::MetaData>& media::PlayerSkeleton::meta_data_for_current_track() const
+const core::Property<media::Track::MetaData>& media::PlayerSkeleton::meta_data_for_current_track() const
 {
-    return d->properties.meta_data_for_current_track;
+    return *d->properties.meta_data_for_current_track;
 }
 
-const media::Property<media::Player::Volume>& media::PlayerSkeleton::volume() const
+const core::Property<media::Player::Volume>& media::PlayerSkeleton::volume() const
 {
-    return d->properties.volume;
+    return *d->properties.volume;
 }
 
-const media::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::minimum_playback_rate() const
+const core::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::minimum_playback_rate() const
 {
-    return d->properties.minimum_playback_rate;
+    return *d->properties.minimum_playback_rate;
 }
 
-const media::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::maximum_playback_rate() const
+const core::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::maximum_playback_rate() const
 {
-    return d->properties.maximum_playback_rate;
+    return *d->properties.maximum_playback_rate;
 }
 
-media::Property<media::Player::LoopStatus>& media::PlayerSkeleton::loop_status()
+core::Property<media::Player::LoopStatus>& media::PlayerSkeleton::loop_status()
 {
-    return d->properties.loop_status;
+    return *d->properties.loop_status;
 }
 
-media::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::playback_rate()
+core::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::playback_rate()
 {
-    return d->properties.playback_rate;
+    return *d->properties.playback_rate;
 }
 
-media::Property<bool>& media::PlayerSkeleton::is_shuffle()
+core::Property<bool>& media::PlayerSkeleton::is_shuffle()
 {
-    return d->properties.is_shuffle;
+    return *d->properties.is_shuffle;
 }
 
-media::Property<media::Player::Volume>& media::PlayerSkeleton::volume()
+core::Property<media::Player::Volume>& media::PlayerSkeleton::volume()
 {
-    return d->properties.volume;
+    return *d->properties.volume;
 }
 
-media::Property<media::Player::PlaybackStatus>& media::PlayerSkeleton::playback_status()
+core::Property<media::Player::PlaybackStatus>& media::PlayerSkeleton::playback_status()
 {
-    return d->properties.playback_status;
+    return *d->properties.playback_status;
 }
 
-media::Property<bool>& media::PlayerSkeleton::can_play()
+core::Property<bool>& media::PlayerSkeleton::can_play()
 {
-    return d->properties.can_play;
+    return *d->properties.can_play;
 }
 
-media::Property<bool>& media::PlayerSkeleton::can_pause()
+core::Property<bool>& media::PlayerSkeleton::can_pause()
 {
-    return d->properties.can_pause;
+    return *d->properties.can_pause;
 }
 
-media::Property<bool>& media::PlayerSkeleton::can_seek()
+core::Property<bool>& media::PlayerSkeleton::can_seek()
 {
-    return d->properties.can_seek;
+    return *d->properties.can_seek;
 }
 
-media::Property<bool>& media::PlayerSkeleton::can_go_previous()
+core::Property<bool>& media::PlayerSkeleton::can_go_previous()
 {
-    return d->properties.can_go_previous;
+    return *d->properties.can_go_previous;
 }
 
-media::Property<bool>& media::PlayerSkeleton::can_go_next()
+core::Property<bool>& media::PlayerSkeleton::can_go_next()
 {
-    return d->properties.can_go_next;
+    return *d->properties.can_go_next;
 }
 
-media::Property<media::Track::MetaData>& media::PlayerSkeleton::meta_data_for_current_track()
+core::Property<media::Track::MetaData>& media::PlayerSkeleton::meta_data_for_current_track()
 {
-    return d->properties.meta_data_for_current_track;
+    return *d->properties.meta_data_for_current_track;
 }
 
-media::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::minimum_playback_rate()
+core::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::minimum_playback_rate()
 {
-    return d->properties.minimum_playback_rate;
+    return *d->properties.minimum_playback_rate;
 }
 
-media::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::maximum_playback_rate()
+core::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::maximum_playback_rate()
 {
-    return d->properties.maximum_playback_rate;
+    return *d->properties.maximum_playback_rate;
 }
 
-const media::Signal<uint64_t>& media::PlayerSkeleton::seeked_to() const
+const core::Signal<uint64_t>& media::PlayerSkeleton::seeked_to() const
 {
-    static const media::Signal<uint64_t> signal;
+    static const core::Signal<uint64_t> signal;
     return signal;
 }

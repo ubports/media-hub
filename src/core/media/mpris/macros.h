@@ -19,7 +19,7 @@
 #ifndef MPRIS_MACROS_H_
 #define MPRIS_MACROS_H_
 
-#include <org/freedesktop/dbus/types/object_path.h>
+#include <core/dbus/types/object_path.h>
 
 #include <chrono>
 #include <string>

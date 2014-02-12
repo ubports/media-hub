@@ -23,7 +23,7 @@
 
 #include "track_list_traits.h"
 
-#include <org/freedesktop/dbus/stub.h>
+#include <core/dbus/stub.h>
 
 #include <memory>
 
@@ -33,16 +33,16 @@ namespace ubuntu
 {
 namespace media
 {
-class TrackListStub : public org::freedesktop::dbus::Stub<core::ubuntu::media::TrackList>
+class TrackListStub : public core::dbus::Stub<core::ubuntu::media::TrackList>
 {
 public:
     TrackListStub(
             const std::shared_ptr<Player>& parent,
-            const org::freedesktop::dbus::types::ObjectPath& op);
+            const core::dbus::types::ObjectPath& op);
     ~TrackListStub();
 
-    const Property<bool>& can_edit_tracks() const;
-    const Property<Container>& tracks() const;
+    const core::Property<bool>& can_edit_tracks() const;
+    const core::Property<Container>& tracks() const;
 
     Track::MetaData query_meta_data_for_track(const Track::Id& id);
 
@@ -51,10 +51,10 @@ public:
 
     void go_to(const Track::Id& track);
 
-    const Signal<void>& on_track_list_replaced() const;
-    const Signal<Track::Id>& on_track_added() const;
-    const Signal<Track::Id>& on_track_removed() const;
-    const Signal<Track::Id>& on_track_changed() const;
+    const core::Signal<void>& on_track_list_replaced() const;
+    const core::Signal<Track::Id>& on_track_added() const;
+    const core::Signal<Track::Id>& on_track_removed() const;
+    const core::Signal<Track::Id>& on_track_changed() const;
 
 private:
     struct Private;

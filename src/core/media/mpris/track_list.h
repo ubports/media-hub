@@ -21,15 +21,17 @@
 
 #include "macros.h"
 
-#include <org/freedesktop/dbus/types/any.h>
-#include <org/freedesktop/dbus/types/object_path.h>
-#include <org/freedesktop/dbus/types/variant.h>
+#include <core/dbus/types/any.h>
+#include <core/dbus/types/object_path.h>
+#include <core/dbus/types/variant.h>
+
+#include <boost/utility/identity_type.hpp>
 
 #include <string>
 #include <tuple>
 #include <vector>
 
-namespace dbus = org::freedesktop::dbus;
+namespace dbus = core::dbus;
 
 namespace mpris
 {
@@ -59,7 +61,7 @@ struct TrackList
         (
             TrackAdded,
             TrackList,
-            BOOST_IDENTITY_TYPE((std::tuple<std::map<std::string, dbus::types::Variant<dbus::types::Any>>, dbus::types::ObjectPath>))
+            BOOST_IDENTITY_TYPE((std::tuple<std::map<std::string, dbus::types::Variant>, dbus::types::ObjectPath>))
         )
 
         SIGNAL
@@ -73,7 +75,7 @@ struct TrackList
         (
             TrackMetadataChanged,
             TrackList,
-            BOOST_IDENTITY_TYPE((std::tuple<std::map<std::string, dbus::types::Variant<dbus::types::Any>>, dbus::types::ObjectPath>))
+            BOOST_IDENTITY_TYPE((std::tuple<std::map<std::string, dbus::types::Variant>, dbus::types::ObjectPath>))
         )
     };
 

@@ -19,11 +19,9 @@
 #ifndef TRACK_LIST_TRAITS_H_
 #define TRACK_LIST_TRAITS_H_
 
-#include <org/freedesktop/dbus/traits/service.h>
+#include <core/dbus/traits/service.h>
 
-namespace org
-{
-namespace freedesktop
+namespace core
 {
 namespace dbus
 {
@@ -41,7 +39,6 @@ struct Service<core::ubuntu::media::TrackList>
         return s;
     }
 };
-}
 }
 }
 }

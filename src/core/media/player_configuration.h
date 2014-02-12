@@ -20,11 +20,11 @@
 
 #include <core/media/player.h>
 
-#include <org/freedesktop/dbus/types/object_path.h>
+#include <core/dbus/types/object_path.h>
 
 struct core::ubuntu::media::Player::Configuration
 {
-    org::freedesktop::dbus::types::ObjectPath object_path;
+    core::dbus::types::ObjectPath object_path;
 };
 
 #endif // CORE_UBUNTU_MEDIA_PLAYER_CLIENT_CONFIGURATION_H_

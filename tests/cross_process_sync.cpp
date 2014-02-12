@@ -20,6 +20,8 @@
 
 #include <boost/exception/errinfo_errno.hpp>
 
+#include <stdexcept>
+
 #include <poll.h>
 #include <unistd.h>
 

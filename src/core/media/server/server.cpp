@@ -1,6 +1,5 @@
 #include <core/media/service.h>
 #include <core/media/player.h>
-#include <core/media/property.h>
 #include <core/media/track_list.h>
 
 #include "core/media/service_implementation.h"

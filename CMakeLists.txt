@@ -48,7 +48,7 @@ endif (DISABLE_ERROR_ON_LOCAL_TYPEDEFS_WARNINGS)
 include_directories(
   ${Boost_INCLUDE_DIRS}
   ${DBUS_INCLUDE_DIRS}
-  ${DBUS_CPP_INCLUDE_DIRS}/dbus
+  ${DBUS_CPP_INCLUDE_DIRS}
   ${GLog_INCLUDE_DIR}
 
   include/

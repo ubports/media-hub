@@ -23,7 +23,7 @@
 
 #include "service_traits.h"
 
-#include <org/freedesktop/dbus/skeleton.h>
+#include <core/dbus/skeleton.h>
 
 #include <memory>
 
@@ -33,7 +33,7 @@ namespace ubuntu
 {
 namespace media
 {
-class ServiceSkeleton : public org::freedesktop::dbus::Skeleton<core::ubuntu::media::Service>
+class ServiceSkeleton : public core::dbus::Skeleton<core::ubuntu::media::Service>
 {
   public:
     ServiceSkeleton();

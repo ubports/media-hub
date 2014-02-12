@@ -24,7 +24,7 @@
 
 #include "mpris/service.h"
 
-namespace dbus = org::freedesktop::dbus;
+namespace dbus = core::dbus;
 namespace media = core::ubuntu::media;
 
 struct media::ServiceStub::Private
@@ -33,7 +33,7 @@ struct media::ServiceStub::Private
 };
 
 media::ServiceStub::ServiceStub()
-    : org::freedesktop::dbus::Stub<media::Service>(the_session_bus()),
+    : core::dbus::Stub<media::Service>(the_session_bus()),
       d(new Private{
         access_service()->object_for_path(
             dbus::types::ObjectPath(

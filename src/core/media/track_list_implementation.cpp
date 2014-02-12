@@ -20,9 +20,7 @@
 
 #include "engine.h"
 
-#include <core/media/property.h>
-
-namespace dbus = org::freedesktop::dbus;
+namespace dbus = core::dbus;
 namespace media = core::ubuntu::media;
 
 struct media::TrackListImplementation::Private
@@ -97,7 +95,7 @@ void media::TrackListImplementation::remove_track(const media::Track::Id& id)
 {
     auto result = tracks().update([id](TrackList::Container& container)
     {
-        container.remove(id);
+        container.erase(std::find(container.begin(), container.end(), id));
         return true;
     });
 

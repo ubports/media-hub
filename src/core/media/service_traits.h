@@ -21,11 +21,9 @@
 
 #include <core/media/service.h>
 
-#include <org/freedesktop/dbus/traits/service.h>
+#include <core/dbus/traits/service.h>
 
-namespace org
-{
-namespace freedesktop
+namespace core
 {
 namespace dbus
 {
@@ -52,7 +50,6 @@ struct Service<core::ubuntu::media::Service>
         return s;
     }
 };
-}
 }
 }
 }

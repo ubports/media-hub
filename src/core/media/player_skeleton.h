@@ -23,8 +23,8 @@
 
 #include "mpris/player.h"
 
-#include <org/freedesktop/dbus/skeleton.h>
-#include <org/freedesktop/dbus/types/object_path.h>
+#include <core/dbus/skeleton.h>
+#include <core/dbus/types/object_path.h>
 
 #include <memory>
 
@@ -36,44 +36,44 @@ namespace media
 {
 class Service;
 
-class PlayerSkeleton : public org::freedesktop::dbus::Skeleton<core::ubuntu::media::Player>
+class PlayerSkeleton : public core::dbus::Skeleton<core::ubuntu::media::Player>
 {
   public:
     ~PlayerSkeleton();
 
-    virtual const Property<bool>& can_play() const;
-    virtual const Property<bool>& can_pause() const;
-    virtual const Property<bool>& can_seek() const;
-    virtual const Property<bool>& can_go_previous() const;
-    virtual const Property<bool>& can_go_next() const;
-    virtual const Property<PlaybackStatus>& playback_status() const;
-    virtual const Property<LoopStatus>& loop_status() const;
-    virtual const Property<PlaybackRate>& playback_rate() const;
-    virtual const Property<bool>& is_shuffle() const;
-    virtual const Property<Track::MetaData>& meta_data_for_current_track() const;
-    virtual const Property<Volume>& volume() const;
-    virtual const Property<PlaybackRate>& minimum_playback_rate() const;
-    virtual const Property<PlaybackRate>& maximum_playback_rate() const;
+    virtual const core::Property<bool>& can_play() const;
+    virtual const core::Property<bool>& can_pause() const;
+    virtual const core::Property<bool>& can_seek() const;
+    virtual const core::Property<bool>& can_go_previous() const;
+    virtual const core::Property<bool>& can_go_next() const;
+    virtual const core::Property<PlaybackStatus>& playback_status() const;
+    virtual const core::Property<LoopStatus>& loop_status() const;
+    virtual const core::Property<PlaybackRate>& playback_rate() const;
+    virtual const core::Property<bool>& is_shuffle() const;
+    virtual const core::Property<Track::MetaData>& meta_data_for_current_track() const;
+    virtual const core::Property<Volume>& volume() const;
+    virtual const core::Property<PlaybackRate>& minimum_playback_rate() const;
+    virtual const core::Property<PlaybackRate>& maximum_playback_rate() const;
 
-    virtual Property<LoopStatus>& loop_status();
-    virtual Property<PlaybackRate>& playback_rate();
-    virtual Property<bool>& is_shuffle();
-    virtual Property<Volume>& volume();
+    virtual core::Property<LoopStatus>& loop_status();
+    virtual core::Property<PlaybackRate>& playback_rate();
+    virtual core::Property<bool>& is_shuffle();
+    virtual core::Property<Volume>& volume();
 
-    virtual const Signal<uint64_t>& seeked_to() const;
+    virtual const core::Signal<uint64_t>& seeked_to() const;
 
   protected:
-    PlayerSkeleton(const org::freedesktop::dbus::types::ObjectPath& session_path);
+    PlayerSkeleton(const core::dbus::types::ObjectPath& session_path);
 
-    virtual Property<PlaybackStatus>& playback_status();
-    virtual Property<bool>& can_play();
-    virtual Property<bool>& can_pause();
-    virtual Property<bool>& can_seek();
-    virtual Property<bool>& can_go_previous();
-    virtual Property<bool>& can_go_next();
-    virtual Property<Track::MetaData>& meta_data_for_current_track();
-    virtual Property<PlaybackRate>& minimum_playback_rate();
-    virtual Property<PlaybackRate>& maximum_playback_rate();
+    virtual core::Property<PlaybackStatus>& playback_status();
+    virtual core::Property<bool>& can_play();
+    virtual core::Property<bool>& can_pause();
+    virtual core::Property<bool>& can_seek();
+    virtual core::Property<bool>& can_go_previous();
+    virtual core::Property<bool>& can_go_next();
+    virtual core::Property<Track::MetaData>& meta_data_for_current_track();
+    virtual core::Property<PlaybackRate>& minimum_playback_rate();
+    virtual core::Property<PlaybackRate>& maximum_playback_rate();
 
   private:
     struct Private;

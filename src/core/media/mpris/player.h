@@ -19,13 +19,14 @@
 #ifndef MPRIS_PLAYER_H_
 #define MPRIS_PLAYER_H_
 
+#include <core/media/player.h>
 #include <core/media/track.h>
 
 #include "macros.h"
 
-#include <org/freedesktop/dbus/types/any.h>
-#include <org/freedesktop/dbus/types/object_path.h>
-#include <org/freedesktop/dbus/types/variant.h>
+#include <core/dbus/types/any.h>
+#include <core/dbus/types/object_path.h>
+#include <core/dbus/types/variant.h>
 
 #include <boost/utility/identity_type.hpp>
 
@@ -33,7 +34,7 @@
 #include <tuple>
 #include <vector>
 
-namespace dbus = org::freedesktop::dbus;
+namespace dbus = core::dbus;
 
 namespace mpris
 {
@@ -62,12 +63,12 @@ struct Player
 
     struct Properties
     {
-        READABLE_PROPERTY(PlaybackStatus, Player, std::string)
-        WRITABLE_PROPERTY(LoopStatus, Player, std::string)
-        WRITABLE_PROPERTY(PlaybackRate, Player, double)
+        READABLE_PROPERTY(PlaybackStatus, Player, core::ubuntu::media::Player::PlaybackStatus)
+        WRITABLE_PROPERTY(LoopStatus, Player, core::ubuntu::media::Player::LoopStatus)
+        WRITABLE_PROPERTY(PlaybackRate, Player, core::ubuntu::media::Player::PlaybackRate)
         WRITABLE_PROPERTY(Rate, Player, double)
         WRITABLE_PROPERTY(Shuffle, Player, bool)
-        READABLE_PROPERTY(MetaData, Player, BOOST_IDENTITY_TYPE((std::map<std::string, std::string>)))
+        READABLE_PROPERTY(MetaData, Player, core::ubuntu::media::Track::MetaData)
         WRITABLE_PROPERTY(Volume, Player, double)
         READABLE_PROPERTY(Position, Player, uint64_t)
         READABLE_PROPERTY(MinimumRate, Player, double)

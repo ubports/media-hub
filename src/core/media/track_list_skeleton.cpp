@@ -19,24 +19,25 @@
 #include "track_list_skeleton.h"
 
 #include <core/media/player.h>
-#include <core/media/property.h>
-#include <core/media/signal.h>
 #include <core/media/track_list.h>
 
+#include "codec.h"
 #include "property_stub.h"
 #include "track_list_traits.h"
 #include "the_session_bus.h"
 
 #include "mpris/track_list.h"
 
-#include <org/freedesktop/dbus/types/object_path.h>
-#include <org/freedesktop/dbus/types/variant.h>
-#include <org/freedesktop/dbus/types/stl/map.h>
-#include <org/freedesktop/dbus/types/stl/vector.h>
+#include <core/dbus/object.h>
+#include <core/dbus/property.h>
+#include <core/dbus/types/object_path.h>
+#include <core/dbus/types/variant.h>
+#include <core/dbus/types/stl/map.h>
+#include <core/dbus/types/stl/vector.h>
 
 #include <limits>
 
-namespace dbus = org::freedesktop::dbus;
+namespace dbus = core::dbus;
 namespace media = core::ubuntu::media;
 
 struct media::TrackListSkeleton::Private
@@ -47,70 +48,66 @@ struct media::TrackListSkeleton::Private
           object(object),
           can_edit_tracks(object->get_property<mpris::TrackList::Properties::CanEditTracks>()),
           tracks(object->get_property<mpris::TrackList::Properties::Tracks>()),
-          current_track(tracks.get().begin())
+          current_track(tracks->get().begin())
     {
     }
 
-    void handle_get_tracks_metadata(DBusMessage* msg)
+    void handle_get_tracks_metadata(const core::dbus::Message::Ptr& msg)
     {
-        auto in = dbus::Message::from_raw_message(msg);
         media::Track::Id track;
-        in->reader() >> track;
+        msg->reader() >> track;
 
         auto meta_data = impl->query_meta_data_for_track(track);
 
         auto reply = dbus::Message::make_method_return(msg);
         reply->writer() << *meta_data;
-        impl->access_bus()->send(reply->get());
+        impl->access_bus()->send(reply);
     }
 
-    void handle_add_track_with_uri_at(DBusMessage* msg)
+    void handle_add_track_with_uri_at(const core::dbus::Message::Ptr& msg)
     {
-        auto in = dbus::Message::from_raw_message(msg);
         Track::UriType uri; media::Track::Id after; bool make_current;
-        in->reader() >> uri >> after >> make_current;
+        msg->reader() >> uri >> after >> make_current;
 
         impl->add_track_with_uri_at(uri, after, make_current);
 
         auto reply = dbus::Message::make_method_return(msg);
-        impl->access_bus()->send(reply->get());
+        impl->access_bus()->send(reply);
     }
 
-    void handle_remove_track(DBusMessage* msg)
+    void handle_remove_track(const core::dbus::Message::Ptr& msg)
     {
-        auto in = dbus::Message::from_raw_message(msg);
         media::Track::Id track;
-        in->reader() >> track;
+        msg->reader() >> track;
 
         impl->remove_track(track);
 
         auto reply = dbus::Message::make_method_return(msg);
-        impl->access_bus()->send(reply->get());
+        impl->access_bus()->send(reply);
     }
 
-    void handle_go_to(DBusMessage* msg)
+    void handle_go_to(const core::dbus::Message::Ptr& msg)
     {
-        auto in = dbus::Message::from_raw_message(msg);
         media::Track::Id track;
-        in->reader() >> track;
+        msg->reader() >> track;
 
         impl->go_to(track);
 
         auto reply = dbus::Message::make_method_return(msg);
-        impl->access_bus()->send(reply->get());
+        impl->access_bus()->send(reply);
     }
 
     media::TrackListSkeleton* impl;
     dbus::Object::Ptr object;
 
-    PropertyStub<bool, mpris::TrackList::Properties::CanEditTracks> can_edit_tracks;
-    PropertyStub<TrackList::Container, mpris::TrackList::Properties::Tracks> tracks;
+    std::shared_ptr<core::dbus::Property<mpris::TrackList::Properties::CanEditTracks>> can_edit_tracks;
+    std::shared_ptr<core::dbus::Property<mpris::TrackList::Properties::Tracks>> tracks;
     TrackList::ConstIterator current_track;
 
-    Signal<void> on_track_list_replaced;
-    Signal<Track::Id> on_track_added;
-    Signal<Track::Id> on_track_removed;
-    Signal<Track::Id> on_track_changed;
+    core::Signal<void> on_track_list_replaced;
+    core::Signal<Track::Id> on_track_added;
+    core::Signal<Track::Id> on_track_removed;
+    core::Signal<Track::Id> on_track_changed;
 };
 
 media::TrackListSkeleton::TrackListSkeleton(
@@ -145,7 +142,7 @@ media::TrackListSkeleton::~TrackListSkeleton()
 
 bool media::TrackListSkeleton::has_next() const
 {
-    return std::next(d->current_track) != d->tracks.get().end();
+    return std::next(d->current_track) != d->tracks->get().end();
 }
 
 const media::Track::Id& media::TrackListSkeleton::next()
@@ -153,62 +150,62 @@ const media::Track::Id& media::TrackListSkeleton::next()
     return *(d->current_track = std::next(d->current_track));
 }
 
-const media::Property<bool>& media::TrackListSkeleton::can_edit_tracks() const
+const core::Property<bool>& media::TrackListSkeleton::can_edit_tracks() const
 {
-    return d->can_edit_tracks;
+    return *d->can_edit_tracks;
 }
 
-media::Property<bool>& media::TrackListSkeleton::can_edit_tracks()
+core::Property<bool>& media::TrackListSkeleton::can_edit_tracks()
 {
-    return d->can_edit_tracks;
+    return *d->can_edit_tracks;
 }
 
-media::Property<media::TrackList::Container>& media::TrackListSkeleton::tracks()
+core::Property<media::TrackList::Container>& media::TrackListSkeleton::tracks()
 {
-    return d->tracks;
+    return *d->tracks;
 }
 
-const media::Property<media::TrackList::Container>& media::TrackListSkeleton::tracks() const
+const core::Property<media::TrackList::Container>& media::TrackListSkeleton::tracks() const
 {
-    return d->tracks;
+    return *d->tracks;
 }
 
-const media::Signal<void>& media::TrackListSkeleton::on_track_list_replaced() const
+const core::Signal<void>& media::TrackListSkeleton::on_track_list_replaced() const
 {
     return d->on_track_list_replaced;
 }
 
-const media::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_added() const
+const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_added() const
 {
     return d->on_track_added;
 }
 
-const media::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_removed() const
+const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_removed() const
 {
     return d->on_track_removed;
 }
 
-const media::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_changed() const
+const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_changed() const
 {
     return d->on_track_changed;
 }
 
-media::Signal<void>& media::TrackListSkeleton::on_track_list_replaced()
+core::Signal<void>& media::TrackListSkeleton::on_track_list_replaced()
 {
     return d->on_track_list_replaced;
 }
 
-media::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_added()
+core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_added()
 {
     return d->on_track_added;
 }
 
-media::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_removed()
+core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_removed()
 {
     return d->on_track_removed;
 }
 
-media::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_changed()
+core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_changed()
 {
     return d->on_track_changed;
 }

@@ -23,7 +23,7 @@
 
 #include "service_traits.h"
 
-#include <org/freedesktop/dbus/stub.h>
+#include <core/dbus/stub.h>
 
 #include <memory>
 
@@ -33,7 +33,7 @@ namespace ubuntu
 {
 namespace media
 {
-class ServiceStub : public org::freedesktop::dbus::Stub<core::ubuntu::media::Service>
+class ServiceStub : public core::dbus::Stub<core::ubuntu::media::Service>
 {
   public:
     ServiceStub();

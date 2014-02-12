@@ -19,6 +19,7 @@
 #include "engine.h"
 
 #include <exception>
+#include <stdexcept>
 
 namespace media = core::ubuntu::media;
 

@@ -18,7 +18,6 @@
 
 #include <core/media/service.h>
 #include <core/media/player.h>
-#include <core/media/property.h>
 #include <core/media/track_list.h>
 
 #include "core/media/gstreamer/engine.h"
@@ -287,7 +286,8 @@ TEST(GStreamerEngine, adjusting_volume_works)
         }
     });
 
-    std::this_thread::sleep_for(std::chrono::seconds{5});
+    timespec ts { 5, 0 };
+    ::nanosleep(&ts, nullptr);
 
     if (t.joinable())
         t.join();

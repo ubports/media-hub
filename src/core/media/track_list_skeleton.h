@@ -22,7 +22,7 @@
 
 #include <core/media/player.h>
 
-#include <org/freedesktop/dbus/skeleton.h>
+#include <core/dbus/skeleton.h>
 
 namespace core
 {
@@ -30,32 +30,32 @@ namespace ubuntu
 {
 namespace media
 {
-class TrackListSkeleton : public org::freedesktop::dbus::Skeleton<core::ubuntu::media::TrackList>
+class TrackListSkeleton : public core::dbus::Skeleton<core::ubuntu::media::TrackList>
 {
 public:
     TrackListSkeleton(
-            const org::freedesktop::dbus::types::ObjectPath& op);
+            const core::dbus::types::ObjectPath& op);
     ~TrackListSkeleton();
 
     bool has_next() const;
     const Track::Id& next();
 
-    const Property<bool>& can_edit_tracks() const;
-    const Property<Container>& tracks() const;
+    const core::Property<bool>& can_edit_tracks() const;
+    const core::Property<Container>& tracks() const;
 
-    const Signal<void>& on_track_list_replaced() const;
-    const Signal<Track::Id>& on_track_added() const;
-    const Signal<Track::Id>& on_track_removed() const;
-    const Signal<Track::Id>& on_track_changed() const;
+    const core::Signal<void>& on_track_list_replaced() const;
+    const core::Signal<Track::Id>& on_track_added() const;
+    const core::Signal<Track::Id>& on_track_removed() const;
+    const core::Signal<Track::Id>& on_track_changed() const;
 
 protected:
-    Property<bool>& can_edit_tracks();
-    Property<Container>& tracks();
+    core::Property<bool>& can_edit_tracks();
+    core::Property<Container>& tracks();
 
-    Signal<void>& on_track_list_replaced();
-    Signal<Track::Id>& on_track_added();
-    Signal<Track::Id>& on_track_removed();
-    Signal<Track::Id>& on_track_changed();
+    core::Signal<void>& on_track_list_replaced();
+    core::Signal<Track::Id>& on_track_added();
+    core::Signal<Track::Id>& on_track_removed();
+    core::Signal<Track::Id>& on_track_changed();
 
 private:
     struct Private;

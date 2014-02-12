@@ -18,20 +18,20 @@
 
 #include "the_session_bus.h"
 
-#include <org/freedesktop/dbus/asio/executor.h>
+#include <core/dbus/asio/executor.h>
 
 namespace
 {
 std::once_flag once;
 }
 
-org::freedesktop::dbus::Bus::Ptr the_session_bus()
+core::dbus::Bus::Ptr the_session_bus()
 {
-    static org::freedesktop::dbus::Bus::Ptr bus
-            = std::make_shared<org::freedesktop::dbus::Bus>(
-                org::freedesktop::dbus::WellKnownBus::session);
-    static org::freedesktop::dbus::Executor::Ptr executor
-            = std::make_shared<org::freedesktop::dbus::asio::Executor>(bus);
+    static core::dbus::Bus::Ptr bus
+            = std::make_shared<core::dbus::Bus>(
+                core::dbus::WellKnownBus::session);
+    static core::dbus::Executor::Ptr executor
+            = core::dbus::asio::make_executor(bus);
 
     std::call_once(once, [](){bus->install_executor(executor);});
 

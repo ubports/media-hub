@@ -18,7 +18,6 @@
 
 #include <core/media/service.h>
 #include <core/media/player.h>
-#include <core/media/property.h>
 #include <core/media/track_list.h>
 
 #include "core/media/service_implementation.h"
@@ -38,6 +37,15 @@
 #include <thread>
 
 namespace media = core::ubuntu::media;
+
+namespace
+{
+void sleep_for(const std::chrono::milliseconds& ms)
+{
+    timespec ts{ 0, ms.count() * 1000 * 1000};
+    ::nanosleep(&ts, nullptr);
+}
+}
 
 TEST(MusicService, accessing_and_creating_a_session_works)
 {
@@ -99,7 +107,7 @@ TEST(MusicService, remotely_querying_track_meta_data_works)
 
         track_list->add_track_with_uri_at(uri, media::TrackList::after_empty_track(), false);
 
-        EXPECT_EQ(1, track_list->tracks()->size());
+        EXPECT_EQ(std::uint32_t{1}, track_list->tracks()->size());
 
         auto md = track_list->query_meta_data_for_track(track_list->tracks()->front());
 
@@ -163,16 +171,16 @@ TEST(MusicService, DISABLED_play_pause_seek_after_open_uri_works)
                       std::placeholders::_1));
 
         session->play();
-        std::this_thread::sleep_for(std::chrono::seconds{1});
+        sleep_for(std::chrono::seconds{1});
         ASSERT_EQ(media::Player::PlaybackStatus::playing, session->playback_status());
         session->stop();
-        std::this_thread::sleep_for(std::chrono::seconds{1});
+        sleep_for(std::chrono::seconds{1});
         ASSERT_EQ(media::Player::PlaybackStatus::stopped, session->playback_status());
         session->play();
-        std::this_thread::sleep_for(std::chrono::seconds{1});
+        sleep_for(std::chrono::seconds{1});
         ASSERT_EQ(media::Player::PlaybackStatus::playing, session->playback_status());
         session->pause();
-        std::this_thread::sleep_for(std::chrono::seconds{1});
+        sleep_for(std::chrono::seconds{1});
         ASSERT_EQ(media::Player::PlaybackStatus::paused, session->playback_status());
     };
 
@@ -223,7 +231,7 @@ TEST(MusicService, DISABLED_starting_playback_on_non_empty_playqueue_works)
 
         session->track_list()->add_track_with_uri_at(uri, media::TrackList::after_empty_track(), dont_make_current);
 
-        EXPECT_EQ(1, session->track_list()->tracks()->size());
+        EXPECT_EQ(std::uint32_t{1}, session->track_list()->tracks()->size());
 
         test::WaitableStateTransition<media::Player::PlaybackStatus>
                 state_transition(

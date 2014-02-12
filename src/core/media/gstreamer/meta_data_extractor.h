@@ -61,7 +61,7 @@ public:
         std::promise<core::ubuntu::media::Track::MetaData> promise;
         std::future<core::ubuntu::media::Track::MetaData> future{promise.get_future()};
 
-        core::ubuntu::media::ScopedConnection on_new_message_connection
+        core::ScopedConnection on_new_message_connection
         {
             bus.on_new_message.connect(
                     [&](const gstreamer::Bus::Message& msg)

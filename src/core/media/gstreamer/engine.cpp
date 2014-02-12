@@ -193,14 +193,14 @@ struct gstreamer::Engine::Private
     }
 
     std::shared_ptr<Engine::MetaDataExtractor> meta_data_extractor;
-    media::Property<Engine::State> state;
-    media::Property<std::tuple<media::Track::UriType, media::Track::MetaData>> track_meta_data;
-    media::Property<media::Engine::Volume> volume;
+    core::Property<Engine::State> state;
+    core::Property<std::tuple<media::Track::UriType, media::Track::MetaData>> track_meta_data;
+    core::Property<media::Engine::Volume> volume;
     gstreamer::Playbin playbin;
-    media::ScopedConnection about_to_finish_connection;
-    media::ScopedConnection on_state_changed_connection;
-    media::ScopedConnection on_tag_available_connection;
-    media::ScopedConnection on_volume_changed_connection;
+    core::ScopedConnection about_to_finish_connection;
+    core::ScopedConnection on_state_changed_connection;
+    core::ScopedConnection on_tag_available_connection;
+    core::ScopedConnection on_volume_changed_connection;
 };
 
 gstreamer::Engine::Engine() : d(new Private{})
@@ -218,7 +218,7 @@ const std::shared_ptr<media::Engine::MetaDataExtractor>& gstreamer::Engine::meta
     return d->meta_data_extractor;
 }
 
-const media::Property<media::Engine::State>& gstreamer::Engine::state() const
+const core::Property<media::Engine::State>& gstreamer::Engine::state() const
 {
     return d->state;
 }
@@ -266,17 +266,17 @@ bool gstreamer::Engine::seek_to(const std::chrono::microseconds& ts)
     return d->playbin.seek(ts);
 }
 
-const core::ubuntu::media::Property<core::ubuntu::media::Engine::Volume>& gstreamer::Engine::volume() const
+const core::Property<core::ubuntu::media::Engine::Volume>& gstreamer::Engine::volume() const
 {
     return d->volume;
 }
 
-core::ubuntu::media::Property<core::ubuntu::media::Engine::Volume>& gstreamer::Engine::volume()
+core::Property<core::ubuntu::media::Engine::Volume>& gstreamer::Engine::volume()
 {
     return d->volume;
 }
 
-const media::Property<std::tuple<media::Track::UriType, media::Track::MetaData>>&
+const core::Property<std::tuple<media::Track::UriType, media::Track::MetaData>>&
 gstreamer::Engine::track_meta_data() const
 {
     return d->track_meta_data;
