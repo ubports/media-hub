@@ -19,7 +19,6 @@ target_link_libraries(
 add_library(
   media-hub-client SHARED
 
-  connection.cpp
   player.cpp
   service.cpp
   track.cpp
