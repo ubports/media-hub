@@ -42,7 +42,7 @@ namespace
 {
 void sleep_for(const std::chrono::milliseconds& ms)
 {
-    timespec ts{ 0, ms.count() * 1000 * 1000};
+    timespec ts{ 0, static_cast<long int>(ms.count()) * 1000 * 1000};
     ::nanosleep(&ts, nullptr);
 }
 }
