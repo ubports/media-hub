@@ -80,6 +80,12 @@ media::PlayerImplementation::PlayerImplementation(
     playback_rate().set(1.f);
     playback_status().set(Player::PlaybackStatus::null);
     loop_status().set(Player::LoopStatus::none);
+
+    engine->position().changed().connect([this](std::uint64_t value)
+    {
+        position().set(value);
+    });
+
 }
 
 media::PlayerImplementation::~PlayerImplementation()

@@ -50,6 +50,7 @@ struct media::PlayerSkeleton::Private
               object->get_property<mpris::Player::Properties::Shuffle>(),
               object->get_property<mpris::Player::Properties::MetaData>(),
               object->get_property<mpris::Player::Properties::Volume>(),
+              object->get_property<mpris::Player::Properties::Position>(),
               object->get_property<mpris::Player::Properties::MinimumRate>(),
               object->get_property<mpris::Player::Properties::MaximumRate>()
           }
@@ -133,6 +134,7 @@ struct media::PlayerSkeleton::Private
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Shuffle>> is_shuffle;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MetaData>> meta_data_for_current_track;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Volume>> volume;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Position>> position;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MinimumRate>> minimum_playback_rate;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MaximumRate>> maximum_playback_rate;
     } properties;
@@ -242,6 +244,11 @@ const core::Property<media::Player::Volume>& media::PlayerSkeleton::volume() con
     return *d->properties.volume;
 }
 
+const core::Property<std::uint64_t>& media::PlayerSkeleton::position() const
+{
+    return *d->properties.position;
+}
+
 const core::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::minimum_playback_rate() const
 {
     return *d->properties.minimum_playback_rate;
@@ -270,6 +277,11 @@ core::Property<bool>& media::PlayerSkeleton::is_shuffle()
 core::Property<media::Player::Volume>& media::PlayerSkeleton::volume()
 {
     return *d->properties.volume;
+}
+
+core::Property<std::uint64_t>& media::PlayerSkeleton::position()
+{
+    return *d->properties.position;
 }
 
 core::Property<media::Player::PlaybackStatus>& media::PlayerSkeleton::playback_status()

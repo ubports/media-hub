@@ -70,7 +70,7 @@ struct Player
         WRITABLE_PROPERTY(Shuffle, Player, bool)
         READABLE_PROPERTY(MetaData, Player, core::ubuntu::media::Track::MetaData)
         WRITABLE_PROPERTY(Volume, Player, double)
-        READABLE_PROPERTY(Position, Player, uint64_t)
+        READABLE_PROPERTY(Position, Player, std::uint64_t)
         READABLE_PROPERTY(MinimumRate, Player, double)
         READABLE_PROPERTY(MaximumRate, Player, double)
         READABLE_PROPERTY(CanGoNext, Player, bool)

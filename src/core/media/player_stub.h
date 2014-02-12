@@ -65,6 +65,7 @@ class PlayerStub : public core::dbus::Stub<Player>
     virtual const core::Property<Volume>& volume() const;
     virtual const core::Property<PlaybackRate>& minimum_playback_rate() const;
     virtual const core::Property<PlaybackRate>& maximum_playback_rate() const;
+    virtual const core::Property<std::uint64_t>& position() const;
 
     virtual core::Property<LoopStatus>& loop_status();
     virtual core::Property<PlaybackRate>& playback_rate();

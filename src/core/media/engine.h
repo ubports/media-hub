@@ -103,6 +103,8 @@ public:
     virtual bool pause() = 0;
     virtual bool seek_to(const std::chrono::microseconds& ts) = 0;
 
+    virtual const core::Property<std::uint64_t>& position() const = 0;
+
     virtual const core::Property<Volume>& volume() const = 0;
     virtual core::Property<Volume>& volume() = 0;
 
