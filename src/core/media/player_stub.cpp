@@ -71,7 +71,7 @@ struct media::PlayerStub::Private
     dbus::Bus::Ptr bus;
     dbus::types::ObjectPath path;
     dbus::Object::Ptr object;
-    
+
     struct
     {
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanPlay>> can_play;
@@ -80,7 +80,7 @@ struct media::PlayerStub::Private
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanControl>> can_control;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanGoNext>> can_go_next;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanGoPrevious>> can_go_previous;
-        
+
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::PlaybackStatus>> playback_status;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::LoopStatus>> loop_status;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::PlaybackRate>> playback_rate;

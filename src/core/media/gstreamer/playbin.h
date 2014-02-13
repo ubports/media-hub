@@ -158,6 +158,16 @@ struct Playbin
                     NULL);
     }
 
+    std::uint64_t position() const
+    {
+        gint64 pos = 0;
+        gst_element_query_position (pipeline, GST_FORMAT_TIME, &pos);
+
+        std::cout << "pos: " << pos << std::endl;
+        // FIXME: this shouldn't be returning a uint64_t but a int64_t instead
+        return static_cast<std::uint64_t>(pos);
+    }
+
     void set_uri(const std::string& uri)
     {
         g_object_set(

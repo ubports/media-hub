@@ -80,11 +80,14 @@ media::PlayerImplementation::PlayerImplementation(
     playback_rate().set(1.f);
     playback_status().set(Player::PlaybackStatus::null);
     loop_status().set(Player::LoopStatus::none);
+    position().set(0);
 
+#if 0
     engine->position().changed().connect([this](std::uint64_t value)
     {
         position().set(value);
     });
+#endif
 
 }
 
@@ -134,4 +137,10 @@ void media::PlayerImplementation::stop()
 void media::PlayerImplementation::seek_to(const std::chrono::microseconds& ms)
 {
     d->engine->seek_to(ms);
+}
+
+core::Property<std::uint64_t>& media::PlayerImplementation::position()
+{
+    core::Property<std::uint64_t> position(d->engine->position());
+    return PlayerSkeleton::position();
 }

@@ -99,7 +99,7 @@ struct media::PlayerSkeleton::Private
     void handle_seek(const core::dbus::Message::Ptr& in)
     {
         uint64_t ticks;
-        in->reader() >> ticks; 
+        in->reader() >> ticks;
         impl->seek_to(std::chrono::microseconds(ticks));
     }
 
@@ -127,7 +127,7 @@ struct media::PlayerSkeleton::Private
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanControl>> can_control;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanGoNext>> can_go_next;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanGoPrevious>> can_go_previous;
-        
+
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::PlaybackStatus>> playback_status;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::LoopStatus>> loop_status;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::PlaybackRate>> playback_rate;
@@ -282,6 +282,11 @@ core::Property<media::Player::Volume>& media::PlayerSkeleton::volume()
 core::Property<std::uint64_t>& media::PlayerSkeleton::position()
 {
     return *d->properties.position;
+}
+
+void media::PlayerSkeleton::set_position(const core::Property<std::uint64_t> &position)
+{
+    d->properties.position->set(position);
 }
 
 core::Property<media::Player::PlaybackStatus>& media::PlayerSkeleton::playback_status()

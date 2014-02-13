@@ -269,6 +269,8 @@ bool gstreamer::Engine::seek_to(const std::chrono::microseconds& ts)
 
 const core::Property<std::uint64_t>& gstreamer::Engine::position() const
 {
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    d->position.set(d->playbin.position());
     return d->position;
 }
 
