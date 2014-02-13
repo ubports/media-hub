@@ -75,7 +75,7 @@ TEST(MusicService, accessing_and_creating_a_session_works)
     ASSERT_NO_FATAL_FAILURE(test::fork_and_run(service, client));
 }
 
-TEST(MusicService, remotely_querying_track_meta_data_works)
+TEST(MusicService, DISABLED_remotely_querying_track_meta_data_works)
 {
     const std::string test_file{"/tmp/test.ogg"};
     const std::string test_file_uri{"file:///tmp/test.ogg"};
