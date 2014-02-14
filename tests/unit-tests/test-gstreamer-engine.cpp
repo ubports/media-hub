@@ -71,7 +71,7 @@ TEST(GStreamerEngine, setting_uri_and_starting_audio_only_playback_works)
     std::remove(test_file.c_str());
     ASSERT_TRUE(test::copy_test_ogg_file_to(test_file));
 
-    test::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
+    core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
                 core::ubuntu::media::Engine::State::ready);
 
     gstreamer::Engine engine;
@@ -95,7 +95,7 @@ TEST(GStreamerEngine, setting_uri_and_starting_audio_only_playback_works)
 
     engine.state().changed().connect(
                 std::bind(
-                    &test::WaitableStateTransition<core::ubuntu::media::Engine::State>::trigger,
+                    &core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State>::trigger,
                     std::ref(wst),
                     std::placeholders::_1));
 
@@ -119,7 +119,7 @@ TEST(GStreamerEngine, setting_uri_and_starting_video_playback_works)
     // Make sure a video sink is added to the pipeline
     const EnsureFakeVideoSinkEnvVarIsSet efs;
 
-    test::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
+    core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
                 core::ubuntu::media::Engine::State::ready);
 
     gstreamer::Engine engine;
@@ -137,7 +137,7 @@ TEST(GStreamerEngine, setting_uri_and_starting_video_playback_works)
 
     engine.state().changed().connect(
                 std::bind(
-                    &test::WaitableStateTransition<core::ubuntu::media::Engine::State>::trigger,
+                    &core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State>::trigger,
                     std::ref(wst),
                     std::placeholders::_1));
 
@@ -159,14 +159,14 @@ TEST(GStreamerEngine, stop_pause_play_seek_audio_only_works)
     std::remove(test_file.c_str());
     ASSERT_TRUE(test::copy_test_mp3_file_to(test_file));
 
-    test::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
+    core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
                 core::ubuntu::media::Engine::State::ready);
 
     gstreamer::Engine engine;
 
     engine.state().changed().connect(
                 std::bind(
-                    &test::WaitableStateTransition<core::ubuntu::media::Engine::State>::trigger,
+                    &core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State>::trigger,
                     std::ref(wst),
                     std::placeholders::_1));
 
@@ -207,14 +207,14 @@ TEST(GStreamerEngine, stop_pause_play_seek_video_works)
     // Make sure a video sink is added to the pipeline
     const EnsureFakeVideoSinkEnvVarIsSet efs;
 
-    test::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
+    core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
                 core::ubuntu::media::Engine::State::ready);
 
     gstreamer::Engine engine;
 
     engine.state().changed().connect(
                 std::bind(
-                    &test::WaitableStateTransition<core::ubuntu::media::Engine::State>::trigger,
+                    &core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State>::trigger,
                     std::ref(wst),
                     std::placeholders::_1));
 
@@ -253,13 +253,13 @@ TEST(GStreamerEngine, adjusting_volume_works)
     std::remove(test_file.c_str());
     ASSERT_TRUE(test::copy_test_mp3_file_to(test_file));
 
-    test::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
+    core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
                 core::ubuntu::media::Engine::State::ready);
 
     gstreamer::Engine engine;
     engine.state().changed().connect(
                 std::bind(
-                    &test::WaitableStateTransition<core::ubuntu::media::Engine::State>::trigger,
+                    &core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State>::trigger,
                     std::ref(wst),
                     std::placeholders::_1));
     EXPECT_TRUE(engine.open_resource_for_uri(test_file_uri));

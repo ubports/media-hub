@@ -116,9 +116,9 @@ std::shared_ptr<media::TrackList> media::PlayerStub::track_list()
 
 bool media::PlayerStub::open_uri(const media::Track::UriType& uri)
 {
-    auto op = d->object->invoke_method_synchronously<mpris::Player::OpenUri, media::Track::UriType>(uri);
+    auto op = d->object->invoke_method_synchronously<mpris::Player::OpenUri, bool>(uri);
 
-    return op.is_error();
+    return op.value();
 }
 
 void media::PlayerStub::next()

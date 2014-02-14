@@ -24,7 +24,9 @@
 #include <mutex>
 #include <thread>
 
-namespace test
+namespace core
+{
+namespace testing
 {
 template<typename T>
 struct WaitableStateTransition
@@ -68,6 +70,7 @@ struct WaitableStateTransition
     std::mutex mutex;
     std::condition_variable cv;
 };
+}
 }
 
 #endif // WAITABLE_STATE_TRANSITION_H_
