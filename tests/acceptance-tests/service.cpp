@@ -71,7 +71,7 @@ void sleep_for(const std::chrono::milliseconds& ms)
 }
 }
 
-TEST(MusicService, accessing_and_creating_a_session_works)
+TEST(MusicService, DISABLED_accessing_and_creating_a_session_works)
 {
     core::testing::CrossProcessSync sync_service_start;
 
@@ -108,7 +108,7 @@ TEST(MusicService, accessing_and_creating_a_session_works)
               core::testing::fork_and_run(service, client));
 }
 
-TEST(MusicService, remotely_querying_track_meta_data_works)
+TEST(MusicService, DISABLED_remotely_querying_track_meta_data_works)
 {
     const std::string test_file{"/tmp/test.ogg"};
     const std::string test_file_uri{"file:///tmp/test.ogg"};
@@ -162,7 +162,7 @@ TEST(MusicService, remotely_querying_track_meta_data_works)
               core::testing::fork_and_run(service, client));
 }
 
-TEST(MusicService, play_pause_seek_after_open_uri_works)
+TEST(MusicService, DISABLED_play_pause_seek_after_open_uri_works)
 {
     const std::string test_file{"/tmp/test.mp3"};
     std::remove(test_file.c_str());
