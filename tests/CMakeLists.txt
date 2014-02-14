@@ -37,7 +37,6 @@ configure_file(
 add_library(
     media-hub-test-framework
 
-    cross_process_sync.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/test_data.cpp
 )
 
