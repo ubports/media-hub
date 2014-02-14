@@ -163,7 +163,6 @@ struct Playbin
         int64_t pos = 0;
         gst_element_query_position (pipeline, GST_FORMAT_TIME, &pos);
 
-        std::cout << "pos: " << pos << std::endl;
         // FIXME: this should be int64_t, but dbus-cpp doesn't seem to handle it correctly
         return static_cast<uint64_t>(pos);
     }

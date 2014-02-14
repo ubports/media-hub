@@ -102,7 +102,6 @@ std::shared_ptr<media::TrackList> media::PlayerImplementation::track_list()
 
 bool media::PlayerImplementation::open_uri(const Track::UriType& uri)
 {
-    std::cout << __PRETTY_FUNCTION__ << ": " << uri << std::endl;
     return d->engine->open_resource_for_uri(uri);
 }
 
@@ -141,7 +140,6 @@ void media::PlayerImplementation::seek_to(const std::chrono::microseconds& ms)
 
 core::Property<uint64_t>& media::PlayerImplementation::position()
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-    core::Property<uint64_t> position(d->engine->position());
+    PlayerSkeleton::position().set(d->engine->position());
     return PlayerSkeleton::position();
 }

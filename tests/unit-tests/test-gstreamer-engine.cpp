@@ -246,6 +246,36 @@ TEST(GStreamerEngine, stop_pause_play_seek_video_works)
                     std::chrono::seconds{40}));
 }
 
+TEST(GStreamerEngine, get_position_works)
+{
+    const std::string test_file{"/tmp/test.ogg"};
+    const std::string test_file_uri{"file:///tmp/test.ogg"};
+    std::remove(test_file.c_str());
+    ASSERT_TRUE(test::copy_test_ogg_file_to(test_file));
+
+    test::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
+                core::ubuntu::media::Engine::State::ready);
+
+    gstreamer::Engine engine;
+
+    engine.state().changed().connect(
+                std::bind(
+                    &test::WaitableStateTransition<core::ubuntu::media::Engine::State>::trigger,
+                    std::ref(wst),
+                    std::placeholders::_1));
+
+    EXPECT_TRUE(engine.open_resource_for_uri(test_file_uri));
+    EXPECT_TRUE(engine.play());
+    EXPECT_TRUE(wst.wait_for_state_for(
+                    core::ubuntu::media::Engine::State::playing,
+                    std::chrono::milliseconds{4000}));
+    sleep(1);
+
+    // FIXME: Ideally we want to seek_to and measure the position there, but seek_to seems
+    // broken from within this unit test
+    EXPECT_TRUE(engine.position() > 1e9);
+}
+
 TEST(GStreamerEngine, adjusting_volume_works)
 {
     const std::string test_file{"/tmp/test.mp3"};

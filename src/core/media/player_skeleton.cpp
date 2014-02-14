@@ -119,8 +119,7 @@ struct media::PlayerSkeleton::Private
 
     uint64_t handle_position()
     {
-        std::cout << "HERE in " << __PRETTY_FUNCTION__ << std::endl;
-        return 42;
+        return impl->position();
     }
 
     media::PlayerSkeleton* impl;
@@ -190,11 +189,13 @@ media::PlayerSkeleton::PlayerSkeleton(
                   std::ref(d),
                   std::placeholders::_1));
 
-    core::Property<int>::Getter getter;
-    typedef core::Property<uint64_t> PropertyType;
-    d->properties.position->install(
-        std::bind<uint64_t>(&Private::handle_position,
-                  std::ref(d)));
+    // Make sure that the Position property gets updated from the Engine
+    // every time the client requests position
+    std::function<std::uint64_t()> position_getter = [this]()
+    {
+        return d->handle_position();
+    };
+    d->properties.position->install(position_getter);
 }
 
 media::PlayerSkeleton::~PlayerSkeleton()
@@ -258,7 +259,6 @@ const core::Property<media::Player::Volume>& media::PlayerSkeleton::volume() con
 
 const core::Property<uint64_t>& media::PlayerSkeleton::position() const
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
     return *d->properties.position;
 }
 
@@ -294,13 +294,7 @@ core::Property<media::Player::Volume>& media::PlayerSkeleton::volume()
 
 core::Property<uint64_t>& media::PlayerSkeleton::position()
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
     return *d->properties.position;
-}
-
-void media::PlayerSkeleton::set_position(const core::Property<uint64_t> &position)
-{
-    d->properties.position->set(position);
 }
 
 core::Property<media::Player::PlaybackStatus>& media::PlayerSkeleton::playback_status()
