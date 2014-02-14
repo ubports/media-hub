@@ -117,6 +117,12 @@ struct media::PlayerSkeleton::Private
         impl->access_bus()->send(reply);
     }
 
+    uint64_t handle_position()
+    {
+        std::cout << "HERE in " << __PRETTY_FUNCTION__ << std::endl;
+        return 42;
+    }
+
     media::PlayerSkeleton* impl;
     dbus::Object::Ptr object;
     struct
@@ -183,6 +189,12 @@ media::PlayerSkeleton::PlayerSkeleton(
         std::bind(&Private::handle_open_uri,
                   std::ref(d),
                   std::placeholders::_1));
+
+    core::Property<int>::Getter getter;
+    typedef core::Property<uint64_t> PropertyType;
+    d->properties.position->install(
+        std::bind<uint64_t>(&Private::handle_position,
+                  std::ref(d)));
 }
 
 media::PlayerSkeleton::~PlayerSkeleton()
@@ -244,8 +256,9 @@ const core::Property<media::Player::Volume>& media::PlayerSkeleton::volume() con
     return *d->properties.volume;
 }
 
-const core::Property<std::uint64_t>& media::PlayerSkeleton::position() const
+const core::Property<uint64_t>& media::PlayerSkeleton::position() const
 {
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
     return *d->properties.position;
 }
 
@@ -279,12 +292,13 @@ core::Property<media::Player::Volume>& media::PlayerSkeleton::volume()
     return *d->properties.volume;
 }
 
-core::Property<std::uint64_t>& media::PlayerSkeleton::position()
+core::Property<uint64_t>& media::PlayerSkeleton::position()
 {
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
     return *d->properties.position;
 }
 
-void media::PlayerSkeleton::set_position(const core::Property<std::uint64_t> &position)
+void media::PlayerSkeleton::set_position(const core::Property<uint64_t> &position)
 {
     d->properties.position->set(position);
 }

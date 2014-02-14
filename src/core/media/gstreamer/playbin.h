@@ -158,14 +158,14 @@ struct Playbin
                     NULL);
     }
 
-    std::uint64_t position() const
+    uint64_t position() const
     {
-        gint64 pos = 0;
+        int64_t pos = 0;
         gst_element_query_position (pipeline, GST_FORMAT_TIME, &pos);
 
         std::cout << "pos: " << pos << std::endl;
-        // FIXME: this shouldn't be returning a uint64_t but a int64_t instead
-        return static_cast<std::uint64_t>(pos);
+        // FIXME: this should be int64_t, but dbus-cpp doesn't seem to handle it correctly
+        return static_cast<uint64_t>(pos);
     }
 
     void set_uri(const std::string& uri)

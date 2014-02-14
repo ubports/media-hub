@@ -195,7 +195,7 @@ struct gstreamer::Engine::Private
     std::shared_ptr<Engine::MetaDataExtractor> meta_data_extractor;
     core::Property<Engine::State> state;
     core::Property<std::tuple<media::Track::UriType, media::Track::MetaData>> track_meta_data;
-    core::Property<std::uint64_t> position;
+    core::Property<uint64_t> position;
     core::Property<media::Engine::Volume> volume;
     gstreamer::Playbin playbin;
     core::ScopedConnection about_to_finish_connection;
@@ -267,7 +267,7 @@ bool gstreamer::Engine::seek_to(const std::chrono::microseconds& ts)
     return d->playbin.seek(ts);
 }
 
-const core::Property<std::uint64_t>& gstreamer::Engine::position() const
+const core::Property<uint64_t>& gstreamer::Engine::position() const
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
     d->position.set(d->playbin.position());

@@ -139,8 +139,9 @@ void media::PlayerImplementation::seek_to(const std::chrono::microseconds& ms)
     d->engine->seek_to(ms);
 }
 
-core::Property<std::uint64_t>& media::PlayerImplementation::position()
+core::Property<uint64_t>& media::PlayerImplementation::position()
 {
-    core::Property<std::uint64_t> position(d->engine->position());
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    core::Property<uint64_t> position(d->engine->position());
     return PlayerSkeleton::position();
 }
