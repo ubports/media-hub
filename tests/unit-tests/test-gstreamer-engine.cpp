@@ -246,7 +246,7 @@ TEST(GStreamerEngine, stop_pause_play_seek_video_works)
                     std::chrono::seconds{40}));
 }
 
-TEST(GStreamerEngine, get_position_works)
+TEST(GStreamerEngine, get_position_duration_work)
 {
     const std::string test_file{"/tmp/test.ogg"};
     const std::string test_file_uri{"file:///tmp/test.ogg"};
@@ -274,6 +274,8 @@ TEST(GStreamerEngine, get_position_works)
     // FIXME: Ideally we want to seek_to and measure the position there, but seek_to seems
     // broken from within this unit test
     EXPECT_TRUE(engine.position() > 1e9);
+
+    EXPECT_TRUE(engine.duration() > 1e9);
 }
 
 TEST(GStreamerEngine, adjusting_volume_works)

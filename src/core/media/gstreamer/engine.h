@@ -40,6 +40,7 @@ public:
     bool seek_to(const std::chrono::microseconds& ts);
 
     const core::Property<uint64_t>& position() const;
+    const core::Property<uint64_t>& duration() const;
 
     const core::Property<core::ubuntu::media::Engine::Volume>& volume() const;
     core::Property<core::ubuntu::media::Engine::Volume>& volume();

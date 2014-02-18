@@ -120,7 +120,7 @@ TEST(MusicService, remotely_querying_track_meta_data_works)
     ASSERT_NO_FATAL_FAILURE(test::fork_and_run(service, client));
 }
 
-TEST(MusicService, DISABLED_play_pause_seek_after_open_uri_works)
+TEST(MusicService, play_pause_seek_after_open_uri_works)
 {
     const std::string test_file{"/tmp/test.mp3"};
     std::remove(test_file.c_str());
@@ -187,6 +187,55 @@ TEST(MusicService, DISABLED_play_pause_seek_after_open_uri_works)
     ASSERT_NO_FATAL_FAILURE(test::fork_and_run(service, client));
 }
 
+TEST(MusicService, get_position_duration_work)
+{
+    const std::string test_file{"/tmp/test.mp3"};
+    std::remove(test_file.c_str());
+    ASSERT_TRUE(test::copy_test_mp3_file_to(test_file));
+
+    test::CrossProcessSync sync_service_start;
+
+    auto service = [&sync_service_start]()
+    {
+        auto service = std::make_shared<media::ServiceImplementation>();
+        std::thread t([&service](){service->run();});
+
+        sync_service_start.signal_ready();
+
+        if (t.joinable())
+            t.join();
+    };
+
+    auto client = [&sync_service_start]()
+    {
+        sync_service_start.wait_for_signal_ready();
+
+        static const media::Track::UriType uri{"file:///tmp/test.mp3"};
+
+        auto service = media::Service::Client::instance();
+        auto session = service->create_session(media::Player::Client::default_configuration());
+
+        ASSERT_EQ(true, session->can_play().get());
+
+        EXPECT_TRUE(session->open_uri(uri));
+
+        test::WaitableStateTransition<media::Player::PlaybackStatus>
+                state_transition(
+                    media::Player::stopped);
+
+        session->playback_status().changed().connect(
+            std::bind(&test::WaitableStateTransition<media::Player::PlaybackStatus>::trigger,
+                      std::ref(state_transition),
+                      std::placeholders::_1));
+
+        session->play();
+        sleep_for(std::chrono::seconds{1});
+        ASSERT_TRUE(session->position() > 1e9);
+        ASSERT_TRUE(session->duration() > 1e9);
+    };
+
+    ASSERT_NO_FATAL_FAILURE(test::fork_and_run(service, client));
+}
 
 TEST(MusicService, DISABLED_starting_playback_on_non_empty_playqueue_works)
 {

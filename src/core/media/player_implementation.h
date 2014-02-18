@@ -51,6 +51,7 @@ public:
     virtual void seek_to(const std::chrono::microseconds& offset);
 
     virtual core::Property<uint64_t>& position();
+    virtual core::Property<uint64_t>& duration();
 
 private:
     struct Private;

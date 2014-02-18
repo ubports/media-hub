@@ -51,6 +51,7 @@ struct media::PlayerSkeleton::Private
               object->get_property<mpris::Player::Properties::MetaData>(),
               object->get_property<mpris::Player::Properties::Volume>(),
               object->get_property<mpris::Player::Properties::Position>(),
+              object->get_property<mpris::Player::Properties::Duration>(),
               object->get_property<mpris::Player::Properties::MinimumRate>(),
               object->get_property<mpris::Player::Properties::MaximumRate>()
           }
@@ -119,7 +120,13 @@ struct media::PlayerSkeleton::Private
 
     uint64_t handle_position()
     {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
         return impl->position();
+    }
+
+    uint64_t handle_duration()
+    {
+        return impl->duration();
     }
 
     media::PlayerSkeleton* impl;
@@ -140,6 +147,7 @@ struct media::PlayerSkeleton::Private
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MetaData>> meta_data_for_current_track;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Volume>> volume;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Position>> position;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Duration>> duration;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MinimumRate>> minimum_playback_rate;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MaximumRate>> maximum_playback_rate;
     } properties;
@@ -193,9 +201,18 @@ media::PlayerSkeleton::PlayerSkeleton(
     // every time the client requests position
     std::function<std::uint64_t()> position_getter = [this]()
     {
+        std::cout << "Begin" << std::endl;
         return d->handle_position();
     };
     d->properties.position->install(position_getter);
+
+    // Make sure that the Duration property gets updated from the Engine
+    // every time the client requests duration
+    std::function<std::uint64_t()> duration_getter = [this]()
+    {
+        return d->handle_duration();
+    };
+    d->properties.duration->install(duration_getter);
 }
 
 media::PlayerSkeleton::~PlayerSkeleton()
@@ -259,7 +276,13 @@ const core::Property<media::Player::Volume>& media::PlayerSkeleton::volume() con
 
 const core::Property<uint64_t>& media::PlayerSkeleton::position() const
 {
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
     return *d->properties.position;
+}
+
+const core::Property<uint64_t>& media::PlayerSkeleton::duration() const
+{
+    return *d->properties.duration;
 }
 
 const core::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::minimum_playback_rate() const
@@ -294,7 +317,13 @@ core::Property<media::Player::Volume>& media::PlayerSkeleton::volume()
 
 core::Property<uint64_t>& media::PlayerSkeleton::position()
 {
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
     return *d->properties.position;
+}
+
+core::Property<uint64_t>& media::PlayerSkeleton::duration()
+{
+    return *d->properties.duration;
 }
 
 core::Property<media::Player::PlaybackStatus>& media::PlayerSkeleton::playback_status()
