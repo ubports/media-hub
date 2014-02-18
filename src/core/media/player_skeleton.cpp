@@ -118,17 +118,6 @@ struct media::PlayerSkeleton::Private
         impl->access_bus()->send(reply);
     }
 
-    uint64_t handle_position()
-    {
-        std::cout << __PRETTY_FUNCTION__ << std::endl;
-        return impl->position();
-    }
-
-    uint64_t handle_duration()
-    {
-        return impl->duration();
-    }
-
     media::PlayerSkeleton* impl;
     dbus::Object::Ptr object;
     struct
@@ -196,23 +185,6 @@ media::PlayerSkeleton::PlayerSkeleton(
         std::bind(&Private::handle_open_uri,
                   std::ref(d),
                   std::placeholders::_1));
-
-    // Make sure that the Position property gets updated from the Engine
-    // every time the client requests position
-    std::function<std::uint64_t()> position_getter = [this]()
-    {
-        std::cout << "Begin" << std::endl;
-        return d->handle_position();
-    };
-    d->properties.position->install(position_getter);
-
-    // Make sure that the Duration property gets updated from the Engine
-    // every time the client requests duration
-    std::function<std::uint64_t()> duration_getter = [this]()
-    {
-        return d->handle_duration();
-    };
-    d->properties.duration->install(duration_getter);
 }
 
 media::PlayerSkeleton::~PlayerSkeleton()

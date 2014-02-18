@@ -82,6 +82,22 @@ media::PlayerImplementation::PlayerImplementation(
     loop_status().set(Player::LoopStatus::none);
     position().set(0);
     duration().set(0);
+
+    // Make sure that the Position property gets updated from the Engine
+    // every time the client requests position
+    std::function<uint64_t()> position_getter = [this]()
+    {
+        return d->engine->position().get();
+    };
+    position().install(position_getter);
+
+    // Make sure that the Duration property gets updated from the Engine
+    // every time the client requests duration
+    std::function<uint64_t()> duration_getter = [this]()
+    {
+        return d->engine->duration().get();
+    };
+    duration().install(duration_getter);
 }
 
 media::PlayerImplementation::~PlayerImplementation()
@@ -129,17 +145,4 @@ void media::PlayerImplementation::stop()
 void media::PlayerImplementation::seek_to(const std::chrono::microseconds& ms)
 {
     d->engine->seek_to(ms);
-}
-
-core::Property<uint64_t>& media::PlayerImplementation::position()
-{
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-    PlayerSkeleton::position().set(d->engine->position());
-    return PlayerSkeleton::position();
-}
-
-core::Property<uint64_t>& media::PlayerImplementation::duration()
-{
-    PlayerSkeleton::duration().set(d->engine->duration());
-    return PlayerSkeleton::duration();
 }
