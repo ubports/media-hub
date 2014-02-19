@@ -18,8 +18,6 @@
 #ifndef CORE_UBUNTU_MEDIA_TRACK_H_
 #define CORE_UBUNTU_MEDIA_TRACK_H_
 
-#include "core/media/connection.h"
-
 #include <chrono>
 #include <functional>
 #include <map>

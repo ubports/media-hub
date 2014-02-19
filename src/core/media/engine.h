@@ -18,8 +18,9 @@
 #ifndef CORE_UBUNTU_MEDIA_ENGINE_H_
 #define CORE_UBUNTU_MEDIA_ENGINE_H_
 
-#include <core/media/property.h>
 #include <core/media/track.h>
+
+#include <core/property.h>
 
 #include <chrono>
 
@@ -93,7 +94,7 @@ public:
 
     virtual const std::shared_ptr<MetaDataExtractor>& meta_data_extractor() const = 0;
 
-    virtual const Property<State>& state() const = 0;
+    virtual const core::Property<State>& state() const = 0;
 
     virtual bool open_resource_for_uri(const Track::UriType& uri) = 0;
 
@@ -102,10 +103,10 @@ public:
     virtual bool pause() = 0;
     virtual bool seek_to(const std::chrono::microseconds& ts) = 0;
 
-    virtual const Property<Volume>& volume() const = 0;
-    virtual Property<Volume>& volume() = 0;
+    virtual const core::Property<Volume>& volume() const = 0;
+    virtual core::Property<Volume>& volume() = 0;
 
-    virtual const Property<std::tuple<Track::UriType, Track::MetaData>>& track_meta_data() const = 0;
+    virtual const core::Property<std::tuple<Track::UriType, Track::MetaData>>& track_meta_data() const = 0;
 };
 }
 }

@@ -19,8 +19,6 @@
 #include "track_list_stub.h"
 
 #include <core/media/player.h>
-#include <core/media/property.h>
-#include <core/media/signal.h>
 #include <core/media/track_list.h>
 
 #include "property_stub.h"
@@ -29,14 +27,15 @@
 
 #include "mpris/track_list.h"
 
-#include <org/freedesktop/dbus/types/object_path.h>
-#include <org/freedesktop/dbus/types/variant.h>
-#include <org/freedesktop/dbus/types/stl/map.h>
-#include <org/freedesktop/dbus/types/stl/vector.h>
+#include <core/dbus/property.h>
+#include <core/dbus/types/object_path.h>
+#include <core/dbus/types/variant.h>
+#include <core/dbus/types/stl/map.h>
+#include <core/dbus/types/stl/vector.h>
 
 #include <limits>
 
-namespace dbus = org::freedesktop::dbus;
+namespace dbus = core::dbus;
 namespace media = core::ubuntu::media;
 
 struct media::TrackListStub::Private
@@ -57,18 +56,18 @@ struct media::TrackListStub::Private
     std::shared_ptr<media::Player> parent;
     dbus::Object::Ptr object;
 
-    PropertyStub<bool, mpris::TrackList::Properties::CanEditTracks> can_edit_tracks;
-    PropertyStub<TrackList::Container, mpris::TrackList::Properties::Tracks> tracks;
+    std::shared_ptr<core::dbus::Property<mpris::TrackList::Properties::CanEditTracks>> can_edit_tracks;
+    std::shared_ptr<core::dbus::Property<mpris::TrackList::Properties::Tracks>> tracks;
 
-    Signal<void> on_track_list_replaced;
-    Signal<Track::Id> on_track_added;
-    Signal<Track::Id> on_track_removed;
-    Signal<Track::Id> on_track_changed;
+    core::Signal<void> on_track_list_replaced;
+    core::Signal<Track::Id> on_track_added;
+    core::Signal<Track::Id> on_track_removed;
+    core::Signal<Track::Id> on_track_changed;
 };
 
 media::TrackListStub::TrackListStub(
         const std::shared_ptr<media::Player>& parent,
-        const org::freedesktop::dbus::types::ObjectPath& op)
+        const core::dbus::types::ObjectPath& op)
     : dbus::Stub<media::TrackList>(the_session_bus()),
       d(new Private(this, parent, op))
 {
@@ -78,14 +77,14 @@ media::TrackListStub::~TrackListStub()
 {
 }
 
-const media::Property<bool>& media::TrackListStub::can_edit_tracks() const
+const core::Property<bool>& media::TrackListStub::can_edit_tracks() const
 {
-    return d->can_edit_tracks;
+    return *d->can_edit_tracks;
 }
 
-const media::Property<media::TrackList::Container>& media::TrackListStub::tracks() const
+const core::Property<media::TrackList::Container>& media::TrackListStub::tracks() const
 {
-    return d->tracks;
+    return *d->tracks;
 }
 
 media::Track::MetaData media::TrackListStub::query_meta_data_for_track(const media::Track::Id& id)
@@ -138,22 +137,22 @@ void media::TrackListStub::go_to(const media::Track::Id& track)
         throw std::runtime_error("Problem adding track: " + op.error());
 }
 
-const media::Signal<void>& media::TrackListStub::on_track_list_replaced() const
+const core::Signal<void>& media::TrackListStub::on_track_list_replaced() const
 {
     return d->on_track_list_replaced;
 }
 
-const media::Signal<media::Track::Id>& media::TrackListStub::on_track_added() const
+const core::Signal<media::Track::Id>& media::TrackListStub::on_track_added() const
 {
     return d->on_track_added;
 }
 
-const media::Signal<media::Track::Id>& media::TrackListStub::on_track_removed() const
+const core::Signal<media::Track::Id>& media::TrackListStub::on_track_removed() const
 {
     return d->on_track_removed;
 }
 
-const media::Signal<media::Track::Id>& media::TrackListStub::on_track_changed() const
+const core::Signal<media::Track::Id>& media::TrackListStub::on_track_changed() const
 {
     return d->on_track_changed;
 }

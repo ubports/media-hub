@@ -17,7 +17,6 @@
  */
 
 #include <core/media/player.h>
-#include <core/media/property.h>
 
 #include "player_configuration.h"
 

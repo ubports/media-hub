@@ -20,6 +20,9 @@
 
 #include <core/media/track.h>
 
+#include <core/property.h>
+#include <core/signal.h>
+
 #include <functional>
 #include <list>
 #include <memory>
@@ -31,13 +34,11 @@ namespace ubuntu
 namespace media
 {
 class Player;
-template<typename T> class Property;
-template<typename T> class Signal;
 
 class TrackList : public std::enable_shared_from_this<TrackList>
 {
   public:
-    typedef std::list<Track::Id> Container;
+    typedef std::vector<Track::Id> Container;
     typedef Container::iterator Iterator;
     typedef Container::const_iterator ConstIterator;
 
@@ -49,8 +50,8 @@ class TrackList : public std::enable_shared_from_this<TrackList>
     TrackList& operator=(const TrackList&) = delete;
     bool operator==(const TrackList&) const = delete;
 
-    virtual const Property<bool>& can_edit_tracks() const = 0;
-    virtual const Property<Container>& tracks() const = 0;
+    virtual const core::Property<bool>& can_edit_tracks() const = 0;
+    virtual const core::Property<Container>& tracks() const = 0;
 
     virtual Track::MetaData query_meta_data_for_track(const Track::Id& id) = 0;
     virtual void add_track_with_uri_at(const Track::UriType& uri, const Track::Id& position, bool make_current) = 0;
@@ -58,10 +59,10 @@ class TrackList : public std::enable_shared_from_this<TrackList>
 
     virtual void go_to(const Track::Id& track) = 0;
 
-    virtual const Signal<void>& on_track_list_replaced() const = 0;
-    virtual const Signal<Track::Id>& on_track_added() const = 0;
-    virtual const Signal<Track::Id>& on_track_removed() const = 0;
-    virtual const Signal<Track::Id>& on_track_changed() const = 0;
+    virtual const core::Signal<void>& on_track_list_replaced() const = 0;
+    virtual const core::Signal<Track::Id>& on_track_added() const = 0;
+    virtual const core::Signal<Track::Id>& on_track_removed() const = 0;
+    virtual const core::Signal<Track::Id>& on_track_changed() const = 0;
 
 protected:
     TrackList();

@@ -20,8 +20,6 @@
 #include "engine.h"
 #include "track_list_implementation.h"
 
-#include <core/media/property.h>
-
 namespace media = core::ubuntu::media;
 
 struct media::PlayerImplementation::Private

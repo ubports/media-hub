@@ -32,7 +32,7 @@ class TrackListImplementation : public TrackListSkeleton
 {
 public:
     TrackListImplementation(
-            const org::freedesktop::dbus::types::ObjectPath& op,
+            const core::dbus::types::ObjectPath& op,
             const std::shared_ptr<Engine::MetaDataExtractor>& extractor);
     ~TrackListImplementation();
 

@@ -19,8 +19,8 @@
 #ifndef THE_SESSION_BUS_H_
 #define THE_SESSION_BUS_H_
 
-#include <org/freedesktop/dbus/bus.h>
+#include <core/dbus/bus.h>
 
-org::freedesktop::dbus::Bus::Ptr the_session_bus();
+core::dbus::Bus::Ptr the_session_bus();
 
 #endif // THE_SESSION_BUS_H_

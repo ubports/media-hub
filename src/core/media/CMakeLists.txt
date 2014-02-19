@@ -13,12 +13,12 @@ target_link_libraries(
 
   ${Boost_LIBRARIES}
   ${DBUS_LIBRARIES}
+  ${DBUS_CPP_LDFLAGS}
 )
 
 add_library(
   media-hub-client SHARED
 
-  connection.cpp
   player.cpp
   service.cpp
   track.cpp
@@ -43,6 +43,7 @@ target_link_libraries(
   media-hub-common
 
   ${DBUS_LIBRARIES}
+  ${DBUS_CPP_LDFLAGS}
   ${GLog_LIBRARY}
 )
 
@@ -71,6 +72,7 @@ target_link_libraries(
   media-hub-common
 
   ${DBUS_LIBRARIES}
+  ${DBUS_CPP_LDFLAGS}
   ${GLog_LIBRARY}
   ${PC_GSTREAMER_1_0_LIBRARIES}
 )
@@ -90,6 +92,7 @@ target_link_libraries(
   media-hub-client
 
   ${DBUS_LIBRARIES}
+  ${DBUS_CPP_LDFLAGS}
   ${GLog_LIBRARY}
   ${PC_GSTREAMER_1_0_LIBRARIES}
 )

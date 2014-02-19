@@ -19,13 +19,12 @@
 #ifndef CODEC_H_
 #define CODEC_H_
 
+#include <core/media/player.h>
 #include <core/media/track.h>
 
-#include <org/freedesktop/dbus/codec.h>
+#include <core/dbus/codec.h>
 
-namespace org
-{
-namespace freedesktop
+namespace core
 {
 namespace dbus
 {
@@ -58,20 +57,98 @@ struct TypeMapper<core::ubuntu::media::Track::MetaData>
 template<>
 struct Codec<core::ubuntu::media::Track::MetaData>
 {
-    static void encode_argument(DBusMessageIter* out, const core::ubuntu::media::Track::MetaData& in)
+    static void encode_argument(core::dbus::Message::Writer& out, const core::ubuntu::media::Track::MetaData& in)
     {
-        Codec<typename core::ubuntu::location::units::Quantity<T>::value_type>::encode_argument(out, in.value());
+        (void) out;
+        (void) in;
     }
 
-    static void decode_argument(DBusMessageIter* out, com::ubuntu::location::units::Quantity<T>& in)
+    static void decode_argument(core::dbus::Message::Reader& out, core::ubuntu::media::Track::MetaData& in)
     {
-        typename core::ubuntu::location::units::Quantity<T>::value_type value;
-        Codec<typename com::ubuntu::location::units::Quantity<T>::value_type>::decode_argument(out, value);
-        in = core::ubuntu::location::units::Quantity<T>::from_value(value);
-        dbus_message_iter_next(out);
+        (void) out;
+        (void) in;
+    }
+};
+
+namespace helper
+{
+template<>
+struct TypeMapper<core::ubuntu::media::Player::PlaybackStatus>
+{
+    constexpr static ArgumentType type_value()
+    {
+        return core::dbus::ArgumentType::int16;
+    }
+    constexpr static bool is_basic_type()
+    {
+        return false;
+    }
+    constexpr static bool requires_signature()
+    {
+        return false;
+    }
+
+    static std::string signature()
+    {
+        static const std::string s = TypeMapper<std::int16_t>::signature();
+        return s;
     }
 };
 }
+
+template<>
+struct Codec<core::ubuntu::media::Player::PlaybackStatus>
+{
+    static void encode_argument(core::dbus::Message::Writer& out, const core::ubuntu::media::Player::PlaybackStatus& in)
+    {
+        out.push_int16(static_cast<std::int16_t>(in));
+    }
+
+    static void decode_argument(core::dbus::Message::Reader& out, core::ubuntu::media::Player::PlaybackStatus& in)
+    {
+        in = static_cast<core::ubuntu::media::Player::PlaybackStatus>(out.pop_int16());
+    }
+};
+namespace helper
+{
+template<>
+struct TypeMapper<core::ubuntu::media::Player::LoopStatus>
+{
+    constexpr static ArgumentType type_value()
+    {
+        return core::dbus::ArgumentType::int16;
+    }
+    constexpr static bool is_basic_type()
+    {
+        return false;
+    }
+    constexpr static bool requires_signature()
+    {
+        return false;
+    }
+
+    static std::string signature()
+    {
+        static const std::string s = TypeMapper<std::int16_t>::signature();
+        return s;
+    }
+};
+}
+
+template<>
+struct Codec<core::ubuntu::media::Player::LoopStatus>
+{
+    static void encode_argument(core::dbus::Message::Writer& out, const core::ubuntu::media::Player::LoopStatus& in)
+    {
+        out.push_int16(static_cast<std::int16_t>(in));
+    }
+
+    static void decode_argument(core::dbus::Message::Reader& out, core::ubuntu::media::Player::LoopStatus& in)
+    {
+        in = static_cast<core::ubuntu::media::Player::LoopStatus>(out.pop_int16());
+    }
+};
+
 }
 }
 

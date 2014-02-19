@@ -220,15 +220,15 @@ struct Playbin
 
     GstElement* pipeline;
     gstreamer::Bus bus;
-    core::ubuntu::media::Connection on_new_message_connection;
+    core::Connection on_new_message_connection;
     struct
     {
-        core::ubuntu::media::Signal<void> about_to_finish;
-        core::ubuntu::media::Signal<Bus::Message::Detail::ErrorWarningInfo> on_error;
-        core::ubuntu::media::Signal<Bus::Message::Detail::ErrorWarningInfo> on_warning;
-        core::ubuntu::media::Signal<Bus::Message::Detail::ErrorWarningInfo> on_info;
-        core::ubuntu::media::Signal<Bus::Message::Detail::Tag> on_tag_available;
-        core::ubuntu::media::Signal<Bus::Message::Detail::StateChanged> on_state_changed;
+        core::Signal<void> about_to_finish;
+        core::Signal<Bus::Message::Detail::ErrorWarningInfo> on_error;
+        core::Signal<Bus::Message::Detail::ErrorWarningInfo> on_warning;
+        core::Signal<Bus::Message::Detail::ErrorWarningInfo> on_info;
+        core::Signal<Bus::Message::Detail::Tag> on_tag_available;
+        core::Signal<Bus::Message::Detail::StateChanged> on_state_changed;
     } signals;
 };
 }

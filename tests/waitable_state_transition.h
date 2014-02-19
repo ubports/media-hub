@@ -24,7 +24,9 @@
 #include <mutex>
 #include <thread>
 
-namespace test
+namespace core
+{
+namespace testing
 {
 template<typename T>
 struct WaitableStateTransition
@@ -49,7 +51,8 @@ struct WaitableStateTransition
             // In theory, this is not required. However, if executing under
             // valgrind and together with its single-threaded execution model, we
             // need to give up the timeslice here.
-            std::this_thread::yield();
+            // FIXME(tvoss): GCC 4.7 does not implement yield.
+            // std::this_thread::yield();
         }
 
         return true;
@@ -67,6 +70,7 @@ struct WaitableStateTransition
     std::mutex mutex;
     std::condition_variable cv;
 };
+}
 }
 
 #endif // WAITABLE_STATE_TRANSITION_H_

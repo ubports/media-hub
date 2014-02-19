@@ -17,7 +17,6 @@
  */
 
 #include <core/media/track.h>
-#include <core/media/property.h>
 
 #include <map>
 

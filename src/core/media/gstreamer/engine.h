@@ -30,7 +30,7 @@ public:
 
     const std::shared_ptr<MetaDataExtractor>& meta_data_extractor() const;
 
-    const core::ubuntu::media::Property<State>& state() const;
+    const core::Property<State>& state() const;
 
     bool open_resource_for_uri(const core::ubuntu::media::Track::UriType& uri);
 
@@ -39,10 +39,10 @@ public:
     bool pause();
     bool seek_to(const std::chrono::microseconds& ts);
 
-    const core::ubuntu::media::Property<core::ubuntu::media::Engine::Volume>& volume() const;
-    core::ubuntu::media::Property<core::ubuntu::media::Engine::Volume>& volume();
+    const core::Property<core::ubuntu::media::Engine::Volume>& volume() const;
+    core::Property<core::ubuntu::media::Engine::Volume>& volume();
 
-    const core::ubuntu::media::Property<std::tuple<core::ubuntu::media::Track::UriType, core::ubuntu::media::Track::MetaData>>& track_meta_data() const;
+    const core::Property<std::tuple<core::ubuntu::media::Track::UriType, core::ubuntu::media::Track::MetaData>>& track_meta_data() const;
 
 private:
     struct Private;

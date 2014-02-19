@@ -22,13 +22,14 @@
 #include "player_configuration.h"
 #include "the_session_bus.h"
 
-#include <org/freedesktop/dbus/message.h>
-#include <org/freedesktop/dbus/types/object_path.h>
+#include <core/dbus/message.h>
+#include <core/dbus/object.h>
+#include <core/dbus/types/object_path.h>
 
 #include <map>
 #include <sstream>
 
-namespace dbus = org::freedesktop::dbus;
+namespace dbus = core::dbus;
 namespace media = core::ubuntu::media;
 
 namespace
@@ -50,7 +51,7 @@ struct media::ServiceSkeleton::Private
                         std::placeholders::_1));
     }
 
-    void handle_create_session(DBusMessage* msg)
+    void handle_create_session(const core::dbus::Message::Ptr& msg)
     {
         static unsigned int session_counter = 0;
 
@@ -74,14 +75,14 @@ struct media::ServiceSkeleton::Private
             auto reply = dbus::Message::make_method_return(msg);
             reply->writer() << op;
 
-            impl->access_bus()->send(reply->get());
+            impl->access_bus()->send(reply);
         } catch(const std::runtime_error& e)
         {
             auto reply = dbus::Message::make_error(
                         msg,
                         mpris::Service::Errors::CreatingSession::name(),
                         e.what());
-            impl->access_bus()->send(reply->get());
+            impl->access_bus()->send(reply);
         }
     }
 
