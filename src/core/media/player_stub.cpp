@@ -230,7 +230,6 @@ const core::Property<media::Player::Volume>& media::PlayerStub::volume() const
 
 const core::Property<uint64_t>& media::PlayerStub::position() const
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
     return *d->properties.position;
 }
 
