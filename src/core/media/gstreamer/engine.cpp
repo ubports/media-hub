@@ -163,6 +163,12 @@ struct gstreamer::Engine::Private
         playbin.set_volume(new_volume.value);
     }
 
+    void on_end_of_stream()
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+        end_of_stream();
+    }
+
     Private()
         : meta_data_extractor(new gstreamer::MetaDataExtractor()),
           volume(media::Engine::Volume(1.)),
@@ -188,7 +194,12 @@ struct gstreamer::Engine::Private
                   std::bind(
                       &Private::on_volume_changed,
                       this,
-                      std::placeholders::_1)))
+                      std::placeholders::_1))),
+          on_end_of_stream_connection(
+              playbin.signals.on_end_of_stream.connect(
+                  std::bind(
+                      &Private::on_end_of_stream,
+                      this)))
     {
     }
 
@@ -203,6 +214,9 @@ struct gstreamer::Engine::Private
     core::ScopedConnection on_state_changed_connection;
     core::ScopedConnection on_tag_available_connection;
     core::ScopedConnection on_volume_changed_connection;
+    core::ScopedConnection on_end_of_stream_connection;
+
+    core::Signal<void> end_of_stream;
 };
 
 gstreamer::Engine::Engine() : d(new Private{})
@@ -294,4 +308,9 @@ const core::Property<std::tuple<media::Track::UriType, media::Track::MetaData>>&
 gstreamer::Engine::track_meta_data() const
 {
     return d->track_meta_data;
+}
+
+const core::Signal<void>& gstreamer::Engine::end_of_stream_signal() const
+{
+    return d->end_of_stream;
 }

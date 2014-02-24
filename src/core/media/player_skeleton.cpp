@@ -144,10 +144,11 @@ struct media::PlayerSkeleton::Private
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MaximumRate>> maximum_playback_rate;
     } properties;
 
-    /*struct
+    struct
     {
-        std::shared_ptr<dbus::Signal<mpris::Player::Signals::Seeked, uint64_t>> seeked;
-        } signals;*/
+        std::shared_ptr<dbus::Signal<mpris::Player::Signals::EndOfStream, void>> end_of_stream;
+        //std::shared_ptr<dbus::Signal<mpris::Player::Signals::Seeked, uint64_t>> seeked;
+    } signals;
 
 };
 
@@ -297,6 +298,12 @@ core::Property<uint64_t>& media::PlayerSkeleton::position()
 core::Property<uint64_t>& media::PlayerSkeleton::duration()
 {
     return *d->properties.duration;
+}
+
+void media::PlayerSkeleton::emit_end_of_stream()
+{
+    std::cout << "Emitting signal EndOfStream" << std::endl;
+    d->object->emit_signal<media::Player::Signals::EndOfStream, media::Player::Signals::EndOfStream::ArgumentType>(42);
 }
 
 core::Property<media::Player::PlaybackStatus>& media::PlayerSkeleton::playback_status()

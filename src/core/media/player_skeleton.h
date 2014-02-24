@@ -78,6 +78,7 @@ class PlayerSkeleton : public core::dbus::Skeleton<core::ubuntu::media::Player>
     virtual core::Property<PlaybackRate>& maximum_playback_rate();
     virtual core::Property<uint64_t>& position();
     virtual core::Property<uint64_t>& duration();
+    virtual void emit_end_of_stream();
 
   private:
     struct Private;

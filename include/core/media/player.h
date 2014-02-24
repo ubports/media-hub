@@ -25,6 +25,17 @@
 #include <chrono>
 #include <memory>
 
+#define SIGNAL(Name, Itf, ArgType) \
+    struct Name \
+    { \
+        inline static std::string name() \
+        { \
+            return #Name; \
+        }; \
+        typedef Itf Interface; \
+        typedef ArgType ArgumentType; \
+    };\
+
 namespace core
 {
 namespace ubuntu
@@ -47,6 +58,21 @@ class Player : public std::enable_shared_from_this<Player>
         Client() = delete;
 
         static const Configuration& default_configuration();
+    };
+
+    struct Signals
+    {
+        SIGNAL(EndOfStream, Player, int)
+#if 0
+        // Signals when the end of the current media stream has been reached
+        // e.g. one song or video
+        struct EndOfStream
+        {
+            inline static std::string name() { return "EndOfStream"; };
+            typedef Service Interface;
+            typedef int ArgumentType;
+        };
+#endif
     };
 
     enum PlaybackStatus

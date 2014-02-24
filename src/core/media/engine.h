@@ -110,6 +110,8 @@ public:
     virtual core::Property<Volume>& volume() = 0;
 
     virtual const core::Property<std::tuple<Track::UriType, Track::MetaData>>& track_meta_data() const = 0;
+
+    virtual const core::Signal<void>& end_of_stream_signal() const = 0;
 };
 }
 }

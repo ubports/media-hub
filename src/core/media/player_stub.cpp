@@ -64,6 +64,13 @@ struct media::PlayerStub::Private
                     object->get_property<mpris::Player::Properties::MaximumRate>()
                 }
     {
+        auto object = m_hubService->object_for_path(dbus::types::ObjectPath("/core/ubuntu/media/Service/sessions/0/Player"));
+        auto eossignal = object->get_signal<media::Player::Signals::EndOfStream>();
+        std::cout << "Connecting EndOfStream signal" << std::endl;
+        eossignal->connect([](media::Player::Signals::EndOfStream::ArgumentType value)
+        {
+            std::cout << "EOS signal from client side! value: " << value << std::endl;
+        });
     }
 
     std::shared_ptr<Service> parent;
