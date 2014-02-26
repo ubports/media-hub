@@ -198,7 +198,7 @@ TEST(GStreamerEngine, stop_pause_play_seek_audio_only_works)
                     std::chrono::seconds{40}));
 }
 
-TEST(GStreamerEngine, stop_pause_play_seek_video_works)
+TEST(GStreamerEngine, DISABLED_stop_pause_play_seek_video_works)
 {
     const std::string test_file{"/tmp/h264.avi"};
     const std::string test_file_uri{"file:///tmp/h264.avi"};

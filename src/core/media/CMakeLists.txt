@@ -15,6 +15,13 @@ target_link_libraries(
   ${DBUS_LIBRARIES}
   ${DBUS_CPP_LDFLAGS}
 )
+set_target_properties(
+  media-hub-common
+
+  PROPERTIES
+  VERSION ${UBUNTU_MEDIA_HUB_VERSION_MAJOR}.${UBUNTU_MEDIA_HUB_VERSION_MINOR}.${UBUNTU_MEDIA_HUB_VERSION_PATCH}
+  SOVERSION ${UBUNTU_MEDIA_HUB_VERSION_MAJOR}
+)
 
 add_library(
   media-hub-client SHARED
