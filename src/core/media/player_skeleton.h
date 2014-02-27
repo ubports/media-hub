@@ -63,6 +63,7 @@ class PlayerSkeleton : public core::dbus::Skeleton<core::ubuntu::media::Player>
     virtual core::Property<Volume>& volume();
 
     virtual const core::Signal<uint64_t>& seeked_to() const;
+    virtual const core::Signal<void>& end_of_stream() const;
 
   protected:
     PlayerSkeleton(const core::dbus::types::ObjectPath& session_path);
@@ -78,7 +79,9 @@ class PlayerSkeleton : public core::dbus::Skeleton<core::ubuntu::media::Player>
     virtual core::Property<PlaybackRate>& maximum_playback_rate();
     virtual core::Property<uint64_t>& position();
     virtual core::Property<uint64_t>& duration();
-    virtual void emit_end_of_stream();
+
+    virtual core::Signal<uint64_t>& seeked_to();
+    virtual core::Signal<void>& end_of_stream();
 
   private:
     struct Private;

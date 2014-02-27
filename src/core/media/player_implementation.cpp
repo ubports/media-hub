@@ -24,12 +24,6 @@ namespace media = core::ubuntu::media;
 
 struct media::PlayerImplementation::Private
 {
-    void on_end_of_stream()
-    {
-        std::cout << __PRETTY_FUNCTION__ << std::endl;
-        parent->emit_end_of_stream();
-    }
-
     Private(PlayerImplementation* parent,
             const dbus::types::ObjectPath& session_path,
             const std::shared_ptr<media::Service>& service,
@@ -41,12 +35,7 @@ struct media::PlayerImplementation::Private
           track_list(
               new media::TrackListImplementation(
                   session_path.as_string() + "/TrackList",
-                  engine->meta_data_extractor())),
-          on_end_of_stream_connection(
-                  engine->end_of_stream_signal().connect(
-                      std::bind(
-                          &Private::on_end_of_stream,
-                          this)))
+                  engine->meta_data_extractor()))
     {
         std::cout << "Session path: " << session_path << std::endl;
         engine->state().changed().connect(
@@ -70,7 +59,6 @@ struct media::PlayerImplementation::Private
     std::shared_ptr<Engine> engine;
     dbus::types::ObjectPath session_path;
     std::shared_ptr<TrackListImplementation> track_list;
-    core::ScopedConnection on_end_of_stream_connection;
 };
 
 media::PlayerImplementation::PlayerImplementation(
@@ -113,6 +101,10 @@ media::PlayerImplementation::PlayerImplementation(
     };
     duration().install(duration_getter);
 
+    engine->end_of_stream_signal().connect([this]()
+    {
+        end_of_stream()();
+    });
 }
 
 media::PlayerImplementation::~PlayerImplementation()
@@ -150,7 +142,6 @@ void media::PlayerImplementation::play()
 void media::PlayerImplementation::pause()
 {
     d->engine->pause();
-    PlayerSkeleton::emit_end_of_stream();
 }
 
 void media::PlayerImplementation::stop()

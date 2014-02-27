@@ -54,6 +54,11 @@ struct media::PlayerSkeleton::Private
               object->get_property<mpris::Player::Properties::Duration>(),
               object->get_property<mpris::Player::Properties::MinimumRate>(),
               object->get_property<mpris::Player::Properties::MaximumRate>()
+          },
+          signals
+          {
+              object->get_signal<mpris::Player::Signals::Seeked>(),
+              object->get_signal<mpris::Player::Signals::EndOfStream>()
           }
     {
     }
@@ -144,10 +149,39 @@ struct media::PlayerSkeleton::Private
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MaximumRate>> maximum_playback_rate;
     } properties;
 
-    struct
+    struct Signals
     {
-        std::shared_ptr<dbus::Signal<mpris::Player::Signals::EndOfStream, void>> end_of_stream;
-        //std::shared_ptr<dbus::Signal<mpris::Player::Signals::Seeked, uint64_t>> seeked;
+        typedef core::dbus::Signal<mpris::Player::Signals::Seeked, mpris::Player::Signals::Seeked::ArgumentType> DBusSeekedToSignal;
+        typedef core::dbus::Signal<mpris::Player::Signals::EndOfStream, mpris::Player::Signals::EndOfStream::ArgumentType> DBusEndOfStreamSignal;
+
+        Signals(const std::shared_ptr<DBusSeekedToSignal>& seeked,
+                const std::shared_ptr<DBusEndOfStreamSignal>& eos)
+            : dbus
+              {
+                  seeked,
+                  eos
+              },
+              seeked_to(),
+              end_of_stream()
+        {
+            seeked_to.connect([this](std::uint64_t value)
+            {
+                dbus.seeked_to->emit(value);
+            });
+
+            end_of_stream.connect([this]()
+            {
+                dbus.end_of_stream->emit();
+            });
+        }
+
+        struct DBus
+        {
+            std::shared_ptr<DBusSeekedToSignal> seeked_to;
+            std::shared_ptr<DBusEndOfStreamSignal> end_of_stream;
+        } dbus;
+        core::Signal<uint64_t> seeked_to;
+        core::Signal<void> end_of_stream;
     } signals;
 
 };
@@ -300,12 +334,6 @@ core::Property<uint64_t>& media::PlayerSkeleton::duration()
     return *d->properties.duration;
 }
 
-void media::PlayerSkeleton::emit_end_of_stream()
-{
-    std::cout << "Emitting signal EndOfStream" << std::endl;
-    d->object->emit_signal<media::Player::Signals::EndOfStream, media::Player::Signals::EndOfStream::ArgumentType>(42);
-}
-
 core::Property<media::Player::PlaybackStatus>& media::PlayerSkeleton::playback_status()
 {
     return *d->properties.playback_status;
@@ -353,6 +381,20 @@ core::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::maximum_play
 
 const core::Signal<uint64_t>& media::PlayerSkeleton::seeked_to() const
 {
-    static const core::Signal<uint64_t> signal;
-    return signal;
+    return d->signals.seeked_to;
+}
+
+core::Signal<uint64_t>& media::PlayerSkeleton::seeked_to()
+{
+    return d->signals.seeked_to;
+}
+
+const core::Signal<void>& media::PlayerSkeleton::end_of_stream() const
+{
+    return d->signals.end_of_stream;
+}
+
+core::Signal<void>& media::PlayerSkeleton::end_of_stream()
+{
+    return d->signals.end_of_stream;
 }

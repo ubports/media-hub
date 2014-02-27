@@ -60,21 +60,6 @@ class Player : public std::enable_shared_from_this<Player>
         static const Configuration& default_configuration();
     };
 
-    struct Signals
-    {
-        SIGNAL(EndOfStream, Player, int)
-#if 0
-        // Signals when the end of the current media stream has been reached
-        // e.g. one song or video
-        struct EndOfStream
-        {
-            inline static std::string name() { return "EndOfStream"; };
-            typedef Service Interface;
-            typedef int ArgumentType;
-        };
-#endif
-    };
-
     enum PlaybackStatus
     {
         null,
@@ -129,9 +114,8 @@ class Player : public std::enable_shared_from_this<Player>
     virtual core::Property<bool>& is_shuffle() = 0;
     virtual core::Property<Volume>& volume() = 0;
 
-
     virtual const core::Signal<uint64_t>& seeked_to() const = 0;
-
+    virtual const core::Signal<void>& end_of_stream() const = 0;
   protected:
     Player();
 
