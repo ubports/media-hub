@@ -102,6 +102,9 @@ struct media::PlayerSkeleton::Private
         uint64_t ticks;
         in->reader() >> ticks;
         impl->seek_to(std::chrono::microseconds(ticks));
+
+        auto reply = dbus::Message::make_method_return(in);
+        impl->access_bus()->send(reply);
     }
 
     void handle_set_position(const core::dbus::Message::Ptr&)
@@ -248,7 +251,6 @@ const core::Property<media::Player::Volume>& media::PlayerSkeleton::volume() con
 
 const core::Property<uint64_t>& media::PlayerSkeleton::position() const
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
     return *d->properties.position;
 }
 
@@ -289,7 +291,6 @@ core::Property<media::Player::Volume>& media::PlayerSkeleton::volume()
 
 core::Property<uint64_t>& media::PlayerSkeleton::position()
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
     return *d->properties.position;
 }
 
