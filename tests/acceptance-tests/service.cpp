@@ -65,8 +65,7 @@ struct SigTermCatcher
 
 void sleep_for(const std::chrono::milliseconds& ms)
 {
-    long int ns = ms.count() * 1000 * 1000;
-    timespec ts{ 0, ns};
+    timespec ts{ 0, static_cast<long int>(ms.count()) * 1000 * 1000};
     ::nanosleep(&ts, nullptr);
 }
 }
@@ -241,6 +240,64 @@ TEST(MusicService, DISABLED_play_pause_seek_after_open_uri_works)
               core::testing::fork_and_run(service, client));
 }
 
+TEST(MusicService, DISABLED_get_position_duration_work)
+{
+    const std::string test_file{"/tmp/test.mp3"};
+    std::remove(test_file.c_str());
+    ASSERT_TRUE(test::copy_test_mp3_file_to(test_file));
+
+    core::testing::CrossProcessSync sync_service_start;
+
+    auto service = [this, &sync_service_start]()
+    {
+        SigTermCatcher sc;
+
+        auto service = std::make_shared<media::ServiceImplementation>();
+        std::thread t([&service](){service->run();});
+
+        sync_service_start.try_signal_ready_for(std::chrono::milliseconds{500});
+
+        sc.wait_for_signal(); service->stop();
+
+        if (t.joinable())
+            t.join();
+
+        return ::testing::Test::HasFailure() ? core::posix::exit::Status::failure : core::posix::exit::Status::success;
+    };
+
+    auto client = [this, &sync_service_start]()
+    {
+        sync_service_start.wait_for_signal_ready_for(std::chrono::milliseconds{500});
+
+        static const media::Track::UriType uri{"file:///tmp/test.mp3"};
+
+        auto service = media::Service::Client::instance();
+        auto session = service->create_session(media::Player::Client::default_configuration());
+
+        EXPECT_TRUE(session->open_uri(uri));
+
+        core::testing::WaitableStateTransition<media::Player::PlaybackStatus>
+                state_transition(
+                    media::Player::stopped);
+
+        session->playback_status().changed().connect(
+            std::bind(&core::testing::WaitableStateTransition<media::Player::PlaybackStatus>::trigger,
+                      std::ref(state_transition),
+                      std::placeholders::_1));
+
+        session->play();
+        sleep_for(std::chrono::seconds{1});
+        EXPECT_EQ(media::Player::PlaybackStatus::playing, session->playback_status());
+        sleep_for(std::chrono::seconds{1});
+        EXPECT_TRUE(session->position() > 1e9);
+        EXPECT_TRUE(session->duration() > 1e9);
+
+        return ::testing::Test::HasFailure() ? core::posix::exit::Status::failure : core::posix::exit::Status::success;
+    };
+
+    EXPECT_EQ(core::testing::ForkAndRunResult::empty,
+              core::testing::fork_and_run(service, client));
+}
 
 TEST(MusicService, DISABLED_starting_playback_on_non_empty_playqueue_works)
 {

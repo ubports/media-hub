@@ -158,6 +158,26 @@ struct Playbin
                     NULL);
     }
 
+    uint64_t position() const
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+        int64_t pos = 0;
+        gst_element_query_position (pipeline, GST_FORMAT_TIME, &pos);
+
+        // FIXME: this should be int64_t, but dbus-cpp doesn't seem to handle it correctly
+        return static_cast<uint64_t>(pos);
+    }
+
+    uint64_t duration() const
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+        int64_t dur = 0;
+        gst_element_query_duration (pipeline, GST_FORMAT_TIME, &dur);
+
+        // FIXME: this should be int64_t, but dbus-cpp doesn't seem to handle it correctly
+        return static_cast<uint64_t>(dur);
+    }
+
     void set_uri(const std::string& uri)
     {
         g_object_set(

@@ -50,6 +50,8 @@ struct media::PlayerSkeleton::Private
               object->get_property<mpris::Player::Properties::Shuffle>(),
               object->get_property<mpris::Player::Properties::MetaData>(),
               object->get_property<mpris::Player::Properties::Volume>(),
+              object->get_property<mpris::Player::Properties::Position>(),
+              object->get_property<mpris::Player::Properties::Duration>(),
               object->get_property<mpris::Player::Properties::MinimumRate>(),
               object->get_property<mpris::Player::Properties::MaximumRate>()
           }
@@ -98,7 +100,7 @@ struct media::PlayerSkeleton::Private
     void handle_seek(const core::dbus::Message::Ptr& in)
     {
         uint64_t ticks;
-        in->reader() >> ticks; 
+        in->reader() >> ticks;
         impl->seek_to(std::chrono::microseconds(ticks));
     }
 
@@ -126,13 +128,15 @@ struct media::PlayerSkeleton::Private
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanControl>> can_control;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanGoNext>> can_go_next;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanGoPrevious>> can_go_previous;
-        
+
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::PlaybackStatus>> playback_status;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::LoopStatus>> loop_status;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::PlaybackRate>> playback_rate;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Shuffle>> is_shuffle;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MetaData>> meta_data_for_current_track;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Volume>> volume;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Position>> position;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Duration>> duration;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MinimumRate>> minimum_playback_rate;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MaximumRate>> maximum_playback_rate;
     } properties;
@@ -242,6 +246,17 @@ const core::Property<media::Player::Volume>& media::PlayerSkeleton::volume() con
     return *d->properties.volume;
 }
 
+const core::Property<uint64_t>& media::PlayerSkeleton::position() const
+{
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    return *d->properties.position;
+}
+
+const core::Property<uint64_t>& media::PlayerSkeleton::duration() const
+{
+    return *d->properties.duration;
+}
+
 const core::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::minimum_playback_rate() const
 {
     return *d->properties.minimum_playback_rate;
@@ -270,6 +285,17 @@ core::Property<bool>& media::PlayerSkeleton::is_shuffle()
 core::Property<media::Player::Volume>& media::PlayerSkeleton::volume()
 {
     return *d->properties.volume;
+}
+
+core::Property<uint64_t>& media::PlayerSkeleton::position()
+{
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    return *d->properties.position;
+}
+
+core::Property<uint64_t>& media::PlayerSkeleton::duration()
+{
+    return *d->properties.duration;
 }
 
 core::Property<media::Player::PlaybackStatus>& media::PlayerSkeleton::playback_status()

@@ -54,6 +54,8 @@ class PlayerSkeleton : public core::dbus::Skeleton<core::ubuntu::media::Player>
     virtual const core::Property<Volume>& volume() const;
     virtual const core::Property<PlaybackRate>& minimum_playback_rate() const;
     virtual const core::Property<PlaybackRate>& maximum_playback_rate() const;
+    virtual const core::Property<uint64_t>& position() const;
+    virtual const core::Property<uint64_t>& duration() const;
 
     virtual core::Property<LoopStatus>& loop_status();
     virtual core::Property<PlaybackRate>& playback_rate();
@@ -74,6 +76,8 @@ class PlayerSkeleton : public core::dbus::Skeleton<core::ubuntu::media::Player>
     virtual core::Property<Track::MetaData>& meta_data_for_current_track();
     virtual core::Property<PlaybackRate>& minimum_playback_rate();
     virtual core::Property<PlaybackRate>& maximum_playback_rate();
+    virtual core::Property<uint64_t>& position();
+    virtual core::Property<uint64_t>& duration();
 
   private:
     struct Private;

@@ -80,6 +80,24 @@ media::PlayerImplementation::PlayerImplementation(
     playback_rate().set(1.f);
     playback_status().set(Player::PlaybackStatus::null);
     loop_status().set(Player::LoopStatus::none);
+    position().set(0);
+    duration().set(0);
+
+    // Make sure that the Position property gets updated from the Engine
+    // every time the client requests position
+    std::function<uint64_t()> position_getter = [this]()
+    {
+        return d->engine->position().get();
+    };
+    position().install(position_getter);
+
+    // Make sure that the Duration property gets updated from the Engine
+    // every time the client requests duration
+    std::function<uint64_t()> duration_getter = [this]()
+    {
+        return d->engine->duration().get();
+    };
+    duration().install(duration_getter);
 }
 
 media::PlayerImplementation::~PlayerImplementation()
@@ -93,7 +111,6 @@ std::shared_ptr<media::TrackList> media::PlayerImplementation::track_list()
 
 bool media::PlayerImplementation::open_uri(const Track::UriType& uri)
 {
-    std::cout << __PRETTY_FUNCTION__ << ": " << uri << std::endl;
     return d->engine->open_resource_for_uri(uri);
 }
 

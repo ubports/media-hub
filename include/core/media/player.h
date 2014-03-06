@@ -94,11 +94,15 @@ class Player : public std::enable_shared_from_this<Player>
     virtual const core::Property<Volume>& volume() const = 0;
     virtual const core::Property<PlaybackRate>& minimum_playback_rate() const = 0;
     virtual const core::Property<PlaybackRate>& maximum_playback_rate() const = 0;
+    virtual const core::Property<uint64_t>& position() const = 0;
+    virtual const core::Property<uint64_t>& duration() const = 0;
+
 
     virtual core::Property<LoopStatus>& loop_status() = 0;
     virtual core::Property<PlaybackRate>& playback_rate() = 0;
     virtual core::Property<bool>& is_shuffle() = 0;
     virtual core::Property<Volume>& volume() = 0;
+
 
     virtual const core::Signal<uint64_t>& seeked_to() const = 0;
 
