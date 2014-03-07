@@ -47,6 +47,8 @@ public:
 
     const core::Property<std::tuple<core::ubuntu::media::Track::UriType, core::ubuntu::media::Track::MetaData>>& track_meta_data() const;
 
+    const core::Signal<void>& end_of_stream_signal() const;
+
 private:
     struct Private;
     std::unique_ptr<Private> d;

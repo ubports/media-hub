@@ -59,6 +59,7 @@ struct Player
     struct Signals
     {
         SIGNAL(Seeked, Player, uint64_t)
+        SIGNAL(EndOfStream, Player, void)
     };
 
     struct Properties

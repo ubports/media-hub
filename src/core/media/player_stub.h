@@ -74,6 +74,7 @@ class PlayerStub : public core::dbus::Stub<Player>
     virtual core::Property<Volume>& volume();
 
     virtual const core::Signal<uint64_t>& seeked_to() const;
+    virtual const core::Signal<void>& end_of_stream() const;
 
   private:
     struct Private;

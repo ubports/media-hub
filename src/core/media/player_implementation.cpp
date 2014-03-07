@@ -37,9 +37,10 @@ struct media::PlayerImplementation::Private
                   session_path.as_string() + "/TrackList",
                   engine->meta_data_extractor()))
     {
+        std::cout << "Session path: " << session_path << std::endl;
         engine->state().changed().connect(
                     [parent](const Engine::State& state)
-                    {
+        {
             switch(state)
             {
             case Engine::State::ready: parent->playback_status().set(media::Player::ready); break;
@@ -49,7 +50,8 @@ struct media::PlayerImplementation::Private
             default:
                 break;
             };
-                    });
+        });
+
     }
 
     PlayerImplementation* parent;
@@ -98,6 +100,11 @@ media::PlayerImplementation::PlayerImplementation(
         return d->engine->duration().get();
     };
     duration().install(duration_getter);
+
+    engine->end_of_stream_signal().connect([this]()
+    {
+        end_of_stream()();
+    });
 }
 
 media::PlayerImplementation::~PlayerImplementation()

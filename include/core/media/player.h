@@ -25,6 +25,17 @@
 #include <chrono>
 #include <memory>
 
+#define SIGNAL(Name, Itf, ArgType) \
+    struct Name \
+    { \
+        inline static std::string name() \
+        { \
+            return #Name; \
+        }; \
+        typedef Itf Interface; \
+        typedef ArgType ArgumentType; \
+    };\
+
 namespace core
 {
 namespace ubuntu
@@ -103,9 +114,8 @@ class Player : public std::enable_shared_from_this<Player>
     virtual core::Property<bool>& is_shuffle() = 0;
     virtual core::Property<Volume>& volume() = 0;
 
-
     virtual const core::Signal<uint64_t>& seeked_to() const = 0;
-
+    virtual const core::Signal<void>& end_of_stream() const = 0;
   protected:
     Player();
 

@@ -62,6 +62,11 @@ struct media::PlayerStub::Private
                     object->get_property<mpris::Player::Properties::Duration>(),
                     object->get_property<mpris::Player::Properties::MinimumRate>(),
                     object->get_property<mpris::Player::Properties::MaximumRate>()
+                },
+                signals
+                {
+                    object->get_signal<mpris::Player::Signals::Seeked>(),
+                    object->get_signal<mpris::Player::Signals::EndOfStream>()
                 }
     {
     }
@@ -93,6 +98,42 @@ struct media::PlayerStub::Private
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MinimumRate>> minimum_playback_rate;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MaximumRate>> maximum_playback_rate;
     } properties;
+
+    struct Signals
+    {
+        typedef core::dbus::Signal<mpris::Player::Signals::Seeked, mpris::Player::Signals::Seeked::ArgumentType> DBusSeekedToSignal;
+        typedef core::dbus::Signal<mpris::Player::Signals::EndOfStream, mpris::Player::Signals::EndOfStream::ArgumentType> DBusEndOfStreamSignal;
+
+        Signals(const std::shared_ptr<DBusSeekedToSignal>& seeked,
+                const std::shared_ptr<DBusEndOfStreamSignal>& eos)
+            : dbus
+              {
+                  seeked,
+                  eos
+              },
+              seeked_to(),
+              end_of_stream()
+        {
+            dbus.seeked_to->connect([this](std::uint64_t value)
+            {
+                seeked_to(value);
+            });
+
+            dbus.end_of_stream->connect([this]()
+            {
+                std::cout << "EndOfStream signal arrived via the bus." << std::endl;
+                end_of_stream();
+            });
+        }
+
+        struct DBus
+        {
+            std::shared_ptr<DBusSeekedToSignal> seeked_to;
+            std::shared_ptr<DBusEndOfStreamSignal> end_of_stream;
+        } dbus;
+        core::Signal<uint64_t> seeked_to;
+        core::Signal<void> end_of_stream;
+    } signals;
 };
 
 media::PlayerStub::PlayerStub(
@@ -270,6 +311,10 @@ core::Property<media::Player::Volume>& media::PlayerStub::volume()
 
 const core::Signal<uint64_t>& media::PlayerStub::seeked_to() const
 {
-    static core::Signal<uint64_t> signal;
-    return signal;
+    return d->signals.seeked_to;
+}
+
+const core::Signal<void>& media::PlayerStub::end_of_stream() const
+{
+    return d->signals.end_of_stream;
 }

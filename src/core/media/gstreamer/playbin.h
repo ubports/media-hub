@@ -45,8 +45,8 @@ struct Playbin
 
     static void about_to_finish(GstElement*,
                                 gpointer user_data)
-    {        auto thiz = static_cast<Playbin*>(user_data);
-
+    {
+        auto thiz = static_cast<Playbin*>(user_data);
         thiz->signals.about_to_finish();
     }
 
@@ -101,6 +101,9 @@ struct Playbin
         case GST_MESSAGE_STATE_CHANGED:
             signals.on_state_changed(message.detail.state_changed);
             break;
+        case GST_MESSAGE_EOS:
+            std::cout << "EOS detected" << std::endl;
+            signals.on_end_of_stream();
         default:
             break;
         }
@@ -247,6 +250,7 @@ struct Playbin
         core::Signal<Bus::Message::Detail::ErrorWarningInfo> on_info;
         core::Signal<Bus::Message::Detail::Tag> on_tag_available;
         core::Signal<Bus::Message::Detail::StateChanged> on_state_changed;
+        core::Signal<void> on_end_of_stream;
     } signals;
 };
 }
