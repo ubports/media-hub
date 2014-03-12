@@ -245,6 +245,11 @@ bool gstreamer::Engine::open_resource_for_uri(const media::Track::UriType& uri)
     return true;
 }
 
+void gstreamer::Engine::create_video_sink(uint32_t texture_id)
+{
+    d->playbin.create_video_sink(texture_id);
+}
+
 bool gstreamer::Engine::play()
 {
     auto result = d->playbin.set_state_and_wait(GST_STATE_PLAYING);

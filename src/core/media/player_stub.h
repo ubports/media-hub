@@ -45,6 +45,7 @@ class PlayerStub : public core::dbus::Stub<Player>
     virtual std::shared_ptr<TrackList> track_list();
 
     virtual bool open_uri(const Track::UriType& uri);
+    virtual void create_video_sink(uint32_t texture_id);
     virtual void next();
     virtual void previous();
     virtual void play();

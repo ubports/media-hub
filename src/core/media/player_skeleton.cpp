@@ -116,6 +116,17 @@ struct media::PlayerSkeleton::Private
     {
     }
 
+    void handle_create_video_sink(const core::dbus::Message::Ptr& in)
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+        uint32_t texture_id;
+        in->reader() >> texture_id;
+        impl->create_video_sink(texture_id);
+
+        auto reply = dbus::Message::make_method_return(in);
+        impl->access_bus()->send(reply);
+    }
+
     void handle_open_uri(const core::dbus::Message::Ptr& in)
     {
         Track::UriType uri;
@@ -166,7 +177,8 @@ struct media::PlayerSkeleton::Private
         {
             seeked_to.connect([this](std::uint64_t value)
             {
-                dbus.seeked_to->emit(value);
+                std::cout << "value: " << value << std::endl;
+                //dbus.seeked_to->emit(value);
             });
 
             end_of_stream.connect([this]()
@@ -217,6 +229,10 @@ media::PlayerSkeleton::PlayerSkeleton(
                   std::placeholders::_1));
     d->object->install_method_handler<mpris::Player::SetPosition>(
         std::bind(&Private::handle_set_position,
+                  std::ref(d),
+                  std::placeholders::_1));
+    d->object->install_method_handler<mpris::Player::CreateVideoSink>(
+        std::bind(&Private::handle_create_video_sink,
                   std::ref(d),
                   std::placeholders::_1));
     d->object->install_method_handler<mpris::Player::OpenUri>(

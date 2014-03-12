@@ -54,6 +54,7 @@ struct Player
     METHOD(Play, Player, std::chrono::seconds(1))
     METHOD(Seek, Player, std::chrono::seconds(1))
     METHOD(SetPosition, Player, std::chrono::seconds(1))
+    METHOD(CreateVideoSink, Player, std::chrono::seconds(1))
     METHOD(OpenUri, Player, std::chrono::seconds(1))
 
     struct Signals

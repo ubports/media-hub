@@ -31,6 +31,11 @@
 #include <core/dbus/property.h>
 #include <core/dbus/types/object_path.h>
 
+// Hybris
+#include <media/decoding_service.h>
+#include <media/media_codec_layer.h>
+#include <media/surface_texture_client_hybris.h>
+
 #include <limits>
 
 namespace dbus = core::dbus;
@@ -42,6 +47,8 @@ struct media::PlayerStub::Private
             const std::shared_ptr<dbus::Service>& remote,
             const dbus::types::ObjectPath& path
             ) : parent(parent),
+                texture_id(0),
+                gl_consumer(nullptr),
                 path(path),
                 object(remote->object_for_path(path)),
                 properties
@@ -71,8 +78,28 @@ struct media::PlayerStub::Private
     {
     }
 
+    static void on_frame_available_cb(void *context)
+    {
+        std::cout << "Frame is available for rendering! (context: " << context << ")" << std::endl;
+    }
+
+    /** We need a GLConsumerHybris instance for doing texture streaming over the
+     * process boundary **/
+    void get_gl_consumer()
+    {
+        IGBCWrapperHybris igbc = decoding_service_get_igraphicbufferconsumer();
+        std::cout << "IGBCWrapperHybris: " << igbc << std::endl;
+        gl_consumer = gl_consumer_create_by_id_with_igbc(texture_id, igbc);
+        std::cout << "GLConsumerHybris: " << gl_consumer << std::endl;
+
+        gl_consumer_set_frame_available_cb(gl_consumer, &Private::on_frame_available_cb, gl_consumer);
+    }
+
     std::shared_ptr<Service> parent;
     std::shared_ptr<TrackList> track_list;
+
+    uint32_t texture_id;
+    GLConsumerHybris gl_consumer;
 
     dbus::Bus::Ptr bus;
     dbus::types::ObjectPath path;
@@ -164,6 +191,16 @@ bool media::PlayerStub::open_uri(const media::Track::UriType& uri)
     auto op = d->object->invoke_method_synchronously<mpris::Player::OpenUri, bool>(uri);
 
     return op.value();
+}
+
+void media::PlayerStub::create_video_sink(uint32_t texture_id)
+{
+    auto op = d->object->invoke_method_synchronously<mpris::Player::CreateVideoSink, void>(texture_id);
+    d->texture_id = texture_id;
+    d->get_gl_consumer();
+
+    if (op.is_error())
+        throw std::runtime_error("Problem switching to next track on remote object");
 }
 
 void media::PlayerStub::next()

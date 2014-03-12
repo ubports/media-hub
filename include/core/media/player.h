@@ -25,17 +25,6 @@
 #include <chrono>
 #include <memory>
 
-#define SIGNAL(Name, Itf, ArgType) \
-    struct Name \
-    { \
-        inline static std::string name() \
-        { \
-            return #Name; \
-        }; \
-        typedef Itf Interface; \
-        typedef ArgType ArgumentType; \
-    };\
-
 namespace core
 {
 namespace ubuntu
@@ -85,6 +74,7 @@ class Player : public std::enable_shared_from_this<Player>
     virtual std::shared_ptr<TrackList> track_list() = 0;
 
     virtual bool open_uri(const Track::UriType& uri) = 0;
+    virtual void create_video_sink(uint32_t texture_id) = 0;
     virtual void next() = 0;
     virtual void previous() = 0;
     virtual void play() = 0;

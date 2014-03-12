@@ -37,7 +37,6 @@ struct media::PlayerImplementation::Private
                   session_path.as_string() + "/TrackList",
                   engine->meta_data_extractor()))
     {
-        std::cout << "Session path: " << session_path << std::endl;
         engine->state().changed().connect(
                     [parent](const Engine::State& state)
         {
@@ -119,6 +118,12 @@ std::shared_ptr<media::TrackList> media::PlayerImplementation::track_list()
 bool media::PlayerImplementation::open_uri(const Track::UriType& uri)
 {
     return d->engine->open_resource_for_uri(uri);
+}
+
+void media::PlayerImplementation::create_video_sink(uint32_t texture_id)
+{
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    d->engine->create_video_sink(texture_id);
 }
 
 void media::PlayerImplementation::next()

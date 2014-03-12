@@ -21,6 +21,10 @@
 
 #include "bus.h"
 
+#include <media/decoding_service.h>
+#include <media/media_codec_layer.h>
+#include <media/surface_texture_client_hybris.h>
+
 #include <gst/gst.h>
 
 #include <chrono>
@@ -129,6 +133,8 @@ struct Playbin
                         ::getenv("CORE_UBUNTU_MEDIA_SERVICE_AUDIO_SINK_NAME"),
                         "audio-sink");
 
+            std::cout << "audio_sink: " << ::getenv("CORE_UBUNTU_MEDIA_SERVICE_AUDIO_SINK_NAME") << std::endl;
+
             g_object_set (
                         pipeline,
                         "audio-sink",
@@ -138,6 +144,27 @@ struct Playbin
 
         if (::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME") != nullptr)
         {
+            auto video_sink = gst_element_factory_make (
+                    ::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME"),
+                    "video-sink");
+
+            std::cout << "video_sink: " << ::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME") << std::endl;
+
+            g_object_set (
+                    pipeline,
+                    "video-sink",
+                    video_sink,
+                    NULL);
+        }
+    }
+
+    void create_video_sink(uint32_t texture_id)
+    {
+        std::cout << "Creating video sink for texture_id: " << texture_id << std::endl;
+
+        if (::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME") != nullptr)
+        {
+#if 0
             auto video_sink = gst_element_factory_make (
                         ::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME"),
                         "video-sink");
@@ -149,6 +176,20 @@ struct Playbin
                         "video-sink",
                         video_sink,
                         NULL);
+#else
+            GstElement *video_sink = NULL;
+            g_object_get (pipeline, "video_sink", &video_sink, NULL);
+#endif
+
+            IGBPWrapperHybris igbp = decoding_service_get_igraphicbufferproducer();
+            std::cout << "IGBPWrapperHybris: " << igbp << std::endl;
+            SurfaceTextureClientHybris stc = surface_texture_client_create_by_igbp(igbp);
+            std::cout << "SurfaceTextureClientHybris: " << stc << std::endl;
+            /* Because mirsink is being loaded, we are definitely doing
+             * hardware rendering.
+             */
+            surface_texture_client_set_hardware_rendering (stc, TRUE);
+            g_object_set (G_OBJECT (video_sink), "surface", static_cast<gpointer>(stc), static_cast<char*>(NULL));
         }
     }
 
@@ -241,6 +282,7 @@ struct Playbin
 
     GstElement* pipeline;
     gstreamer::Bus bus;
+    SurfaceTextureClientHybris stc_hybris;
     core::Connection on_new_message_connection;
     struct
     {

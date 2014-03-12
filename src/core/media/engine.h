@@ -97,6 +97,7 @@ public:
     virtual const core::Property<State>& state() const = 0;
 
     virtual bool open_resource_for_uri(const Track::UriType& uri) = 0;
+    virtual void create_video_sink(uint32_t texture_id) = 0;
 
     virtual bool play() = 0;
     virtual bool stop()  = 0;
