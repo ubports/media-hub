@@ -39,6 +39,11 @@ class Player : public std::enable_shared_from_this<Player>
   public:
     typedef double PlaybackRate;
     typedef double Volume;
+    typedef void* GLConsumerWrapperHybris;
+
+    /** Used to set a callback function to be called when a frame is ready to be rendered **/
+    typedef void (*FrameAvailableCbHybris)(GLConsumerWrapperHybris wrapper, void *context);
+    typedef void (*FrameAvailableCb)(void *context);
 
     struct Configuration;
 
@@ -75,12 +80,16 @@ class Player : public std::enable_shared_from_this<Player>
 
     virtual bool open_uri(const Track::UriType& uri) = 0;
     virtual void create_video_sink(uint32_t texture_id) = 0;
+    virtual GLConsumerWrapperHybris gl_consumer() const = 0;
     virtual void next() = 0;
     virtual void previous() = 0;
     virtual void play() = 0;
     virtual void pause() = 0;
     virtual void stop() = 0;
     virtual void seek_to(const std::chrono::microseconds& offset) = 0;
+
+    /** TODO: Convert this to be a signal once proven to work **/
+    virtual void set_frame_available_callback(FrameAvailableCb cb, void *context) = 0;
 
     virtual const core::Property<bool>& can_play() const = 0;
     virtual const core::Property<bool>& can_pause() const = 0;
@@ -97,7 +106,6 @@ class Player : public std::enable_shared_from_this<Player>
     virtual const core::Property<PlaybackRate>& maximum_playback_rate() const = 0;
     virtual const core::Property<uint64_t>& position() const = 0;
     virtual const core::Property<uint64_t>& duration() const = 0;
-
 
     virtual core::Property<LoopStatus>& loop_status() = 0;
     virtual core::Property<PlaybackRate>& playback_rate() = 0;

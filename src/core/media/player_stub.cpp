@@ -38,6 +38,8 @@
 
 #include <limits>
 
+#define UNUSED __attribute__((unused))
+
 namespace dbus = core::dbus;
 namespace media = core::ubuntu::media;
 
@@ -48,7 +50,10 @@ struct media::PlayerStub::Private
             const dbus::types::ObjectPath& path
             ) : parent(parent),
                 texture_id(0),
-                gl_consumer(nullptr),
+                igbc_wrapper(nullptr),
+                glc_wrapper(nullptr),
+                frame_available_cb(nullptr),
+                frame_available_context(nullptr),
                 path(path),
                 object(remote->object_for_path(path)),
                 properties
@@ -78,28 +83,58 @@ struct media::PlayerStub::Private
     {
     }
 
-    static void on_frame_available_cb(void *context)
+    ~Private()
+    {
+        std::cout << "PlayerStub->" << __FUNCTION__ << std::endl;
+    }
+
+    static void on_frame_available_cb(UNUSED GLConsumerWrapperHybris wrapper, void *context)
     {
         std::cout << "Frame is available for rendering! (context: " << context << ")" << std::endl;
+        if (context != nullptr) {
+            std::cout << "Calling on_frame_available()" << std::endl;
+            Private *p = static_cast<Private*>(context);
+            p->on_frame_available();
+        }
+    }
+
+    void on_frame_available()
+    {
+        if (frame_available_cb != nullptr) {
+            std::cout << "Calling frame_available_cb(frame_available_context: " << frame_available_context << ")" << std::endl;
+            frame_available_cb(frame_available_context);
+        }
+    }
+
+    void set_frame_available_cb(FrameAvailableCb cb, void *context)
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+        frame_available_cb = cb;
+        frame_available_context = context;
+
+        gl_consumer_set_frame_available_cb(glc_wrapper, &Private::on_frame_available_cb, static_cast<void*>(this));
     }
 
     /** We need a GLConsumerHybris instance for doing texture streaming over the
      * process boundary **/
     void get_gl_consumer()
     {
-        IGBCWrapperHybris igbc = decoding_service_get_igraphicbufferconsumer();
-        std::cout << "IGBCWrapperHybris: " << igbc << std::endl;
-        gl_consumer = gl_consumer_create_by_id_with_igbc(texture_id, igbc);
-        std::cout << "GLConsumerHybris: " << gl_consumer << std::endl;
+        igbc_wrapper = decoding_service_get_igraphicbufferconsumer();
+        std::cout << "IGBCWrapperHybris: " << igbc_wrapper << std::endl;
+        glc_wrapper = gl_consumer_create_by_id_with_igbc(texture_id, igbc_wrapper);
+        std::cout << "GLConsumerWrapperHybris: " << glc_wrapper << std::endl;
 
-        gl_consumer_set_frame_available_cb(gl_consumer, &Private::on_frame_available_cb, gl_consumer);
     }
 
     std::shared_ptr<Service> parent;
     std::shared_ptr<TrackList> track_list;
 
     uint32_t texture_id;
-    GLConsumerHybris gl_consumer;
+    IGBCWrapperHybris igbc_wrapper;
+    GLConsumerWrapperHybris glc_wrapper;
+
+    FrameAvailableCb frame_available_cb;
+    void *frame_available_context;
 
     dbus::Bus::Ptr bus;
     dbus::types::ObjectPath path;
@@ -203,6 +238,11 @@ void media::PlayerStub::create_video_sink(uint32_t texture_id)
         throw std::runtime_error("Problem switching to next track on remote object");
 }
 
+GLConsumerWrapperHybris media::PlayerStub::gl_consumer() const
+{
+    return d->glc_wrapper;
+}
+
 void media::PlayerStub::next()
 {
     auto op = d->object->invoke_method_synchronously<mpris::Player::Next, void>();
@@ -249,6 +289,11 @@ void media::PlayerStub::stop()
 
     if (op.is_error())
         throw std::runtime_error("Problem stopping playback on remote object");
+}
+
+void media::PlayerStub::set_frame_available_callback(FrameAvailableCb cb, void *context)
+{
+    d->set_frame_available_cb(cb, context);
 }
 
 const core::Property<bool>& media::PlayerStub::can_play() const

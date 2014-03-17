@@ -20,6 +20,8 @@
 #include "engine.h"
 #include "track_list_implementation.h"
 
+#define UNUSED __attribute__((unused))
+
 namespace media = core::ubuntu::media;
 
 struct media::PlayerImplementation::Private
@@ -126,6 +128,12 @@ void media::PlayerImplementation::create_video_sink(uint32_t texture_id)
     d->engine->create_video_sink(texture_id);
 }
 
+media::Player::GLConsumerWrapperHybris media::PlayerImplementation::gl_consumer() const
+{
+    // This method is client-side only and is simply a no-op for the service side
+    return NULL;
+}
+
 void media::PlayerImplementation::next()
 {
 }
@@ -152,6 +160,12 @@ void media::PlayerImplementation::pause()
 void media::PlayerImplementation::stop()
 {
     d->engine->stop();
+}
+
+void media::PlayerImplementation::set_frame_available_callback(
+    UNUSED FrameAvailableCb cb, UNUSED void *context)
+{
+    // This method is client-side only and is simply a no-op for the service side
 }
 
 void media::PlayerImplementation::seek_to(const std::chrono::microseconds& ms)
