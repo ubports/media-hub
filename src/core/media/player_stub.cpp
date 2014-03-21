@@ -52,6 +52,7 @@ struct media::PlayerStub::Private
                 texture_id(0),
                 igbc_wrapper(nullptr),
                 glc_wrapper(nullptr),
+                decoding_session(decoding_service_create_session()),
                 frame_available_cb(nullptr),
                 frame_available_context(nullptr),
                 path(path),
@@ -132,6 +133,8 @@ struct media::PlayerStub::Private
     uint32_t texture_id;
     IGBCWrapperHybris igbc_wrapper;
     GLConsumerWrapperHybris glc_wrapper;
+
+    DSSessionWrapperHybris decoding_session;
 
     FrameAvailableCb frame_available_cb;
     void *frame_available_context;
