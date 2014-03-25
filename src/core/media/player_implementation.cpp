@@ -17,6 +17,8 @@
 
 #include "player_implementation.h"
 
+#include <unistd.h>
+
 #include "engine.h"
 #include "track_list_implementation.h"
 
@@ -102,6 +104,16 @@ media::PlayerImplementation::PlayerImplementation(
     };
     duration().install(duration_getter);
 
+    engine->about_to_finish_signal().connect([this]()
+    {
+        if (d->track_list->has_next())
+        {
+            Track::UriType uri = d->track_list->query_uri_for_track(d->track_list->next());
+            if (!uri.empty())
+                d->parent->open_uri(uri);
+        }
+    });
+
     engine->end_of_stream_signal().connect([this]()
     {
         end_of_stream()();
@@ -144,11 +156,6 @@ void media::PlayerImplementation::previous()
 
 void media::PlayerImplementation::play()
 {
-    /*if (playback_status() == media::Player::null)
-    {
-        if (d->track_list->has_next())
-            if (open_uri(d->track_list->next()->))
-    }*/
     d->engine->play();
 }
 
