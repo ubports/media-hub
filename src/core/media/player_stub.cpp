@@ -31,7 +31,14 @@
 #include <core/dbus/property.h>
 #include <core/dbus/types/object_path.h>
 
+// Hybris
+#include <media/decoding_service.h>
+#include <media/media_codec_layer.h>
+#include <media/surface_texture_client_hybris.h>
+
 #include <limits>
+
+#define UNUSED __attribute__((unused))
 
 namespace dbus = core::dbus;
 namespace media = core::ubuntu::media;
@@ -42,6 +49,12 @@ struct media::PlayerStub::Private
             const std::shared_ptr<dbus::Service>& remote,
             const dbus::types::ObjectPath& path
             ) : parent(parent),
+                texture_id(0),
+                igbc_wrapper(nullptr),
+                glc_wrapper(nullptr),
+                decoding_session(decoding_service_create_session()),
+                frame_available_cb(nullptr),
+                frame_available_context(nullptr),
                 path(path),
                 object(remote->object_for_path(path)),
                 properties
@@ -62,12 +75,69 @@ struct media::PlayerStub::Private
                     object->get_property<mpris::Player::Properties::Duration>(),
                     object->get_property<mpris::Player::Properties::MinimumRate>(),
                     object->get_property<mpris::Player::Properties::MaximumRate>()
+                },
+                signals
+                {
+                    object->get_signal<mpris::Player::Signals::Seeked>(),
+                    object->get_signal<mpris::Player::Signals::EndOfStream>()
                 }
     {
     }
 
+    ~Private()
+    {
+        std::cout << "PlayerStub->" << __FUNCTION__ << std::endl;
+    }
+
+    static void on_frame_available_cb(UNUSED GLConsumerWrapperHybris wrapper, void *context)
+    {
+        std::cout << "Frame is available for rendering! (context: " << context << ")" << std::endl;
+        if (context != nullptr) {
+            std::cout << "Calling on_frame_available()" << std::endl;
+            Private *p = static_cast<Private*>(context);
+            p->on_frame_available();
+        }
+    }
+
+    void on_frame_available()
+    {
+        if (frame_available_cb != nullptr) {
+            std::cout << "Calling frame_available_cb(frame_available_context: " << frame_available_context << ")" << std::endl;
+            frame_available_cb(frame_available_context);
+        }
+    }
+
+    void set_frame_available_cb(FrameAvailableCb cb, void *context)
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+        frame_available_cb = cb;
+        frame_available_context = context;
+
+        gl_consumer_set_frame_available_cb(glc_wrapper, &Private::on_frame_available_cb, static_cast<void*>(this));
+    }
+
+    /** We need a GLConsumerHybris instance for doing texture streaming over the
+     * process boundary **/
+    void get_gl_consumer()
+    {
+        igbc_wrapper = decoding_service_get_igraphicbufferconsumer();
+        std::cout << "IGBCWrapperHybris: " << igbc_wrapper << std::endl;
+        glc_wrapper = gl_consumer_create_by_id_with_igbc(texture_id, igbc_wrapper);
+        std::cout << "GLConsumerWrapperHybris: " << glc_wrapper << std::endl;
+
+    }
+
     std::shared_ptr<Service> parent;
     std::shared_ptr<TrackList> track_list;
+
+    uint32_t texture_id;
+    IGBCWrapperHybris igbc_wrapper;
+    GLConsumerWrapperHybris glc_wrapper;
+
+    DSSessionWrapperHybris decoding_session;
+
+    FrameAvailableCb frame_available_cb;
+    void *frame_available_context;
 
     dbus::Bus::Ptr bus;
     dbus::types::ObjectPath path;
@@ -93,6 +163,42 @@ struct media::PlayerStub::Private
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MinimumRate>> minimum_playback_rate;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MaximumRate>> maximum_playback_rate;
     } properties;
+
+    struct Signals
+    {
+        typedef core::dbus::Signal<mpris::Player::Signals::Seeked, mpris::Player::Signals::Seeked::ArgumentType> DBusSeekedToSignal;
+        typedef core::dbus::Signal<mpris::Player::Signals::EndOfStream, mpris::Player::Signals::EndOfStream::ArgumentType> DBusEndOfStreamSignal;
+
+        Signals(const std::shared_ptr<DBusSeekedToSignal>& seeked,
+                const std::shared_ptr<DBusEndOfStreamSignal>& eos)
+            : dbus
+              {
+                  seeked,
+                  eos
+              },
+              seeked_to(),
+              end_of_stream()
+        {
+            dbus.seeked_to->connect([this](std::uint64_t value)
+            {
+                seeked_to(value);
+            });
+
+            dbus.end_of_stream->connect([this]()
+            {
+                std::cout << "EndOfStream signal arrived via the bus." << std::endl;
+                end_of_stream();
+            });
+        }
+
+        struct DBus
+        {
+            std::shared_ptr<DBusSeekedToSignal> seeked_to;
+            std::shared_ptr<DBusEndOfStreamSignal> end_of_stream;
+        } dbus;
+        core::Signal<uint64_t> seeked_to;
+        core::Signal<void> end_of_stream;
+    } signals;
 };
 
 media::PlayerStub::PlayerStub(
@@ -123,6 +229,21 @@ bool media::PlayerStub::open_uri(const media::Track::UriType& uri)
     auto op = d->object->invoke_method_synchronously<mpris::Player::OpenUri, bool>(uri);
 
     return op.value();
+}
+
+void media::PlayerStub::create_video_sink(uint32_t texture_id)
+{
+    auto op = d->object->invoke_method_synchronously<mpris::Player::CreateVideoSink, void>(texture_id);
+    d->texture_id = texture_id;
+    d->get_gl_consumer();
+
+    if (op.is_error())
+        throw std::runtime_error("Problem switching to next track on remote object");
+}
+
+GLConsumerWrapperHybris media::PlayerStub::gl_consumer() const
+{
+    return d->glc_wrapper;
 }
 
 void media::PlayerStub::next()
@@ -171,6 +292,11 @@ void media::PlayerStub::stop()
 
     if (op.is_error())
         throw std::runtime_error("Problem stopping playback on remote object");
+}
+
+void media::PlayerStub::set_frame_available_callback(FrameAvailableCb cb, void *context)
+{
+    d->set_frame_available_cb(cb, context);
 }
 
 const core::Property<bool>& media::PlayerStub::can_play() const
@@ -270,6 +396,10 @@ core::Property<media::Player::Volume>& media::PlayerStub::volume()
 
 const core::Signal<uint64_t>& media::PlayerStub::seeked_to() const
 {
-    static core::Signal<uint64_t> signal;
-    return signal;
+    return d->signals.seeked_to;
+}
+
+const core::Signal<void>& media::PlayerStub::end_of_stream() const
+{
+    return d->signals.end_of_stream;
 }

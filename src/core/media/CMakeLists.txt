@@ -1,6 +1,6 @@
 pkg_check_modules(PC_GSTREAMER_1_0 REQUIRED gstreamer-1.0)
 
-include_directories(${PC_GSTREAMER_1_0_INCLUDE_DIRS})
+include_directories(${PC_GSTREAMER_1_0_INCLUDE_DIRS} /usr/include/hybris)
 
 add_library(
   media-hub-common SHARED
@@ -52,6 +52,7 @@ target_link_libraries(
   ${DBUS_LIBRARIES}
   ${DBUS_CPP_LDFLAGS}
   ${GLog_LIBRARY}
+  -lmedia
 )
 
 install(
@@ -82,9 +83,10 @@ target_link_libraries(
   ${DBUS_CPP_LDFLAGS}
   ${GLog_LIBRARY}
   ${PC_GSTREAMER_1_0_LIBRARIES}
+  -lmedia
 )
 
-include_directories(${PROJECT_SOURCE_DIR}/src/)
+include_directories(${PROJECT_SOURCE_DIR}/src/ /usr/include/hybris)
 
 add_executable(
   media-hub-server
@@ -102,6 +104,7 @@ target_link_libraries(
   ${DBUS_CPP_LDFLAGS}
   ${GLog_LIBRARY}
   ${PC_GSTREAMER_1_0_LIBRARIES}
+  -lmedia
 )
 
 install(

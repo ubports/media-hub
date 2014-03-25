@@ -20,6 +20,8 @@
 #include "engine.h"
 #include "track_list_implementation.h"
 
+#define UNUSED __attribute__((unused))
+
 namespace media = core::ubuntu::media;
 
 struct media::PlayerImplementation::Private
@@ -39,7 +41,7 @@ struct media::PlayerImplementation::Private
     {
         engine->state().changed().connect(
                     [parent](const Engine::State& state)
-                    {
+        {
             switch(state)
             {
             case Engine::State::ready: parent->playback_status().set(media::Player::ready); break;
@@ -49,7 +51,8 @@ struct media::PlayerImplementation::Private
             default:
                 break;
             };
-                    });
+        });
+
     }
 
     PlayerImplementation* parent;
@@ -98,6 +101,11 @@ media::PlayerImplementation::PlayerImplementation(
         return d->engine->duration().get();
     };
     duration().install(duration_getter);
+
+    engine->end_of_stream_signal().connect([this]()
+    {
+        end_of_stream()();
+    });
 }
 
 media::PlayerImplementation::~PlayerImplementation()
@@ -112,6 +120,18 @@ std::shared_ptr<media::TrackList> media::PlayerImplementation::track_list()
 bool media::PlayerImplementation::open_uri(const Track::UriType& uri)
 {
     return d->engine->open_resource_for_uri(uri);
+}
+
+void media::PlayerImplementation::create_video_sink(uint32_t texture_id)
+{
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    d->engine->create_video_sink(texture_id);
+}
+
+media::Player::GLConsumerWrapperHybris media::PlayerImplementation::gl_consumer() const
+{
+    // This method is client-side only and is simply a no-op for the service side
+    return NULL;
 }
 
 void media::PlayerImplementation::next()
@@ -140,6 +160,12 @@ void media::PlayerImplementation::pause()
 void media::PlayerImplementation::stop()
 {
     d->engine->stop();
+}
+
+void media::PlayerImplementation::set_frame_available_callback(
+    UNUSED FrameAvailableCb cb, UNUSED void *context)
+{
+    // This method is client-side only and is simply a no-op for the service side
 }
 
 void media::PlayerImplementation::seek_to(const std::chrono::microseconds& ms)

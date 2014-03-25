@@ -45,12 +45,16 @@ class PlayerStub : public core::dbus::Stub<Player>
     virtual std::shared_ptr<TrackList> track_list();
 
     virtual bool open_uri(const Track::UriType& uri);
+    virtual void create_video_sink(uint32_t texture_id);
+    virtual GLConsumerWrapperHybris gl_consumer() const;
     virtual void next();
     virtual void previous();
     virtual void play();
     virtual void pause();
     virtual void seek_to(const std::chrono::microseconds& offset);
     virtual void stop();
+
+    virtual void set_frame_available_callback(FrameAvailableCb cb, void *context);
 
     virtual const core::Property<bool>& can_play() const;
     virtual const core::Property<bool>& can_pause() const;
@@ -74,6 +78,7 @@ class PlayerStub : public core::dbus::Stub<Player>
     virtual core::Property<Volume>& volume();
 
     virtual const core::Signal<uint64_t>& seeked_to() const;
+    virtual const core::Signal<void>& end_of_stream() const;
 
   private:
     struct Private;

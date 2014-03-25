@@ -33,6 +33,7 @@ public:
     const core::Property<State>& state() const;
 
     bool open_resource_for_uri(const core::ubuntu::media::Track::UriType& uri);
+    void create_video_sink(uint32_t texture_id);
 
     bool play();
     bool stop();
@@ -46,6 +47,8 @@ public:
     core::Property<core::ubuntu::media::Engine::Volume>& volume();
 
     const core::Property<std::tuple<core::ubuntu::media::Track::UriType, core::ubuntu::media::Track::MetaData>>& track_meta_data() const;
+
+    const core::Signal<void>& end_of_stream_signal() const;
 
 private:
     struct Private;
