@@ -79,6 +79,8 @@ media::PlayerImplementation::PlayerImplementation(
     can_seek().set(true);
     can_go_previous().set(true);
     can_go_next().set(true);
+    is_video_source().set(false);
+    is_audio_source().set(false);
     is_shuffle().set(true);
     playback_rate().set(1.f);
     playback_status().set(Player::PlaybackStatus::null);
@@ -102,6 +104,20 @@ media::PlayerImplementation::PlayerImplementation(
     };
     duration().install(duration_getter);
 
+#if 1
+    std::function<bool()> video_type_getter = [this]()
+    {
+        return d->engine->is_video_source().get();
+    };
+    is_video_source().install(video_type_getter);
+
+    std::function<bool()> audio_type_getter = [this]()
+    {
+        return d->engine->is_audio_source().get();
+    };
+    is_audio_source().install(audio_type_getter);
+#endif
+
     engine->end_of_stream_signal().connect([this]()
     {
         end_of_stream()();
@@ -119,6 +135,8 @@ std::shared_ptr<media::TrackList> media::PlayerImplementation::track_list()
 
 bool media::PlayerImplementation::open_uri(const Track::UriType& uri)
 {
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+
     return d->engine->open_resource_for_uri(uri);
 }
 

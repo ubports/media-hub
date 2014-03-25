@@ -65,6 +65,8 @@ struct media::PlayerStub::Private
                     object->get_property<mpris::Player::Properties::CanControl>(),
                     object->get_property<mpris::Player::Properties::CanGoNext>(),
                     object->get_property<mpris::Player::Properties::CanGoPrevious>(),
+                    object->get_property<mpris::Player::Properties::IsVideoSource>(),
+                    object->get_property<mpris::Player::Properties::IsAudioSource>(),
                     object->get_property<mpris::Player::Properties::PlaybackStatus>(),
                     object->get_property<mpris::Player::Properties::LoopStatus>(),
                     object->get_property<mpris::Player::Properties::PlaybackRate>(),
@@ -151,6 +153,8 @@ struct media::PlayerStub::Private
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanControl>> can_control;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanGoNext>> can_go_next;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanGoPrevious>> can_go_previous;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::IsVideoSource>> is_video_source;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::IsAudioSource>> is_audio_source;
 
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::PlaybackStatus>> playback_status;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::LoopStatus>> loop_status;
@@ -322,6 +326,18 @@ const core::Property<bool>& media::PlayerStub::can_go_previous() const
 const core::Property<bool>& media::PlayerStub::can_go_next() const
 {
     return *d->properties.can_go_next;
+}
+
+const core::Property<bool>& media::PlayerStub::is_video_source() const
+{
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    return *d->properties.is_video_source;
+}
+
+const core::Property<bool>& media::PlayerStub::is_audio_source() const
+{
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    return *d->properties.is_audio_source;
 }
 
 const core::Property<media::Player::PlaybackStatus>& media::PlayerStub::playback_status() const

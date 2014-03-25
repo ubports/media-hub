@@ -76,6 +76,8 @@ struct Player
         READABLE_PROPERTY(Duration, Player, uint64_t)
         READABLE_PROPERTY(MinimumRate, Player, double)
         READABLE_PROPERTY(MaximumRate, Player, double)
+        READABLE_PROPERTY(IsVideoSource, Player, bool)
+        READABLE_PROPERTY(IsAudioSource, Player, bool)
         READABLE_PROPERTY(CanGoNext, Player, bool)
         READABLE_PROPERTY(CanGoPrevious, Player, bool)
         READABLE_PROPERTY(CanPlay, Player, bool)

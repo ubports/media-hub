@@ -61,6 +61,8 @@ class PlayerStub : public core::dbus::Stub<Player>
     virtual const core::Property<bool>& can_seek() const;
     virtual const core::Property<bool>& can_go_previous() const;
     virtual const core::Property<bool>& can_go_next() const;
+    virtual const core::Property<bool>& is_video_source() const;
+    virtual const core::Property<bool>& is_audio_source() const;
     virtual const core::Property<PlaybackStatus>& playback_status() const;
     virtual const core::Property<LoopStatus>& loop_status() const;
     virtual const core::Property<PlaybackRate>& playback_rate() const;
