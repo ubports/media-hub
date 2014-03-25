@@ -78,12 +78,53 @@ struct Playbin
                     this
                     );
 
+        // When a client of media-hub dies, call on_client_died
+        decoding_service_set_client_death_cb(&Playbin::on_client_died_cb, static_cast<void*>(this));
     }
 
     ~Playbin()
     {
         if (pipeline)
             gst_object_unref(pipeline);
+    }
+
+    static void on_client_died_cb(void *context)
+    {
+        if (context)
+        {
+            Playbin *pb = static_cast<Playbin*>(context);
+            pb->on_client_died();
+        }
+    }
+
+    void on_client_died()
+    {
+        std::cout << "Client died, resetting pipeline" << std::endl;
+        // When the client dies, tear down the current pipeline and get it
+        // in a state that is ready for the next client that connects to the
+        // service
+        reset_pipeline();
+    }
+
+    void reset_pipeline()
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+        auto ret = gst_element_set_state(pipeline, GST_STATE_NULL);
+        std::cout << "ret: " << ret << std::endl;
+        switch(ret)
+        {
+        case GST_STATE_CHANGE_FAILURE:
+            std::cout << "GST_STATE_CHANGE_FAILURE" << std::endl;
+            break;
+        case GST_STATE_CHANGE_NO_PREROLL:
+            std::cout << "GST_STATE_CHANGE_NO_PREROLL" << std::endl;
+        case GST_STATE_CHANGE_SUCCESS:
+            std::cout << "GST_STATE_CHANGE_SUCCESS" << std::endl;
+            break;
+        case GST_STATE_CHANGE_ASYNC:
+            std::cout << "GST_STATE_CHANGE_ASYNC" << std::endl;
+            break;
+        }
     }
 
     void on_new_message(const Bus::Message& message)
@@ -181,13 +222,13 @@ struct Playbin
             g_object_get (pipeline, "video_sink", &video_sink, NULL);
 #endif
 
+            // Get the service-side BufferQueue (IGraphicBufferProducer) and associate it with
+            // the SurfaceTextureClientHybris instance
             IGBPWrapperHybris igbp = decoding_service_get_igraphicbufferproducer();
             std::cout << "IGBPWrapperHybris: " << igbp << std::endl;
             SurfaceTextureClientHybris stc = surface_texture_client_create_by_igbp(igbp);
             std::cout << "SurfaceTextureClientHybris: " << stc << std::endl;
-            /* Because mirsink is being loaded, we are definitely doing
-             * hardware rendering.
-             */
+            // Because mirsink is being loaded, we are definitely doing * hardware rendering.
             surface_texture_client_set_hardware_rendering (stc, TRUE);
             g_object_set (G_OBJECT (video_sink), "surface", static_cast<gpointer>(stc), static_cast<char*>(NULL));
         }
