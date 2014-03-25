@@ -165,7 +165,6 @@ struct gstreamer::Engine::Private
 
     void on_end_of_stream()
     {
-        std::cout << __PRETTY_FUNCTION__ << std::endl;
         end_of_stream();
     }
 
@@ -293,40 +292,22 @@ bool gstreamer::Engine::seek_to(const std::chrono::microseconds& ts)
 
 const core::Property<bool>& gstreamer::Engine::is_video_source() const
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
     gstreamer::Playbin::MediaFileType type = d->playbin.media_file_type();
     if (type == gstreamer::Playbin::MediaFileType::MEDIA_FILE_TYPE_VIDEO)
-        d->is_video_source = true;
-
-    return d->is_video_source;
-}
-
-core::Property<bool>& gstreamer::Engine::is_video_source()
-{
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-    gstreamer::Playbin::MediaFileType type = d->playbin.media_file_type();
-    if (type == gstreamer::Playbin::MediaFileType::MEDIA_FILE_TYPE_VIDEO)
-        d->is_video_source = true;
+        d->is_video_source.set(true);
+    else
+        d->is_video_source.set(false);
 
     return d->is_video_source;
 }
 
 const core::Property<bool>& gstreamer::Engine::is_audio_source() const
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
     gstreamer::Playbin::MediaFileType type = d->playbin.media_file_type();
     if (type == gstreamer::Playbin::MediaFileType::MEDIA_FILE_TYPE_AUDIO)
-        d->is_audio_source = true;
-
-    return d->is_audio_source;
-}
-
-core::Property<bool>& gstreamer::Engine::is_audio_source()
-{
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-    gstreamer::Playbin::MediaFileType type = d->playbin.media_file_type();
-    if (type == gstreamer::Playbin::MediaFileType::MEDIA_FILE_TYPE_AUDIO)
-        d->is_audio_source = true;
+        d->is_audio_source.set(true);
+    else
+        d->is_audio_source.set(false);
 
     return d->is_audio_source;
 }

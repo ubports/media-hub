@@ -41,9 +41,7 @@ public:
     bool seek_to(const std::chrono::microseconds& ts);
 
     const core::Property<bool>& is_video_source() const;
-    core::Property<bool>& is_video_source();
     const core::Property<bool>& is_audio_source() const;
-    core::Property<bool>& is_audio_source();
 
     const core::Property<uint64_t>& position() const;
     const core::Property<uint64_t>& duration() const;

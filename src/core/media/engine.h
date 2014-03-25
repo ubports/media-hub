@@ -105,9 +105,7 @@ public:
     virtual bool seek_to(const std::chrono::microseconds& ts) = 0;
 
     virtual const core::Property<bool>& is_video_source() const = 0;
-    virtual core::Property<bool>& is_video_source() = 0;
     virtual const core::Property<bool>& is_audio_source() const = 0;
-    virtual core::Property<bool>& is_audio_source() = 0;
 
     virtual const core::Property<uint64_t>& position() const = 0;
     virtual const core::Property<uint64_t>& duration() const = 0;
