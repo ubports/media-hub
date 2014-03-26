@@ -44,6 +44,8 @@ struct media::PlayerSkeleton::Private
               object->get_property<mpris::Player::Properties::CanControl>(),
               object->get_property<mpris::Player::Properties::CanGoNext>(),
               object->get_property<mpris::Player::Properties::CanGoPrevious>(),
+              object->get_property<mpris::Player::Properties::IsVideoSource>(),
+              object->get_property<mpris::Player::Properties::IsAudioSource>(),
               object->get_property<mpris::Player::Properties::PlaybackStatus>(),
               object->get_property<mpris::Player::Properties::LoopStatus>(),
               object->get_property<mpris::Player::Properties::PlaybackRate>(),
@@ -118,7 +120,6 @@ struct media::PlayerSkeleton::Private
 
     void handle_create_video_sink(const core::dbus::Message::Ptr& in)
     {
-        std::cout << __PRETTY_FUNCTION__ << std::endl;
         uint32_t texture_id;
         in->reader() >> texture_id;
         impl->create_video_sink(texture_id);
@@ -147,6 +148,8 @@ struct media::PlayerSkeleton::Private
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanControl>> can_control;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanGoNext>> can_go_next;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanGoPrevious>> can_go_previous;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::IsVideoSource>> is_video_source;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::IsAudioSource>> is_audio_source;
 
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::PlaybackStatus>> playback_status;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::LoopStatus>> loop_status;
@@ -270,6 +273,16 @@ const core::Property<bool>& media::PlayerSkeleton::can_go_next() const
     return *d->properties.can_go_next;
 }
 
+const core::Property<bool>& media::PlayerSkeleton::is_video_source() const
+{
+    return *d->properties.is_video_source;
+}
+
+const core::Property<bool>& media::PlayerSkeleton::is_audio_source() const
+{
+    return *d->properties.is_audio_source;
+}
+
 const core::Property<media::Player::PlaybackStatus>& media::PlayerSkeleton::playback_status() const
 {
     return *d->properties.playback_status;
@@ -379,6 +392,17 @@ core::Property<bool>& media::PlayerSkeleton::can_go_next()
 {
     return *d->properties.can_go_next;
 }
+
+core::Property<bool>& media::PlayerSkeleton::is_video_source()
+{
+    return *d->properties.is_video_source;
+}
+
+core::Property<bool>& media::PlayerSkeleton::is_audio_source()
+{
+    return *d->properties.is_audio_source;
+}
+
 
 core::Property<media::Track::MetaData>& media::PlayerSkeleton::meta_data_for_current_track()
 {

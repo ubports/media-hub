@@ -81,6 +81,8 @@ media::PlayerImplementation::PlayerImplementation(
     can_seek().set(true);
     can_go_previous().set(true);
     can_go_next().set(true);
+    is_video_source().set(false);
+    is_audio_source().set(false);
     is_shuffle().set(true);
     playback_rate().set(1.f);
     playback_status().set(Player::PlaybackStatus::null);
@@ -103,6 +105,18 @@ media::PlayerImplementation::PlayerImplementation(
         return d->engine->duration().get();
     };
     duration().install(duration_getter);
+    
+    std::function<bool()> video_type_getter = [this]()
+    {
+        return d->engine->is_video_source().get();
+    };
+    is_video_source().install(video_type_getter);
+
+    std::function<bool()> audio_type_getter = [this]()
+    {
+        return d->engine->is_audio_source().get();
+    };
+    is_audio_source().install(audio_type_getter);
 
     engine->about_to_finish_signal().connect([this]()
     {
@@ -136,7 +150,6 @@ bool media::PlayerImplementation::open_uri(const Track::UriType& uri)
 
 void media::PlayerImplementation::create_video_sink(uint32_t texture_id)
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
     d->engine->create_video_sink(texture_id);
 }
 

@@ -46,6 +46,8 @@ class PlayerSkeleton : public core::dbus::Skeleton<core::ubuntu::media::Player>
     virtual const core::Property<bool>& can_seek() const;
     virtual const core::Property<bool>& can_go_previous() const;
     virtual const core::Property<bool>& can_go_next() const;
+    virtual const core::Property<bool>& is_video_source() const;
+    virtual const core::Property<bool>& is_audio_source() const;
     virtual const core::Property<PlaybackStatus>& playback_status() const;
     virtual const core::Property<LoopStatus>& loop_status() const;
     virtual const core::Property<PlaybackRate>& playback_rate() const;
@@ -74,6 +76,8 @@ class PlayerSkeleton : public core::dbus::Skeleton<core::ubuntu::media::Player>
     virtual core::Property<bool>& can_seek();
     virtual core::Property<bool>& can_go_previous();
     virtual core::Property<bool>& can_go_next();
+    virtual core::Property<bool>& is_video_source();
+    virtual core::Property<bool>& is_audio_source();
     virtual core::Property<Track::MetaData>& meta_data_for_current_track();
     virtual core::Property<PlaybackRate>& minimum_playback_rate();
     virtual core::Property<PlaybackRate>& maximum_playback_rate();

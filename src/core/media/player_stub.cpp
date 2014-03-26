@@ -65,6 +65,8 @@ struct media::PlayerStub::Private
                     object->get_property<mpris::Player::Properties::CanControl>(),
                     object->get_property<mpris::Player::Properties::CanGoNext>(),
                     object->get_property<mpris::Player::Properties::CanGoPrevious>(),
+                    object->get_property<mpris::Player::Properties::IsVideoSource>(),
+                    object->get_property<mpris::Player::Properties::IsAudioSource>(),
                     object->get_property<mpris::Player::Properties::PlaybackStatus>(),
                     object->get_property<mpris::Player::Properties::LoopStatus>(),
                     object->get_property<mpris::Player::Properties::PlaybackRate>(),
@@ -86,30 +88,29 @@ struct media::PlayerStub::Private
 
     ~Private()
     {
-        std::cout << "PlayerStub->" << __FUNCTION__ << std::endl;
     }
 
     static void on_frame_available_cb(UNUSED GLConsumerWrapperHybris wrapper, void *context)
     {
-        std::cout << "Frame is available for rendering! (context: " << context << ")" << std::endl;
         if (context != nullptr) {
-            std::cout << "Calling on_frame_available()" << std::endl;
             Private *p = static_cast<Private*>(context);
             p->on_frame_available();
         }
+        else
+            std::cout << "context is nullptr, can't call on_frame_available()" << std::endl;
     }
 
     void on_frame_available()
     {
         if (frame_available_cb != nullptr) {
-            std::cout << "Calling frame_available_cb(frame_available_context: " << frame_available_context << ")" << std::endl;
             frame_available_cb(frame_available_context);
         }
+        else
+            std::cout << "frame_available_cb is nullptr, can't call frame_available_cb()" << std::endl;
     }
 
     void set_frame_available_cb(FrameAvailableCb cb, void *context)
     {
-        std::cout << __PRETTY_FUNCTION__ << std::endl;
         frame_available_cb = cb;
         frame_available_context = context;
 
@@ -121,9 +122,7 @@ struct media::PlayerStub::Private
     void get_gl_consumer()
     {
         igbc_wrapper = decoding_service_get_igraphicbufferconsumer();
-        std::cout << "IGBCWrapperHybris: " << igbc_wrapper << std::endl;
         glc_wrapper = gl_consumer_create_by_id_with_igbc(texture_id, igbc_wrapper);
-        std::cout << "GLConsumerWrapperHybris: " << glc_wrapper << std::endl;
 
     }
 
@@ -151,6 +150,8 @@ struct media::PlayerStub::Private
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanControl>> can_control;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanGoNext>> can_go_next;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanGoPrevious>> can_go_previous;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::IsVideoSource>> is_video_source;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::IsAudioSource>> is_audio_source;
 
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::PlaybackStatus>> playback_status;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::LoopStatus>> loop_status;
@@ -322,6 +323,16 @@ const core::Property<bool>& media::PlayerStub::can_go_previous() const
 const core::Property<bool>& media::PlayerStub::can_go_next() const
 {
     return *d->properties.can_go_next;
+}
+
+const core::Property<bool>& media::PlayerStub::is_video_source() const
+{
+    return *d->properties.is_video_source;
+}
+
+const core::Property<bool>& media::PlayerStub::is_audio_source() const
+{
+    return *d->properties.is_audio_source;
 }
 
 const core::Property<media::Player::PlaybackStatus>& media::PlayerStub::playback_status() const

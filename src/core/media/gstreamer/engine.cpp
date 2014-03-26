@@ -169,13 +169,14 @@ struct gstreamer::Engine::Private
 
     void on_end_of_stream()
     {
-        std::cout << __PRETTY_FUNCTION__ << std::endl;
         end_of_stream();
     }
 
     Private()
         : meta_data_extractor(new gstreamer::MetaDataExtractor()),
           volume(media::Engine::Volume(1.)),
+          is_video_source(false),
+          is_audio_source(false),
           about_to_finish_connection(
               playbin.signals.about_to_finish.connect(
                   std::bind(
@@ -213,6 +214,8 @@ struct gstreamer::Engine::Private
     core::Property<uint64_t> position;
     core::Property<uint64_t> duration;
     core::Property<media::Engine::Volume> volume;
+    core::Property<bool> is_video_source;
+    core::Property<bool> is_audio_source;
     gstreamer::Playbin playbin;
     core::ScopedConnection about_to_finish_connection;
     core::ScopedConnection on_state_changed_connection;
@@ -290,6 +293,28 @@ bool gstreamer::Engine::pause()
 bool gstreamer::Engine::seek_to(const std::chrono::microseconds& ts)
 {
     return d->playbin.seek(ts);
+}
+
+const core::Property<bool>& gstreamer::Engine::is_video_source() const
+{
+    gstreamer::Playbin::MediaFileType type = d->playbin.media_file_type();
+    if (type == gstreamer::Playbin::MediaFileType::MEDIA_FILE_TYPE_VIDEO)
+        d->is_video_source.set(true);
+    else
+        d->is_video_source.set(false);
+
+    return d->is_video_source;
+}
+
+const core::Property<bool>& gstreamer::Engine::is_audio_source() const
+{
+    gstreamer::Playbin::MediaFileType type = d->playbin.media_file_type();
+    if (type == gstreamer::Playbin::MediaFileType::MEDIA_FILE_TYPE_AUDIO)
+        d->is_audio_source.set(true);
+    else
+        d->is_audio_source.set(false);
+
+    return d->is_audio_source;
 }
 
 const core::Property<uint64_t>& gstreamer::Engine::position() const

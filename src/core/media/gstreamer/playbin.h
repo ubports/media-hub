@@ -25,6 +25,7 @@
 #include <media/media_codec_layer.h>
 #include <media/surface_texture_client_hybris.h>
 
+#include <gio/gio.h>
 #include <gst/gst.h>
 
 #include <chrono>
@@ -39,6 +40,13 @@ struct Playbin
         GST_PLAY_FLAG_VIDEO = (1 << 0),
         GST_PLAY_FLAG_AUDIO = (1 << 1),
         GST_PLAY_FLAG_TEXT = (1 << 2)
+    };
+
+    enum MediaFileType
+    {
+        MEDIA_FILE_TYPE_NONE,
+        MEDIA_FILE_TYPE_AUDIO,
+        MEDIA_FILE_TYPE_VIDEO
     };
 
     static const std::string& pipeline_name()
@@ -57,6 +65,7 @@ struct Playbin
     Playbin()
         : pipeline(gst_element_factory_make("playbin", pipeline_name().c_str())),
           bus{gst_element_get_bus(pipeline)},
+          file_type(MEDIA_FILE_TYPE_NONE),
           on_new_message_connection(
               bus.on_new_message.connect(
                   std::bind(
@@ -110,21 +119,19 @@ struct Playbin
     {
         std::cout << __PRETTY_FUNCTION__ << std::endl;
         auto ret = gst_element_set_state(pipeline, GST_STATE_NULL);
-        std::cout << "ret: " << ret << std::endl;
         switch(ret)
         {
         case GST_STATE_CHANGE_FAILURE:
-            std::cout << "GST_STATE_CHANGE_FAILURE" << std::endl;
+            std::cout << "Failed to reset the pipeline state. Client reconnect may not function properly." << std::endl;
             break;
         case GST_STATE_CHANGE_NO_PREROLL:
-            std::cout << "GST_STATE_CHANGE_NO_PREROLL" << std::endl;
         case GST_STATE_CHANGE_SUCCESS:
-            std::cout << "GST_STATE_CHANGE_SUCCESS" << std::endl;
-            break;
         case GST_STATE_CHANGE_ASYNC:
-            std::cout << "GST_STATE_CHANGE_ASYNC" << std::endl;
             break;
+        default:
+            std::cout << "Failed to reset the pipeline state. Client reconnect may not function properly." << std::endl;
         }
+        file_type = MEDIA_FILE_TYPE_NONE;
     }
 
     void on_new_message(const Bus::Message& message)
@@ -205,22 +212,8 @@ struct Playbin
 
         if (::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME") != nullptr)
         {
-#if 0
-            auto video_sink = gst_element_factory_make (
-                        ::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME"),
-                        "video-sink");
-
-            std::cout << "video_sink: " << ::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME") << std::endl;
-
-            g_object_set (
-                        pipeline,
-                        "video-sink",
-                        video_sink,
-                        NULL);
-#else
             GstElement *video_sink = NULL;
             g_object_get (pipeline, "video_sink", &video_sink, NULL);
-#endif
 
             // Get the service-side BufferQueue (IGraphicBufferProducer) and associate it with
             // the SurfaceTextureClientHybris instance
@@ -236,11 +229,7 @@ struct Playbin
 
     void set_volume(double new_volume)
     {
-        g_object_set(
-                    pipeline,
-                    "volume",
-                    new_volume,
-                    NULL);
+        g_object_set(pipeline, "volume", new_volume, NULL);
     }
 
     uint64_t position() const
@@ -263,11 +252,11 @@ struct Playbin
 
     void set_uri(const std::string& uri)
     {
-        g_object_set(
-                    pipeline,
-                    "uri",
-                    uri.c_str(),
-                    NULL);
+        g_object_set(pipeline, "uri", uri.c_str(), NULL);
+        if (is_video_file(uri))
+            file_type = MEDIA_FILE_TYPE_VIDEO;
+        else if (is_audio_file(uri))
+            file_type = MEDIA_FILE_TYPE_AUDIO;
     }
 
     std::string uri() const
@@ -321,8 +310,79 @@ struct Playbin
                     ms.count() * 1000);
     }
 
+    std::string get_file_content_type(const std::string& uri) const
+    {
+        if (uri.empty())
+            return std::string();
+
+        std::string filename(uri);
+        size_t pos = uri.find("file://") + 7;
+        if (pos)
+            filename = uri.substr(pos, std::string::npos);
+
+        std::cout << "filename: " << filename << std::endl;
+
+        GError *error = nullptr;
+        std::unique_ptr<GFile, void(*)(void *)> file(
+                g_file_new_for_path(filename.c_str()), g_object_unref);
+        std::unique_ptr<GFileInfo, void(*)(void *)> info(
+                g_file_query_info(
+                    file.get(), G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE ","
+                    G_FILE_ATTRIBUTE_ETAG_VALUE, G_FILE_QUERY_INFO_NONE,
+                    /* cancellable */ NULL, &error),
+                g_object_unref);
+        if (!info)
+        {
+            std::string error_str(error->message);
+            g_error_free(error);
+
+            std::cout << "Failed to query the URI for the presence of video content: "
+                << error_str << std::endl;
+            return std::string();
+        }
+
+        std::string content_type(g_file_info_get_attribute_string(
+                    info.get(), G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE));
+
+        return content_type;
+    }
+
+    bool is_audio_file(const std::string& uri) const
+    {
+        if (uri.empty())
+            return false;
+
+        if (get_file_content_type(uri).find("audio/") == 0)
+        {
+            std::cout << "Found audio content" << std::endl;
+            return true;
+        }
+
+        return false;
+    }
+
+    bool is_video_file(const std::string& uri) const
+    {
+        if (uri.empty())
+            return false;
+
+        if (get_file_content_type(uri).find("video/") == 0)
+        {
+            std::cout << "Found video content" << std::endl;
+            return true;
+        }
+
+        return false;
+    }
+
+    MediaFileType media_file_type() const
+    {
+        return file_type;
+    }
+
     GstElement* pipeline;
     gstreamer::Bus bus;
+    MediaFileType file_type;
     SurfaceTextureClientHybris stc_hybris;
     core::Connection on_new_message_connection;
     struct
