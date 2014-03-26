@@ -17,6 +17,8 @@
 
 #include "player_implementation.h"
 
+#include <unistd.h>
+
 #include "engine.h"
 #include "track_list_implementation.h"
 
@@ -103,7 +105,7 @@ media::PlayerImplementation::PlayerImplementation(
         return d->engine->duration().get();
     };
     duration().install(duration_getter);
-
+    
     std::function<bool()> video_type_getter = [this]()
     {
         return d->engine->is_video_source().get();
@@ -115,6 +117,16 @@ media::PlayerImplementation::PlayerImplementation(
         return d->engine->is_audio_source().get();
     };
     is_audio_source().install(audio_type_getter);
+
+    engine->about_to_finish_signal().connect([this]()
+    {
+        if (d->track_list->has_next())
+        {
+            Track::UriType uri = d->track_list->query_uri_for_track(d->track_list->next());
+            if (!uri.empty())
+                d->parent->open_uri(uri);
+        }
+    });
 
     engine->end_of_stream_signal().connect([this]()
     {
@@ -157,11 +169,6 @@ void media::PlayerImplementation::previous()
 
 void media::PlayerImplementation::play()
 {
-    /*if (playback_status() == media::Player::null)
-    {
-        if (d->track_list->has_next())
-            if (open_uri(d->track_list->next()->))
-    }*/
     d->engine->play();
 }
 

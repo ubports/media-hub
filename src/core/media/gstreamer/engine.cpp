@@ -16,6 +16,9 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "bus.h"
 #include "engine.h"
 #include "meta_data_extractor.h"
@@ -43,14 +46,10 @@ struct Init
 
 struct gstreamer::Engine::Private
 {
-    void about_to_finish()
-    {
-        state = Engine::State::ready;
-    }
-
     void on_playbin_state_changed(
-            const gstreamer::Bus::Message::Detail::StateChanged&)
+            const gstreamer::Bus::Message::Detail::StateChanged& state_change)
     {
+        (void) state_change;
     }
 
     void on_tag_available(const gstreamer::Bus::Message::Detail::Tag& tag)
@@ -163,6 +162,12 @@ struct gstreamer::Engine::Private
         playbin.set_volume(new_volume.value);
     }
 
+    void on_about_to_finish()
+    {
+        state = Engine::State::ready;
+        about_to_finish();
+    }
+
     void on_end_of_stream()
     {
         end_of_stream();
@@ -176,7 +181,7 @@ struct gstreamer::Engine::Private
           about_to_finish_connection(
               playbin.signals.about_to_finish.connect(
                   std::bind(
-                      &Private::about_to_finish,
+                      &Private::on_about_to_finish,
                       this))),
           on_state_changed_connection(
               playbin.signals.on_state_changed.connect(
@@ -219,6 +224,7 @@ struct gstreamer::Engine::Private
     core::ScopedConnection on_volume_changed_connection;
     core::ScopedConnection on_end_of_stream_connection;
 
+    core::Signal<void> about_to_finish;
     core::Signal<void> end_of_stream;
 };
 
@@ -278,7 +284,7 @@ bool gstreamer::Engine::stop()
 bool gstreamer::Engine::pause()
 {
     auto result = d->playbin.set_state_and_wait(GST_STATE_PAUSED);
-
+    
     if (result)
         d->state = media::Engine::State::paused;
 
@@ -338,6 +344,11 @@ const core::Property<std::tuple<media::Track::UriType, media::Track::MetaData>>&
 gstreamer::Engine::track_meta_data() const
 {
     return d->track_meta_data;
+}
+
+const core::Signal<void>& gstreamer::Engine::about_to_finish_signal() const
+{
+    return d->about_to_finish;
 }
 
 const core::Signal<void>& gstreamer::Engine::end_of_stream_signal() const

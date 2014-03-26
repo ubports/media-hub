@@ -48,7 +48,8 @@ struct media::TrackListSkeleton::Private
           object(object),
           can_edit_tracks(object->get_property<mpris::TrackList::Properties::CanEditTracks>()),
           tracks(object->get_property<mpris::TrackList::Properties::Tracks>()),
-          current_track(tracks->get().begin())
+          current_track(tracks->get().begin()),
+          empty_iterator(tracks->get().begin())
     {
     }
 
@@ -103,6 +104,7 @@ struct media::TrackListSkeleton::Private
     std::shared_ptr<core::dbus::Property<mpris::TrackList::Properties::CanEditTracks>> can_edit_tracks;
     std::shared_ptr<core::dbus::Property<mpris::TrackList::Properties::Tracks>> tracks;
     TrackList::ConstIterator current_track;
+    TrackList::ConstIterator empty_iterator;
 
     core::Signal<void> on_track_list_replaced;
     core::Signal<Track::Id> on_track_added;
@@ -142,12 +144,22 @@ media::TrackListSkeleton::~TrackListSkeleton()
 
 bool media::TrackListSkeleton::has_next() const
 {
-    return std::next(d->current_track) != d->tracks->get().end();
+    return d->current_track != d->tracks->get().end();
 }
 
 const media::Track::Id& media::TrackListSkeleton::next()
 {
-    return *(d->current_track = std::next(d->current_track));
+    if (d->tracks->get().empty())
+        return *(d->current_track);
+
+    if (d->tracks->get().size() && (d->current_track == d->empty_iterator))
+    {        
+        d->current_track = d->tracks->get().begin();
+        return *(d->current_track = std::next(d->current_track));
+    }
+
+    d->current_track = std::next(d->current_track);
+    return *(d->current_track);
 }
 
 const core::Property<bool>& media::TrackListSkeleton::can_edit_tracks() const
