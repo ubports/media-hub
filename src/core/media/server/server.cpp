@@ -16,7 +16,7 @@ using namespace std;
 int main()
 {
     // Init hybris-level DecodingService
-    decoding_service_init(42);
+    decoding_service_init();
     cout << "Starting DecodingService..." << endl;
 
     auto service = std::make_shared<media::ServiceImplementation>();
