@@ -1,9 +1,8 @@
-Source: music-hub
+Source: media-hub
 Priority: optional
 Section: libs
 Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
 Build-Depends: cmake,
-               dbus-cpp-dev,
                dbus-test-runner,
                debhelper (>= 9),
                doxygen,
@@ -18,52 +17,78 @@ Build-Depends: cmake,
                libboost-program-options-dev (>=1.53),
                libboost-system-dev (>=1.53),
                libdbus-1-dev,
+               libdbus-cpp-dev,
                libgoogle-glog-dev,
+               libhybris-dev (>=0.1.0+git20131207+e452e83-0ubuntu13),
                libprocess-cpp-dev,
                libproperties-cpp-dev,
                gstreamer1.0-libav,
                libgstreamer1.0-dev,
                pkg-config,
-Standards-Version: 3.9.4
-Homepage: https://launchpad.net/music-hub
+Standards-Version: 3.9.5
+Homepage: https://launchpad.net/media-hub
 # If you aren't a member of ~phablet-team but need to upload packaging changes,
 # just go ahead.  ~phablet-team will notice and sync up the code again.
-Vcs-Bzr: https://code.launchpad.net/~phablet-team/music-hub/trunk
+Vcs-Bzr: https://code.launchpad.net/~phablet-team/media-hub/trunk
 
-Package: libmusic-hub-dev
+Package: libmedia-hub-dev
 Section: libdevel
 Architecture: any
 Multi-Arch: same
 Pre-Depends: dpkg (>= 1.15.6~)
-Depends: libmusic-hub0 (= ${binary:Version}),
+Depends: libmedia-hub-common0 (= ${binary:Version}),
+         libmedia-hub-client0 (= ${binary:Version}),
          ${misc:Depends},
-Suggests: libmusic-hub-doc
-Description: Simple and lightweight music playback service - development files
- Music Hub is a simple and lightweight service for music playback using
+Suggests: libmedia-hub-doc
+Description: Simple and lightweight media playback service - development files
+ Media Hub is a simple and lightweight service for media playback using
  DBus.
  .
  This package contains the development files.
 
-Package: libmusic-hub0
+Package: media-hub
+Architecture: any
+Pre-Depends: dpkg (>= 1.15.6~)
+Depends: ${misc:Depends},
+         ${shlibs:Depends},
+Description: Simple and lightweight media playback service
+ Media Hub is a simple and lightweight service for media playback using
+ DBus.
+ .
+ This package contains the runtime.
+
+Package: libmedia-hub-common0
 Architecture: any
 Multi-Arch: same
 Pre-Depends: dpkg (>= 1.15.6~)
 Depends: ${misc:Depends},
          ${shlibs:Depends},
-Description: Simple and lightweight music playback service
- Music Hub is a simple and lightweight service for music playback using
+Description: Simple and lightweight media playback service
+ Media Hub is a simple and lightweight service for media playback using
  DBus.
  .
- This package contains the library itself.
+ This package contains the common libraries.
 
-Package: libmusic-hub-doc
+Package: libmedia-hub-client0
+Architecture: any
+Multi-Arch: same
+Pre-Depends: dpkg (>= 1.15.6~)
+Depends: ${misc:Depends},
+         ${shlibs:Depends},
+Description: Simple and lightweight media playback service
+ Media Hub is a simple and lightweight service for media playback using
+ DBus.
+ .
+ This package contains the client libraries.
+
+Package: libmedia-hub-doc
 Section: doc
 Architecture: all
 Depends: ${misc:Depends},
          ${shlibs:Depends},
-Recommends: libmusic-hub-dev
-Description: Simple and lightweight music playback service - documentation
- Music Hub is a simple and lightweight service for music playback using
+Recommends: libmedia-hub-dev
+Description: Simple and lightweight media playback service - documentation
+ Media Hub is a simple and lightweight service for media playback using
  DBus.
  .
  This package contains the documentation.

@@ -1,0 +1,2 @@
+debian/media-hub.conf /usr/share/upstart/sessions/
+usr/bin
