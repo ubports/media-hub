@@ -119,20 +119,17 @@ struct Playbin
     {
         std::cout << __PRETTY_FUNCTION__ << std::endl;
         auto ret = gst_element_set_state(pipeline, GST_STATE_NULL);
-        std::cout << "ret: " << ret << std::endl;
         switch(ret)
         {
         case GST_STATE_CHANGE_FAILURE:
-            std::cout << "GST_STATE_CHANGE_FAILURE" << std::endl;
+            std::cout << "Failed to reset the pipeline state. Client reconnect may not function properly." << std::endl;
             break;
         case GST_STATE_CHANGE_NO_PREROLL:
-            std::cout << "GST_STATE_CHANGE_NO_PREROLL" << std::endl;
         case GST_STATE_CHANGE_SUCCESS:
-            std::cout << "GST_STATE_CHANGE_SUCCESS" << std::endl;
-            break;
         case GST_STATE_CHANGE_ASYNC:
-            std::cout << "GST_STATE_CHANGE_ASYNC" << std::endl;
             break;
+        default:
+            std::cout << "Failed to reset the pipeline state. Client reconnect may not function properly." << std::endl;
         }
         file_type = MEDIA_FILE_TYPE_NONE;
     }
@@ -315,7 +312,6 @@ struct Playbin
 
     std::string get_file_content_type(const std::string& uri) const
     {
-        std::cout << __PRETTY_FUNCTION__ << std::endl;
         if (uri.empty())
             return std::string();
 
@@ -353,7 +349,6 @@ struct Playbin
 
     bool is_audio_file(const std::string& uri) const
     {
-        std::cout << __PRETTY_FUNCTION__ << std::endl;
         if (uri.empty())
             return false;
 
@@ -363,13 +358,11 @@ struct Playbin
             return true;
         }
 
-        std::cout << "Did not find audio content, returning false." << std::endl;
         return false;
     }
 
     bool is_video_file(const std::string& uri) const
     {
-        std::cout << __PRETTY_FUNCTION__ << std::endl;
         if (uri.empty())
             return false;
 
@@ -379,21 +372,11 @@ struct Playbin
             return true;
         }
 
-        std::cout << "Did not find video content, returning false." << std::endl;
         return false;
     }
 
     MediaFileType media_file_type() const
     {
-        std::cout << __PRETTY_FUNCTION__ << std::endl;
-#if 0
-        if (is_video_file(source_uri))
-            return MEDIA_FILE_TYPE_VIDEO;
-        else if (is_audio_file(source_uri))
-            return MEDIA_FILE_TYPE_AUDIO;
-        else
-            return MEDIA_FILE_TYPE_NONE;
-#endif
         return file_type;
     }
 

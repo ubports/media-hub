@@ -120,7 +120,6 @@ struct media::PlayerSkeleton::Private
 
     void handle_create_video_sink(const core::dbus::Message::Ptr& in)
     {
-        std::cout << __PRETTY_FUNCTION__ << std::endl;
         uint32_t texture_id;
         in->reader() >> texture_id;
         impl->create_video_sink(texture_id);
@@ -276,13 +275,11 @@ const core::Property<bool>& media::PlayerSkeleton::can_go_next() const
 
 const core::Property<bool>& media::PlayerSkeleton::is_video_source() const
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
     return *d->properties.is_video_source;
 }
 
 const core::Property<bool>& media::PlayerSkeleton::is_audio_source() const
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
     return *d->properties.is_audio_source;
 }
 
@@ -398,13 +395,11 @@ core::Property<bool>& media::PlayerSkeleton::can_go_next()
 
 core::Property<bool>& media::PlayerSkeleton::is_video_source()
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
     return *d->properties.is_video_source;
 }
 
 core::Property<bool>& media::PlayerSkeleton::is_audio_source()
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
     return *d->properties.is_audio_source;
 }
 

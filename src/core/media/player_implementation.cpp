@@ -104,7 +104,6 @@ media::PlayerImplementation::PlayerImplementation(
     };
     duration().install(duration_getter);
 
-#if 1
     std::function<bool()> video_type_getter = [this]()
     {
         return d->engine->is_video_source().get();
@@ -116,7 +115,6 @@ media::PlayerImplementation::PlayerImplementation(
         return d->engine->is_audio_source().get();
     };
     is_audio_source().install(audio_type_getter);
-#endif
 
     engine->end_of_stream_signal().connect([this]()
     {
@@ -135,14 +133,11 @@ std::shared_ptr<media::TrackList> media::PlayerImplementation::track_list()
 
 bool media::PlayerImplementation::open_uri(const Track::UriType& uri)
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-
     return d->engine->open_resource_for_uri(uri);
 }
 
 void media::PlayerImplementation::create_video_sink(uint32_t texture_id)
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
     d->engine->create_video_sink(texture_id);
 }
 
