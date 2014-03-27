@@ -19,6 +19,7 @@
 #define CORE_UBUNTU_MEDIA_PLAYER_IMPLEMENTATION_H_
 
 #include "player_skeleton.h"
+#include <core/media/visibility.h>
 
 #include <memory>
 
@@ -34,13 +35,13 @@ class Service;
 class PlayerImplementation : public PlayerSkeleton
 {
 public:
-    PlayerImplementation(
+    MH_DLL_LOCAL PlayerImplementation(
             const core::dbus::types::ObjectPath& session_path,
             const std::shared_ptr<Service>& service,
             const std::shared_ptr<Engine>& engine);
-    ~PlayerImplementation();
+    MH_DLL_LOCAL ~PlayerImplementation();
 
-    virtual std::shared_ptr<TrackList> track_list();
+    MH_DLL_LOCAL virtual std::shared_ptr<TrackList> track_list();
 
     virtual bool open_uri(const Track::UriType& uri);
     virtual void create_video_sink(uint32_t texture_id);

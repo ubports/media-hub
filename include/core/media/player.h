@@ -22,6 +22,8 @@
 
 #include <core/property.h>
 
+#include "visibility.h"
+
 #include <chrono>
 #include <memory>
 

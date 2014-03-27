@@ -21,7 +21,6 @@
 
 #include "bus.h"
 
-#include <media/decoding_service.h>
 #include <media/media_codec_layer.h>
 #include <media/surface_texture_client_hybris.h>
 
