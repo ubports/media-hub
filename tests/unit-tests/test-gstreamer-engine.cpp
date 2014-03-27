@@ -59,12 +59,12 @@ struct EnsureMirVideoSinkEnvVarIsSet
     }
 };
 
-TEST(GStreamerEngine, construction_and_deconstruction_works)
+TEST(GStreamerEngine, DISABLED_construction_and_deconstruction_works)
 {
     gstreamer::Engine engine;
 }
 
-TEST(GStreamerEngine, setting_uri_and_starting_audio_only_playback_works)
+TEST(GStreamerEngine, DISABLED_setting_uri_and_starting_audio_only_playback_works)
 {
     const std::string test_file{"/tmp/test.ogg"};
     const std::string test_file_uri{"file:///tmp/test.ogg"};
@@ -110,7 +110,7 @@ TEST(GStreamerEngine, setting_uri_and_starting_audio_only_playback_works)
                     std::chrono::seconds{10});
 }
 
-TEST(GStreamerEngine, setting_uri_and_starting_video_playback_works)
+TEST(GStreamerEngine, DISABLED_setting_uri_and_starting_video_playback_works)
 {
     const std::string test_file{"/tmp/h264.avi"};
     const std::string test_file_uri{"file:///tmp/h264.avi"};
@@ -152,7 +152,7 @@ TEST(GStreamerEngine, setting_uri_and_starting_video_playback_works)
                     std::chrono::seconds{10});
 }
 
-TEST(GStreamerEngine, stop_pause_play_seek_audio_only_works)
+TEST(GStreamerEngine, DISABLED_stop_pause_play_seek_audio_only_works)
 {
     const std::string test_file{"/tmp/test.ogg"};
     const std::string test_file_uri{"file:///tmp/test.ogg"};
@@ -246,7 +246,7 @@ TEST(GStreamerEngine, DISABLED_stop_pause_play_seek_video_works)
                     std::chrono::seconds{40}));
 }
 
-TEST(GStreamerEngine, get_position_duration_work)
+TEST(GStreamerEngine, DISABLED_get_position_duration_work)
 {
     const std::string test_file{"/tmp/test.ogg"};
     const std::string test_file_uri{"file:///tmp/test.ogg"};
@@ -278,7 +278,7 @@ TEST(GStreamerEngine, get_position_duration_work)
     EXPECT_TRUE(engine.duration() > 1e9);
 }
 
-TEST(GStreamerEngine, adjusting_volume_works)
+TEST(GStreamerEngine, DISABLED_adjusting_volume_works)
 {
     const std::string test_file{"/tmp/test.mp3"};
     const std::string test_file_uri{"file:///tmp/test.mp3"};
@@ -325,13 +325,13 @@ TEST(GStreamerEngine, adjusting_volume_works)
         t.join();
 }
 
-TEST(GStreamerEngine, provides_non_null_meta_data_extractor)
+TEST(GStreamerEngine, DISABLED_provides_non_null_meta_data_extractor)
 {
     gstreamer::Engine engine;
     EXPECT_NE(nullptr, engine.meta_data_extractor());
 }
 
-TEST(GStreamerEngine, meta_data_extractor_provides_correct_tags)
+TEST(GStreamerEngine, DISABLED_meta_data_extractor_provides_correct_tags)
 {
     const std::string test_file{"/tmp/test.ogg"};
     const std::string test_file_uri{"file:///tmp/test.ogg"};
