@@ -34,13 +34,13 @@ class Service;
 class PlayerImplementation : public PlayerSkeleton
 {
 public:
-    MH_DLL_LOCAL PlayerImplementation(
+    PlayerImplementation(
             const core::dbus::types::ObjectPath& session_path,
             const std::shared_ptr<Service>& service,
             const std::shared_ptr<Engine>& engine);
-    MH_DLL_LOCAL ~PlayerImplementation();
+    ~PlayerImplementation();
 
-    MH_DLL_LOCAL virtual std::shared_ptr<TrackList> track_list();
+    virtual std::shared_ptr<TrackList> track_list();
 
     virtual bool open_uri(const Track::UriType& uri);
     virtual void create_video_sink(uint32_t texture_id);
