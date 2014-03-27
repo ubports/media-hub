@@ -19,7 +19,6 @@
 #define CORE_UBUNTU_MEDIA_PLAYER_IMPLEMENTATION_H_
 
 #include "player_skeleton.h"
-#include <core/media/visibility.h>
 
 #include <memory>
 
