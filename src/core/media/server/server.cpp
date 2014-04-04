@@ -20,7 +20,7 @@
 #include <core/media/player.h>
 #include <core/media/track_list.h>
 
-#include <media/media_codec_layer.h>
+#include <hybris/media/media_codec_layer.h>
 
 #include "core/media/service_implementation.h"
 

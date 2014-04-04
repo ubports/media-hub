@@ -21,8 +21,8 @@
 
 #include "bus.h"
 
-#include <media/media_codec_layer.h>
-#include <media/surface_texture_client_hybris.h>
+#include <hybris/media/media_codec_layer.h>
+#include <hybris/media/surface_texture_client_hybris.h>
 
 #include <gio/gio.h>
 #include <gst/gst.h>
@@ -217,9 +217,7 @@ struct Playbin
             // Get the service-side BufferQueue (IGraphicBufferProducer) and associate it with
             // the SurfaceTextureClientHybris instance
             IGBPWrapperHybris igbp = decoding_service_get_igraphicbufferproducer();
-            std::cout << "IGBPWrapperHybris: " << igbp << std::endl;
             SurfaceTextureClientHybris stc = surface_texture_client_create_by_igbp(igbp);
-            std::cout << "SurfaceTextureClientHybris: " << stc << std::endl;
             // Because mirsink is being loaded, we are definitely doing * hardware rendering.
             surface_texture_client_set_hardware_rendering (stc, TRUE);
             g_object_set (G_OBJECT (video_sink), "surface", static_cast<gpointer>(stc), static_cast<char*>(NULL));

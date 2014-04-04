@@ -105,7 +105,7 @@ media::PlayerImplementation::PlayerImplementation(
         return d->engine->duration().get();
     };
     duration().install(duration_getter);
-    
+
     std::function<bool()> video_type_getter = [this]()
     {
         return d->engine->is_video_source().get();

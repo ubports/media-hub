@@ -180,8 +180,7 @@ struct media::PlayerSkeleton::Private
         {
             seeked_to.connect([this](std::uint64_t value)
             {
-                std::cout << "value: " << value << std::endl;
-                //dbus.seeked_to->emit(value);
+                dbus.seeked_to->emit(value);
             });
 
             end_of_stream.connect([this]()

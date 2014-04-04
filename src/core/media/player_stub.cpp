@@ -32,8 +32,8 @@
 #include <core/dbus/types/object_path.h>
 
 // Hybris
-#include <media/media_codec_layer.h>
-#include <media/surface_texture_client_hybris.h>
+#include <hybris/media/media_codec_layer.h>
+#include <hybris/media/surface_texture_client_hybris.h>
 
 #include <limits>
 
@@ -238,7 +238,7 @@ void media::PlayerStub::create_video_sink(uint32_t texture_id)
     d->get_gl_consumer();
 
     if (op.is_error())
-        throw std::runtime_error("Problem switching to next track on remote object");
+        throw std::runtime_error("Problem creating new video sink instance on remote object");
 }
 
 GLConsumerWrapperHybris media::PlayerStub::gl_consumer() const
