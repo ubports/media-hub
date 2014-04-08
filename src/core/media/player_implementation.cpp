@@ -17,8 +17,12 @@
 
 #include "player_implementation.h"
 
+#include <unistd.h>
+
 #include "engine.h"
 #include "track_list_implementation.h"
+
+#define UNUSED __attribute__((unused))
 
 namespace media = core::ubuntu::media;
 
@@ -39,7 +43,7 @@ struct media::PlayerImplementation::Private
     {
         engine->state().changed().connect(
                     [parent](const Engine::State& state)
-                    {
+        {
             switch(state)
             {
             case Engine::State::ready: parent->playback_status().set(media::Player::ready); break;
@@ -49,7 +53,8 @@ struct media::PlayerImplementation::Private
             default:
                 break;
             };
-                    });
+        });
+
     }
 
     PlayerImplementation* parent;
@@ -76,6 +81,8 @@ media::PlayerImplementation::PlayerImplementation(
     can_seek().set(true);
     can_go_previous().set(true);
     can_go_next().set(true);
+    is_video_source().set(false);
+    is_audio_source().set(false);
     is_shuffle().set(true);
     playback_rate().set(1.f);
     playback_status().set(Player::PlaybackStatus::null);
@@ -98,6 +105,33 @@ media::PlayerImplementation::PlayerImplementation(
         return d->engine->duration().get();
     };
     duration().install(duration_getter);
+
+    std::function<bool()> video_type_getter = [this]()
+    {
+        return d->engine->is_video_source().get();
+    };
+    is_video_source().install(video_type_getter);
+
+    std::function<bool()> audio_type_getter = [this]()
+    {
+        return d->engine->is_audio_source().get();
+    };
+    is_audio_source().install(audio_type_getter);
+
+    engine->about_to_finish_signal().connect([this]()
+    {
+        if (d->track_list->has_next())
+        {
+            Track::UriType uri = d->track_list->query_uri_for_track(d->track_list->next());
+            if (!uri.empty())
+                d->parent->open_uri(uri);
+        }
+    });
+
+    engine->end_of_stream_signal().connect([this]()
+    {
+        end_of_stream()();
+    });
 }
 
 media::PlayerImplementation::~PlayerImplementation()
@@ -114,6 +148,17 @@ bool media::PlayerImplementation::open_uri(const Track::UriType& uri)
     return d->engine->open_resource_for_uri(uri);
 }
 
+void media::PlayerImplementation::create_video_sink(uint32_t texture_id)
+{
+    d->engine->create_video_sink(texture_id);
+}
+
+media::Player::GLConsumerWrapperHybris media::PlayerImplementation::gl_consumer() const
+{
+    // This method is client-side only and is simply a no-op for the service side
+    return NULL;
+}
+
 void media::PlayerImplementation::next()
 {
 }
@@ -124,11 +169,6 @@ void media::PlayerImplementation::previous()
 
 void media::PlayerImplementation::play()
 {
-    /*if (playback_status() == media::Player::null)
-    {
-        if (d->track_list->has_next())
-            if (open_uri(d->track_list->next()->))
-    }*/
     d->engine->play();
 }
 
@@ -140,6 +180,12 @@ void media::PlayerImplementation::pause()
 void media::PlayerImplementation::stop()
 {
     d->engine->stop();
+}
+
+void media::PlayerImplementation::set_frame_available_callback(
+    UNUSED FrameAvailableCb cb, UNUSED void *context)
+{
+    // This method is client-side only and is simply a no-op for the service side
 }
 
 void media::PlayerImplementation::seek_to(const std::chrono::microseconds& ms)

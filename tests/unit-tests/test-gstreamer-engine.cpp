@@ -1,5 +1,5 @@
 /*
- * Copyright © 2013 Canonical Ltd.
+ * Copyright © 2013-2014 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -198,7 +198,7 @@ TEST(GStreamerEngine, stop_pause_play_seek_audio_only_works)
                     std::chrono::seconds{40}));
 }
 
-TEST(GStreamerEngine, DISABLED_stop_pause_play_seek_video_works)
+TEST(GStreamerEngine, stop_pause_play_seek_video_works)
 {
     const std::string test_file{"/tmp/h264.avi"};
     const std::string test_file_uri{"file:///tmp/h264.avi"};

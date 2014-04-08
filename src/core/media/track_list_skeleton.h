@@ -48,9 +48,10 @@ public:
     const core::Signal<Track::Id>& on_track_removed() const;
     const core::Signal<Track::Id>& on_track_changed() const;
 
+    core::Property<Container>& tracks();
+
 protected:
     core::Property<bool>& can_edit_tracks();
-    core::Property<Container>& tracks();
 
     core::Signal<void>& on_track_list_replaced();
     core::Signal<Track::Id>& on_track_added();

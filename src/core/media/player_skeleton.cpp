@@ -44,6 +44,8 @@ struct media::PlayerSkeleton::Private
               object->get_property<mpris::Player::Properties::CanControl>(),
               object->get_property<mpris::Player::Properties::CanGoNext>(),
               object->get_property<mpris::Player::Properties::CanGoPrevious>(),
+              object->get_property<mpris::Player::Properties::IsVideoSource>(),
+              object->get_property<mpris::Player::Properties::IsAudioSource>(),
               object->get_property<mpris::Player::Properties::PlaybackStatus>(),
               object->get_property<mpris::Player::Properties::LoopStatus>(),
               object->get_property<mpris::Player::Properties::PlaybackRate>(),
@@ -54,6 +56,11 @@ struct media::PlayerSkeleton::Private
               object->get_property<mpris::Player::Properties::Duration>(),
               object->get_property<mpris::Player::Properties::MinimumRate>(),
               object->get_property<mpris::Player::Properties::MaximumRate>()
+          },
+          signals
+          {
+              object->get_signal<mpris::Player::Signals::Seeked>(),
+              object->get_signal<mpris::Player::Signals::EndOfStream>()
           }
     {
     }
@@ -111,6 +118,16 @@ struct media::PlayerSkeleton::Private
     {
     }
 
+    void handle_create_video_sink(const core::dbus::Message::Ptr& in)
+    {
+        uint32_t texture_id;
+        in->reader() >> texture_id;
+        impl->create_video_sink(texture_id);
+
+        auto reply = dbus::Message::make_method_return(in);
+        impl->access_bus()->send(reply);
+    }
+
     void handle_open_uri(const core::dbus::Message::Ptr& in)
     {
         Track::UriType uri;
@@ -131,6 +148,8 @@ struct media::PlayerSkeleton::Private
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanControl>> can_control;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanGoNext>> can_go_next;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanGoPrevious>> can_go_previous;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::IsVideoSource>> is_video_source;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::IsAudioSource>> is_audio_source;
 
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::PlaybackStatus>> playback_status;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::LoopStatus>> loop_status;
@@ -144,10 +163,40 @@ struct media::PlayerSkeleton::Private
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MaximumRate>> maximum_playback_rate;
     } properties;
 
-    /*struct
+    struct Signals
     {
-        std::shared_ptr<dbus::Signal<mpris::Player::Signals::Seeked, uint64_t>> seeked;
-        } signals;*/
+        typedef core::dbus::Signal<mpris::Player::Signals::Seeked, mpris::Player::Signals::Seeked::ArgumentType> DBusSeekedToSignal;
+        typedef core::dbus::Signal<mpris::Player::Signals::EndOfStream, mpris::Player::Signals::EndOfStream::ArgumentType> DBusEndOfStreamSignal;
+
+        Signals(const std::shared_ptr<DBusSeekedToSignal>& seeked,
+                const std::shared_ptr<DBusEndOfStreamSignal>& eos)
+            : dbus
+              {
+                  seeked,
+                  eos
+              },
+              seeked_to(),
+              end_of_stream()
+        {
+            seeked_to.connect([this](std::uint64_t value)
+            {
+                dbus.seeked_to->emit(value);
+            });
+
+            end_of_stream.connect([this]()
+            {
+                dbus.end_of_stream->emit();
+            });
+        }
+
+        struct DBus
+        {
+            std::shared_ptr<DBusSeekedToSignal> seeked_to;
+            std::shared_ptr<DBusEndOfStreamSignal> end_of_stream;
+        } dbus;
+        core::Signal<uint64_t> seeked_to;
+        core::Signal<void> end_of_stream;
+    } signals;
 
 };
 
@@ -184,6 +233,10 @@ media::PlayerSkeleton::PlayerSkeleton(
         std::bind(&Private::handle_set_position,
                   std::ref(d),
                   std::placeholders::_1));
+    d->object->install_method_handler<mpris::Player::CreateVideoSink>(
+        std::bind(&Private::handle_create_video_sink,
+                  std::ref(d),
+                  std::placeholders::_1));
     d->object->install_method_handler<mpris::Player::OpenUri>(
         std::bind(&Private::handle_open_uri,
                   std::ref(d),
@@ -217,6 +270,16 @@ const core::Property<bool>& media::PlayerSkeleton::can_go_previous() const
 const core::Property<bool>& media::PlayerSkeleton::can_go_next() const
 {
     return *d->properties.can_go_next;
+}
+
+const core::Property<bool>& media::PlayerSkeleton::is_video_source() const
+{
+    return *d->properties.is_video_source;
+}
+
+const core::Property<bool>& media::PlayerSkeleton::is_audio_source() const
+{
+    return *d->properties.is_audio_source;
 }
 
 const core::Property<media::Player::PlaybackStatus>& media::PlayerSkeleton::playback_status() const
@@ -329,6 +392,17 @@ core::Property<bool>& media::PlayerSkeleton::can_go_next()
     return *d->properties.can_go_next;
 }
 
+core::Property<bool>& media::PlayerSkeleton::is_video_source()
+{
+    return *d->properties.is_video_source;
+}
+
+core::Property<bool>& media::PlayerSkeleton::is_audio_source()
+{
+    return *d->properties.is_audio_source;
+}
+
+
 core::Property<media::Track::MetaData>& media::PlayerSkeleton::meta_data_for_current_track()
 {
     return *d->properties.meta_data_for_current_track;
@@ -346,6 +420,20 @@ core::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::maximum_play
 
 const core::Signal<uint64_t>& media::PlayerSkeleton::seeked_to() const
 {
-    static const core::Signal<uint64_t> signal;
-    return signal;
+    return d->signals.seeked_to;
+}
+
+core::Signal<uint64_t>& media::PlayerSkeleton::seeked_to()
+{
+    return d->signals.seeked_to;
+}
+
+const core::Signal<void>& media::PlayerSkeleton::end_of_stream() const
+{
+    return d->signals.end_of_stream;
+}
+
+core::Signal<void>& media::PlayerSkeleton::end_of_stream()
+{
+    return d->signals.end_of_stream;
 }

@@ -39,6 +39,7 @@ Pre-Depends: dpkg (>= 1.15.6~)
 Depends: libmedia-hub-common0 (= ${binary:Version}),
          libmedia-hub-client0 (= ${binary:Version}),
          ${misc:Depends},
+         libproperties-cpp-dev,
 Suggests: libmedia-hub-doc
 Description: Simple and lightweight media playback service - development files
  Media Hub is a simple and lightweight service for media playback using
