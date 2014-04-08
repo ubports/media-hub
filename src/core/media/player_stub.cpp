@@ -207,6 +207,11 @@ media::PlayerStub::PlayerStub(
         : dbus::Stub<Player>(the_session_bus()),
           d(new Private{parent, access_service(), object_path})
 {
+    auto bus = the_session_bus();
+    worker = std::move(std::thread([bus]()
+    {
+        bus->run();
+    }));
 }
 
 media::PlayerStub::~PlayerStub()

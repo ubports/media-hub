@@ -85,6 +85,7 @@ class PlayerStub : public core::dbus::Stub<Player>
   private:
     struct Private;
     std::unique_ptr<Private> d;
+    std::thread worker;
 };
 }
 }
