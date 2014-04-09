@@ -61,25 +61,25 @@ struct media::PlayerImplementation::Private
             case Engine::State::ready:
             {
                 parent->playback_status().set(media::Player::ready);
-                clear_power_state(parent->is_video_source());
+                clear_power_state();
                 break;
             }
             case Engine::State::playing:
             {
                 parent->playback_status().set(media::Player::playing);
-                request_power_state(parent->is_video_source());
+                request_power_state();
                 break;
             }
             case Engine::State::stopped:
             {
                 parent->playback_status().set(media::Player::stopped);
-                clear_power_state(parent->is_video_source());
+                clear_power_state();
                 break;
             }
             case Engine::State::paused:
             {
                 parent->playback_status().set(media::Player::paused);
-                clear_power_state(parent->is_video_source());
+                clear_power_state();
                 break;
             }
             default:
@@ -89,9 +89,9 @@ struct media::PlayerImplementation::Private
 
     }
 
-    void request_power_state(bool is_video)
+    void request_power_state()
     {
-        if (is_video)
+        if (parent->is_video_source())
         {
             if (disp_cookie.empty())
             {
@@ -115,9 +115,9 @@ struct media::PlayerImplementation::Private
         }
     }
 
-    void clear_power_state(bool is_video)
+    void clear_power_state()
     {
-        if (is_video)
+        if (parent->is_video_source())
         {
             if (!disp_cookie.empty())
             {
