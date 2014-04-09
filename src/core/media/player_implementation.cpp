@@ -22,9 +22,12 @@
 #include "engine.h"
 #include "track_list_implementation.h"
 
+#include "powerd_service.h"
+
 #define UNUSED __attribute__((unused))
 
 namespace media = core::ubuntu::media;
+namespace dbus = core::dbus;
 
 struct media::PlayerImplementation::Private
 {
@@ -40,16 +43,57 @@ struct media::PlayerImplementation::Private
               new media::TrackListImplementation(
                   session_path.as_string() + "/TrackList",
                   engine->meta_data_extractor()))
+
     {
+        auto bus = std::shared_ptr<dbus::Bus>(new dbus::Bus(core::dbus::WellKnownBus::system));
+        bus->install_executor(dbus::asio::make_executor(bus));
+
+        auto stub_service = dbus::Service::use_service(bus, dbus::traits::Service<core::Powerd>::interface_name());
+        powerd_session = stub_service->object_for_path(dbus::types::ObjectPath("/com/canonical/powerd"));
+
         engine->state().changed().connect(
-                    [parent](const Engine::State& state)
+                    [parent, this](const Engine::State& state)
         {
             switch(state)
             {
-            case Engine::State::ready: parent->playback_status().set(media::Player::ready); break;
-            case Engine::State::playing: parent->playback_status().set(media::Player::playing); break;
-            case Engine::State::stopped: parent->playback_status().set(media::Player::stopped); break;
-            case Engine::State::paused: parent->playback_status().set(media::Player::paused); break;
+            case Engine::State::ready:
+            {
+                printf("%s():%d new state: READY\n", __func__, __LINE__);
+                parent->playback_status().set(media::Player::ready);
+                if (!lock_cookie.empty())
+                    powerd_session->invoke_method_synchronously<core::Powerd::clearSysState, void>(lock_cookie);
+                break;
+            }
+            case Engine::State::playing:
+            {
+                printf("%s():%d new state: PLAYING\n", __func__, __LINE__);
+                parent->playback_status().set(media::Player::playing);
+                if (lock_cookie.empty())
+                {
+                    auto result = powerd_session->invoke_method_synchronously<core::Powerd::requestSysState, std::string>(lock_name, 1);
+                    if (result.is_error())
+                        throw std::runtime_error(result.error().print());
+
+                    lock_cookie = result.value();
+                }
+                break;
+            }
+            case Engine::State::stopped:
+            {
+                printf("%s():%d new state: STOPPED\n", __func__, __LINE__);
+                parent->playback_status().set(media::Player::stopped);
+                if (!lock_cookie.empty())
+                    powerd_session->invoke_method_synchronously<core::Powerd::clearSysState, void>(lock_cookie);
+                break;
+            }
+            case Engine::State::paused:
+            {
+                printf("%s():%d new state: PAUSED\n", __func__, __LINE__);
+                parent->playback_status().set(media::Player::paused);
+                if (!lock_cookie.empty())
+                    powerd_session->invoke_method_synchronously<core::Powerd::clearSysState, void>(lock_cookie);
+                break;
+            }
             default:
                 break;
             };
@@ -62,6 +106,9 @@ struct media::PlayerImplementation::Private
     std::shared_ptr<Engine> engine;
     dbus::types::ObjectPath session_path;
     std::shared_ptr<TrackListImplementation> track_list;
+    std::shared_ptr<dbus::Object> powerd_session;
+    std::string lock_name;
+    std::string lock_cookie;
 };
 
 media::PlayerImplementation::PlayerImplementation(
