@@ -51,6 +51,7 @@ public:
     virtual void pause();
     virtual void stop();
     virtual void set_frame_available_callback(FrameAvailableCb cb, void *context);
+    virtual void set_playback_complete_callback(PlaybackCompleteCb cb, void *context);
     virtual void seek_to(const std::chrono::microseconds& offset);
 
 private:
