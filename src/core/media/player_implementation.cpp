@@ -128,6 +128,11 @@ media::PlayerImplementation::PlayerImplementation(
         }
     });
 
+    engine->seeked_to_signal().connect([this](uint64_t value)
+    {
+        seeked_to()(value);
+    });
+
     engine->end_of_stream_signal().connect([this]()
     {
         end_of_stream()();

@@ -70,7 +70,8 @@ struct Playbin
                   std::bind(
                       &Playbin::on_new_message,
                       this,
-                      std::placeholders::_1)))
+                      std::placeholders::_1))),
+          is_seeking(false)
     {
         if (!pipeline)
             throw std::runtime_error("Could not create pipeline for playbin.");
@@ -152,8 +153,15 @@ struct Playbin
         case GST_MESSAGE_STATE_CHANGED:
             signals.on_state_changed(message.detail.state_changed);
             break;
+        case GST_MESSAGE_ASYNC_DONE:
+            if (is_seeking)
+            {
+                // FIXME: Pass the actual playback time position to the signal call
+                signals.on_seeked_to(0);
+                is_seeking = false;
+            }
+            break;
         case GST_MESSAGE_EOS:
-            std::cout << "EOS detected" << std::endl;
             signals.on_end_of_stream();
         default:
             break;
@@ -300,6 +308,7 @@ struct Playbin
 
     bool seek(const std::chrono::microseconds& ms)
     {
+        is_seeking = true;
         return gst_element_seek_simple(
                     pipeline,
                     GST_FORMAT_TIME,
@@ -383,6 +392,7 @@ struct Playbin
     MediaFileType file_type;
     SurfaceTextureClientHybris stc_hybris;
     core::Connection on_new_message_connection;
+    bool is_seeking;
     struct
     {
         core::Signal<void> about_to_finish;
@@ -391,6 +401,7 @@ struct Playbin
         core::Signal<Bus::Message::Detail::ErrorWarningInfo> on_info;
         core::Signal<Bus::Message::Detail::Tag> on_tag_available;
         core::Signal<Bus::Message::Detail::StateChanged> on_state_changed;
+        core::Signal<uint64_t> on_seeked_to;
         core::Signal<void> on_end_of_stream;
     } signals;
 };

@@ -181,6 +181,7 @@ struct media::PlayerStub::Private
         {
             dbus.seeked_to->connect([this](std::uint64_t value)
             {
+                std::cout << "seeked_to signal arrived via the bus." << std::endl;
                 seeked_to(value);
             });
 

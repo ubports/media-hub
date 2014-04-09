@@ -168,6 +168,11 @@ struct gstreamer::Engine::Private
         about_to_finish();
     }
 
+    void on_seeked_to(uint64_t value)
+    {
+        seeked_to(value);
+    }
+
     void on_end_of_stream()
     {
         end_of_stream();
@@ -201,6 +206,12 @@ struct gstreamer::Engine::Private
                       &Private::on_volume_changed,
                       this,
                       std::placeholders::_1))),
+          on_seeked_to_connection(
+              playbin.signals.on_seeked_to.connect(
+                  std::bind(
+                      &Private::on_seeked_to,
+                      this,
+                      std::placeholders::_1))),
           on_end_of_stream_connection(
               playbin.signals.on_end_of_stream.connect(
                   std::bind(
@@ -222,9 +233,11 @@ struct gstreamer::Engine::Private
     core::ScopedConnection on_state_changed_connection;
     core::ScopedConnection on_tag_available_connection;
     core::ScopedConnection on_volume_changed_connection;
+    core::ScopedConnection on_seeked_to_connection;
     core::ScopedConnection on_end_of_stream_connection;
 
     core::Signal<void> about_to_finish;
+    core::Signal<uint64_t> seeked_to;
     core::Signal<void> end_of_stream;
 };
 
@@ -284,7 +297,7 @@ bool gstreamer::Engine::stop()
 bool gstreamer::Engine::pause()
 {
     auto result = d->playbin.set_state_and_wait(GST_STATE_PAUSED);
-    
+
     if (result)
         d->state = media::Engine::State::paused;
 
@@ -349,6 +362,11 @@ gstreamer::Engine::track_meta_data() const
 const core::Signal<void>& gstreamer::Engine::about_to_finish_signal() const
 {
     return d->about_to_finish;
+}
+
+const core::Signal<uint64_t>& gstreamer::Engine::seeked_to_signal() const
+{
+    return d->seeked_to;
 }
 
 const core::Signal<void>& gstreamer::Engine::end_of_stream_signal() const
