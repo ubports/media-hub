@@ -42,7 +42,8 @@ struct media::PlayerImplementation::Private
           track_list(
               new media::TrackListImplementation(
                   session_path.as_string() + "/TrackList",
-                  engine->meta_data_extractor()))
+                  engine->meta_data_extractor())),
+          lock_name("media-hub-bg-playback")
 
     {
         auto bus = std::shared_ptr<dbus::Bus>(new dbus::Bus(core::dbus::WellKnownBus::system));
@@ -58,19 +59,20 @@ struct media::PlayerImplementation::Private
             {
             case Engine::State::ready:
             {
-                printf("%s():%d new state: READY\n", __func__, __LINE__);
                 parent->playback_status().set(media::Player::ready);
                 if (!lock_cookie.empty())
-                    powerd_session->invoke_method_synchronously<core::Powerd::clearSysState, void>(lock_cookie);
+                {
+                    powerd_session->invoke_method_synchronously<core::Powerd::clearDisplayState, void>(lock_cookie);
+                    lock_cookie.clear();
+                }
                 break;
             }
             case Engine::State::playing:
             {
-                printf("%s():%d new state: PLAYING\n", __func__, __LINE__);
                 parent->playback_status().set(media::Player::playing);
                 if (lock_cookie.empty())
                 {
-                    auto result = powerd_session->invoke_method_synchronously<core::Powerd::requestSysState, std::string>(lock_name, 1);
+                    auto result = powerd_session->invoke_method_synchronously<core::Powerd::requestDisplayState, std::string>(lock_name, static_cast<int>(1), static_cast<unsigned int>(0));
                     if (result.is_error())
                         throw std::runtime_error(result.error().print());
 
@@ -80,18 +82,22 @@ struct media::PlayerImplementation::Private
             }
             case Engine::State::stopped:
             {
-                printf("%s():%d new state: STOPPED\n", __func__, __LINE__);
                 parent->playback_status().set(media::Player::stopped);
                 if (!lock_cookie.empty())
-                    powerd_session->invoke_method_synchronously<core::Powerd::clearSysState, void>(lock_cookie);
+                {
+                    powerd_session->invoke_method_synchronously<core::Powerd::clearDisplayState, void>(lock_cookie);
+                    lock_cookie.clear();
+                }
                 break;
             }
             case Engine::State::paused:
             {
-                printf("%s():%d new state: PAUSED\n", __func__, __LINE__);
                 parent->playback_status().set(media::Player::paused);
                 if (!lock_cookie.empty())
-                    powerd_session->invoke_method_synchronously<core::Powerd::clearSysState, void>(lock_cookie);
+                {
+                    powerd_session->invoke_method_synchronously<core::Powerd::clearDisplayState, void>(lock_cookie);
+                    lock_cookie.clear();
+                }
                 break;
             }
             default:
