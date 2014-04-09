@@ -44,6 +44,7 @@ class Player : public std::enable_shared_from_this<Player>
     /** Used to set a callback function to be called when a frame is ready to be rendered **/
     typedef void (*FrameAvailableCbHybris)(GLConsumerWrapperHybris wrapper, void *context);
     typedef void (*FrameAvailableCb)(void *context);
+    typedef void (*PlaybackCompleteCb)(void *context);
 
     struct Configuration;
 
@@ -90,6 +91,7 @@ class Player : public std::enable_shared_from_this<Player>
 
     // TODO: Convert this to be a signal
     virtual void set_frame_available_callback(FrameAvailableCb cb, void *context) = 0;
+    virtual void set_playback_complete_callback(PlaybackCompleteCb cb, void *context) = 0;
 
     virtual const core::Property<bool>& can_play() const = 0;
     virtual const core::Property<bool>& can_pause() const = 0;

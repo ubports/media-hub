@@ -193,6 +193,12 @@ void media::PlayerImplementation::set_frame_available_callback(
     // This method is client-side only and is simply a no-op for the service side
 }
 
+void media::PlayerImplementation::set_playback_complete_callback(
+    UNUSED PlaybackCompleteCb cb, UNUSED void *context)
+{
+    // This method is client-side only and is simply a no-op for the service side
+}
+
 void media::PlayerImplementation::seek_to(const std::chrono::microseconds& ms)
 {
     d->engine->seek_to(ms);

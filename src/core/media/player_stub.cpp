@@ -136,7 +136,7 @@ struct media::PlayerStub::Private
 
     FrameAvailableCb frame_available_cb;
     void *frame_available_context;
-
+ 
     dbus::Bus::Ptr bus;
     dbus::types::ObjectPath path;
     dbus::Object::Ptr object;
@@ -176,6 +176,8 @@ struct media::PlayerStub::Private
                   seeked,
                   eos
               },
+              playback_complete_cb(nullptr),
+              playback_complete_context(nullptr),
               seeked_to(),
               end_of_stream()
         {
@@ -188,6 +190,8 @@ struct media::PlayerStub::Private
             dbus.end_of_stream->connect([this]()
             {
                 std::cout << "EndOfStream signal arrived via the bus." << std::endl;
+                if (playback_complete_cb)
+                    playback_complete_cb(playback_complete_context);
                 end_of_stream();
             });
         }
@@ -197,6 +201,15 @@ struct media::PlayerStub::Private
             std::shared_ptr<DBusSeekedToSignal> seeked_to;
             std::shared_ptr<DBusEndOfStreamSignal> end_of_stream;
         } dbus;
+
+        void set_playback_complete_cb(PlaybackCompleteCb cb, void *context)
+        {
+            playback_complete_cb = cb;
+            playback_complete_context = context;
+        }
+
+        PlaybackCompleteCb playback_complete_cb;
+        void *playback_complete_context;
         core::Signal<uint64_t> seeked_to;
         core::Signal<void> end_of_stream;
     } signals;
@@ -208,6 +221,11 @@ media::PlayerStub::PlayerStub(
         : dbus::Stub<Player>(the_session_bus()),
           d(new Private{parent, access_service(), object_path})
 {
+    auto bus = the_session_bus();
+    worker = std::move(std::thread([bus]()
+    {
+        bus->run();
+    }));
 }
 
 media::PlayerStub::~PlayerStub()
@@ -298,6 +316,11 @@ void media::PlayerStub::stop()
 void media::PlayerStub::set_frame_available_callback(FrameAvailableCb cb, void *context)
 {
     d->set_frame_available_cb(cb, context);
+}
+
+void media::PlayerStub::set_playback_complete_callback(PlaybackCompleteCb cb, void *context)
+{
+    d->signals.set_playback_complete_cb(cb, context);
 }
 
 const core::Property<bool>& media::PlayerStub::can_play() const

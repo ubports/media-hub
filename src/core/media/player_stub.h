@@ -55,6 +55,7 @@ class PlayerStub : public core::dbus::Stub<Player>
     virtual void stop();
 
     virtual void set_frame_available_callback(FrameAvailableCb cb, void *context);
+    virtual void set_playback_complete_callback(PlaybackCompleteCb cb, void *context);
 
     virtual const core::Property<bool>& can_play() const;
     virtual const core::Property<bool>& can_pause() const;
@@ -85,6 +86,7 @@ class PlayerStub : public core::dbus::Stub<Player>
   private:
     struct Private;
     std::unique_ptr<Private> d;
+    std::thread worker;
 };
 }
 }
