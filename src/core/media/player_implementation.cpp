@@ -43,7 +43,8 @@ struct media::PlayerImplementation::Private
               new media::TrackListImplementation(
                   session_path.as_string() + "/TrackList",
                   engine->meta_data_extractor())),
-          lock_name("media-hub-bg-playback")
+          disp_lock_name("media-hub-video-playback"),
+          sys_lock_name("media-hub-music-playback")
 
     {
         auto bus = std::shared_ptr<dbus::Bus>(new dbus::Bus(core::dbus::WellKnownBus::system));
@@ -60,44 +61,25 @@ struct media::PlayerImplementation::Private
             case Engine::State::ready:
             {
                 parent->playback_status().set(media::Player::ready);
-                if (!lock_cookie.empty())
-                {
-                    powerd_session->invoke_method_synchronously<core::Powerd::clearDisplayState, void>(lock_cookie);
-                    lock_cookie.clear();
-                }
+                clear_power_state(parent->is_video_source());
                 break;
             }
             case Engine::State::playing:
             {
                 parent->playback_status().set(media::Player::playing);
-                if (lock_cookie.empty())
-                {
-                    auto result = powerd_session->invoke_method_synchronously<core::Powerd::requestDisplayState, std::string>(lock_name, static_cast<int>(1), static_cast<unsigned int>(0));
-                    if (result.is_error())
-                        throw std::runtime_error(result.error().print());
-
-                    lock_cookie = result.value();
-                }
+                request_power_state(parent->is_video_source());
                 break;
             }
             case Engine::State::stopped:
             {
                 parent->playback_status().set(media::Player::stopped);
-                if (!lock_cookie.empty())
-                {
-                    powerd_session->invoke_method_synchronously<core::Powerd::clearDisplayState, void>(lock_cookie);
-                    lock_cookie.clear();
-                }
+                clear_power_state(parent->is_video_source());
                 break;
             }
             case Engine::State::paused:
             {
                 parent->playback_status().set(media::Player::paused);
-                if (!lock_cookie.empty())
-                {
-                    powerd_session->invoke_method_synchronously<core::Powerd::clearDisplayState, void>(lock_cookie);
-                    lock_cookie.clear();
-                }
+                clear_power_state(parent->is_video_source());
                 break;
             }
             default:
@@ -107,14 +89,62 @@ struct media::PlayerImplementation::Private
 
     }
 
+    void request_power_state(bool is_video)
+    {
+        if (is_video)
+        {
+            if (disp_cookie.empty())
+            {
+                auto result = powerd_session->invoke_method_synchronously<core::Powerd::requestDisplayState, std::string>(disp_lock_name, static_cast<int>(1), static_cast<unsigned int>(0));
+                if (result.is_error())
+                    throw std::runtime_error(result.error().print());
+
+                disp_cookie = result.value();
+            }
+        }
+        else
+        {
+            if (sys_cookie.empty())
+            {
+                auto result = powerd_session->invoke_method_synchronously<core::Powerd::requestSysState, std::string>(sys_lock_name, static_cast<int>(1));
+                if (result.is_error())
+                    throw std::runtime_error(result.error().print());
+
+                sys_cookie = result.value();
+            }
+        }
+    }
+
+    void clear_power_state(bool is_video)
+    {
+        if (is_video)
+        {
+            if (!disp_cookie.empty())
+            {
+                powerd_session->invoke_method_synchronously<core::Powerd::clearDisplayState, void>(disp_cookie);
+                disp_cookie.clear();
+            }
+        }
+        else
+        {
+            if (!sys_cookie.empty())
+            {
+                powerd_session->invoke_method_synchronously<core::Powerd::clearSysState, void>(sys_cookie);
+                sys_cookie.clear();
+            }
+        }
+    }
+
     PlayerImplementation* parent;
     std::shared_ptr<Service> service;
     std::shared_ptr<Engine> engine;
     dbus::types::ObjectPath session_path;
     std::shared_ptr<TrackListImplementation> track_list;
     std::shared_ptr<dbus::Object> powerd_session;
-    std::string lock_name;
-    std::string lock_cookie;
+    std::string disp_lock_name;
+    std::string sys_lock_name;
+    std::string disp_cookie;
+    std::string sys_cookie;
 };
 
 media::PlayerImplementation::PlayerImplementation(

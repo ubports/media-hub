@@ -67,6 +67,33 @@ struct Powerd
 
         typedef Powerd Interface;
     };
+
+    struct requestSysState
+    {
+        static std::string name()
+        {
+            static std::string s = "requestSysState";
+            return s;
+        }
+
+        static const std::chrono::milliseconds default_timeout() { return std::chrono::seconds{1}; }
+
+        typedef Powerd Interface;
+    };
+
+    struct clearSysState
+    {
+        static std::string name()
+        {
+            static std::string s = "clearSysState";
+            return s;
+        }
+ 
+        static const std::chrono::milliseconds default_timeout() { return std::chrono::seconds{1}; }
+
+        typedef Powerd Interface;
+    };
+
 };
 
 }
