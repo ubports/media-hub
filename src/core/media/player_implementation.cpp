@@ -95,7 +95,7 @@ struct media::PlayerImplementation::Private
         {
             if (disp_cookie.empty())
             {
-                auto result = powerd_session->invoke_method_synchronously<core::Powerd::requestDisplayState, std::string>(disp_lock_name, static_cast<int>(1), static_cast<unsigned int>(0));
+                auto result = powerd_session->invoke_method_synchronously<core::Powerd::requestDisplayState, std::string>(disp_lock_name, static_cast<int>(1), static_cast<unsigned int>(4));
                 if (result.is_error())
                     throw std::runtime_error(result.error().print());
 
