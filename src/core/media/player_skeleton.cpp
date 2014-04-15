@@ -174,8 +174,8 @@ struct media::PlayerSkeleton::Private
         std::cout << "client pkgname: " << pkgname << std::endl;
 
         // All confined apps can access their own files
-        if (uri.find(std::string(".local/share/" + pkgname)) != std::string::npos
-                || uri.find(std::string(".cache/" + pkgname)) != std::string::npos)
+        if (uri.find(std::string(".local/share/" + pkgname + "/")) != std::string::npos
+                || uri.find(std::string(".cache/" + pkgname + "/")) != std::string::npos)
         {
             std::cout << "Client can access content in ~/.local/share/" << pkgname << " or ~/.cache/" << pkgname << std::endl;
             return true;
@@ -183,9 +183,11 @@ struct media::PlayerSkeleton::Private
         // TODO: Check if the trust store previously allowed direct access to uri
 
         // Check in ~/Music and ~/Videos
-        // TODO: when the trust store lands, check it to see if this app can access the dirs
-        else if (uri.find(std::string("Music")) != std::string::npos
-                || uri.find(std::string("Videos")) != std::string::npos)
+        // TODO: when the trust store lands, check it to see if this app can access the dirs and
+        // then remove the explicit whitelist of the music-app
+        else if (pkgname == "com.ubuntu.music" &&
+                (uri.find(std::string("Music/")) != std::string::npos
+                || uri.find(std::string("Videos/")) != std::string::npos))
         {
             std::cout << "Client can access content in ~/Music or ~/Videos" << std::endl;
             return true;
