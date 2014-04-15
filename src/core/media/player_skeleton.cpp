@@ -16,6 +16,7 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
+#include "apparmor.h"
 #include "codec.h"
 #include "player_skeleton.h"
 #include "player_traits.h"
@@ -27,6 +28,7 @@
 #include <core/dbus/object.h>
 #include <core/dbus/property.h>
 #include <core/dbus/stub.h>
+#include <core/dbus/asio/executor.h>
 
 namespace dbus = core::dbus;
 namespace media = core::ubuntu::media;
@@ -36,6 +38,7 @@ struct media::PlayerSkeleton::Private
     Private(media::PlayerSkeleton* player, const dbus::types::ObjectPath& session)
         : impl(player),
           object(impl->access_service()->add_object_for_path(session)),
+          apparmor_session(nullptr),
           properties
           {
               object->get_property<mpris::Player::Properties::CanPlay>(),
@@ -128,18 +131,88 @@ struct media::PlayerSkeleton::Private
         impl->access_bus()->send(reply);
     }
 
+    std::string get_client_apparmor_context(const core::dbus::Message::Ptr& msg)
+    {
+        auto bus = std::shared_ptr<dbus::Bus>(new dbus::Bus(core::dbus::WellKnownBus::session));
+        bus->install_executor(dbus::asio::make_executor(bus));
+
+        auto stub_service = dbus::Service::use_service(bus, dbus::traits::Service<core::Apparmor>::interface_name());
+        apparmor_session = stub_service->object_for_path(dbus::types::ObjectPath("/org/freedesktop/DBus"));
+        // Get the AppArmor security context for the client
+        auto result = apparmor_session->invoke_method_synchronously<core::Apparmor::getConnectionAppArmorSecurityContext, std::string>(msg->sender());
+        if (result.is_error())
+        {
+            std::cout << "Error getting apparmor profile: " << result.error().print() << std::endl;
+            return std::string();
+        }
+
+        return result.value();
+    }
+
+    bool does_client_have_access(const std::string& context, const std::string& uri)
+    {
+        if (context.empty() || uri.empty())
+        {
+            std::cout << "Client denied access since context or uri are empty" << std::endl;
+            return false;
+        }
+
+        if (context == "unconfined")
+        {
+            std::cout << "Client allowed access since it's unconfined" << std::endl;
+            return true;
+        }
+
+        size_t pos = context.find_first_of('_');
+        if (pos == std::string::npos)
+        {
+            std::cout << "Client denied access since it's an invalid apparmor security context" << std::endl;
+            return false;
+        }
+
+        const std::string pkgname = context.substr(0, pos);
+        std::cout << "client pkgname: " << pkgname << std::endl;
+
+        // All confined apps can access their own files
+        if (uri.find(std::string(".local/share/" + pkgname)) != std::string::npos
+                || uri.find(std::string(".cache/" + pkgname)) != std::string::npos)
+        {
+            std::cout << "Client can access content in ~/.local/share/" << pkgname << " or ~/.cache/" << pkgname << std::endl;
+            return true;
+        }
+        // TODO: Check if the trust store previously allowed direct access to uri
+
+        // Check in ~/Music and ~/Videos
+        // TODO: when the trust store lands, check it to see if this app can access the dirs
+        else if (uri.find(std::string("Music")) != std::string::npos
+                || uri.find(std::string("Videos")) != std::string::npos)
+        {
+            std::cout << "Client can access content in ~/Music or ~/Videos" << std::endl;
+            return true;
+        }
+        else
+            return false;
+    }
+
     void handle_open_uri(const core::dbus::Message::Ptr& in)
     {
         Track::UriType uri;
         in->reader() >> uri;
 
+        std::string context = get_client_apparmor_context(in);
+        bool have_access = does_client_have_access(context, uri);
+
         auto reply = dbus::Message::make_method_return(in);
-        reply->writer() << impl->open_uri(uri);
+        if (have_access)
+            reply->writer() << impl->open_uri(uri);
+        else
+            reply->writer() << false;
         impl->access_bus()->send(reply);
     }
 
     media::PlayerSkeleton* impl;
     dbus::Object::Ptr object;
+    dbus::Object::Ptr apparmor_session;
     struct
     {
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanPlay>> can_play;
