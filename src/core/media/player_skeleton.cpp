@@ -172,12 +172,19 @@ struct media::PlayerSkeleton::Private
 
         const std::string pkgname = context.substr(0, pos);
         std::cout << "client pkgname: " << pkgname << std::endl;
+        std::cout << "uri: " << uri << std::endl;
 
         // All confined apps can access their own files
         if (uri.find(std::string(".local/share/" + pkgname + "/")) != std::string::npos
                 || uri.find(std::string(".cache/" + pkgname + "/")) != std::string::npos)
         {
             std::cout << "Client can access content in ~/.local/share/" << pkgname << " or ~/.cache/" << pkgname << std::endl;
+            return true;
+        }
+        else if (uri.find(std::string("opt/click.ubuntu.com/")) != std::string::npos
+                && uri.find(pkgname) != std::string::npos)
+        {
+            std::cout << "Client can access content in own opt directory" << std::endl;
             return true;
         }
         // TODO: Check if the trust store previously allowed direct access to uri
