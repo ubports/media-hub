@@ -192,8 +192,17 @@ struct media::PlayerSkeleton::Private
             std::cout << "Client can access content in ~/Music or ~/Videos" << std::endl;
             return true;
         }
+        else if (uri.find(std::string("http://")) != std::string::npos
+                || uri.find(std::string("rtsp://")) != std::string::npos)
+        {
+            std::cout << "Client can access streaming content" << std::endl;
+            return true;
+        }
         else
+        {
+            std::cout << "Client denied access to open_uri()" << std::endl;
             return false;
+        }
     }
 
     void handle_open_uri(const core::dbus::Message::Ptr& in)

@@ -323,11 +323,16 @@ struct Playbin
             return std::string();
 
         std::string filename(uri);
-        size_t pos = uri.find("file://") + 7;
-        if (pos)
-            filename = uri.substr(pos, std::string::npos);
-
         std::cout << "filename: " << filename << std::endl;
+        size_t pos = uri.find("file://");
+        if (pos != std::string::npos)
+            filename = uri.substr(pos + 7, std::string::npos);
+        else
+            // Anything other than a file, for now claim that the type
+            // is both audio and video.
+            // FIXME: implement true net stream sampling and get the type from GstCaps
+            return std::string("audio/video/");
+
 
         GError *error = nullptr;
         std::unique_ptr<GFile, void(*)(void *)> file(
