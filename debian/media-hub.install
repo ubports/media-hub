@@ -1,2 +1,3 @@
 debian/media-hub.conf /usr/share/upstart/sessions/
+debian/usr.bin.media-hub-server etc/apparmor.d
 usr/bin
