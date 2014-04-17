@@ -187,6 +187,13 @@ struct media::PlayerSkeleton::Private
             std::cout << "Client can access content in own opt directory" << std::endl;
             return true;
         }
+        else if ((uri.find(std::string("/system/media/audio/ui/")) != std::string::npos
+                || uri.find(std::string("/android/system/media/audio/ui/")) != std::string::npos)
+                && pkgname == "com.ubuntu.camera")
+        {
+            std::cout << "Camera app can access ui sounds" << std::endl;
+            return true;
+        }
         // TODO: Check if the trust store previously allowed direct access to uri
 
         // Check in ~/Music and ~/Videos
