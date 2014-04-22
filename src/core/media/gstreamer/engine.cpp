@@ -28,6 +28,8 @@
 
 namespace media = core::ubuntu::media;
 
+using namespace std;
+
 namespace gstreamer
 {
 struct Init
@@ -243,6 +245,7 @@ struct gstreamer::Engine::Private
 
 gstreamer::Engine::Engine() : d(new Private{})
 {
+    cout << "Creating a new Engine instance in " << __PRETTY_FUNCTION__ << endl;
     d->state = media::Engine::State::ready;
 }
 
@@ -277,9 +280,9 @@ bool gstreamer::Engine::play()
     auto result = d->playbin.set_state_and_wait(GST_STATE_PLAYING);
 
     if (result)
-    {
         d->state = media::Engine::State::playing;
-    }
+
+    cout << "Engine: " << this << endl;
 
     return result;
 }

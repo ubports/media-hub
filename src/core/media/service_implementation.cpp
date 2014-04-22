@@ -25,17 +25,9 @@
 
 namespace media = core::ubuntu::media;
 
-struct media::ServiceImplementation::Private
+media::ServiceImplementation::ServiceImplementation()
 {
-    Private() : engine(std::make_shared<gstreamer::Engine>())
-    {
-    }
-    std::shared_ptr<media::Engine> engine;
-};
-
-media::ServiceImplementation::ServiceImplementation() : d(new Private())
-{
-
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
 }
 
 media::ServiceImplementation::~ServiceImplementation()
@@ -47,6 +39,5 @@ std::shared_ptr<media::Player> media::ServiceImplementation::create_session(
 {
     return std::make_shared<media::PlayerImplementation>(
                 conf.object_path,
-                shared_from_this(),
-                d->engine);
+                shared_from_this());
 }

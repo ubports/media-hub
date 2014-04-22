@@ -36,8 +36,7 @@ class PlayerImplementation : public PlayerSkeleton
 public:
     PlayerImplementation(
             const core::dbus::types::ObjectPath& session_path,
-            const std::shared_ptr<Service>& service,
-            const std::shared_ptr<Engine>& engine);
+            const std::shared_ptr<Service>& service);
     ~PlayerImplementation();
 
     virtual std::shared_ptr<TrackList> track_list();

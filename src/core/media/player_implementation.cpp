@@ -22,19 +22,22 @@
 #include "engine.h"
 #include "track_list_implementation.h"
 
+#include "gstreamer/engine.h"
+
 #define UNUSED __attribute__((unused))
 
 namespace media = core::ubuntu::media;
+
+using namespace std;
 
 struct media::PlayerImplementation::Private
 {
     Private(PlayerImplementation* parent,
             const dbus::types::ObjectPath& session_path,
-            const std::shared_ptr<media::Service>& service,
-            const std::shared_ptr<media::Engine>& engine)
+            const std::shared_ptr<media::Service>& service)
         : parent(parent),
           service(service),
-          engine(engine),
+          engine(std::make_shared<gstreamer::Engine>()),
           session_path(session_path),
           track_list(
               new media::TrackListImplementation(
@@ -66,14 +69,12 @@ struct media::PlayerImplementation::Private
 
 media::PlayerImplementation::PlayerImplementation(
         const dbus::types::ObjectPath& session_path,
-        const std::shared_ptr<Service>& service,
-        const std::shared_ptr<Engine>& engine)
+        const std::shared_ptr<Service>& service)
     : media::PlayerSkeleton(session_path),
       d(new Private(
             this,
             session_path,
-            service,
-            engine))
+            service))
 {
     // Initializing default values for properties
     can_play().set(true);
@@ -118,7 +119,7 @@ media::PlayerImplementation::PlayerImplementation(
     };
     is_audio_source().install(audio_type_getter);
 
-    engine->about_to_finish_signal().connect([this]()
+    d->engine->about_to_finish_signal().connect([this]()
     {
         if (d->track_list->has_next())
         {
@@ -128,12 +129,12 @@ media::PlayerImplementation::PlayerImplementation(
         }
     });
 
-    engine->seeked_to_signal().connect([this](uint64_t value)
+    d->engine->seeked_to_signal().connect([this](uint64_t value)
     {
         seeked_to()(value);
     });
 
-    engine->end_of_stream_signal().connect([this]()
+    d->engine->end_of_stream_signal().connect([this]()
     {
         end_of_stream()();
     });
@@ -174,11 +175,13 @@ void media::PlayerImplementation::previous()
 
 void media::PlayerImplementation::play()
 {
+    cout << "play(): " << d->session_path << endl;
     d->engine->play();
 }
 
 void media::PlayerImplementation::pause()
 {
+    cout << "pause(): " << d->session_path << endl;
     d->engine->pause();
 }
 
