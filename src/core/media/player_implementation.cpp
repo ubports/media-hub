@@ -34,7 +34,8 @@ struct media::PlayerImplementation::Private
 {
     Private(PlayerImplementation* parent,
             const dbus::types::ObjectPath& session_path,
-            const std::shared_ptr<media::Service>& service)
+            const std::shared_ptr<media::Service>& service,
+            PlayerImplementation::PlayerKey key)
         : parent(parent),
           service(service),
           engine(std::make_shared<gstreamer::Engine>()),
@@ -42,7 +43,8 @@ struct media::PlayerImplementation::Private
           track_list(
               new media::TrackListImplementation(
                   session_path.as_string() + "/TrackList",
-                  engine->meta_data_extractor()))
+                  engine->meta_data_extractor())),
+          key(key)
     {
         engine->state().changed().connect(
                     [parent](const Engine::State& state)
@@ -65,16 +67,19 @@ struct media::PlayerImplementation::Private
     std::shared_ptr<Engine> engine;
     dbus::types::ObjectPath session_path;
     std::shared_ptr<TrackListImplementation> track_list;
+    PlayerImplementation::PlayerKey key;
 };
 
 media::PlayerImplementation::PlayerImplementation(
         const dbus::types::ObjectPath& session_path,
-        const std::shared_ptr<Service>& service)
+        const std::shared_ptr<Service>& service,
+        PlayerKey key)
     : media::PlayerSkeleton(session_path),
       d(new Private(
             this,
             session_path,
-            service))
+            service,
+            key))
 {
     // Initializing default values for properties
     can_play().set(true);
@@ -147,6 +152,12 @@ media::PlayerImplementation::~PlayerImplementation()
 std::shared_ptr<media::TrackList> media::PlayerImplementation::track_list()
 {
     return d->track_list;
+}
+
+// TODO: Convert this to be a property instead of sync call
+media::Player::PlayerKey media::PlayerImplementation::key() const
+{
+    return d->key;
 }
 
 bool media::PlayerImplementation::open_uri(const Track::UriType& uri)

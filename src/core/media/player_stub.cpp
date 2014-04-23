@@ -136,7 +136,7 @@ struct media::PlayerStub::Private
 
     FrameAvailableCb frame_available_cb;
     void *frame_available_context;
- 
+
     dbus::Bus::Ptr bus;
     dbus::types::ObjectPath path;
     dbus::Object::Ptr object;
@@ -241,6 +241,13 @@ std::shared_ptr<media::TrackList> media::PlayerStub::track_list()
                     dbus::types::ObjectPath(d->path.as_string() + "/TrackList"));
     }
     return d->track_list;
+}
+
+media::Player::PlayerKey media::PlayerStub::key() const
+{
+    auto op = d->object->invoke_method_synchronously<mpris::Player::Key, media::Player::PlayerKey>();
+
+    return op.value();
 }
 
 bool media::PlayerStub::open_uri(const media::Track::UriType& uri)

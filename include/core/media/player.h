@@ -39,6 +39,7 @@ class Player : public std::enable_shared_from_this<Player>
   public:
     typedef double PlaybackRate;
     typedef double Volume;
+    typedef uint32_t PlayerKey;
     typedef void* GLConsumerWrapperHybris;
 
     /** Used to set a callback function to be called when a frame is ready to be rendered **/
@@ -78,6 +79,7 @@ class Player : public std::enable_shared_from_this<Player>
     bool operator==(const Player&) const = delete;
 
     virtual std::shared_ptr<TrackList> track_list() = 0;
+    virtual PlayerKey key() const = 0;
 
     virtual bool open_uri(const Track::UriType& uri) = 0;
     virtual void create_video_sink(uint32_t texture_id) = 0;

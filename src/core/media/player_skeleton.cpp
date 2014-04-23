@@ -219,6 +219,13 @@ struct media::PlayerSkeleton::Private
         }
     }
 
+    void handle_key(const core::dbus::Message::Ptr& in)
+    {
+        auto reply = dbus::Message::make_method_return(in);
+        reply->writer() << impl->key();
+        impl->access_bus()->send(reply);
+    }
+
     void handle_open_uri(const core::dbus::Message::Ptr& in)
     {
         Track::UriType uri;
@@ -333,6 +340,10 @@ media::PlayerSkeleton::PlayerSkeleton(
                   std::placeholders::_1));
     d->object->install_method_handler<mpris::Player::CreateVideoSink>(
         std::bind(&Private::handle_create_video_sink,
+                  std::ref(d),
+                  std::placeholders::_1));
+    d->object->install_method_handler<mpris::Player::Key>(
+        std::bind(&Private::handle_key,
                   std::ref(d),
                   std::placeholders::_1));
     d->object->install_method_handler<mpris::Player::OpenUri>(

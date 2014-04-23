@@ -1,5 +1,5 @@
 /*
- * Copyright © 2013 Canonical Ltd.
+ * Copyright © 2013-2014 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -47,13 +47,21 @@ media::ServiceStub::~ServiceStub()
 
 std::shared_ptr<media::Player> media::ServiceStub::create_session(const media::Player::Configuration&)
 {
-    auto op
-            = d->object->invoke_method_synchronously<
-                mpris::Service::CreateSession,
-                dbus::types::ObjectPath>();
+    auto op = d->object->invoke_method_synchronously<mpris::Service::CreateSession,
+         dbus::types::ObjectPath>();
 
     if (op.is_error())
         throw std::runtime_error("Problem creating session: " + op.error());
 
     return std::shared_ptr<media::Player>(new media::PlayerStub(shared_from_this(), op.value()));
+}
+
+void media::ServiceStub::pause_other_sessions(media::Player::PlayerKey key)
+{
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    auto op = d->object->invoke_method_synchronously<mpris::Service::PauseOtherSessions,
+         void>(key);
+
+    if (op.is_error())
+        throw std::runtime_error("Problem pausing other sessions: " + op.error());
 }

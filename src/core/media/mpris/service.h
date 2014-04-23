@@ -50,6 +50,7 @@ struct Service
     };
 
     METHOD(CreateSession, Service, std::chrono::seconds(1))
+    METHOD(PauseOtherSessions, Service, std::chrono::seconds(1))
 };
 }
 
