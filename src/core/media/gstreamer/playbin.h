@@ -315,7 +315,7 @@ struct Playbin
         return gst_element_seek_simple(
                     pipeline,
                     GST_FORMAT_TIME,
-                    (GstSeekFlags)(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_ACCURATE),
+                    (GstSeekFlags)(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_KEY_UNIT),
                     ms.count() * 1000);
     }
 
