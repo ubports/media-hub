@@ -54,6 +54,7 @@ public:
     const core::Signal<void>& about_to_finish_signal() const;
     const core::Signal<uint64_t>& seeked_to_signal() const;
     const core::Signal<void>& end_of_stream_signal() const;
+    const core::Signal<core::ubuntu::media::Player::PlaybackStatus>& playback_status_changed_signal() const;
 
 private:
     struct Private;

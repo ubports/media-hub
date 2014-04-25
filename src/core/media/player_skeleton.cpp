@@ -1,5 +1,5 @@
 /*
- * Copyright © 2013 Canonical Ltd.
+ * Copyright © 2013-2014 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -63,7 +63,8 @@ struct media::PlayerSkeleton::Private
           signals
           {
               object->get_signal<mpris::Player::Signals::Seeked>(),
-              object->get_signal<mpris::Player::Signals::EndOfStream>()
+              object->get_signal<mpris::Player::Signals::EndOfStream>(),
+              object->get_signal<mpris::Player::Signals::PlaybackStatusChanged>()
           }
     {
     }
@@ -272,16 +273,20 @@ struct media::PlayerSkeleton::Private
     {
         typedef core::dbus::Signal<mpris::Player::Signals::Seeked, mpris::Player::Signals::Seeked::ArgumentType> DBusSeekedToSignal;
         typedef core::dbus::Signal<mpris::Player::Signals::EndOfStream, mpris::Player::Signals::EndOfStream::ArgumentType> DBusEndOfStreamSignal;
+        typedef core::dbus::Signal<mpris::Player::Signals::PlaybackStatusChanged, mpris::Player::Signals::PlaybackStatusChanged::ArgumentType> DBusPlaybackStatusChangedSignal;
 
         Signals(const std::shared_ptr<DBusSeekedToSignal>& seeked,
-                const std::shared_ptr<DBusEndOfStreamSignal>& eos)
+                const std::shared_ptr<DBusEndOfStreamSignal>& eos,
+                const std::shared_ptr<DBusPlaybackStatusChangedSignal>& status)
             : dbus
               {
                   seeked,
-                  eos
+                  eos,
+                  status
               },
               seeked_to(),
-              end_of_stream()
+              end_of_stream(),
+              playback_status_changed()
         {
             seeked_to.connect([this](std::uint64_t value)
             {
@@ -292,15 +297,22 @@ struct media::PlayerSkeleton::Private
             {
                 dbus.end_of_stream->emit();
             });
+
+            playback_status_changed.connect([this](const media::Player::PlaybackStatus& status)
+            {
+                dbus.playback_status_changed->emit(status);
+            });
         }
 
         struct DBus
         {
             std::shared_ptr<DBusSeekedToSignal> seeked_to;
             std::shared_ptr<DBusEndOfStreamSignal> end_of_stream;
+            std::shared_ptr<DBusPlaybackStatusChangedSignal> playback_status_changed;
         } dbus;
         core::Signal<uint64_t> seeked_to;
         core::Signal<void> end_of_stream;
+        core::Signal<media::Player::PlaybackStatus> playback_status_changed;
     } signals;
 
 };
@@ -545,4 +557,9 @@ const core::Signal<void>& media::PlayerSkeleton::end_of_stream() const
 core::Signal<void>& media::PlayerSkeleton::end_of_stream()
 {
     return d->signals.end_of_stream;
+}
+
+core::Signal<media::Player::PlaybackStatus>& media::PlayerSkeleton::playback_status_changed()
+{
+    return d->signals.playback_status_changed;
 }

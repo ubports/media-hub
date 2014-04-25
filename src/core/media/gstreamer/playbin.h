@@ -20,6 +20,7 @@
 #define GSTREAMER_PLAYBIN_H_
 
 #include "bus.h"
+#include "../mpris/player.h"
 
 #include <hybris/media/media_codec_layer.h>
 #include <hybris/media/surface_texture_client_hybris.h>
@@ -29,6 +30,8 @@
 
 #include <chrono>
 #include <string>
+
+namespace media = core::ubuntu::media;
 
 namespace gstreamer
 {
@@ -408,6 +411,7 @@ struct Playbin
         core::Signal<Bus::Message::Detail::StateChanged> on_state_changed;
         core::Signal<uint64_t> on_seeked_to;
         core::Signal<void> on_end_of_stream;
+        core::Signal<media::Player::PlaybackStatus> on_playback_status_changed;
     } signals;
 };
 }

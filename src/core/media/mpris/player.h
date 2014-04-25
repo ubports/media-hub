@@ -62,6 +62,7 @@ struct Player
     {
         SIGNAL(Seeked, Player, uint64_t)
         SIGNAL(EndOfStream, Player, void)
+        SIGNAL(PlaybackStatusChanged, Player, core::ubuntu::media::Player::PlaybackStatus)
     };
 
     struct Properties

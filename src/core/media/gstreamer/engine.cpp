@@ -241,6 +241,7 @@ struct gstreamer::Engine::Private
     core::Signal<void> about_to_finish;
     core::Signal<uint64_t> seeked_to;
     core::Signal<void> end_of_stream;
+    core::Signal<media::Player::PlaybackStatus> playback_status_changed;
 };
 
 gstreamer::Engine::Engine() : d(new Private{})
@@ -280,7 +281,10 @@ bool gstreamer::Engine::play()
     auto result = d->playbin.set_state_and_wait(GST_STATE_PLAYING);
 
     if (result)
+    {
         d->state = media::Engine::State::playing;
+        d->playback_status_changed(media::Player::PlaybackStatus::playing);
+    }
 
     cout << "Engine: " << this << endl;
 
@@ -292,7 +296,10 @@ bool gstreamer::Engine::stop()
     auto result = d->playbin.set_state_and_wait(GST_STATE_NULL);
 
     if (result)
+    {
         d->state = media::Engine::State::stopped;
+        d->playback_status_changed(media::Player::PlaybackStatus::stopped);
+    }
 
     return result;
 }
@@ -302,7 +309,11 @@ bool gstreamer::Engine::pause()
     auto result = d->playbin.set_state_and_wait(GST_STATE_PAUSED);
 
     if (result)
+    {
         d->state = media::Engine::State::paused;
+        cout << "pause" << endl;
+        d->playback_status_changed(media::Player::PlaybackStatus::paused);
+    }
 
     return result;
 }
@@ -375,4 +386,9 @@ const core::Signal<uint64_t>& gstreamer::Engine::seeked_to_signal() const
 const core::Signal<void>& gstreamer::Engine::end_of_stream_signal() const
 {
     return d->end_of_stream;
+}
+
+const core::Signal<media::Player::PlaybackStatus>& gstreamer::Engine::playback_status_changed_signal() const
+{
+    return d->playback_status_changed;
 }

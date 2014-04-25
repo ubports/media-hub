@@ -143,6 +143,11 @@ media::PlayerImplementation::PlayerImplementation(
     {
         end_of_stream()();
     });
+
+    d->engine->playback_status_changed_signal().connect([this](const Player::PlaybackStatus& status)
+    {
+        playback_status_changed()(status);
+    });
 }
 
 media::PlayerImplementation::~PlayerImplementation()
@@ -186,13 +191,11 @@ void media::PlayerImplementation::previous()
 
 void media::PlayerImplementation::play()
 {
-    cout << "play(): " << d->session_path << endl;
     d->engine->play();
 }
 
 void media::PlayerImplementation::pause()
 {
-    cout << "pause(): " << d->session_path << endl;
     d->engine->pause();
 }
 

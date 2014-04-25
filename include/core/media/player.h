@@ -120,6 +120,7 @@ class Player : public std::enable_shared_from_this<Player>
 
     virtual const core::Signal<uint64_t>& seeked_to() const = 0;
     virtual const core::Signal<void>& end_of_stream() const = 0;
+    virtual core::Signal<PlaybackStatus>& playback_status_changed() = 0;
   protected:
     Player();
 

@@ -68,6 +68,7 @@ class PlayerSkeleton : public core::dbus::Skeleton<core::ubuntu::media::Player>
 
     virtual const core::Signal<uint64_t>& seeked_to() const;
     virtual const core::Signal<void>& end_of_stream() const;
+    virtual core::Signal<PlaybackStatus>& playback_status_changed();
 
   protected:
     PlayerSkeleton(const core::dbus::types::ObjectPath& session_path);
