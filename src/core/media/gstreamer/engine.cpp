@@ -16,6 +16,9 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "bus.h"
 #include "engine.h"
 #include "meta_data_extractor.h"
@@ -43,14 +46,10 @@ struct Init
 
 struct gstreamer::Engine::Private
 {
-    void about_to_finish()
-    {
-        state = Engine::State::ready;
-    }
-
     void on_playbin_state_changed(
-            const gstreamer::Bus::Message::Detail::StateChanged&)
+            const gstreamer::Bus::Message::Detail::StateChanged& state_change)
     {
+        (void) state_change;
     }
 
     void on_tag_available(const gstreamer::Bus::Message::Detail::Tag& tag)
@@ -163,13 +162,31 @@ struct gstreamer::Engine::Private
         playbin.set_volume(new_volume.value);
     }
 
+    void on_about_to_finish()
+    {
+        state = Engine::State::ready;
+        about_to_finish();
+    }
+
+    void on_seeked_to(uint64_t value)
+    {
+        seeked_to(value);
+    }
+
+    void on_end_of_stream()
+    {
+        end_of_stream();
+    }
+
     Private()
         : meta_data_extractor(new gstreamer::MetaDataExtractor()),
           volume(media::Engine::Volume(1.)),
+          is_video_source(false),
+          is_audio_source(false),
           about_to_finish_connection(
               playbin.signals.about_to_finish.connect(
                   std::bind(
-                      &Private::about_to_finish,
+                      &Private::on_about_to_finish,
                       this))),
           on_state_changed_connection(
               playbin.signals.on_state_changed.connect(
@@ -188,7 +205,18 @@ struct gstreamer::Engine::Private
                   std::bind(
                       &Private::on_volume_changed,
                       this,
-                      std::placeholders::_1)))
+                      std::placeholders::_1))),
+          on_seeked_to_connection(
+              playbin.signals.on_seeked_to.connect(
+                  std::bind(
+                      &Private::on_seeked_to,
+                      this,
+                      std::placeholders::_1))),
+          on_end_of_stream_connection(
+              playbin.signals.on_end_of_stream.connect(
+                  std::bind(
+                      &Private::on_end_of_stream,
+                      this)))
     {
     }
 
@@ -198,11 +226,19 @@ struct gstreamer::Engine::Private
     core::Property<uint64_t> position;
     core::Property<uint64_t> duration;
     core::Property<media::Engine::Volume> volume;
+    core::Property<bool> is_video_source;
+    core::Property<bool> is_audio_source;
     gstreamer::Playbin playbin;
     core::ScopedConnection about_to_finish_connection;
     core::ScopedConnection on_state_changed_connection;
     core::ScopedConnection on_tag_available_connection;
     core::ScopedConnection on_volume_changed_connection;
+    core::ScopedConnection on_seeked_to_connection;
+    core::ScopedConnection on_end_of_stream_connection;
+
+    core::Signal<void> about_to_finish;
+    core::Signal<uint64_t> seeked_to;
+    core::Signal<void> end_of_stream;
 };
 
 gstreamer::Engine::Engine() : d(new Private{})
@@ -229,6 +265,11 @@ bool gstreamer::Engine::open_resource_for_uri(const media::Track::UriType& uri)
 {
     d->playbin.set_uri(uri);
     return true;
+}
+
+void gstreamer::Engine::create_video_sink(uint32_t texture_id)
+{
+    d->playbin.create_video_sink(texture_id);
 }
 
 bool gstreamer::Engine::play()
@@ -268,6 +309,28 @@ bool gstreamer::Engine::seek_to(const std::chrono::microseconds& ts)
     return d->playbin.seek(ts);
 }
 
+const core::Property<bool>& gstreamer::Engine::is_video_source() const
+{
+    gstreamer::Playbin::MediaFileType type = d->playbin.media_file_type();
+    if (type == gstreamer::Playbin::MediaFileType::MEDIA_FILE_TYPE_VIDEO)
+        d->is_video_source.set(true);
+    else
+        d->is_video_source.set(false);
+
+    return d->is_video_source;
+}
+
+const core::Property<bool>& gstreamer::Engine::is_audio_source() const
+{
+    gstreamer::Playbin::MediaFileType type = d->playbin.media_file_type();
+    if (type == gstreamer::Playbin::MediaFileType::MEDIA_FILE_TYPE_AUDIO)
+        d->is_audio_source.set(true);
+    else
+        d->is_audio_source.set(false);
+
+    return d->is_audio_source;
+}
+
 const core::Property<uint64_t>& gstreamer::Engine::position() const
 {
     d->position.set(d->playbin.position());
@@ -294,4 +357,19 @@ const core::Property<std::tuple<media::Track::UriType, media::Track::MetaData>>&
 gstreamer::Engine::track_meta_data() const
 {
     return d->track_meta_data;
+}
+
+const core::Signal<void>& gstreamer::Engine::about_to_finish_signal() const
+{
+    return d->about_to_finish;
+}
+
+const core::Signal<uint64_t>& gstreamer::Engine::seeked_to_signal() const
+{
+    return d->seeked_to;
+}
+
+const core::Signal<void>& gstreamer::Engine::end_of_stream_signal() const
+{
+    return d->end_of_stream;
 }

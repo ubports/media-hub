@@ -16,6 +16,9 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "track_list_implementation.h"
 
 #include "engine.h"
@@ -43,6 +46,16 @@ media::TrackListImplementation::TrackListImplementation(
 
 media::TrackListImplementation::~TrackListImplementation()
 {
+}
+
+media::Track::UriType media::TrackListImplementation::query_uri_for_track(const media::Track::Id& id)
+{
+    auto it = d->meta_data_cache.find(id);
+
+    if (it == d->meta_data_cache.end())
+        return Track::UriType{};
+
+    return std::get<0>(it->second);
 }
 
 media::Track::MetaData media::TrackListImplementation::query_meta_data_for_track(const media::Track::Id& id)

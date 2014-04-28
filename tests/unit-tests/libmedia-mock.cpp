@@ -1,5 +1,5 @@
 /*
- * Copyright © 2013 Canonical Ltd.
+ * Copyright © 2013-2014 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -13,18 +13,14 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Authored by: Thomas Voß <thomas.voss@canonical.com>
+ * Authored by: Jim Hodapp <jim.hodapp@canonical.com>
  */
 
-#include <core/media/service.h>
+#include <hybris/media/media_codec_layer.h>
+#include <hybris/media/surface_texture_client_hybris.h>
 
-#include "service_stub.h"
+#define UNUSED __attribute__((unused))
 
-namespace media = core::ubuntu::media;
-
-const std::shared_ptr<media::Service> media::Service::Client::instance()
+void decoding_service_set_client_death_cb(UNUSED DecodingClientDeathCbHybris callback, UNUSED void *context)
 {
-    std::cout << "Creating a new static Service instance" << std::endl;
-    static std::shared_ptr<media::Service> instance{new media::ServiceStub()};
-    return instance;
 }

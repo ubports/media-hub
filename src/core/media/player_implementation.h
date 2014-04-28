@@ -43,11 +43,15 @@ public:
     virtual std::shared_ptr<TrackList> track_list();
 
     virtual bool open_uri(const Track::UriType& uri);
+    virtual void create_video_sink(uint32_t texture_id);
+    virtual GLConsumerWrapperHybris gl_consumer() const;
     virtual void next();
     virtual void previous();
     virtual void play();
     virtual void pause();
     virtual void stop();
+    virtual void set_frame_available_callback(FrameAvailableCb cb, void *context);
+    virtual void set_playback_complete_callback(PlaybackCompleteCb cb, void *context);
     virtual void seek_to(const std::chrono::microseconds& offset);
 
 private:

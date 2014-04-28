@@ -39,6 +39,12 @@ class Player : public std::enable_shared_from_this<Player>
   public:
     typedef double PlaybackRate;
     typedef double Volume;
+    typedef void* GLConsumerWrapperHybris;
+
+    /** Used to set a callback function to be called when a frame is ready to be rendered **/
+    typedef void (*FrameAvailableCbHybris)(GLConsumerWrapperHybris wrapper, void *context);
+    typedef void (*FrameAvailableCb)(void *context);
+    typedef void (*PlaybackCompleteCb)(void *context);
 
     struct Configuration;
 
@@ -74,6 +80,8 @@ class Player : public std::enable_shared_from_this<Player>
     virtual std::shared_ptr<TrackList> track_list() = 0;
 
     virtual bool open_uri(const Track::UriType& uri) = 0;
+    virtual void create_video_sink(uint32_t texture_id) = 0;
+    virtual GLConsumerWrapperHybris gl_consumer() const = 0;
     virtual void next() = 0;
     virtual void previous() = 0;
     virtual void play() = 0;
@@ -81,11 +89,17 @@ class Player : public std::enable_shared_from_this<Player>
     virtual void stop() = 0;
     virtual void seek_to(const std::chrono::microseconds& offset) = 0;
 
+    // TODO: Convert this to be a signal
+    virtual void set_frame_available_callback(FrameAvailableCb cb, void *context) = 0;
+    virtual void set_playback_complete_callback(PlaybackCompleteCb cb, void *context) = 0;
+
     virtual const core::Property<bool>& can_play() const = 0;
     virtual const core::Property<bool>& can_pause() const = 0;
     virtual const core::Property<bool>& can_seek() const = 0;
     virtual const core::Property<bool>& can_go_previous() const = 0;
     virtual const core::Property<bool>& can_go_next() const = 0;
+    virtual const core::Property<bool>& is_video_source() const = 0;
+    virtual const core::Property<bool>& is_audio_source() const = 0;
     virtual const core::Property<PlaybackStatus>& playback_status() const = 0;
     virtual const core::Property<LoopStatus>& loop_status() const = 0;
     virtual const core::Property<PlaybackRate>& playback_rate() const = 0;
@@ -97,15 +111,13 @@ class Player : public std::enable_shared_from_this<Player>
     virtual const core::Property<uint64_t>& position() const = 0;
     virtual const core::Property<uint64_t>& duration() const = 0;
 
-
     virtual core::Property<LoopStatus>& loop_status() = 0;
     virtual core::Property<PlaybackRate>& playback_rate() = 0;
     virtual core::Property<bool>& is_shuffle() = 0;
     virtual core::Property<Volume>& volume() = 0;
 
-
     virtual const core::Signal<uint64_t>& seeked_to() const = 0;
-
+    virtual const core::Signal<void>& end_of_stream() const = 0;
   protected:
     Player();
 
