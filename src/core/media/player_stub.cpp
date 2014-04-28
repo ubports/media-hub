@@ -230,6 +230,11 @@ media::PlayerStub::PlayerStub(
 
 media::PlayerStub::~PlayerStub()
 {
+    auto bus = the_session_bus();
+    bus->stop();
+
+    if (worker.joinable())
+        worker.join();
 }
 
 std::shared_ptr<media::TrackList> media::PlayerStub::track_list()
