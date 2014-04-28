@@ -80,7 +80,8 @@ struct media::PlayerStub::Private
                 signals
                 {
                     object->get_signal<mpris::Player::Signals::Seeked>(),
-                    object->get_signal<mpris::Player::Signals::EndOfStream>()
+                    object->get_signal<mpris::Player::Signals::EndOfStream>(),
+                    object->get_signal<mpris::Player::Signals::PlaybackStatusChanged>()
                 }
     {
     }
@@ -136,7 +137,7 @@ struct media::PlayerStub::Private
 
     FrameAvailableCb frame_available_cb;
     void *frame_available_context;
- 
+
     dbus::Bus::Ptr bus;
     dbus::types::ObjectPath path;
     dbus::Object::Ptr object;
@@ -168,18 +169,22 @@ struct media::PlayerStub::Private
     {
         typedef core::dbus::Signal<mpris::Player::Signals::Seeked, mpris::Player::Signals::Seeked::ArgumentType> DBusSeekedToSignal;
         typedef core::dbus::Signal<mpris::Player::Signals::EndOfStream, mpris::Player::Signals::EndOfStream::ArgumentType> DBusEndOfStreamSignal;
+        typedef core::dbus::Signal<mpris::Player::Signals::PlaybackStatusChanged, mpris::Player::Signals::PlaybackStatusChanged::ArgumentType> DBusPlaybackStatusChangedSignal;
 
         Signals(const std::shared_ptr<DBusSeekedToSignal>& seeked,
-                const std::shared_ptr<DBusEndOfStreamSignal>& eos)
+                const std::shared_ptr<DBusEndOfStreamSignal>& eos,
+                const std::shared_ptr<DBusPlaybackStatusChangedSignal>& status)
             : dbus
               {
                   seeked,
-                  eos
+                  eos,
+                  status
               },
               playback_complete_cb(nullptr),
               playback_complete_context(nullptr),
               seeked_to(),
-              end_of_stream()
+              end_of_stream(),
+              playback_status_changed()
         {
             dbus.seeked_to->connect([this](std::uint64_t value)
             {
@@ -194,12 +199,19 @@ struct media::PlayerStub::Private
                     playback_complete_cb(playback_complete_context);
                 end_of_stream();
             });
+
+            dbus.playback_status_changed->connect([this](const media::Player::PlaybackStatus& status)
+            {
+                std::cout << "PlaybackStatusChanged signal arrived via the bus." << std::endl;
+                playback_status_changed(status);
+            });
         }
 
         struct DBus
         {
             std::shared_ptr<DBusSeekedToSignal> seeked_to;
             std::shared_ptr<DBusEndOfStreamSignal> end_of_stream;
+            std::shared_ptr<DBusPlaybackStatusChangedSignal> playback_status_changed;
         } dbus;
 
         void set_playback_complete_cb(PlaybackCompleteCb cb, void *context)
@@ -212,6 +224,7 @@ struct media::PlayerStub::Private
         void *playback_complete_context;
         core::Signal<uint64_t> seeked_to;
         core::Signal<void> end_of_stream;
+        core::Signal<media::Player::PlaybackStatus> playback_status_changed;
     } signals;
 };
 
@@ -246,6 +259,13 @@ std::shared_ptr<media::TrackList> media::PlayerStub::track_list()
                     dbus::types::ObjectPath(d->path.as_string() + "/TrackList"));
     }
     return d->track_list;
+}
+
+media::Player::PlayerKey media::PlayerStub::key() const
+{
+    auto op = d->object->invoke_method_synchronously<mpris::Player::Key, media::Player::PlayerKey>();
+
+    return op.value();
 }
 
 bool media::PlayerStub::open_uri(const media::Track::UriType& uri)
@@ -441,4 +461,9 @@ const core::Signal<uint64_t>& media::PlayerStub::seeked_to() const
 const core::Signal<void>& media::PlayerStub::end_of_stream() const
 {
     return d->signals.end_of_stream;
+}
+
+core::Signal<media::Player::PlaybackStatus>& media::PlayerStub::playback_status_changed()
+{
+    return d->signals.playback_status_changed;
 }

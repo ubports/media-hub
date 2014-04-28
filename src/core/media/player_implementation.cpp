@@ -23,29 +23,32 @@
 #include "track_list_implementation.h"
 
 #include "powerd_service.h"
+#include "gstreamer/engine.h"
 
 #define UNUSED __attribute__((unused))
 
 namespace media = core::ubuntu::media;
 namespace dbus = core::dbus;
 
+using namespace std;
+
 struct media::PlayerImplementation::Private
 {
     Private(PlayerImplementation* parent,
             const dbus::types::ObjectPath& session_path,
             const std::shared_ptr<media::Service>& service,
-            const std::shared_ptr<media::Engine>& engine)
+            PlayerImplementation::PlayerKey key)
         : parent(parent),
           service(service),
-          engine(engine),
+          engine(std::make_shared<gstreamer::Engine>()),
           session_path(session_path),
           track_list(
               new media::TrackListImplementation(
                   session_path.as_string() + "/TrackList",
                   engine->meta_data_extractor())),
           disp_lock_name("media-hub-video-playback"),
-          sys_lock_name("media-hub-music-playback")
-
+          sys_lock_name("media-hub-music-playback"),
+          key(key)
     {
         auto bus = std::shared_ptr<dbus::Bus>(new dbus::Bus(core::dbus::WellKnownBus::system));
         bus->install_executor(dbus::asio::make_executor(bus));
@@ -145,18 +148,19 @@ struct media::PlayerImplementation::Private
     std::string sys_lock_name;
     std::string disp_cookie;
     std::string sys_cookie;
+    PlayerImplementation::PlayerKey key;
 };
 
 media::PlayerImplementation::PlayerImplementation(
         const dbus::types::ObjectPath& session_path,
         const std::shared_ptr<Service>& service,
-        const std::shared_ptr<Engine>& engine)
+        PlayerKey key)
     : media::PlayerSkeleton(session_path),
       d(new Private(
             this,
             session_path,
             service,
-            engine))
+            key))
 {
     // Initializing default values for properties
     can_play().set(true);
@@ -201,7 +205,7 @@ media::PlayerImplementation::PlayerImplementation(
     };
     is_audio_source().install(audio_type_getter);
 
-    engine->about_to_finish_signal().connect([this]()
+    d->engine->about_to_finish_signal().connect([this]()
     {
         if (d->track_list->has_next())
         {
@@ -211,14 +215,19 @@ media::PlayerImplementation::PlayerImplementation(
         }
     });
 
-    engine->seeked_to_signal().connect([this](uint64_t value)
+    d->engine->seeked_to_signal().connect([this](uint64_t value)
     {
         seeked_to()(value);
     });
 
-    engine->end_of_stream_signal().connect([this]()
+    d->engine->end_of_stream_signal().connect([this]()
     {
         end_of_stream()();
+    });
+
+    d->engine->playback_status_changed_signal().connect([this](const Player::PlaybackStatus& status)
+    {
+        playback_status_changed()(status);
     });
 }
 
@@ -229,6 +238,12 @@ media::PlayerImplementation::~PlayerImplementation()
 std::shared_ptr<media::TrackList> media::PlayerImplementation::track_list()
 {
     return d->track_list;
+}
+
+// TODO: Convert this to be a property instead of sync call
+media::Player::PlayerKey media::PlayerImplementation::key() const
+{
+    return d->key;
 }
 
 bool media::PlayerImplementation::open_uri(const Track::UriType& uri)

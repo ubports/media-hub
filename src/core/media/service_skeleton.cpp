@@ -1,5 +1,5 @@
 /*
- * Copyright © 2013 Canonical Ltd.
+ * Copyright © 2013-2014 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -49,6 +49,11 @@ struct media::ServiceSkeleton::Private
                         &Private::handle_create_session,
                         this,
                         std::placeholders::_1));
+        object->install_method_handler<mpris::Service::PauseOtherSessions>(
+                    std::bind(
+                        &Private::handle_pause_other_sessions,
+                        this,
+                        std::placeholders::_1));
     }
 
     void handle_create_session(const core::dbus::Message::Ptr& msg)
@@ -84,6 +89,17 @@ struct media::ServiceSkeleton::Private
                         e.what());
             impl->access_bus()->send(reply);
         }
+    }
+
+    void handle_pause_other_sessions(const core::dbus::Message::Ptr& msg)
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+        Player::PlayerKey key;
+        msg->reader() >> key;
+        impl->pause_other_sessions(key);
+
+        auto reply = dbus::Message::make_method_return(msg);
+        impl->access_bus()->send(reply);
     }
 
     media::ServiceSkeleton* impl;

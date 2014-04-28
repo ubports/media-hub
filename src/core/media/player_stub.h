@@ -43,6 +43,7 @@ class PlayerStub : public core::dbus::Stub<Player>
     ~PlayerStub();
 
     virtual std::shared_ptr<TrackList> track_list();
+    virtual PlayerKey key() const;
 
     virtual bool open_uri(const Track::UriType& uri);
     virtual void create_video_sink(uint32_t texture_id);
@@ -82,6 +83,7 @@ class PlayerStub : public core::dbus::Stub<Player>
 
     virtual const core::Signal<uint64_t>& seeked_to() const;
     virtual const core::Signal<void>& end_of_stream() const;
+    virtual core::Signal<PlaybackStatus>& playback_status_changed();
 
   private:
     struct Private;

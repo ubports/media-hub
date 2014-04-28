@@ -21,21 +21,63 @@
 #include "player_configuration.h"
 #include "player_implementation.h"
 
-#include "gstreamer/engine.h"
+#include <map>
 
 namespace media = core::ubuntu::media;
 
+using namespace std;
+
 struct media::ServiceImplementation::Private
 {
-    Private() : engine(std::make_shared<gstreamer::Engine>())
+    Private()
+        : key_(0)
     {
     }
-    std::shared_ptr<media::Engine> engine;
+
+    void track_player(const std::shared_ptr<media::Player>& player)
+    {
+        cout << __PRETTY_FUNCTION__ << endl;
+        cout << "key: " << key_ << endl;
+        player_map.insert(
+                std::pair<media::Player::PlayerKey,
+                std::shared_ptr<media::Player>>(key_, player));
+
+        ++key_;
+    }
+
+    inline media::Player::PlayerKey key() const
+    {
+        return key_;
+    }
+
+    void pause_other_sessions(media::Player::PlayerKey key)
+    {
+        cout << __PRETTY_FUNCTION__ << endl;
+        cout << "key: " << key << endl;
+
+        // TODO: Add a field to Player that is the type of player so that certain
+        // types of playback aren't paused below. E.g. a camera click sound shouldn't
+        // pause, nor should it pause background music sessions
+        for (auto& player_pair : player_map)
+        {
+            if (player_pair.second->playback_status() == Player::playing
+                    && player_pair.first != key)
+            {
+                cout << "Pausing player with key: " << player_pair.first << endl;
+                player_pair.second->pause();
+            }
+        }
+    }
+
+    // Used for Player instance management
+    std::map<media::Player::PlayerKey, std::shared_ptr<media::Player>> player_map;
+    media::Player::PlayerKey key_;
+
 };
 
 media::ServiceImplementation::ServiceImplementation() : d(new Private())
 {
-
+    cout << __PRETTY_FUNCTION__ << endl;
 }
 
 media::ServiceImplementation::~ServiceImplementation()
@@ -45,8 +87,13 @@ media::ServiceImplementation::~ServiceImplementation()
 std::shared_ptr<media::Player> media::ServiceImplementation::create_session(
         const media::Player::Configuration& conf)
 {
-    return std::make_shared<media::PlayerImplementation>(
-                conf.object_path,
-                shared_from_this(),
-                d->engine);
+    std::shared_ptr<media::Player> player = std::make_shared<media::PlayerImplementation>(
+            conf.object_path, shared_from_this(), d->key());
+    d->track_player(player);
+    return player;
+}
+
+void media::ServiceImplementation::pause_other_sessions(media::Player::PlayerKey key)
+{
+    d->pause_other_sessions(key);
 }

@@ -20,6 +20,7 @@
 #define GSTREAMER_PLAYBIN_H_
 
 #include "bus.h"
+#include "../mpris/player.h"
 
 #include <hybris/media/media_codec_layer.h>
 #include <hybris/media/surface_texture_client_hybris.h>
@@ -29,6 +30,8 @@
 
 #include <chrono>
 #include <string>
+
+namespace media = core::ubuntu::media;
 
 namespace gstreamer
 {
@@ -312,8 +315,7 @@ struct Playbin
         return gst_element_seek_simple(
                     pipeline,
                     GST_FORMAT_TIME,
-                    (GstSeekFlags)(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_KEY_UNIT |
-                                    GST_SEEK_FLAG_SNAP_BEFORE),
+                    (GstSeekFlags)(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_KEY_UNIT),
                     ms.count() * 1000);
     }
 
@@ -408,6 +410,7 @@ struct Playbin
         core::Signal<Bus::Message::Detail::StateChanged> on_state_changed;
         core::Signal<uint64_t> on_seeked_to;
         core::Signal<void> on_end_of_stream;
+        core::Signal<media::Player::PlaybackStatus> on_playback_status_changed;
     } signals;
 };
 }

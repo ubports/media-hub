@@ -27,6 +27,9 @@ namespace ubuntu
 {
 namespace media
 {
+
+class Player;
+
 class ServiceImplementation : public ServiceSkeleton
 {
   public:
@@ -34,6 +37,8 @@ class ServiceImplementation : public ServiceSkeleton
     ~ServiceImplementation ();
 
     std::shared_ptr<Player> create_session(const Player::Configuration&);
+
+    void pause_other_sessions(Player::PlayerKey key);
 
   private:
     struct Private;

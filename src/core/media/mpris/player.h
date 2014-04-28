@@ -55,12 +55,14 @@ struct Player
     METHOD(Seek, Player, std::chrono::seconds(1))
     METHOD(SetPosition, Player, std::chrono::seconds(1))
     METHOD(CreateVideoSink, Player, std::chrono::seconds(1))
+    METHOD(Key, Player, std::chrono::seconds(1))
     METHOD(OpenUri, Player, std::chrono::seconds(1))
 
     struct Signals
     {
         SIGNAL(Seeked, Player, uint64_t)
         SIGNAL(EndOfStream, Player, void)
+        SIGNAL(PlaybackStatusChanged, Player, core::ubuntu::media::Player::PlaybackStatus)
     };
 
     struct Properties
