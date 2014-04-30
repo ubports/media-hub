@@ -1,6 +1,63 @@
-media-hub (0.0.1-0ubuntu1) UNRELEASED; urgency=medium
+media-hub (0.0.1+14.10.20140430-0ubuntu1) utopic; urgency=medium
 
+  [ Sergio Schvezov ]
   * Repackaging from original music-hub.
   * Polishing packaging.
+  * Enable the position property for getting the current playback
+    position. Added duration to the dbus interface. Also added a service
+    acceptance test for position and duration.
+  * Make sure seek_to sends a reply to the client. Disabled
+    position/duration test for now.
 
- -- Sergio Schvezov <sergio.schvezov@canonical.com>  Thu, 06 Mar 2014 16:32:48 -0300
+  [ Jim Hodapp ]
+  * Modify directory structure to be generic media-hub instead of music-
+    specific.
+  * Added README file which describes how to build and how to run the
+    tests. Also changed the namespaces to be the more general
+    core::ubuntu::media instead of music-specific.
+  * Removed com directory since it's no longer needed. All source under
+    com was moved to core.
+  * Removed com include directory since it's no longer needed. All
+    source under com was moved to core.
+  * Enable adding a videosink to the playbin pipeline. Added a couple of
+    unit tests that test hardware decoding/software rendering, pause,
+    play, seek and stop.
+  * Added a very simple media-hub-server, which is the server side of
+    the dbus MPRIS interface. Will fill this out more in the future to
+    make it a full daemon.
+  * Merged with EOS branch from tvoss. Added on_frame_available listener
+    and callback. Create a decoding session and pass it to the hybris
+    layer. Allow playback to work again after a client quits or dies.
+    Added two new properties to see if the opened media is video or
+    audio. Background playlist support. Add powerd control interface.
+    One Engine instance per PlayerImplementation instance instead of one
+    global Engine instance. Pause other playing sessions when starting
+    playback of a new foreground player. Emit a PlaybackStatusChanged
+    signal so that qtubuntu-media knows when PlaybackStatus changes from
+    underneath it. Use GST_SEEK_FLAG_KEY_UNIT instead because seeking
+    doesn't perform well enough with GST_SEEK_FLAG_ACCURATE .
+
+  [ thomas-voss ]
+  * Ramp up acceptance testing.
+  * WIP.
+  * Add stub and skeleton implementations.
+  * Add first wave of acceptance tests and ensure that they are passing.
+  * More refactoring of local spike.
+  * More tests passing.
+  * Add missing build dep on google-mock.
+  * Add missing build-dependency on libgstreamer1.0-dev.
+  * Add missing build dependencies.
+  * Fix build dependencies on libboost-system-dev. Disable two failing
+    tests.
+  * Add build-dependency on libboost-program-options-dev.
+  * Add fakesink for testing purposes.
+  * Ensure that the audio sink is set to a fake sink for unit testing
+    purposes.
+  * Merged lp:~thomas-voss/media-hub/switch-to-properties-cpp
+
+  [ Thomas Voß ]
+  * Initial commit.
+  * Added packaging setup.
+  * Add backend and server implementation headers.
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Wed, 30 Apr 2014 01:16:41 +0000
