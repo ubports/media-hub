@@ -1,5 +1,5 @@
 /*
- * Copyright © 2013 Canonical Ltd.
+ * Copyright © 2013-2014 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -40,6 +40,7 @@ class ServiceStub : public core::dbus::Stub<core::ubuntu::media::Service>
     ~ServiceStub();
 
     std::shared_ptr<Player> create_session(const Player::Configuration&);
+    void pause_other_sessions(Player::PlayerKey key);
 
   private:
     struct Private;

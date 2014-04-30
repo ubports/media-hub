@@ -1,4 +1,6 @@
 /**
+ * Copyright (C) 2013-2014 Canonical Ltd
+ *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
  * as published by the Free Software Foundation.
@@ -46,6 +48,8 @@ class PlayerSkeleton : public core::dbus::Skeleton<core::ubuntu::media::Player>
     virtual const core::Property<bool>& can_seek() const;
     virtual const core::Property<bool>& can_go_previous() const;
     virtual const core::Property<bool>& can_go_next() const;
+    virtual const core::Property<bool>& is_video_source() const;
+    virtual const core::Property<bool>& is_audio_source() const;
     virtual const core::Property<PlaybackStatus>& playback_status() const;
     virtual const core::Property<LoopStatus>& loop_status() const;
     virtual const core::Property<PlaybackRate>& playback_rate() const;
@@ -63,6 +67,8 @@ class PlayerSkeleton : public core::dbus::Skeleton<core::ubuntu::media::Player>
     virtual core::Property<Volume>& volume();
 
     virtual const core::Signal<uint64_t>& seeked_to() const;
+    virtual const core::Signal<void>& end_of_stream() const;
+    virtual core::Signal<PlaybackStatus>& playback_status_changed();
 
   protected:
     PlayerSkeleton(const core::dbus::types::ObjectPath& session_path);
@@ -73,11 +79,16 @@ class PlayerSkeleton : public core::dbus::Skeleton<core::ubuntu::media::Player>
     virtual core::Property<bool>& can_seek();
     virtual core::Property<bool>& can_go_previous();
     virtual core::Property<bool>& can_go_next();
+    virtual core::Property<bool>& is_video_source();
+    virtual core::Property<bool>& is_audio_source();
     virtual core::Property<Track::MetaData>& meta_data_for_current_track();
     virtual core::Property<PlaybackRate>& minimum_playback_rate();
     virtual core::Property<PlaybackRate>& maximum_playback_rate();
     virtual core::Property<uint64_t>& position();
     virtual core::Property<uint64_t>& duration();
+
+    virtual core::Signal<uint64_t>& seeked_to();
+    virtual core::Signal<void>& end_of_stream();
 
   private:
     struct Private;

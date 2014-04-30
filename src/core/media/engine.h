@@ -18,6 +18,7 @@
 #ifndef CORE_UBUNTU_MEDIA_ENGINE_H_
 #define CORE_UBUNTU_MEDIA_ENGINE_H_
 
+#include <core/media/player.h>
 #include <core/media/track.h>
 
 #include <core/property.h>
@@ -97,11 +98,15 @@ public:
     virtual const core::Property<State>& state() const = 0;
 
     virtual bool open_resource_for_uri(const Track::UriType& uri) = 0;
+    virtual void create_video_sink(uint32_t texture_id) = 0;
 
     virtual bool play() = 0;
     virtual bool stop()  = 0;
     virtual bool pause() = 0;
     virtual bool seek_to(const std::chrono::microseconds& ts) = 0;
+
+    virtual const core::Property<bool>& is_video_source() const = 0;
+    virtual const core::Property<bool>& is_audio_source() const = 0;
 
     virtual const core::Property<uint64_t>& position() const = 0;
     virtual const core::Property<uint64_t>& duration() const = 0;
@@ -110,6 +115,11 @@ public:
     virtual core::Property<Volume>& volume() = 0;
 
     virtual const core::Property<std::tuple<Track::UriType, Track::MetaData>>& track_meta_data() const = 0;
+
+    virtual const core::Signal<void>& about_to_finish_signal() const = 0;
+    virtual const core::Signal<uint64_t>& seeked_to_signal() const = 0;
+    virtual const core::Signal<void>& end_of_stream_signal() const = 0;
+    virtual const core::Signal<core::ubuntu::media::Player::PlaybackStatus>& playback_status_changed_signal() const = 0;
 };
 }
 }

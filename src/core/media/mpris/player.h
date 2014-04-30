@@ -54,11 +54,15 @@ struct Player
     METHOD(Play, Player, std::chrono::seconds(1))
     METHOD(Seek, Player, std::chrono::seconds(1))
     METHOD(SetPosition, Player, std::chrono::seconds(1))
+    METHOD(CreateVideoSink, Player, std::chrono::seconds(1))
+    METHOD(Key, Player, std::chrono::seconds(1))
     METHOD(OpenUri, Player, std::chrono::seconds(1))
 
     struct Signals
     {
         SIGNAL(Seeked, Player, uint64_t)
+        SIGNAL(EndOfStream, Player, void)
+        SIGNAL(PlaybackStatusChanged, Player, core::ubuntu::media::Player::PlaybackStatus)
     };
 
     struct Properties
@@ -74,6 +78,8 @@ struct Player
         READABLE_PROPERTY(Duration, Player, uint64_t)
         READABLE_PROPERTY(MinimumRate, Player, double)
         READABLE_PROPERTY(MaximumRate, Player, double)
+        READABLE_PROPERTY(IsVideoSource, Player, bool)
+        READABLE_PROPERTY(IsAudioSource, Player, bool)
         READABLE_PROPERTY(CanGoNext, Player, bool)
         READABLE_PROPERTY(CanGoPrevious, Player, bool)
         READABLE_PROPERTY(CanPlay, Player, bool)

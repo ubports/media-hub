@@ -1,5 +1,5 @@
 /*
- * Copyright © 2013 Canonical Ltd.
+ * Copyright © 2013-2014 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -198,7 +198,7 @@ TEST(GStreamerEngine, stop_pause_play_seek_audio_only_works)
                     std::chrono::seconds{40}));
 }
 
-TEST(GStreamerEngine, DISABLED_stop_pause_play_seek_video_works)
+TEST(GStreamerEngine, stop_pause_play_seek_video_works)
 {
     const std::string test_file{"/tmp/h264.avi"};
     const std::string test_file_uri{"file:///tmp/h264.avi"};
@@ -248,8 +248,8 @@ TEST(GStreamerEngine, DISABLED_stop_pause_play_seek_video_works)
 
 TEST(GStreamerEngine, get_position_duration_work)
 {
-    const std::string test_file{"/tmp/test.ogg"};
-    const std::string test_file_uri{"file:///tmp/test.ogg"};
+    const std::string test_file{"/tmp/h264.avi"};
+    const std::string test_file_uri{"file:///tmp/h264.avi"};
     std::remove(test_file.c_str());
     ASSERT_TRUE(test::copy_test_ogg_file_to(test_file));
 
@@ -269,10 +269,18 @@ TEST(GStreamerEngine, get_position_duration_work)
     EXPECT_TRUE(wst.wait_for_state_for(
                     core::ubuntu::media::Engine::State::playing,
                     std::chrono::milliseconds{4000}));
-    sleep(1);
 
-    // FIXME: Ideally we want to seek_to and measure the position there, but seek_to seems
-    // broken from within this unit test
+    EXPECT_TRUE(engine.seek_to(std::chrono::seconds{10}));
+    EXPECT_TRUE(engine.play());
+    EXPECT_TRUE(wst.wait_for_state_for(
+                    core::ubuntu::media::Engine::State::playing,
+                    std::chrono::milliseconds{4000}));
+
+    std::cout << "position: " << engine.position() << std::endl;
+    std::cout << "duration: " << engine.duration() << std::endl;
+
+    // FIXME: This should be 10e9, but seek_to seems to be broken from within this unit test
+    // and I haven't been able to figure out why
     EXPECT_TRUE(engine.position() > 1e9);
 
     EXPECT_TRUE(engine.duration() > 1e9);

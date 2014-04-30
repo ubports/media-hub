@@ -13,41 +13,14 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Authored by: Thomas Voß <thomas.voss@canonical.com>
+ * Authored by: Jim Hodapp <jim.hodapp@canonical.com>
  */
 
-#ifndef CORE_UBUNTU_MEDIA_SERVICE_SKELETON_H_
-#define CORE_UBUNTU_MEDIA_SERVICE_SKELETON_H_
+#include <hybris/media/media_codec_layer.h>
+#include <hybris/media/surface_texture_client_hybris.h>
 
-#include <core/media/service.h>
+#define UNUSED __attribute__((unused))
 
-#include "service_traits.h"
-
-#include <core/dbus/skeleton.h>
-
-#include <memory>
-
-namespace core
+void decoding_service_set_client_death_cb(UNUSED DecodingClientDeathCbHybris callback, UNUSED void *context)
 {
-namespace ubuntu
-{
-namespace media
-{
-class ServiceSkeleton : public core::dbus::Skeleton<core::ubuntu::media::Service>
-{
-  public:
-    ServiceSkeleton();
-    ~ServiceSkeleton();
-
-    void run();
-    void stop();
-
-  private:
-    struct Private;
-    std::shared_ptr<Private> d;
-};
 }
-}
-}
-
-#endif // CORE_UBUNTU_MEDIA_SERVICE_SKELETON_H_

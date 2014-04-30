@@ -43,6 +43,7 @@ class Service : public std::enable_shared_from_this<Service>
     bool operator==(const Service&) const = delete;
 
     virtual std::shared_ptr<Player> create_session(const Player::Configuration&) = 0;
+    virtual void pause_other_sessions(Player::PlayerKey) = 0;
 
   protected:
     Service() = default;

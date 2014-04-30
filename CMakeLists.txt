@@ -25,6 +25,8 @@ find_package(GLog)
 pkg_check_modules(DBUS dbus-1 REQUIRED)
 pkg_check_modules(DBUS_CPP dbus-cpp REQUIRED)
 pkg_check_modules(PROPERTIES_CPP properties-cpp REQUIRED)
+pkg_check_modules(GIO gio-2.0 REQUIRED)
+pkg_check_modules(HYBRIS_MEDIA libmedia REQUIRED)
 
 #####################################################################
 # Enable code coverage calculation with gcov/gcovr/lcov

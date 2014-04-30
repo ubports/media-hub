@@ -24,7 +24,7 @@ namespace media = core::ubuntu::media;
 
 const std::shared_ptr<media::Service> media::Service::Client::instance()
 {
-    std::cout << "Creating a new Service instance" << std::endl;
+    std::cout << "Creating a new static Service instance" << std::endl;
     static std::shared_ptr<media::Service> instance{new media::ServiceStub()};
     return instance;
 }

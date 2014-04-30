@@ -1,4 +1,5 @@
 /*
+ * Copyright © 2013-2014 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -37,17 +38,22 @@ public:
     PlayerImplementation(
             const core::dbus::types::ObjectPath& session_path,
             const std::shared_ptr<Service>& service,
-            const std::shared_ptr<Engine>& engine);
+            PlayerKey key);
     ~PlayerImplementation();
 
     virtual std::shared_ptr<TrackList> track_list();
+    virtual PlayerKey key() const;
 
     virtual bool open_uri(const Track::UriType& uri);
+    virtual void create_video_sink(uint32_t texture_id);
+    virtual GLConsumerWrapperHybris gl_consumer() const;
     virtual void next();
     virtual void previous();
     virtual void play();
     virtual void pause();
     virtual void stop();
+    virtual void set_frame_available_callback(FrameAvailableCb cb, void *context);
+    virtual void set_playback_complete_callback(PlaybackCompleteCb cb, void *context);
     virtual void seek_to(const std::chrono::microseconds& offset);
 
 private:

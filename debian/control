@@ -5,6 +5,7 @@ Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
 Build-Depends: cmake,
                dbus-test-runner,
                debhelper (>= 9),
+               dh-apparmor,
                doxygen,
                gcc-4.7,
                g++-4.7,
@@ -39,6 +40,7 @@ Pre-Depends: dpkg (>= 1.15.6~)
 Depends: libmedia-hub-common0 (= ${binary:Version}),
          libmedia-hub-client0 (= ${binary:Version}),
          ${misc:Depends},
+         libproperties-cpp-dev,
 Suggests: libmedia-hub-doc
 Description: Simple and lightweight media playback service - development files
  Media Hub is a simple and lightweight service for media playback using
@@ -51,6 +53,7 @@ Architecture: any
 Pre-Depends: dpkg (>= 1.15.6~)
 Depends: ${misc:Depends},
          ${shlibs:Depends},
+Suggests: apparmor (>= 2.8.95~2430-0ubuntu4~)
 Description: Simple and lightweight media playback service
  Media Hub is a simple and lightweight service for media playback using
  DBus.
