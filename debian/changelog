@@ -1,10 +1,11 @@
-media-hub (0.0.2+14.10.20140520-0ubuntu1) UNRELEASED; urgency=low
+media-hub (0.0.2+14.10.20140520.1-0ubuntu1) utopic; urgency=low
 
+  [ Oliver Grawert ]
   * make sure media-hub-server only starts on real ubuntu-touch sessions (i.e.
     not in the new unity8 desktop session which lacks the codecs)
     (LP: 1321204)
 
- -- Oliver Grawert <ogra@ubuntu.com>  Tue, 20 May 2014 11:51:57 +0200
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Tue, 20 May 2014 11:59:10 +0000
 
 media-hub (0.0.2+14.10.20140507-0ubuntu1) utopic; urgency=medium
 
