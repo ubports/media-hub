@@ -199,8 +199,8 @@ struct media::PlayerSkeleton::Private
 
         // Check in ~/Music and ~/Videos
         // TODO: when the trust store lands, check it to see if this app can access the dirs and
-        // then remove the explicit whitelist of the music-app
-        else if (pkgname == "com.ubuntu.music" &&
+        // then remove the explicit whitelist of the music-app, and gallery-app
+        else if (pkgname == "com.ubuntu.music" && pkgname == "com.ubuntu.gallery" &&
                 (uri.find(std::string("Music/")) != std::string::npos
                 || uri.find(std::string("Videos/")) != std::string::npos))
         {
