@@ -1,3 +1,11 @@
+media-hub (0.0.2+14.10.20140521-0ubuntu1) utopic; urgency=low
+
+  [ Jim Hodapp ]
+  * Whitelist gallery app to be able to play media in ~/Videos and
+    ~/Music unti the trusted helper is ready
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Wed, 21 May 2014 08:40:05 +0000
+
 media-hub (0.0.2+14.10.20140520.1-0ubuntu1) utopic; urgency=low
 
   [ Oliver Grawert ]
