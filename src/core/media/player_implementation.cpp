@@ -23,6 +23,7 @@
 #include "track_list_implementation.h"
 
 #include "powerd_service.h"
+#include "unity_screen_service.h"
 #include "gstreamer/engine.h"
 
 #define UNUSED __attribute__((unused))
@@ -46,8 +47,8 @@ struct media::PlayerImplementation::Private
               new media::TrackListImplementation(
                   session_path.as_string() + "/TrackList",
                   engine->meta_data_extractor())),
-          disp_lock_name("media-hub-video-playback"),
           sys_lock_name("media-hub-music-playback"),
+          active_display_on_request(false),
           key(key)
     {
         auto bus = std::shared_ptr<dbus::Bus>(new dbus::Bus(core::dbus::WellKnownBus::system));
@@ -55,6 +56,9 @@ struct media::PlayerImplementation::Private
 
         auto stub_service = dbus::Service::use_service(bus, dbus::traits::Service<core::Powerd>::interface_name());
         powerd_session = stub_service->object_for_path(dbus::types::ObjectPath("/com/canonical/powerd"));
+        
+        auto uscreen_stub_service = dbus::Service::use_service(bus, dbus::traits::Service<core::UScreen>::interface_name());
+        uscreen_session = uscreen_stub_service->object_for_path(dbus::types::ObjectPath("/com/canonical/Unity/Screen"));
 
         engine->state().changed().connect(
                     [parent, this](const Engine::State& state)
@@ -96,13 +100,14 @@ struct media::PlayerImplementation::Private
     {
         if (parent->is_video_source())
         {
-            if (disp_cookie.empty())
+            if (!active_display_on_request)
             {
-                auto result = powerd_session->invoke_method_synchronously<core::Powerd::requestDisplayState, std::string>(disp_lock_name, static_cast<int>(1), static_cast<unsigned int>(4));
+                auto result = uscreen_session->invoke_method_synchronously<core::UScreen::keepDisplayOn, int>();
                 if (result.is_error())
                     throw std::runtime_error(result.error().print());
 
                 disp_cookie = result.value();
+                active_display_on_request = true;
             }
         }
         else
@@ -122,10 +127,10 @@ struct media::PlayerImplementation::Private
     {
         if (parent->is_video_source())
         {
-            if (!disp_cookie.empty())
+            if (active_display_on_request)
             {
-                powerd_session->invoke_method_synchronously<core::Powerd::clearDisplayState, void>(disp_cookie);
-                disp_cookie.clear();
+                uscreen_session->invoke_method_synchronously<core::UScreen::removeDisplayOnRequest, void>(disp_cookie);
+                active_display_on_request = false;
             }
         }
         else
@@ -144,9 +149,10 @@ struct media::PlayerImplementation::Private
     dbus::types::ObjectPath session_path;
     std::shared_ptr<TrackListImplementation> track_list;
     std::shared_ptr<dbus::Object> powerd_session;
-    std::string disp_lock_name;
+    std::shared_ptr<dbus::Object> uscreen_session;
     std::string sys_lock_name;
-    std::string disp_cookie;
+    int disp_cookie;
+    bool active_display_on_request;
     std::string sys_cookie;
     PlayerImplementation::PlayerKey key;
 };
