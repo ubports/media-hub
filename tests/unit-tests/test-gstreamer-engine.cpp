@@ -103,7 +103,7 @@ TEST(GStreamerEngine, setting_uri_and_starting_audio_only_playback_works)
     EXPECT_TRUE(engine.play());
     EXPECT_TRUE(wst.wait_for_state_for(
                     core::ubuntu::media::Engine::State::playing,
-                    std::chrono::seconds{10}));
+                    std::chrono::seconds{30}));
 
     wst.wait_for_state_for(
                     core::ubuntu::media::Engine::State::ready,
