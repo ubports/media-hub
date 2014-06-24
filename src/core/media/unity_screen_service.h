@@ -13,7 +13,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- *      Author: Ricardo Mendoza <ricardo.mendoza@canonical.com>
+ *      Author: Alberto Aguirre <alberto.aguirre@canonical.com>
  */
 
 #include <core/dbus/dbus.h>
@@ -34,40 +34,39 @@
 namespace core
 {
 
-struct Powerd
+struct UScreen
 {
     static std::string& name()
     {
-        static std::string s = "com.canonical.powerd";
+        static std::string s = "com.canonical.Unity.Screen";
         return s;
     }
-    
-    struct requestSysState
+
+    struct keepDisplayOn
     {
         static std::string name()
         {
-            static std::string s = "requestSysState";
+            static std::string s = "keepDisplayOn";
             return s;
         }
 
         static const std::chrono::milliseconds default_timeout() { return std::chrono::seconds{1}; }
 
-        typedef Powerd Interface;
+        typedef UScreen Interface;
     };
 
-    struct clearSysState
+    struct removeDisplayOnRequest
     {
         static std::string name()
         {
-            static std::string s = "clearSysState";
+            static std::string s = "removeDisplayOnRequest";
             return s;
         }
  
         static const std::chrono::milliseconds default_timeout() { return std::chrono::seconds{1}; }
 
-        typedef Powerd Interface;
+        typedef UScreen Interface;
     };
-
 };
 
 }
