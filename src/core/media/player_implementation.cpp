@@ -26,6 +26,9 @@
 #include "unity_screen_service.h"
 #include "gstreamer/engine.h"
 
+#include <exception>
+#include <iostream>
+
 #define UNUSED __attribute__((unused))
 
 namespace media = core::ubuntu::media;
@@ -56,7 +59,7 @@ struct media::PlayerImplementation::Private
 
         auto stub_service = dbus::Service::use_service(bus, dbus::traits::Service<core::Powerd>::interface_name());
         powerd_session = stub_service->object_for_path(dbus::types::ObjectPath("/com/canonical/powerd"));
-        
+
         auto uscreen_stub_service = dbus::Service::use_service(bus, dbus::traits::Service<core::UScreen>::interface_name());
         uscreen_session = uscreen_stub_service->object_for_path(dbus::types::ObjectPath("/com/canonical/Unity/Screen"));
 
@@ -98,48 +101,64 @@ struct media::PlayerImplementation::Private
 
     void request_power_state()
     {
-        if (parent->is_video_source())
+        try
         {
-            if (!active_display_on_request)
+            if (parent->is_video_source())
             {
-                auto result = uscreen_session->invoke_method_synchronously<core::UScreen::keepDisplayOn, int>();
-                if (result.is_error())
-                    throw std::runtime_error(result.error().print());
+                if (!active_display_on_request)
+                {
+                    auto result = uscreen_session->invoke_method_synchronously<core::UScreen::keepDisplayOn, int>();
+                    if (result.is_error())
+                        throw std::runtime_error(result.error().print());
 
-                disp_cookie = result.value();
-                active_display_on_request = true;
+                    disp_cookie = result.value();
+                    active_display_on_request = true;
+                }
+            }
+            else
+            {
+                if (sys_cookie.empty())
+                {
+                    auto result = powerd_session->invoke_method_synchronously<core::Powerd::requestSysState, std::string>(sys_lock_name, static_cast<int>(1));
+                    if (result.is_error())
+                        throw std::runtime_error(result.error().print());
+
+                    sys_cookie = result.value();
+                }
             }
         }
-        else
+        catch(std::exception& e)
         {
-            if (sys_cookie.empty())
-            {
-                auto result = powerd_session->invoke_method_synchronously<core::Powerd::requestSysState, std::string>(sys_lock_name, static_cast<int>(1));
-                if (result.is_error())
-                    throw std::runtime_error(result.error().print());
-
-                sys_cookie = result.value();
-            }
+            std::cerr << "Warning: failed to request power state: ";
+            std::cerr << e.what() << std::endl;
         }
     }
 
     void clear_power_state()
     {
-        if (parent->is_video_source())
+        try
         {
-            if (active_display_on_request)
+            if (parent->is_video_source())
             {
-                uscreen_session->invoke_method_synchronously<core::UScreen::removeDisplayOnRequest, void>(disp_cookie);
-                active_display_on_request = false;
+                if (active_display_on_request)
+                {
+                    uscreen_session->invoke_method_synchronously<core::UScreen::removeDisplayOnRequest, void>(disp_cookie);
+                    active_display_on_request = false;
+                }
+            }
+            else
+            {
+                if (!sys_cookie.empty())
+                {
+                    powerd_session->invoke_method_synchronously<core::Powerd::clearSysState, void>(sys_cookie);
+                    sys_cookie.clear();
+                }
             }
         }
-        else
+        catch(std::exception& e)
         {
-            if (!sys_cookie.empty())
-            {
-                powerd_session->invoke_method_synchronously<core::Powerd::clearSysState, void>(sys_cookie);
-                sys_cookie.clear();
-            }
+            std::cerr << "Warning: failed to clear power state: ";
+            std::cerr << e.what() << std::endl;
         }
     }
 
