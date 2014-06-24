@@ -69,7 +69,7 @@ TEST(GStreamerEngine, setting_uri_and_starting_audio_only_playback_works)
     const std::string test_file{"/tmp/test.ogg"};
     const std::string test_file_uri{"file:///tmp/test.ogg"};
     std::remove(test_file.c_str());
-    ASSERT_TRUE(test::copy_test_ogg_file_to(test_file));
+    ASSERT_TRUE(test::copy_test_mp3_file_to(test_file));
 
     core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
                 core::ubuntu::media::Engine::State::ready);
@@ -80,11 +80,11 @@ TEST(GStreamerEngine, setting_uri_and_starting_audio_only_playback_works)
                 [](const std::tuple<media::Track::UriType, media::Track::MetaData>& md)
                 {
                     if (0 < std::get<1>(md).count(media::Engine::Xesam::album()))
-                        EXPECT_EQ("Test", std::get<1>(md).get(media::Engine::Xesam::album()));
+                        EXPECT_EQ("Ezwa", std::get<1>(md).get(media::Engine::Xesam::album()));
                     if (0 < std::get<1>(md).count(media::Engine::Xesam::album_artist()))
-                        EXPECT_EQ("Test", std::get<1>(md).get(media::Engine::Xesam::album_artist()));
+                        EXPECT_EQ("Ezwa", std::get<1>(md).get(media::Engine::Xesam::album_artist()));
                     if (0 < std::get<1>(md).count(media::Engine::Xesam::artist()))
-                        EXPECT_EQ("Test", std::get<1>(md).get(media::Engine::Xesam::artist()));
+                        EXPECT_EQ("Ezwa", std::get<1>(md).get(media::Engine::Xesam::artist()));
                     if (0 < std::get<1>(md).count(media::Engine::Xesam::disc_number()))
                         EXPECT_EQ("42", std::get<1>(md).get(media::Engine::Xesam::disc_number()));
                     if (0 < std::get<1>(md).count(media::Engine::Xesam::genre()))
@@ -103,7 +103,10 @@ TEST(GStreamerEngine, setting_uri_and_starting_audio_only_playback_works)
     EXPECT_TRUE(engine.play());
     EXPECT_TRUE(wst.wait_for_state_for(
                     core::ubuntu::media::Engine::State::playing,
-                    std::chrono::seconds{60}));
+                    std::chrono::seconds{4}));
+    EXPECT_TRUE(wst.wait_for_state_for(
+                    core::ubuntu::media::Engine::State::ready,
+                    std::chrono::seconds{10}));
 }
 
 TEST(GStreamerEngine, setting_uri_and_starting_video_playback_works)
@@ -143,9 +146,9 @@ TEST(GStreamerEngine, setting_uri_and_starting_video_playback_works)
                     core::ubuntu::media::Engine::State::playing,
                     std::chrono::milliseconds{4000}));
 
-    wst.wait_for_state_for(
+    EXPECT_TRUE(wst.wait_for_state_for(
                     core::ubuntu::media::Engine::State::ready,
-                    std::chrono::seconds{10});
+                    std::chrono::seconds{10}));
 }
 
 TEST(GStreamerEngine, stop_pause_play_seek_audio_only_works)
