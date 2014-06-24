@@ -40,22 +40,8 @@ struct WaitableStateTransition
                             const std::chrono::milliseconds& duration)
     {
         std::unique_lock<std::mutex> ul{mutex};
-
-        while (last_state != expected_final_state)
-        {
-            auto status = cv.wait_for(ul, duration);
-
-            if (status == std::cv_status::timeout)
-                return false;
-
-            // In theory, this is not required. However, if executing under
-            // valgrind and together with its single-threaded execution model, we
-            // need to give up the timeslice here.
-            // FIXME(tvoss): GCC 4.7 does not implement yield.
-            // std::this_thread::yield();
-        }
-
-        return true;
+        return cv.wait_for(ul, duration,
+            [&]{ return last_state == expected_final_state;});
     }
 
     void trigger(const T& new_state)
