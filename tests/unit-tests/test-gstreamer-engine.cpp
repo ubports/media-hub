@@ -250,7 +250,7 @@ TEST(GStreamerEngine, get_position_duration_work)
     const std::string test_file{"/tmp/h264.avi"};
     const std::string test_file_uri{"file:///tmp/h264.avi"};
     std::remove(test_file.c_str());
-    ASSERT_TRUE(test::copy_test_ogg_file_to(test_file));
+    ASSERT_TRUE(test::copy_test_avi_file_to(test_file));
 
     core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
                 core::ubuntu::media::Engine::State::ready);
@@ -278,11 +278,8 @@ TEST(GStreamerEngine, get_position_duration_work)
     std::cout << "position: " << engine.position() << std::endl;
     std::cout << "duration: " << engine.duration() << std::endl;
 
-    // FIXME: This should be 10e9, but seek_to seems to be broken from within this unit test
-    // and I haven't been able to figure out why
-    EXPECT_TRUE(engine.position() > 1e9);
-
-    EXPECT_TRUE(engine.duration() > 1e9);
+    EXPECT_TRUE(engine.position() > 10e9);
+    EXPECT_TRUE(engine.duration() > 10e9);
 }
 
 TEST(GStreamerEngine, adjusting_volume_works)
