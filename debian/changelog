@@ -1,3 +1,10 @@
+media-hub (0.0.2+14.10.20140624.4-0ubuntu1) utopic; urgency=low
+
+  [ Alberto Aguirre ]
+  * Use new interface for keeping display on.
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Tue, 24 Jun 2014 22:34:29 +0000
+
 media-hub (0.0.2+14.10.20140521-0ubuntu1) utopic; urgency=low
 
   [ Jim Hodapp ]
