@@ -1,4 +1,4 @@
-libmedia-hub-common.so.0 libmedia-hub-common0 #MINVER#
+libmedia-hub-common.so.1 libmedia-hub-common1 #MINVER#
  (c++)"the_session_bus()@Base" 0.0.1
  (c++)"std::shared_ptr<core::dbus::Bus>::~shared_ptr()@Base" 0.0.1
  (c++)"std::shared_ptr<core::dbus::Bus>::~shared_ptr()@Base" 0.0.1
