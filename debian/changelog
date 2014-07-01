@@ -1,3 +1,9 @@
+media-hub (0.0.2+14.10.20140624.4-0ubuntu3) UNRELEASED; urgency=medium
+
+  * apparmor: add missing proc file used by the mediatek soc
+
+ -- Ricardo Salveti de Araujo <ricardo.salveti@canonical.com>  Tue, 01 Jul 2014 11:16:54 +0800
+
 media-hub (0.0.2+14.10.20140624.4-0ubuntu2) utopic; urgency=medium
 
   * debian/usr.bin.media-hub-server:
