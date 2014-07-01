@@ -26,6 +26,8 @@
   /sys/kernel/debug/tracing/trace_marker w,
   /dev/ashmem rw,
 
+  ptrace (read) peer=@{profile_name},
+
   # Explicitly deny this-- it is not needed
   /dev/fb0 rw,
 
@@ -67,11 +69,11 @@
       path=/com/canonical/Unity/Screen
       interface=com.canonical.Unity.Screen,
 
-  # GStreamer binary registry - hybris pulls this in for everything now, not
-  # just audio
   owner @{HOME}/.gstreamer*/registry.*.bin*       rw,
   owner @{HOME}/.gstreamer*/                      rw,
+  owner @{HOME}/.cache/gstreamer*/                rw,
   owner @{HOME}/.cache/gstreamer*/registry.*.bin* rw,
+  /usr/lib/@{multiarch}/gstreamer*/gstreamer*/gst-plugin-scanner ix,
 
   /{,android/}system/etc/media_codecs.xml r,
   /etc/wildmidi/wildmidi.cfg r,
@@ -80,6 +82,9 @@
 
   # Allow read on all directories
   /**/ r,
+
+  # camera click
+  /{,android/}system/media/audio/ui/camera_click.ogg r,
 
   # Allow read on click install directories, removable media and files in
   # /usr/local/share.
