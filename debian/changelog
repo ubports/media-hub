@@ -1,4 +1,4 @@
-media-hub (0.0.2+14.10.20140624.4-0ubuntu3) UNRELEASED; urgency=medium
+media-hub (0.0.2+14.10.20140624.4-0ubuntu3) utopic; urgency=medium
 
   * apparmor: add missing proc file used by the mediatek soc
 
