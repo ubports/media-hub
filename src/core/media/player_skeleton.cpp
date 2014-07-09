@@ -243,6 +243,25 @@ struct media::PlayerSkeleton::Private
         impl->access_bus()->send(reply);
     }
 
+    void handle_open_uri_extended(const core::dbus::Message::Ptr& in)
+    {
+        Track::UriType uri, cookies;
+        std::string user_agent;
+        in->reader() >> uri;
+        in->reader() >> cookies;
+        in->reader() >> user_agent;
+
+        std::string context = get_client_apparmor_context(in);
+        bool have_access = does_client_have_access(context, uri);
+
+        auto reply = dbus::Message::make_method_return(in);
+        if (have_access)
+            reply->writer() << impl->open_uri(uri, cookies, user_agent);
+        else
+            reply->writer() << false;
+        impl->access_bus()->send(reply);
+    }
+
     media::PlayerSkeleton* impl;
     dbus::Object::Ptr object;
     dbus::Object::Ptr apparmor_session;
@@ -360,6 +379,10 @@ media::PlayerSkeleton::PlayerSkeleton(
                   std::placeholders::_1));
     d->object->install_method_handler<mpris::Player::OpenUri>(
         std::bind(&Private::handle_open_uri,
+                  std::ref(d),
+                  std::placeholders::_1));
+    d->object->install_method_handler<mpris::Player::OpenUriExtended>(
+        std::bind(&Private::handle_open_uri_extended,
                   std::ref(d),
                   std::placeholders::_1));
 }

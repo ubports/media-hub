@@ -275,6 +275,14 @@ bool media::PlayerStub::open_uri(const media::Track::UriType& uri)
     return op.value();
 }
 
+bool media::PlayerStub::open_uri(const Track::UriType& uri, const Track::UriType& cookies,
+        const std::string& user_agent)
+{
+    auto op = d->object->invoke_method_synchronously<mpris::Player::OpenUriExtended, bool>(uri, cookies, user_agent);
+
+    return op.value();
+}
+
 void media::PlayerStub::create_video_sink(uint32_t texture_id)
 {
     auto op = d->object->invoke_method_synchronously<mpris::Player::CreateVideoSink, void>(texture_id);

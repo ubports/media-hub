@@ -276,6 +276,16 @@ bool media::PlayerImplementation::open_uri(const Track::UriType& uri)
     return d->engine->open_resource_for_uri(uri);
 }
 
+bool media::PlayerImplementation::open_uri(const Track::UriType& uri, const Track::UriType& cookies,
+        const std::string& user_agent)
+{
+    // TODO: Implement this for proper Oxide media playback support
+    (void)uri;
+    (void)cookies;
+    (void)user_agent;
+    return true;
+}
+
 void media::PlayerImplementation::create_video_sink(uint32_t texture_id)
 {
     d->engine->create_video_sink(texture_id);
