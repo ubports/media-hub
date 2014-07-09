@@ -35,7 +35,7 @@
             static const std::string s{#Name}; \
             return s; \
         } \
-        inline static const std::chrono::milliseconds default_timeout() { return std::chrono::milliseconds{2000}; } \
+        inline static const std::chrono::milliseconds default_timeout() { return std::chrono::milliseconds{10000}; } \
     };\
 
 #define SIGNAL(Name, Itf, ArgType) \
