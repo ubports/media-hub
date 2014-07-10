@@ -1,3 +1,11 @@
+media-hub (0.0.2+14.10.20140710-0ubuntu1) utopic; urgency=low
+
+  [ Ricardo Mendoza ]
+  * Increase default timeout for MPRIS handlers. (Author: Alfonso
+    Sanchez-Beato)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 10 Jul 2014 12:57:59 +0000
+
 media-hub (0.0.2+14.10.20140624.4-0ubuntu3) utopic; urgency=medium
 
   * apparmor: add missing proc file used by the mediatek soc
