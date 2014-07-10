@@ -26,6 +26,18 @@
 
 #define SECONDS(seconds) std::chrono::seconds{seconds};
 
+#define METHOD_WITH_TIMEOUT_MS(Name, Itf, Timeout) \
+    struct Name \
+    { \
+        typedef Itf Interface; \
+        inline static const std::string& name() \
+        { \
+            static const std::string s{#Name}; \
+            return s; \
+        } \
+        inline static const std::chrono::milliseconds default_timeout() { return std::chrono::milliseconds{Timeout}; } \
+    };\
+
 #define METHOD(Name, Itf, Timeout) \
     struct Name \
     { \
@@ -35,7 +47,7 @@
             static const std::string s{#Name}; \
             return s; \
         } \
-        inline static const std::chrono::milliseconds default_timeout() { return std::chrono::milliseconds{2000}; } \
+        inline static const std::chrono::milliseconds default_timeout() { return std::chrono::milliseconds{7000}; } \
     };\
 
 #define SIGNAL(Name, Itf, ArgType) \
