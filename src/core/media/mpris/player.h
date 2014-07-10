@@ -48,7 +48,7 @@ struct Player
 
     METHOD(Next, Player, std::chrono::seconds(1))
     METHOD(Previous, Player, std::chrono::seconds(1))
-    METHOD(Pause, Player, std::chrono::seconds(1))
+    METHOD_WITH_TIMEOUT_MS(Pause, Player, 1000)
     METHOD(PlayPause, Player, std::chrono::seconds(1))
     METHOD(Stop, Player, std::chrono::seconds(1))
     METHOD(Play, Player, std::chrono::seconds(1))
