@@ -46,7 +46,7 @@ class PlayerStub : public core::dbus::Stub<Player>
     virtual PlayerKey key() const;
 
     virtual bool open_uri(const Track::UriType& uri);
-    virtual bool open_uri(const Track::UriType& uri, const Track::UriType& cookies,
+    virtual bool open_uri(const Track::UriType& uri, const std::string& cookies,
             const std::string& user_agent);
     virtual void create_video_sink(uint32_t texture_id);
     virtual GLConsumerWrapperHybris gl_consumer() const;

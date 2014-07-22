@@ -276,7 +276,7 @@ bool media::PlayerImplementation::open_uri(const Track::UriType& uri)
     return d->engine->open_resource_for_uri(uri);
 }
 
-bool media::PlayerImplementation::open_uri(const Track::UriType& uri, const Track::UriType& cookies,
+bool media::PlayerImplementation::open_uri(const Track::UriType& uri, const std::string& cookies,
         const std::string& user_agent)
 {
     // TODO: Implement this for proper Oxide media playback support

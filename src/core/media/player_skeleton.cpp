@@ -245,8 +245,8 @@ struct media::PlayerSkeleton::Private
 
     void handle_open_uri_extended(const core::dbus::Message::Ptr& in)
     {
-        Track::UriType uri, cookies;
-        std::string user_agent;
+        Track::UriType uri;
+        std::string cookies, user_agent;
         in->reader() >> uri;
         in->reader() >> cookies;
         in->reader() >> user_agent;
