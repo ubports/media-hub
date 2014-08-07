@@ -202,7 +202,8 @@ struct media::PlayerSkeleton::Private
         // then remove the explicit whitelist of the music-app, and gallery-app
         else if ((pkgname == "com.ubuntu.music" || pkgname == "com.ubuntu.gallery") &&
                 (uri.find(std::string("Music/")) != std::string::npos
-                || uri.find(std::string("Videos/")) != std::string::npos))
+                || uri.find(std::string("Videos/")) != std::string::npos
+                || uri.find(std::string("/media")) != std::string::npos))
         {
             std::cout << "Client can access content in ~/Music or ~/Videos" << std::endl;
             return true;
