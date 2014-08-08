@@ -84,6 +84,10 @@
   owner @{HOME}/.cache/gstreamer*/registry.*.bin* rw,
   /usr/lib/@{multiarch}/gstreamer*/gstreamer*/gst-plugin-scanner ix,
 
+  # The user-tmp abstraction allows writes to these files, but gstreamer sometimes
+  # needs to also mmap its temporary files
+  owner /tmp/orcexec* m,
+
   /{,android/}system/etc/media_codecs.xml r,
   /etc/wildmidi/wildmidi.cfg r,
 
