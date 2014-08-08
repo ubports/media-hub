@@ -6,6 +6,10 @@ cd build
 cmake ..
 make
 
+To Run From Console:
+--------------------
+CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME=mirsink CORE_UBUNTU_MEDIA_SERVICE_AUDIO_SINK_NAME=pulsesink src/core/media/media-hub-server
+
 To Run Unit Tests:
 ------------------
 

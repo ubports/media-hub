@@ -13,9 +13,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
+ *              Jim Hodapp <jim.hodapp@canonical.com>
  */
 
 #include "player_implementation.h"
+#include "util/timeout.h"
 
 #include <unistd.h>
 
@@ -28,6 +30,7 @@
 
 #include <exception>
 #include <iostream>
+#include <mutex>
 
 #define UNUSED __attribute__((unused))
 
@@ -38,6 +41,14 @@ using namespace std;
 
 struct media::PlayerImplementation::Private
 {
+    enum class wakelock_clear_t
+    {
+        WAKELOCK_CLEAR_INACTIVE,
+        WAKELOCK_CLEAR_DISPLAY,
+        WAKELOCK_CLEAR_SYSTEM,
+        WAKELOCK_CLEAR_INVALID
+    };
+
     Private(PlayerImplementation* parent,
             const dbus::types::ObjectPath& session_path,
             const std::shared_ptr<media::Service>& service,
@@ -72,6 +83,7 @@ struct media::PlayerImplementation::Private
             {
                 parent->playback_status().set(media::Player::ready);
                 clear_power_state();
+                clear_all_wakelocks();
                 break;
             }
             case Engine::State::playing:
@@ -84,12 +96,14 @@ struct media::PlayerImplementation::Private
             {
                 parent->playback_status().set(media::Player::stopped);
                 clear_power_state();
+                clear_all_wakelocks();
                 break;
             }
             case Engine::State::paused:
             {
                 parent->playback_status().set(media::Player::paused);
                 clear_power_state();
+                clear_all_wakelocks();
                 break;
             }
             default:
@@ -110,55 +124,114 @@ struct media::PlayerImplementation::Private
                     auto result = uscreen_session->invoke_method_synchronously<core::UScreen::keepDisplayOn, int>();
                     if (result.is_error())
                         throw std::runtime_error(result.error().print());
+                    cout << "Requested new display wakelock" << endl;
 
                     disp_cookie = result.value();
                     active_display_on_request = true;
+                    std::lock_guard<std::mutex> lock(wakelock_mutex);
+                    display_wakelocks++;
                 }
             }
             else
             {
-                if (sys_cookie.empty())
-                {
-                    auto result = powerd_session->invoke_method_synchronously<core::Powerd::requestSysState, std::string>(sys_lock_name, static_cast<int>(1));
-                    if (result.is_error())
-                        throw std::runtime_error(result.error().print());
+                auto result = powerd_session->invoke_method_synchronously<core::Powerd::requestSysState, std::string>(sys_lock_name, static_cast<int>(1));
+                if (result.is_error())
+                    throw std::runtime_error(result.error().print());
+                cout << "Requested new system wakelock" << endl;
 
-                    sys_cookie = result.value();
-                }
+                sys_cookie = result.value();
+                std::lock_guard<std::mutex> lock(wakelock_mutex);
+                system_wakelocks++;
             }
         }
-        catch(std::exception& e)
+        catch(const std::exception& e)
         {
             std::cerr << "Warning: failed to request power state: ";
             std::cerr << e.what() << std::endl;
         }
     }
 
-    void clear_power_state()
+    void clear_all_wakelocks()
+    {
+        uint8_t i;
+        std::lock_guard<std::mutex> lock(wakelock_mutex);
+        for (i=0; i<system_wakelocks; i++)
+            clear_wakelock(wakelock_clear_t::WAKELOCK_CLEAR_SYSTEM);
+        for (i=0; i<display_wakelocks; i++)
+            clear_wakelock(wakelock_clear_t::WAKELOCK_CLEAR_DISPLAY);
+
+        system_wakelocks = display_wakelocks = 0;
+    }
+
+    void clear_wakelock(const wakelock_clear_t &wakelock)
     {
         try
         {
-            if (parent->is_video_source())
+            switch (wakelock)
             {
-                if (active_display_on_request)
-                {
-                    uscreen_session->invoke_method_synchronously<core::UScreen::removeDisplayOnRequest, void>(disp_cookie);
-                    active_display_on_request = false;
-                }
-            }
-            else
-            {
-                if (!sys_cookie.empty())
-                {
-                    powerd_session->invoke_method_synchronously<core::Powerd::clearSysState, void>(sys_cookie);
-                    sys_cookie.clear();
-                }
+                case wakelock_clear_t::WAKELOCK_CLEAR_INACTIVE:
+                    break;
+                case wakelock_clear_t::WAKELOCK_CLEAR_SYSTEM:
+                    if (engine->state() != Engine::State::playing && !sys_cookie.empty())
+                    {
+                        cout << "Clearing system wakelock" << endl;
+                        powerd_session->invoke_method_synchronously<core::Powerd::clearSysState, void>(sys_cookie);
+                        wakelock_timeout.reset(nullptr);
+                        sys_cookie.clear();
+                    }
+                    break;
+                case wakelock_clear_t::WAKELOCK_CLEAR_DISPLAY:
+                    if (engine->state() != Engine::State::playing && active_display_on_request)
+                    {
+                        cout << "Clearing display wakelock" << endl;
+                        uscreen_session->invoke_method_synchronously<core::UScreen::removeDisplayOnRequest, void>(disp_cookie);
+                        wakelock_timeout.reset(nullptr);
+                        active_display_on_request = false;
+                    }
+                    break;
+                case wakelock_clear_t::WAKELOCK_CLEAR_INVALID:
+                default:
+                    cerr << "Can't clear invalid wakelock type" << endl;
             }
         }
-        catch(std::exception& e)
+        catch(const std::exception& e)
         {
             std::cerr << "Warning: failed to clear power state: ";
             std::cerr << e.what() << std::endl;
+        }
+    }
+
+    void clear_power_state()
+    {
+        if (parent->is_video_source())
+        {
+            if (active_display_on_request)
+            {
+                std::lock_guard<std::mutex> lock(wakelock_mutex);
+                if (wakelock_timeout != nullptr)
+                {
+                    cout << "Wakelock clear timeout already in progress, not adding another one" << endl;
+                    return;
+                }
+                cout << "Adding a timeout to clear display wakelock" << endl;
+                wakelock_timeout.reset(new timeout(6000, true, std::bind(&Private::clear_wakelock, this, std::placeholders::_1),
+                            wakelock_clear_t::WAKELOCK_CLEAR_DISPLAY));
+            }
+        }
+        else
+        {
+            if (!sys_cookie.empty())
+            {
+                std::lock_guard<std::mutex> lock(wakelock_mutex);
+                if (wakelock_timeout != nullptr)
+                {
+                    cout << "Wakelock clear timeout already in progress, not adding another one" << endl;
+                    return;
+                }
+                cout << "Adding a delay to clear system wakelock" << endl;
+                wakelock_timeout.reset(new timeout(6000, true, std::bind(&Private::clear_wakelock, this, std::placeholders::_1),
+                            wakelock_clear_t::WAKELOCK_CLEAR_SYSTEM));
+            }
         }
     }
 
@@ -173,6 +246,10 @@ struct media::PlayerImplementation::Private
     int disp_cookie;
     bool active_display_on_request;
     std::string sys_cookie;
+    std::mutex wakelock_mutex;
+    uint8_t system_wakelocks;
+    uint8_t display_wakelocks;
+    std::unique_ptr<timeout> wakelock_timeout;
     PlayerImplementation::PlayerKey key;
 };
 
