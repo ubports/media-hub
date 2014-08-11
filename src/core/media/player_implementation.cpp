@@ -101,7 +101,7 @@ struct media::PlayerImplementation::Private
             case Engine::State::paused:
             {
                 parent->playback_status().set(media::Player::paused);
-                cout << "Pausing for 6 seconds before clearing all wakelocks after a pause" << endl;
+                cout << "Delaying for 6 seconds before clearing all wakelocks after a pause" << endl;
                 pause_wakelock_timeout.reset(new timeout(6000, true, std::bind(&Private::clear_all_wakelocks, this)));
                 break;
             }
@@ -160,8 +160,6 @@ struct media::PlayerImplementation::Private
             clear_wakelock(wakelock_clear_t::WAKELOCK_CLEAR_DISPLAY);
 
         system_wakelocks = display_wakelocks = 0;
-        active_display_on_request = false;
-        sys_cookie.clear();
     }
 
     void clear_wakelock(const wakelock_clear_t &wakelock)
