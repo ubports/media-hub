@@ -83,7 +83,6 @@ struct media::PlayerImplementation::Private
             {
                 parent->playback_status().set(media::Player::ready);
                 clear_power_state();
-                clear_all_wakelocks();
                 break;
             }
             case Engine::State::playing:
@@ -102,8 +101,8 @@ struct media::PlayerImplementation::Private
             case Engine::State::paused:
             {
                 parent->playback_status().set(media::Player::paused);
-                clear_power_state();
-                clear_all_wakelocks();
+                cout << "Pausing for 6 seconds before clearing all wakelocks after a pause" << endl;
+                pause_wakelock_timeout.reset(new timeout(6000, true, std::bind(&Private::clear_all_wakelocks, this)));
                 break;
             }
             default:
@@ -161,6 +160,8 @@ struct media::PlayerImplementation::Private
             clear_wakelock(wakelock_clear_t::WAKELOCK_CLEAR_DISPLAY);
 
         system_wakelocks = display_wakelocks = 0;
+        active_display_on_request = false;
+        sys_cookie.clear();
     }
 
     void clear_wakelock(const wakelock_clear_t &wakelock)
@@ -176,7 +177,6 @@ struct media::PlayerImplementation::Private
                     {
                         cout << "Clearing system wakelock" << endl;
                         powerd_session->invoke_method_synchronously<core::Powerd::clearSysState, void>(sys_cookie);
-                        wakelock_timeout.reset(nullptr);
                         sys_cookie.clear();
                     }
                     break;
@@ -185,7 +185,6 @@ struct media::PlayerImplementation::Private
                     {
                         cout << "Clearing display wakelock" << endl;
                         uscreen_session->invoke_method_synchronously<core::UScreen::removeDisplayOnRequest, void>(disp_cookie);
-                        wakelock_timeout.reset(nullptr);
                         active_display_on_request = false;
                     }
                     break;
@@ -199,6 +198,8 @@ struct media::PlayerImplementation::Private
             std::cerr << "Warning: failed to clear power state: ";
             std::cerr << e.what() << std::endl;
         }
+
+        wakelock_timeout.reset(nullptr);
     }
 
     void clear_power_state()
@@ -228,7 +229,7 @@ struct media::PlayerImplementation::Private
                     cout << "Wakelock clear timeout already in progress, not adding another one" << endl;
                     return;
                 }
-                cout << "Adding a delay to clear system wakelock" << endl;
+                cout << "Adding a timeout to clear system wakelock" << endl;
                 wakelock_timeout.reset(new timeout(6000, true, std::bind(&Private::clear_wakelock, this, std::placeholders::_1),
                             wakelock_clear_t::WAKELOCK_CLEAR_SYSTEM));
             }
@@ -250,6 +251,7 @@ struct media::PlayerImplementation::Private
     uint8_t system_wakelocks;
     uint8_t display_wakelocks;
     std::unique_ptr<timeout> wakelock_timeout;
+    std::unique_ptr<timeout> pause_wakelock_timeout;
     PlayerImplementation::PlayerKey key;
 };
 

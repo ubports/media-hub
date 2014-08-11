@@ -36,7 +36,6 @@ namespace media
 class timeout
 {
 public:
-    template <class callable, class... arguments>
     /**
      * @brief Start a timeout with millisecond resolution
      * @param timeout_ms Timeout value in milliseconds
@@ -44,7 +43,8 @@ public:
      * @param f The function to call when the timeout expires
      * @param args Any arguments to pass to f when the timeout expires
      */
-    timeout(unsigned int timeout_ms, bool async, callable&& f, arguments&&... args)
+    template <class callable, class... arguments>
+    timeout(int timeout_ms, bool async, callable&& f, arguments&&... args)
     {
         std::function<typename std::result_of<callable(arguments...)>::type()>
             task(std::bind(std::forward<callable>(f), std::forward<arguments>(args)...));
