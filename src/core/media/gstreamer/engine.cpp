@@ -1,5 +1,5 @@
 /*
- * Copyright © 2013 Canonical Ltd.
+ * Copyright © 2013-2014 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -175,6 +175,11 @@ struct gstreamer::Engine::Private
         seeked_to(value);
     }
 
+    void on_client_disconnected()
+    {
+        client_disconnected();
+    }
+
     void on_end_of_stream()
     {
         end_of_stream();
@@ -214,6 +219,11 @@ struct gstreamer::Engine::Private
                       &Private::on_seeked_to,
                       this,
                       std::placeholders::_1))),
+          client_disconnected_connection(
+              playbin.signals.client_disconnected.connect(
+                  std::bind(
+                      &Private::on_client_disconnected,
+                      this))),
           on_end_of_stream_connection(
               playbin.signals.on_end_of_stream.connect(
                   std::bind(
@@ -236,10 +246,12 @@ struct gstreamer::Engine::Private
     core::ScopedConnection on_tag_available_connection;
     core::ScopedConnection on_volume_changed_connection;
     core::ScopedConnection on_seeked_to_connection;
+    core::ScopedConnection client_disconnected_connection;
     core::ScopedConnection on_end_of_stream_connection;
 
     core::Signal<void> about_to_finish;
     core::Signal<uint64_t> seeked_to;
+    core::Signal<void> client_disconnected;
     core::Signal<void> end_of_stream;
     core::Signal<media::Player::PlaybackStatus> playback_status_changed;
 };
@@ -381,6 +393,11 @@ const core::Signal<void>& gstreamer::Engine::about_to_finish_signal() const
 const core::Signal<uint64_t>& gstreamer::Engine::seeked_to_signal() const
 {
     return d->seeked_to;
+}
+
+const core::Signal<void>& gstreamer::Engine::client_disconnected_signal() const
+{
+    return d->client_disconnected;
 }
 
 const core::Signal<void>& gstreamer::Engine::end_of_stream_signal() const

@@ -138,6 +138,13 @@ struct media::PlayerImplementation::Private
 
     }
 
+    ~Private()
+    {
+        // Make sure that we don't hold on to the wakelocks if media-hub
+        // ever gets restarted
+        clear_wakelocks();
+    }
+
     void request_power_state()
     {
         cout << __PRETTY_FUNCTION__ << endl;
@@ -236,6 +243,27 @@ struct media::PlayerImplementation::Private
             wakelock_clear_t::WAKELOCK_CLEAR_DISPLAY : wakelock_clear_t::WAKELOCK_CLEAR_SYSTEM;
     }
 
+    void clear_wakelocks()
+    {
+        cout << __PRETTY_FUNCTION__ << endl;
+        if (system_wakelock_count > 0)
+        {
+            {
+                std::lock_guard<std::mutex> lock(wakelock_mutex);
+                system_wakelock_count = 1;
+            }
+            clear_wakelock(wakelock_clear_t::WAKELOCK_CLEAR_SYSTEM);
+        }
+        if (display_wakelock_count > 0)
+        {
+            {
+                std::lock_guard<std::mutex> lock(wakelock_mutex);
+                display_wakelock_count = 1;
+            }
+            clear_wakelock(wakelock_clear_t::WAKELOCK_CLEAR_DISPLAY);
+        }
+    }
+
     PlayerImplementation* parent;
     std::shared_ptr<Service> service;
     std::shared_ptr<Engine> engine;
@@ -316,6 +344,13 @@ media::PlayerImplementation::PlayerImplementation(
             if (!uri.empty())
                 d->parent->open_uri(uri);
         }
+    });
+
+    d->engine->client_disconnected_signal().connect([this]()
+    {
+        // If the client disconnects, make sure both wakelock types
+        // are cleared
+        d->clear_wakelocks();
     });
 
     d->engine->seeked_to_signal().connect([this](uint64_t value)

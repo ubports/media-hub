@@ -1,5 +1,5 @@
 /*
- * Copyright © 2013 Canonical Ltd.
+ * Copyright © 2013-2014 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -53,6 +53,7 @@ public:
 
     const core::Signal<void>& about_to_finish_signal() const;
     const core::Signal<uint64_t>& seeked_to_signal() const;
+    const core::Signal<void>& client_disconnected_signal() const;
     const core::Signal<void>& end_of_stream_signal() const;
     const core::Signal<core::ubuntu::media::Player::PlaybackStatus>& playback_status_changed_signal() const;
 
