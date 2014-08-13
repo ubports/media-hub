@@ -1,3 +1,15 @@
+media-hub (1.0.0+14.10.20140813-0ubuntu1) utopic; urgency=low
+
+  [ Jim Hodapp ]
+  * Allow music to advance to the next song when the device is not
+    charging (LP: #1342351)
+
+  [ Jim Hodapp<jim.hodapp@canonical.com> ]
+  * Allow music to advance to the next song when the device is not
+    charging (LP: #1342351)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Wed, 13 Aug 2014 01:42:00 +0000
+
 media-hub (1.0.0+14.10.20140808.1-0ubuntu1) utopic; urgency=low
 
   [ Ubuntu daily release ]
