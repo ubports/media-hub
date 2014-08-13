@@ -271,6 +271,13 @@ bool gstreamer::Engine::open_resource_for_uri(const media::Track::UriType& uri)
     return true;
 }
 
+bool gstreamer::Engine::open_resource_for_uri(const media::Track::UriType& uri, const std::string& cookies,
+        const std::string& user_agent)
+{
+    d->playbin.set_uri(uri, cookies, user_agent);
+    return true;
+}
+
 void gstreamer::Engine::create_video_sink(uint32_t texture_id)
 {
     d->playbin.create_video_sink(texture_id);
