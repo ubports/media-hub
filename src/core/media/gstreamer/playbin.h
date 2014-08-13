@@ -116,6 +116,8 @@ struct Playbin
         // in a state that is ready for the next client that connects to the
         // service
         reset_pipeline();
+        // Signal to the Player class that the client side has disconnected
+        signals.client_disconnected();
     }
 
     void reset_pipeline()
@@ -411,6 +413,7 @@ struct Playbin
         core::Signal<uint64_t> on_seeked_to;
         core::Signal<void> on_end_of_stream;
         core::Signal<media::Player::PlaybackStatus> on_playback_status_changed;
+        core::Signal<void> client_disconnected;
     } signals;
 };
 }

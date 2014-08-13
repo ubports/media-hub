@@ -41,7 +41,7 @@ struct Powerd
         static std::string s = "com.canonical.powerd";
         return s;
     }
-    
+
     struct requestSysState
     {
         static std::string name()
@@ -62,7 +62,7 @@ struct Powerd
             static std::string s = "clearSysState";
             return s;
         }
- 
+
         static const std::chrono::milliseconds default_timeout() { return std::chrono::seconds{1}; }
 
         typedef Powerd Interface;
