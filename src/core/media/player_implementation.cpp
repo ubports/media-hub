@@ -77,6 +77,14 @@ struct media::PlayerImplementation::Private
         auto uscreen_stub_service = dbus::Service::use_service(bus, dbus::traits::Service<core::UScreen>::interface_name());
         uscreen_session = uscreen_stub_service->object_for_path(dbus::types::ObjectPath("/com/canonical/Unity/Screen"));
 
+        /*
+         * Wakelock state logic:
+         *
+         * PLAYING->READY: delay 4 seconds and try to clear current wakelock type
+         * PLAYING->PAUSED or PLAYING->STOPPED: delay 4 seconds and try to clear current wakelock type
+         * READY->PAUSED: request a new wakelock (system or display)
+         * PLAYING->PAUSED: delay 4 seconds and try to clear current wakelock type
+         */
         engine->state().changed().connect(
                     [parent, this](const Engine::State& state)
         {
@@ -84,11 +92,9 @@ struct media::PlayerImplementation::Private
             {
             case Engine::State::ready:
             {
-                cout << "READY state" << endl;
                 parent->playback_status().set(media::Player::ready);
                 if (previous_state == Engine::State::playing)
                 {
-                    cout << "Delaying for 4 seconds before clearing all wakelocks after a PLAYING->READY transition" << endl;
                     wakelock_timeout.reset(new timeout(4000, true, std::bind(&Private::clear_wakelock,
                                     this, std::placeholders::_1), current_wakelock_type()));
                 }
@@ -96,33 +102,27 @@ struct media::PlayerImplementation::Private
             }
             case Engine::State::playing:
             {
-                cout << "PLAYING state" << endl;
                 parent->playback_status().set(media::Player::playing);
                 if (previous_state == Engine::State::stopped || previous_state == Engine::State::paused)
                 {
-                    cout << "Trying to request new wakelock from STOPPED->PLAYING || PAUSED->PLAYING transition" << endl;
                     request_power_state();
                 }
                 break;
             }
             case Engine::State::stopped:
             {
-                cout << "STOPPED state" << endl;
                 parent->playback_status().set(media::Player::stopped);
                 break;
             }
             case Engine::State::paused:
             {
-                cout << "PAUSED state" << endl;
                 parent->playback_status().set(media::Player::paused);
                 if (previous_state == Engine::State::ready)
                 {
-                    cout << "Trying to request new wakelock from READY->PAUSED transition" << endl;
                     request_power_state();
                 }
                 else if (previous_state == Engine::State::playing)
                 {
-                    cout << "Delaying for 4 seconds before clearing all wakelocks after a pause" << endl;
                     wakelock_timeout.reset(new timeout(4000, true, std::bind(&Private::clear_wakelock,
                                     this, std::placeholders::_1), current_wakelock_type()));
                 }
@@ -140,14 +140,13 @@ struct media::PlayerImplementation::Private
 
     ~Private()
     {
-        // Make sure that we don't hold on to the wakelocks if media-hub
-        // ever gets restarted
+        // Make sure that we don't hold on to the wakelocks if media-hub-server
+        // ever gets restarted manually or automatically
         clear_wakelocks();
     }
 
     void request_power_state()
     {
-        cout << __PRETTY_FUNCTION__ << endl;
         try
         {
             if (parent->is_video_source())
@@ -162,6 +161,7 @@ struct media::PlayerImplementation::Private
                 }
 
                 {
+                    // Keep track of how many display wakelocks have been requested
                     std::lock_guard<std::mutex> lock(wakelock_mutex);
                     ++display_wakelock_count;
                 }
@@ -178,6 +178,7 @@ struct media::PlayerImplementation::Private
                 }
 
                 {
+                    // Keep track of how many system wakelocks have been requested
                     std::lock_guard<std::mutex> lock(wakelock_mutex);
                     ++system_wakelock_count;
                 }
@@ -245,7 +246,7 @@ struct media::PlayerImplementation::Private
 
     void clear_wakelocks()
     {
-        cout << __PRETTY_FUNCTION__ << endl;
+        // Clear both types of wakelocks (display and system)
         if (system_wakelock_count > 0)
         {
             {
