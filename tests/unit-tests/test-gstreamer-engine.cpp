@@ -151,6 +151,31 @@ TEST(GStreamerEngine, setting_uri_and_starting_video_playback_works)
                     std::chrono::seconds{10}));
 }
 
+TEST(GStreamerEngine, setting_uri_and_audio_playback_with_http_headers_works)
+{
+    const std::string test_audio_uri{"http://stream-dc1.radioparadise.com/mp3-32"};
+
+    core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
+                core::ubuntu::media::Engine::State::ready);
+
+    gstreamer::Engine engine;
+
+    engine.state().changed().connect(
+                std::bind(
+                    &core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State>::trigger,
+                    std::ref(wst),
+                    std::placeholders::_1));
+
+    EXPECT_TRUE(engine.open_resource_for_uri(test_audio_uri, "", "MediaHub"));
+    EXPECT_TRUE(engine.play());
+    EXPECT_TRUE(wst.wait_for_state_for(
+                    core::ubuntu::media::Engine::State::playing,
+                    std::chrono::seconds{10}));
+    EXPECT_TRUE(wst.wait_for_state_for(
+                    core::ubuntu::media::Engine::State::ready,
+                    std::chrono::seconds{10}));
+}
+
 TEST(GStreamerEngine, stop_pause_play_seek_audio_only_works)
 {
     const std::string test_file{"/tmp/test.ogg"};
