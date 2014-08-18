@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
+ *              Jim Hodapp <jim.hodapp@canonical.com>
  */
 
 #include "apparmor.h"
@@ -206,6 +207,11 @@ struct media::PlayerSkeleton::Private
                 || uri.find(std::string("/media")) != std::string::npos))
         {
             std::cout << "Client can access content in ~/Music or ~/Videos" << std::endl;
+            return true;
+        }
+        else if (uri.find(std::string("/usr/share/sounds")) != std::string::npos)
+        {
+            std::cout << "Client can access content in /usr/share/sounds" << std::endl;
             return true;
         }
         else if (uri.find(std::string("http://")) != std::string::npos
