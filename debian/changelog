@@ -1,3 +1,12 @@
+media-hub (1.0.0+14.10.20140813-0ubuntu2) utopic; urgency=medium
+
+  * debian/usr.bin.media-hub-server: remove 'audit deny owner /** m,' since it
+    is overriding the rule to allow mmap of /tmp/orcexec files (AppArmor will
+    still deny other mmap access)
+    - LP: #1357348
+
+ -- Jamie Strandboge <jamie@ubuntu.com>  Fri, 15 Aug 2014 07:22:05 -0500
+
 media-hub (1.0.0+14.10.20140813-0ubuntu1) utopic; urgency=low
 
   [ Jim Hodapp ]
