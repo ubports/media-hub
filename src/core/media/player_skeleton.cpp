@@ -24,6 +24,7 @@
 #include "property_stub.h"
 #include "the_session_bus.h"
 
+#include "mpris/media_player2.h"
 #include "mpris/player.h"
 
 #include <core/dbus/object.h>
@@ -33,6 +34,11 @@
 
 namespace dbus = core::dbus;
 namespace media = core::ubuntu::media;
+
+namespace
+{
+unsigned int counter = {0};
+}
 
 struct media::PlayerSkeleton::Private
 {
@@ -44,6 +50,7 @@ struct media::PlayerSkeleton::Private
           object(session),
           apparmor_session(nullptr),
           skeleton{mpris::Player::Skeleton::Configuration{bus, session}},
+          exported{bus},
           signals
           {
               skeleton.signals.seeked_to,
@@ -239,6 +246,23 @@ struct media::PlayerSkeleton::Private
     dbus::Object::Ptr apparmor_session;
 
     mpris::Player::Skeleton skeleton;
+
+    struct Exported
+    {
+        explicit Exported(const dbus::Bus::Ptr& bus)
+            : service{dbus::Service::add_service(bus, "org.mpris.MediaPlayer2.MediaHub." + std::to_string(counter++))},
+              object{service->add_object_for_path(dbus::types::ObjectPath{"/org/mpris/MediaPlayer2"})},
+              media_player{mpris::MediaPlayer2::Skeleton::Configuration{bus, object}},
+              player{mpris::Player::Skeleton::Configuration{bus, object}}
+        {
+        }
+
+        dbus::Service::Ptr service;
+        dbus::Object::Ptr object;
+
+        mpris::MediaPlayer2::Skeleton media_player;
+        mpris::Player::Skeleton player;
+    } exported;
 
     struct Signals
     {
