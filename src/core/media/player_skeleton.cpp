@@ -30,7 +30,9 @@
 #include <core/dbus/object.h>
 #include <core/dbus/property.h>
 #include <core/dbus/stub.h>
+
 #include <core/dbus/asio/executor.h>
+#include <core/dbus/interfaces/properties.h>
 
 namespace dbus = core::dbus;
 namespace media = core::ubuntu::media;
@@ -50,6 +52,10 @@ struct media::PlayerSkeleton::Private
           object(session),
           apparmor_session(nullptr),
           skeleton{mpris::Player::Skeleton::Configuration{bus, session}},
+          skeleton_properties_changed
+          {
+              object->get_signal<core::dbus::interfaces::Properties::Signals::PropertiesChanged>()
+          },
           exported{bus},
           signals
           {
@@ -246,6 +252,11 @@ struct media::PlayerSkeleton::Private
     dbus::Object::Ptr apparmor_session;
 
     mpris::Player::Skeleton skeleton;
+    dbus::Signal
+    <
+        core::dbus::interfaces::Properties::Signals::PropertiesChanged,
+        core::dbus::interfaces::Properties::Signals::PropertiesChanged::ArgumentType
+    >::Ptr skeleton_properties_changed;
 
     struct Exported
     {
@@ -253,7 +264,15 @@ struct media::PlayerSkeleton::Private
             : service{dbus::Service::add_service(bus, "org.mpris.MediaPlayer2.MediaHub." + std::to_string(counter++))},
               object{service->add_object_for_path(dbus::types::ObjectPath{"/org/mpris/MediaPlayer2"})},
               media_player{mpris::MediaPlayer2::Skeleton::Configuration{bus, object}},
-              player{mpris::Player::Skeleton::Configuration{bus, object}}
+              media_player_properties_changed
+              {
+                  object->get_signal<core::dbus::interfaces::Properties::Signals::PropertiesChanged>()
+              },
+              player{mpris::Player::Skeleton::Configuration{bus, object}},
+              player_properties_changed
+              {
+                  object->get_signal<core::dbus::interfaces::Properties::Signals::PropertiesChanged>()
+              }
         {
         }
 
@@ -261,7 +280,17 @@ struct media::PlayerSkeleton::Private
         dbus::Object::Ptr object;
 
         mpris::MediaPlayer2::Skeleton media_player;
+        dbus::Signal
+        <
+            core::dbus::interfaces::Properties::Signals::PropertiesChanged,
+            core::dbus::interfaces::Properties::Signals::PropertiesChanged::ArgumentType
+        >::Ptr media_player_properties_changed;
         mpris::Player::Skeleton player;
+        dbus::Signal
+        <
+            core::dbus::interfaces::Properties::Signals::PropertiesChanged,
+            core::dbus::interfaces::Properties::Signals::PropertiesChanged::ArgumentType
+        >::Ptr player_properties_changed;
     } exported;
 
     struct Signals
@@ -302,6 +331,25 @@ media::PlayerSkeleton::PlayerSkeleton(
         const std::shared_ptr<core::dbus::Object>& session)
         : d(new Private{this, bus, session})
 {
+    // Initialize property values.
+    d->skeleton.properties.can_play->set(true);
+    d->exported.player.properties.can_play->set(true);
+
+    d->skeleton.properties.can_pause->set(true);
+    d->exported.player.properties.can_pause->set(true);
+
+    d->skeleton.properties.can_seek->set(true);
+    d->exported.player.properties.can_seek->set(true);
+
+    d->skeleton.properties.can_control->set(true);
+    d->exported.player.properties.can_control->set(true);
+
+    d->skeleton.properties.can_go_next->set(true);
+    d->exported.player.properties.can_go_next->set(true);
+
+    d->skeleton.properties.can_go_previous->set(true);
+    d->exported.player.properties.can_go_previous->set(true);
+    // Setup method handlers for mpris::Player methods.
     auto next = std::bind(&Private::handle_next, d, std::placeholders::_1);
     d->object->install_method_handler<mpris::Player::Next>(next);
     d->exported.object->install_method_handler<mpris::Player::Next>(next);
