@@ -99,26 +99,10 @@ struct MediaPlayer2
         // Creation time properties go here.
         struct Configuration
         {
-            // Functor for handling incoming dbus calls
-            typedef std::function<core::dbus::Message::Ptr(const core::dbus::Message::Ptr&)> InvocationHandler;
-
-            // Returns
-            static InvocationHandler a_handler_returning_error()
-            {
-                return [](const core::dbus::Message::Ptr& in)
-                {
-                    return core::dbus::Message::make_error(in, "org.freedesktop.DBus.Error.Failed", "Not implemented");
-                };
-            }
-
             // The bus connection that should be used
             core::dbus::Bus::Ptr bus;
             // The dbus object that should implement org.mpris.MediaPlayer2
-            core::dbus::Object::Ptr object;
-            // Invocation handler for raise requests.
-            InvocationHandler on_raise;
-            // Invocation handler for quit requests.
-            InvocationHandler on_quit;
+            core::dbus::Object::Ptr object;     
         };
 
         // Creates a new instance, sets up player properties and installs method handlers.
@@ -136,22 +120,7 @@ struct MediaPlayer2
                   configuration.object->get_property<Properties::SupportedUriSchemes>(),
                   configuration.object->get_property<Properties::SupportedMimeTypes>()
               }
-        {
-            configuration.object->install_method_handler<Methods::Raise>([this](const core::dbus::Message::Ptr& msg)
-            {
-                Skeleton::configuration.bus->send(Skeleton::configuration.on_raise(msg));
-            });
-
-            configuration.object->install_method_handler<Methods::Quit>([this](const core::dbus::Message::Ptr& msg)
-            {
-                Skeleton::configuration.bus->send(Skeleton::configuration.on_quit(msg));
-            });
-        }
-
-        ~Skeleton()
-        {
-            configuration.object->uninstall_method_handler<Methods::Quit>();
-            configuration.object->uninstall_method_handler<Methods::Raise>();
+        {            
         }
 
         // We just store creation time properties here.
