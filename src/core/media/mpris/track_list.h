@@ -19,7 +19,7 @@
 #ifndef MPRIS_TRACK_LIST_H_
 #define MPRIS_TRACK_LIST_H_
 
-#include "macros.h"
+#include <core/dbus/macros.h>
 
 #include <core/dbus/types/any.h>
 #include <core/dbus/types/object_path.h>
@@ -43,35 +43,35 @@ struct TrackList
         return s;
     }
 
-    METHOD(GetTracksMetadata, TrackList, SECONDS(1))
-    METHOD(AddTrack, TrackList, SECONDS(1))
-    METHOD(RemoveTrack, TrackList, SECONDS(1))
-    METHOD(GoTo, TrackList, SECONDS(1))
+    DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(GetTracksMetadata, TrackList, 1000)
+    DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(AddTrack, TrackList, 1000)
+    DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(RemoveTrack, TrackList, 1000)
+    DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(GoTo, TrackList, 1000)
 
     struct Signals
     {
-        SIGNAL
+        DBUS_CPP_SIGNAL_DEF
         (
             TrackListReplaced,
             TrackList,
             BOOST_IDENTITY_TYPE((std::tuple<std::vector<dbus::types::ObjectPath>, dbus::types::ObjectPath>))
         )
 
-        SIGNAL
+        DBUS_CPP_SIGNAL_DEF
         (
             TrackAdded,
             TrackList,
             BOOST_IDENTITY_TYPE((std::tuple<std::map<std::string, dbus::types::Variant>, dbus::types::ObjectPath>))
         )
 
-        SIGNAL
+        DBUS_CPP_SIGNAL_DEF
         (
             TrackRemoved,
             TrackList,
             dbus::types::ObjectPath
         )
 
-        SIGNAL
+        DBUS_CPP_SIGNAL_DEF
         (
             TrackMetadataChanged,
             TrackList,
@@ -81,8 +81,8 @@ struct TrackList
 
     struct Properties
     {
-        READABLE_PROPERTY(Tracks, TrackList, std::vector<std::string>)
-        READABLE_PROPERTY(CanEditTracks, TrackList, bool)
+        DBUS_CPP_READABLE_PROPERTY_DEF(Tracks, TrackList, std::vector<std::string>)
+        DBUS_CPP_READABLE_PROPERTY_DEF(CanEditTracks, TrackList, bool)
     };
 };
 }

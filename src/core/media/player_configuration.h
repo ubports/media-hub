@@ -20,11 +20,13 @@
 
 #include <core/media/player.h>
 
-#include <core/dbus/types/object_path.h>
+#include <core/dbus/bus.h>
+#include <core/dbus/object.h>
 
 struct core::ubuntu::media::Player::Configuration
 {
-    core::dbus::types::ObjectPath object_path;
+    std::shared_ptr<core::dbus::Bus> bus;
+    std::shared_ptr<core::dbus::Object> session;
 };
 
 #endif // CORE_UBUNTU_MEDIA_PLAYER_CLIENT_CONFIGURATION_H_

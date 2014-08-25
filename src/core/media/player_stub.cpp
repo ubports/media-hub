@@ -45,8 +45,7 @@ namespace media = core::ubuntu::media;
 struct media::PlayerStub::Private
 {
     Private(const std::shared_ptr<Service>& parent,
-            const std::shared_ptr<dbus::Service>& remote,
-            const dbus::types::ObjectPath& path
+            const std::shared_ptr<core::dbus::Object>& object
             ) : parent(parent),
                 texture_id(0),
                 igbc_wrapper(nullptr),
@@ -54,8 +53,7 @@ struct media::PlayerStub::Private
                 decoding_session(decoding_service_create_session()),
                 frame_available_cb(nullptr),
                 frame_available_context(nullptr),
-                path(path),
-                object(remote->object_for_path(path)),
+                object(object),
                 properties
                 {
                     object->get_property<mpris::Player::Properties::CanPlay>(),
@@ -66,11 +64,11 @@ struct media::PlayerStub::Private
                     object->get_property<mpris::Player::Properties::CanGoPrevious>(),
                     object->get_property<mpris::Player::Properties::IsVideoSource>(),
                     object->get_property<mpris::Player::Properties::IsAudioSource>(),
-                    object->get_property<mpris::Player::Properties::PlaybackStatus>(),
-                    object->get_property<mpris::Player::Properties::LoopStatus>(),
+                    object->get_property<mpris::Player::Properties::TypedPlaybackStatus>(),
+                    object->get_property<mpris::Player::Properties::TypedLoopStatus>(),
                     object->get_property<mpris::Player::Properties::PlaybackRate>(),
                     object->get_property<mpris::Player::Properties::Shuffle>(),
-                    object->get_property<mpris::Player::Properties::MetaData>(),
+                    object->get_property<mpris::Player::Properties::TypedMetaData>(),
                     object->get_property<mpris::Player::Properties::Volume>(),
                     object->get_property<mpris::Player::Properties::Position>(),
                     object->get_property<mpris::Player::Properties::Duration>(),
@@ -138,8 +136,6 @@ struct media::PlayerStub::Private
     FrameAvailableCb frame_available_cb;
     void *frame_available_context;
 
-    dbus::Bus::Ptr bus;
-    dbus::types::ObjectPath path;
     dbus::Object::Ptr object;
 
     struct
@@ -153,11 +149,11 @@ struct media::PlayerStub::Private
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::IsVideoSource>> is_video_source;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::IsAudioSource>> is_audio_source;
 
-        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::PlaybackStatus>> playback_status;
-        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::LoopStatus>> loop_status;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::TypedPlaybackStatus>> playback_status;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::TypedLoopStatus>> loop_status;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::PlaybackRate>> playback_rate;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Shuffle>> is_shuffle;
-        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MetaData>> meta_data_for_current_track;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::TypedMetaData>> meta_data_for_current_track;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Volume>> volume;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Position>> position;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Duration>> duration;
@@ -230,9 +226,8 @@ struct media::PlayerStub::Private
 
 media::PlayerStub::PlayerStub(
     const std::shared_ptr<Service>& parent,
-    const dbus::types::ObjectPath& object_path)
-        : dbus::Stub<Player>(the_session_bus()),
-          d(new Private{parent, access_service(), object_path})
+    const std::shared_ptr<core::dbus::Object>& object)
+        : d(new Private{parent, object})
 {
     auto bus = the_session_bus();
     worker = std::move(std::thread([bus]()
@@ -256,7 +251,7 @@ std::shared_ptr<media::TrackList> media::PlayerStub::track_list()
     {
         d->track_list = std::make_shared<media::TrackListStub>(
                     shared_from_this(),
-                    dbus::types::ObjectPath(d->path.as_string() + "/TrackList"));
+                    dbus::types::ObjectPath(d->object->path().as_string() + "/TrackList"));
     }
     return d->track_list;
 }

@@ -284,13 +284,14 @@ struct media::PlayerImplementation::Private
 };
 
 media::PlayerImplementation::PlayerImplementation(
-        const dbus::types::ObjectPath& session_path,
+        const std::shared_ptr<core::dbus::Bus>& bus,
+        const std::shared_ptr<core::dbus::Object>& session,
         const std::shared_ptr<Service>& service,
         PlayerKey key)
-    : media::PlayerSkeleton(session_path),
+    : media::PlayerSkeleton(bus, session),
       d(new Private(
             this,
-            session_path,
+            session->path(),
             service,
             key))
 {

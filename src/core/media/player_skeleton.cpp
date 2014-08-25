@@ -36,9 +36,12 @@ namespace media = core::ubuntu::media;
 
 struct media::PlayerSkeleton::Private
 {
-    Private(media::PlayerSkeleton* player, const dbus::types::ObjectPath& session)
+    Private(media::PlayerSkeleton* player,
+            const std::shared_ptr<core::dbus::Bus>& bus,
+            const std::shared_ptr<core::dbus::Object>& session)
         : impl(player),
-          object(impl->access_service()->add_object_for_path(session)),
+          bus(bus),
+          object(session),
           apparmor_session(nullptr),
           properties
           {
@@ -50,11 +53,11 @@ struct media::PlayerSkeleton::Private
               object->get_property<mpris::Player::Properties::CanGoPrevious>(),
               object->get_property<mpris::Player::Properties::IsVideoSource>(),
               object->get_property<mpris::Player::Properties::IsAudioSource>(),
-              object->get_property<mpris::Player::Properties::PlaybackStatus>(),
-              object->get_property<mpris::Player::Properties::LoopStatus>(),
+              object->get_property<mpris::Player::Properties::TypedPlaybackStatus>(),
+              object->get_property<mpris::Player::Properties::TypedLoopStatus>(),
               object->get_property<mpris::Player::Properties::PlaybackRate>(),
               object->get_property<mpris::Player::Properties::Shuffle>(),
-              object->get_property<mpris::Player::Properties::MetaData>(),
+              object->get_property<mpris::Player::Properties::TypedMetaData>(),
               object->get_property<mpris::Player::Properties::Volume>(),
               object->get_property<mpris::Player::Properties::Position>(),
               object->get_property<mpris::Player::Properties::Duration>(),
@@ -74,21 +77,21 @@ struct media::PlayerSkeleton::Private
     {
         impl->next();
         auto reply = dbus::Message::make_method_return(msg);
-        impl->access_bus()->send(reply);
+        bus->send(reply);
     }
 
     void handle_previous(const core::dbus::Message::Ptr& msg)
     {
         impl->previous();
         auto reply = dbus::Message::make_method_return(msg);
-        impl->access_bus()->send(reply);
+        bus->send(reply);
     }
 
     void handle_pause(const core::dbus::Message::Ptr& msg)
     {
         impl->pause();
         auto reply = dbus::Message::make_method_return(msg);
-        impl->access_bus()->send(reply);
+        bus->send(reply);
     }
 
     void handle_playpause(DBusMessage*)
@@ -99,14 +102,14 @@ struct media::PlayerSkeleton::Private
     {
         impl->stop();
         auto reply = dbus::Message::make_method_return(msg);
-        impl->access_bus()->send(reply);
+        bus->send(reply);
     }
 
     void handle_play(const core::dbus::Message::Ptr& msg)
     {
         impl->play();
         auto reply = dbus::Message::make_method_return(msg);
-        impl->access_bus()->send(reply);
+        bus->send(reply);
     }
 
     void handle_seek(const core::dbus::Message::Ptr& in)
@@ -116,7 +119,7 @@ struct media::PlayerSkeleton::Private
         impl->seek_to(std::chrono::microseconds(ticks));
 
         auto reply = dbus::Message::make_method_return(in);
-        impl->access_bus()->send(reply);
+        bus->send(reply);
     }
 
     void handle_set_position(const core::dbus::Message::Ptr&)
@@ -130,7 +133,7 @@ struct media::PlayerSkeleton::Private
         impl->create_video_sink(texture_id);
 
         auto reply = dbus::Message::make_method_return(in);
-        impl->access_bus()->send(reply);
+        bus->send(reply);
     }
 
     std::string get_client_apparmor_context(const core::dbus::Message::Ptr& msg)
@@ -231,7 +234,7 @@ struct media::PlayerSkeleton::Private
     {
         auto reply = dbus::Message::make_method_return(in);
         reply->writer() << impl->key();
-        impl->access_bus()->send(reply);
+        bus->send(reply);
     }
 
     void handle_open_uri(const core::dbus::Message::Ptr& in)
@@ -247,10 +250,11 @@ struct media::PlayerSkeleton::Private
             reply->writer() << impl->open_uri(uri);
         else
             reply->writer() << false;
-        impl->access_bus()->send(reply);
+        bus->send(reply);
     }
 
     media::PlayerSkeleton* impl;
+    dbus::Bus::Ptr bus;
     dbus::Object::Ptr object;
     dbus::Object::Ptr apparmor_session;
     struct
@@ -264,11 +268,11 @@ struct media::PlayerSkeleton::Private
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::IsVideoSource>> is_video_source;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::IsAudioSource>> is_audio_source;
 
-        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::PlaybackStatus>> playback_status;
-        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::LoopStatus>> loop_status;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::TypedPlaybackStatus>> playback_status;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::TypedLoopStatus>> loop_status;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::PlaybackRate>> playback_rate;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Shuffle>> is_shuffle;
-        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MetaData>> meta_data_for_current_track;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::TypedMetaData>> meta_data_for_current_track;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Volume>> volume;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Position>> position;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Duration>> duration;
@@ -325,9 +329,9 @@ struct media::PlayerSkeleton::Private
 };
 
 media::PlayerSkeleton::PlayerSkeleton(
-    const core::dbus::types::ObjectPath& session_path)
-        : dbus::Skeleton<media::Player>(the_session_bus()),
-          d(new Private{this, session_path})
+        const std::shared_ptr<core::dbus::Bus>& bus,
+        const std::shared_ptr<core::dbus::Object>& session)
+        : d(new Private{this, bus, session})
 {
     d->object->install_method_handler<mpris::Player::Next>(
         std::bind(&Private::handle_next,
