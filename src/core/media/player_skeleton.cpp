@@ -302,44 +302,46 @@ media::PlayerSkeleton::PlayerSkeleton(
         const std::shared_ptr<core::dbus::Object>& session)
         : d(new Private{this, bus, session})
 {
-    d->object->install_method_handler<mpris::Player::Next>(
-        std::bind(&Private::handle_next,
-                  d,
-                  std::placeholders::_1));
-    d->object->install_method_handler<mpris::Player::Previous>(
-        std::bind(&Private::handle_previous,
-                  d,
-                  std::placeholders::_1));
-    d->object->install_method_handler<mpris::Player::Pause>(
-        std::bind(&Private::handle_pause,
-                  d,
-                  std::placeholders::_1));
-    d->object->install_method_handler<mpris::Player::Stop>(
-        std::bind(&Private::handle_stop,
-                  d,
-                  std::placeholders::_1));
-    d->object->install_method_handler<mpris::Player::Play>(
-        std::bind(&Private::handle_play,
-                  d,
-                  std::placeholders::_1));
-    d->object->install_method_handler<mpris::Player::Seek>(
-        std::bind(&Private::handle_seek,
-                  d,
-                  std::placeholders::_1));
-    d->object->install_method_handler<mpris::Player::SetPosition>(
-        std::bind(&Private::handle_set_position,
-                  d,
-                  std::placeholders::_1));
+    auto next = std::bind(&Private::handle_next, d, std::placeholders::_1);
+    d->object->install_method_handler<mpris::Player::Next>(next);
+    d->exported.object->install_method_handler<mpris::Player::Next>(next);
+
+    auto previous = std::bind(&Private::handle_previous, d, std::placeholders::_1);
+    d->object->install_method_handler<mpris::Player::Previous>(previous);
+    d->exported.object->install_method_handler<mpris::Player::Previous>(previous);
+
+    auto pause = std::bind(&Private::handle_pause, d, std::placeholders::_1);
+    d->object->install_method_handler<mpris::Player::Pause>(pause);
+    d->exported.object->install_method_handler<mpris::Player::Pause>(pause);
+
+    auto stop = std::bind(&Private::handle_stop, d, std::placeholders::_1);
+    d->object->install_method_handler<mpris::Player::Stop>(stop);
+    d->exported.object->install_method_handler<mpris::Player::Stop>(stop);
+
+    auto play = std::bind(&Private::handle_play, d, std::placeholders::_1);
+    d->object->install_method_handler<mpris::Player::Play>(play);
+    d->exported.object->install_method_handler<mpris::Player::Play>(play);
+
+    auto seek = std::bind(&Private::handle_seek, d, std::placeholders::_1);
+    d->object->install_method_handler<mpris::Player::Seek>(seek);
+    d->exported.object->install_method_handler<mpris::Player::Seek>(seek);
+
+    auto set_position = std::bind(&Private::handle_set_position, d, std::placeholders::_1);
+    d->object->install_method_handler<mpris::Player::SetPosition>(set_position);
+    d->exported.object->install_method_handler<mpris::Player::SetPosition>(set_position);
+
+    auto open_uri = std::bind(&Private::handle_open_uri, d, std::placeholders::_1);
+    d->object->install_method_handler<mpris::Player::OpenUri>(open_uri);
+    d->exported.object->install_method_handler<mpris::Player::OpenUri>(open_uri);
+
+    // All the method handlers that exceed the mpris spec go here.
     d->object->install_method_handler<mpris::Player::CreateVideoSink>(
         std::bind(&Private::handle_create_video_sink,
                   d,
                   std::placeholders::_1));
+
     d->object->install_method_handler<mpris::Player::Key>(
         std::bind(&Private::handle_key,
-                  d,
-                  std::placeholders::_1));
-    d->object->install_method_handler<mpris::Player::OpenUri>(
-        std::bind(&Private::handle_open_uri,
                   d,
                   std::placeholders::_1));
 }
