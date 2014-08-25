@@ -141,31 +141,10 @@ struct Player
         // Creation time options go here.
         struct Configuration
         {
-            // Functor for handling incoming dbus calls
-            typedef std::function<core::dbus::Message::Ptr(const core::dbus::Message::Ptr&)> InvocationHandler;
-
             // The bus connection that should be used
             core::dbus::Bus::Ptr bus;
             // The dbus object that should implement org.mpris.MediaPlayer2
             core::dbus::Object::Ptr object;
-            // Handles incoming calls for next. Never throws.
-            InvocationHandler handle_next;
-            // Handles incoming calls for previous. Never throws.
-            InvocationHandler handle_previous;
-            // Handles incoming calls for pause. Never throws.
-            InvocationHandler handle_pause;
-            // Handles incoming calls for stpo. Never throws.
-            InvocationHandler handle_stop;
-            // Handles incoming calls for play. Never throws.
-            InvocationHandler handle_play;
-            // Handles incoming calls for seek. Never throws.
-            InvocationHandler handle_seek;
-            // Handles incoming calls for video sink creation. Never throws.
-            InvocationHandler handle_create_video_sink;
-            // Handles incoming calls for key generation. Never throws.
-            InvocationHandler handle_key;
-            // Handles incoming calls for opening a URI. Never throws.
-            InvocationHandler handle_open_uri;
         };
 
         Skeleton(const Configuration& configuration)
@@ -199,58 +178,7 @@ struct Player
                   configuration.object->template get_signal<mpris::Player::Signals::EndOfStream>(),
                   configuration.object->template get_signal<mpris::Player::Signals::PlaybackStatusChanged>()
               }
-        {
-            Skeleton::configuration.object->template install_method_handler<mpris::Player::Next>(
-                    [this](const core::dbus::Message::Ptr& in)
-                    {
-                        Skeleton::configuration.bus->send(Skeleton::configuration.handle_next(in));
-                    });
-
-            Skeleton::configuration.object->template install_method_handler<mpris::Player::Previous>(
-                    [this](const core::dbus::Message::Ptr& in)
-                    {
-                        Skeleton::configuration.bus->send(Skeleton::configuration.handle_previous(in));
-                    });
-            Skeleton::configuration.object->template install_method_handler<mpris::Player::Pause>(
-                    [this](const core::dbus::Message::Ptr& in)
-                    {
-                        Skeleton::configuration.bus->send(Skeleton::configuration.handle_pause(in));
-                    });
-            Skeleton::configuration.object->template install_method_handler<mpris::Player::Stop>(
-                    [this](const core::dbus::Message::Ptr& in)
-                    {
-                        Skeleton::configuration.bus->send(Skeleton::configuration.handle_stop(in));
-                    });
-            Skeleton::configuration.object->template install_method_handler<mpris::Player::Play>(
-                    [this](const core::dbus::Message::Ptr& in)
-                    {
-                        Skeleton::configuration.bus->send(Skeleton::configuration.handle_play(in));
-                    });
-            Skeleton::configuration.object->template install_method_handler<mpris::Player::Seek>(
-                    [this](const core::dbus::Message::Ptr& in)
-                    {
-                        Skeleton::configuration.bus->send(Skeleton::configuration.handle_seek(in));
-                    });
-            Skeleton::configuration.object->template install_method_handler<mpris::Player::SetPosition>(
-                    [this](const core::dbus::Message::Ptr&)
-                    {
-                        // Skeleton::configuration.handle_set_position(in));
-                    });
-            Skeleton::configuration.object->template install_method_handler<mpris::Player::CreateVideoSink>(
-                    [this](const core::dbus::Message::Ptr& in)
-                    {
-                        Skeleton::configuration.bus->send(Skeleton::configuration.handle_create_video_sink(in));
-                    });
-            Skeleton::configuration.object->template install_method_handler<mpris::Player::Key>(
-                    [this](const core::dbus::Message::Ptr& in)
-                    {
-                        Skeleton::configuration.bus->send(Skeleton::configuration.handle_key(in));
-                    });
-            Skeleton::configuration.object->template install_method_handler<mpris::Player::OpenUri>(
-                    [this](const core::dbus::Message::Ptr& in)
-                    {
-                        Skeleton::configuration.bus->send(Skeleton::configuration.handle_open_uri(in));
-                    });
+        {            
         }
 
         // We just store creation time properties

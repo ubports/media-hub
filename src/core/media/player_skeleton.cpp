@@ -257,6 +257,7 @@ struct media::PlayerSkeleton::Private
     dbus::Bus::Ptr bus;
     dbus::Object::Ptr object;
     dbus::Object::Ptr apparmor_session;
+
     struct
     {
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanPlay>> can_play;
