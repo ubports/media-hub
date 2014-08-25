@@ -178,7 +178,7 @@ struct Player
                   configuration.object->template get_signal<mpris::Player::Signals::EndOfStream>(),
                   configuration.object->template get_signal<mpris::Player::Signals::PlaybackStatusChanged>()
               }
-        {            
+        {
         }
 
         // We just store creation time properties

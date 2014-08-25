@@ -94,7 +94,7 @@ class PlayerSkeleton : public core::ubuntu::media::Player
 
   private:
     struct Private;
-    std::unique_ptr<Private> d;
+    std::shared_ptr<Private> d;
 };
 }
 }
