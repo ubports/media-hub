@@ -282,7 +282,7 @@ struct media::PlayerSkeleton::Private
     struct Exported
     {
         explicit Exported(const dbus::Bus::Ptr& bus)
-            : service{dbus::Service::add_service(bus, "org.mpris.MediaPlayer2.MediaHub." + std::to_string(counter++))},
+            : service{dbus::Service::add_service(bus, "org.mpris.MediaPlayer2.MediaHub.Session" + std::to_string(counter++))},
               object{service->add_object_for_path(dbus::types::ObjectPath{"/org/mpris/MediaPlayer2"})},
               media_player{mpris::MediaPlayer2::Skeleton::Configuration{bus, object}},
               media_player_properties_changed
