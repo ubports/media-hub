@@ -246,6 +246,27 @@ struct media::PlayerSkeleton::Private
         bus->send(reply);
     }
 
+    template<typename Property>
+    void on_property_value_changed(
+            const typename Property::ValueType& value,
+            const dbus::Signal
+            <
+                core::dbus::interfaces::Properties::Signals::PropertiesChanged,
+                core::dbus::interfaces::Properties::Signals::PropertiesChanged::ArgumentType
+            >::Ptr& signal)
+    {
+        typedef std::map<std::string, dbus::types::Variant> Dictionary;
+
+        static const std::vector<std::string> the_empty_list_of_invalided_properties;
+
+        Dictionary dict; dict[Property::name()] = dbus::types::Variant::encode(value);
+
+        signal->emit(std::make_tuple(
+                        dbus::traits::Service<typename Property::Interface>::interface_name(),
+                        dict,
+                        the_empty_list_of_invalided_properties));
+    }
+
     media::PlayerSkeleton* impl;
     dbus::Bus::Ptr bus;
     dbus::Object::Ptr object;
@@ -330,8 +351,48 @@ media::PlayerSkeleton::PlayerSkeleton(
         const std::shared_ptr<core::dbus::Bus>& bus,
         const std::shared_ptr<core::dbus::Object>& session)
         : d(new Private{this, bus, session})
-{
-    // Initialize property values.
+{    
+    // Initialize property values of the media_player instance.
+    d->exported.media_player.properties.can_quit->set(false);
+    d->exported.media_player.properties.fullscreen->set(false);
+    d->exported.media_player.properties.can_set_fullscreen->set(false);
+    d->exported.media_player.properties.can_raise->set(false);
+    d->exported.media_player.properties.has_track_list->set(false);
+    d->exported.media_player.properties.can_set_fullscreen->set(false);
+    // TODO(tvoss): Value should be passed as an argument to the ctor.
+    d->exported.media_player.properties.desktop_entry->set(std::string{"mediaplayer-app"});
+    // TODO(tvoss): Value should be passed as an argument to the ctor.
+    d->exported.media_player.properties.identity->set(std::string{"MediaHub::Player instance"});
+    // TODO(tvoss): Value should be queried from the underlying engine.
+    d->exported.media_player.properties.supported_mime_types->set({std::string{"audio/mpeg3"}});
+
+    std::map<std::string, dbus::types::Variant> dict;
+    dict[mpris::MediaPlayer2::Properties::CanQuit::name()]
+            = dbus::types::Variant::encode(d->exported.media_player.properties.can_quit->get());
+    dict[mpris::MediaPlayer2::Properties::Fullscreen::name()]
+            = dbus::types::Variant::encode(d->exported.media_player.properties.fullscreen->get());
+    dict[mpris::MediaPlayer2::Properties::CanSetFullscreen::name()]
+            = dbus::types::Variant::encode(d->exported.media_player.properties.can_set_fullscreen->get());
+    dict[mpris::MediaPlayer2::Properties::CanRaise::name()]
+            = dbus::types::Variant::encode(d->exported.media_player.properties.can_raise->get());
+    dict[mpris::MediaPlayer2::Properties::HasTrackList::name()]
+            = dbus::types::Variant::encode(d->exported.media_player.properties.has_track_list->get());
+    dict[mpris::MediaPlayer2::Properties::CanSetFullscreen::name()]
+            = dbus::types::Variant::encode(d->exported.media_player.properties.can_set_fullscreen->get());
+    dict[mpris::MediaPlayer2::Properties::DesktopEntry::name()]
+            = dbus::types::Variant::encode(d->exported.media_player.properties.desktop_entry->get());
+    dict[mpris::MediaPlayer2::Properties::Identity::name()]
+            = dbus::types::Variant::encode(d->exported.media_player.properties.identity->get());
+    dict[mpris::MediaPlayer2::Properties::SupportedMimeTypes::name()]
+            = dbus::types::Variant::encode(d->exported.media_player.properties.supported_mime_types->get());
+
+    // We announce the initial set of values here.
+    d->exported.media_player_properties_changed->emit(
+                std::make_tuple(
+                    dbus::traits::Service<mpris::MediaPlayer2>::interface_name(),
+                    dict,
+                    std::vector<std::string>{}));
+    // Initialize property values of the player instance.
     d->skeleton.properties.can_play->set(true);
     d->exported.player.properties.can_play->set(true);
 
@@ -349,6 +410,7 @@ media::PlayerSkeleton::PlayerSkeleton(
 
     d->skeleton.properties.can_go_previous->set(true);
     d->exported.player.properties.can_go_previous->set(true);
+
     // Setup method handlers for mpris::Player methods.
     auto next = std::bind(&Private::handle_next, d, std::placeholders::_1);
     d->object->install_method_handler<mpris::Player::Next>(next);
