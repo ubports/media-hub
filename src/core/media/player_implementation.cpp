@@ -47,7 +47,7 @@ struct media::PlayerImplementation::Private
         WAKELOCK_CLEAR_DISPLAY,
         WAKELOCK_CLEAR_SYSTEM,
         WAKELOCK_CLEAR_INVALID
-    };
+    };    
 
     Private(PlayerImplementation* parent,
             const dbus::types::ObjectPath& session_path,
@@ -102,6 +102,10 @@ struct media::PlayerImplementation::Private
             }
             case Engine::State::playing:
             {
+                // We update the track meta data prior to updating the playback status.
+                // Some MPRIS clients expect this order of events.
+                parent->meta_data_for_current_track().set(std::get<1>(engine->track_meta_data().get()));
+                // And update our playback status.
                 parent->playback_status().set(media::Player::playing);
                 if (previous_state == Engine::State::stopped || previous_state == Engine::State::paused)
                 {
@@ -135,7 +139,6 @@ struct media::PlayerImplementation::Private
             // Keep track of the previous Engine playback state:
             previous_state = state;
         });
-
     }
 
     ~Private()
