@@ -386,6 +386,51 @@ media::PlayerSkeleton::PlayerSkeleton(
     dict[mpris::MediaPlayer2::Properties::SupportedMimeTypes::name()]
             = dbus::types::Variant::encode(d->exported.media_player.properties.supported_mime_types->get());
 
+    // We wire up player state changes
+    d->skeleton.signals.seeked_to->connect([this](std::uint64_t position)
+    {
+        d->exported.player.signals.seeked_to->emit(position);
+    });
+
+    d->skeleton.properties.position->changed().connect([this](std::uint64_t position)
+    {
+        d->exported.player.properties.position->set(position);
+    });
+
+    d->skeleton.properties.typed_playback_status->changed().connect([this](core::ubuntu::media::Player::PlaybackStatus status)
+    {
+        d->exported.player.properties.playback_status->set(mpris::Player::PlaybackStatus::from(status));
+    });
+
+    d->skeleton.properties.typed_loop_status->changed().connect([this](core::ubuntu::media::Player::LoopStatus status)
+    {
+        d->exported.player.properties.loop_status->set(mpris::Player::LoopStatus::from(status));
+    });
+
+    d->exported.player.properties.position->changed().connect([this](std::uint64_t position)
+    {
+        d->on_property_value_changed
+        <
+            mpris::Player::Properties::Position
+        >(position, d->exported.player_properties_changed);
+    });
+
+    d->exported.player.properties.playback_status->changed().connect([this](const std::string& status)
+    {
+        d->on_property_value_changed
+        <
+            mpris::Player::Properties::PlaybackStatus
+        >(status, d->exported.player_properties_changed);
+    });
+
+    d->exported.player.properties.loop_status->changed().connect([this](const std::string& status)
+    {
+        d->on_property_value_changed
+        <
+            mpris::Player::Properties::LoopStatus
+        >(status, d->exported.player_properties_changed);
+    });
+
     // We announce the initial set of values here.
     d->exported.media_player_properties_changed->emit(
                 std::make_tuple(
@@ -517,7 +562,7 @@ const core::Property<bool>& media::PlayerSkeleton::is_shuffle() const
 
 const core::Property<media::Track::MetaData>& media::PlayerSkeleton::meta_data_for_current_track() const
 {
-    return *d->skeleton.properties.meta_data_for_current_track;
+    return *d->skeleton.properties.typed_meta_data_for_current_track;
 }
 
 const core::Property<media::Player::Volume>& media::PlayerSkeleton::volume() const
@@ -618,7 +663,7 @@ core::Property<bool>& media::PlayerSkeleton::is_audio_source()
 
 core::Property<media::Track::MetaData>& media::PlayerSkeleton::meta_data_for_current_track()
 {
-    return *d->skeleton.properties.meta_data_for_current_track;
+    return *d->skeleton.properties.typed_meta_data_for_current_track;
 }
 
 core::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::minimum_playback_rate()
