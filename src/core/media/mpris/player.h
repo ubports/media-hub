@@ -28,6 +28,7 @@
 #include <core/dbus/macros.h>
 #include <core/dbus/object.h>
 #include <core/dbus/property.h>
+#include <core/dbus/interfaces/properties.h>
 #include <core/dbus/types/any.h>
 #include <core/dbus/types/object_path.h>
 #include <core/dbus/types/variant.h>
@@ -153,6 +154,11 @@ struct Player
     // Convenience struct to create a skeleton implementation for org.mpris.MediaPlayer2.Player
     struct Skeleton
     {
+        static const std::vector<std::string>& the_empty_list_of_invalided_properties()
+        {
+            static const std::vector<std::string> instance; return instance;
+        }
+
         // Creation time options go here.
         struct Configuration
         {
@@ -160,75 +166,180 @@ struct Player
             core::dbus::Bus::Ptr bus;
             // The dbus object that should implement org.mpris.MediaPlayer2
             core::dbus::Object::Ptr object;
+
+            // Default values for properties
+            struct Defaults
+            {
+                Properties::CanPlay::ValueType can_play{true};
+                Properties::CanPause::ValueType can_pause{true};
+                Properties::CanSeek::ValueType can_seek{true};
+                Properties::CanControl::ValueType can_control{true};
+                Properties::CanGoNext::ValueType can_go_next{true};
+                Properties::CanGoPrevious::ValueType can_go_previous{true};
+                Properties::IsVideoSource::ValueType is_video_source{false};
+                Properties::IsAudioSource::ValueType is_audio_source{true};
+                Properties::PlaybackStatus::ValueType playback_status{PlaybackStatus::stopped};
+                Properties::TypedPlaybackStatus::ValueType typed_playback_status{core::ubuntu::media::Player::PlaybackStatus::null};
+                Properties::LoopStatus::ValueType loop_status{LoopStatus::none};
+                Properties::TypedLoopStatus::ValueType typed_loop_status{core::ubuntu::media::Player::LoopStatus::none};
+                Properties::PlaybackRate::ValueType playback_rate{1.f};
+                Properties::Shuffle::ValueType shuffle{false};
+                Properties::TypedMetaData::ValueType typed_meta_data{};
+                Properties::Volume::ValueType volume{0.f};
+                Properties::Position::ValueType position{0};
+                Properties::Duration::ValueType duration{0};
+                Properties::MinimumRate::ValueType minimum_rate{1.f};
+                Properties::MaximumRate::ValueType maximum_rate{1.f};
+            } defaults;
         };
 
         Skeleton(const Configuration& configuration)
             : configuration(configuration),
               properties
               {
-                  configuration.object->template get_property<mpris::Player::Properties::CanPlay>(),
-                  configuration.object->template get_property<mpris::Player::Properties::CanPause>(),
-                  configuration.object->template get_property<mpris::Player::Properties::CanSeek>(),
-                  configuration.object->template get_property<mpris::Player::Properties::CanControl>(),
-                  configuration.object->template get_property<mpris::Player::Properties::CanGoNext>(),
-                  configuration.object->template get_property<mpris::Player::Properties::CanGoPrevious>(),
-                  configuration.object->template get_property<mpris::Player::Properties::IsVideoSource>(),
-                  configuration.object->template get_property<mpris::Player::Properties::IsAudioSource>(),
-                  configuration.object->template get_property<mpris::Player::Properties::PlaybackStatus>(),
-                  configuration.object->template get_property<mpris::Player::Properties::TypedPlaybackStatus>(),
-                  configuration.object->template get_property<mpris::Player::Properties::LoopStatus>(),
-                  configuration.object->template get_property<mpris::Player::Properties::TypedLoopStatus>(),
-                  configuration.object->template get_property<mpris::Player::Properties::PlaybackRate>(),
-                  configuration.object->template get_property<mpris::Player::Properties::Shuffle>(),
-                  configuration.object->template get_property<mpris::Player::Properties::TypedMetaData>(),
-                  configuration.object->template get_property<mpris::Player::Properties::Volume>(),
-                  configuration.object->template get_property<mpris::Player::Properties::Position>(),
-                  configuration.object->template get_property<mpris::Player::Properties::Duration>(),
-                  configuration.object->template get_property<mpris::Player::Properties::MinimumRate>(),
-                  configuration.object->template get_property<mpris::Player::Properties::MaximumRate>()
+                  configuration.object->template get_property<Properties::CanPlay>(),
+                  configuration.object->template get_property<Properties::CanPause>(),
+                  configuration.object->template get_property<Properties::CanSeek>(),
+                  configuration.object->template get_property<Properties::CanControl>(),
+                  configuration.object->template get_property<Properties::CanGoNext>(),
+                  configuration.object->template get_property<Properties::CanGoPrevious>(),
+                  configuration.object->template get_property<Properties::IsVideoSource>(),
+                  configuration.object->template get_property<Properties::IsAudioSource>(),
+                  configuration.object->template get_property<Properties::PlaybackStatus>(),
+                  configuration.object->template get_property<Properties::TypedPlaybackStatus>(),
+                  configuration.object->template get_property<Properties::LoopStatus>(),
+                  configuration.object->template get_property<Properties::TypedLoopStatus>(),
+                  configuration.object->template get_property<Properties::PlaybackRate>(),
+                  configuration.object->template get_property<Properties::Shuffle>(),
+                  configuration.object->template get_property<Properties::TypedMetaData>(),
+                  configuration.object->template get_property<Properties::Volume>(),
+                  configuration.object->template get_property<Properties::Position>(),
+                  configuration.object->template get_property<Properties::Duration>(),
+                  configuration.object->template get_property<Properties::MinimumRate>(),
+                  configuration.object->template get_property<Properties::MaximumRate>()
               },
               signals
               {
-                  configuration.object->template get_signal<mpris::Player::Signals::Seeked>(),
-                  configuration.object->template get_signal<mpris::Player::Signals::EndOfStream>(),
-                  configuration.object->template get_signal<mpris::Player::Signals::PlaybackStatusChanged>()
+                  configuration.object->template get_signal<Signals::Seeked>(),
+                  configuration.object->template get_signal<Signals::EndOfStream>(),
+                  configuration.object->template get_signal<Signals::PlaybackStatusChanged>(),
+                  configuration.object->template get_signal<core::dbus::interfaces::Properties::Signals::PropertiesChanged>()
               }
         {
+            properties.can_play->set(configuration.defaults.can_play);
+            properties.can_pause->set(configuration.defaults.can_pause);
+            properties.can_seek->set(configuration.defaults.can_seek);
+            properties.can_control->set(configuration.defaults.can_control);
+            properties.can_go_next->set(configuration.defaults.can_go_next);
+            properties.can_go_previous->set(configuration.defaults.can_go_previous);
+            properties.is_video_source->set(configuration.defaults.is_video_source);
+            properties.is_audio_source->set(configuration.defaults.is_audio_source);
+            properties.playback_status->set(configuration.defaults.playback_status);
+            properties.typed_playback_status->set(configuration.defaults.typed_playback_status);
+            properties.loop_status->set(configuration.defaults.loop_status);
+            properties.typed_loop_status->set(configuration.defaults.typed_loop_status);
+            properties.playback_rate->set(configuration.defaults.playback_rate);
+            properties.is_shuffle->set(configuration.defaults.shuffle);
+            properties.position->set(configuration.defaults.position);
+            properties.duration->set(configuration.defaults.duration);
+            properties.minimum_playback_rate->set(configuration.defaults.minimum_rate);
+            properties.maximum_playback_rate->set(configuration.defaults.maximum_rate);
+
+            Dictionary dict;
+            dict[Properties::CanPlay::name()] = dbus::types::Variant::encode(properties.can_play->get());
+            dict[Properties::CanPause::name()] = dbus::types::Variant::encode(properties.can_pause->get());
+            dict[Properties::CanSeek::name()] = dbus::types::Variant::encode(properties.can_seek->get());
+            dict[Properties::CanControl::name()] = dbus::types::Variant::encode(properties.can_control->get());
+            dict[Properties::CanGoNext::name()] = dbus::types::Variant::encode(properties.can_go_next->get());
+            dict[Properties::CanGoPrevious::name()] = dbus::types::Variant::encode(properties.can_go_previous->get());
+            dict[Properties::PlaybackStatus::name()] = dbus::types::Variant::encode(properties.playback_status->get());
+            dict[Properties::TypedPlaybackStatus::name()] = dbus::types::Variant::encode(properties.typed_playback_status->get());
+            dict[Properties::LoopStatus::name()] = dbus::types::Variant::encode(properties.loop_status->get());
+            dict[Properties::TypedLoopStatus::name()] = dbus::types::Variant::encode(properties.typed_loop_status->get());
+            dict[Properties::PlaybackRate::name()] = dbus::types::Variant::encode(properties.playback_rate->get());
+            dict[Properties::Shuffle::name()] = dbus::types::Variant::encode(properties.is_shuffle->get());
+            dict[Properties::Duration::name()] = dbus::types::Variant::encode(properties.duration->get());
+            dict[Properties::Position::name()] = dbus::types::Variant::encode(properties.position->get());
+            dict[Properties::MinimumRate::name()] = dbus::types::Variant::encode(properties.minimum_playback_rate->get());
+            dict[Properties::MaximumRate::name()] = dbus::types::Variant::encode(properties.maximum_playback_rate->get());
+
+            signals.properties_changed->emit(std::make_tuple(
+                            dbus::traits::Service<Player>::interface_name(),
+                            dict,
+                            Player::Skeleton::the_empty_list_of_invalided_properties()));
+
+            properties.position->changed().connect([this](std::uint64_t position)
+            {
+                on_property_value_changed<Properties::Position>(position);
+            });
+
+            properties.duration->changed().connect([this](std::uint64_t duration)
+            {
+                on_property_value_changed<Properties::Duration>(duration);
+            });
+
+            properties.playback_status->changed().connect([this](const std::string& status)
+            {
+                on_property_value_changed<Properties::PlaybackStatus>(status);
+            });
+
+            properties.loop_status->changed().connect([this](const std::string& status)
+            {
+                on_property_value_changed<Properties::LoopStatus>(status);
+            });
         }
+
+        template<typename Property>
+        void on_property_value_changed(const typename Property::ValueType& value)
+        {
+            Dictionary dict; dict[Property::name()] = dbus::types::Variant::encode(value);
+
+            signals.properties_changed->emit(std::make_tuple(
+                            dbus::traits::Service<Player>::interface_name(),
+                            dict,
+                            the_empty_list_of_invalided_properties()));
+        }
+
 
         // We just store creation time properties
         Configuration configuration;
         // All the properties exposed to the bus go here.
         struct
         {
-            std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanPlay>> can_play;
-            std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanPause>> can_pause;
-            std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanSeek>> can_seek;
-            std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanControl>> can_control;
-            std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanGoNext>> can_go_next;
-            std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanGoPrevious>> can_go_previous;
-            std::shared_ptr<core::dbus::Property<mpris::Player::Properties::IsVideoSource>> is_video_source;
-            std::shared_ptr<core::dbus::Property<mpris::Player::Properties::IsAudioSource>> is_audio_source;
+            std::shared_ptr<core::dbus::Property<Properties::CanPlay>> can_play;
+            std::shared_ptr<core::dbus::Property<Properties::CanPause>> can_pause;
+            std::shared_ptr<core::dbus::Property<Properties::CanSeek>> can_seek;
+            std::shared_ptr<core::dbus::Property<Properties::CanControl>> can_control;
+            std::shared_ptr<core::dbus::Property<Properties::CanGoNext>> can_go_next;
+            std::shared_ptr<core::dbus::Property<Properties::CanGoPrevious>> can_go_previous;
+            std::shared_ptr<core::dbus::Property<Properties::IsVideoSource>> is_video_source;
+            std::shared_ptr<core::dbus::Property<Properties::IsAudioSource>> is_audio_source;
 
-            std::shared_ptr<core::dbus::Property<mpris::Player::Properties::PlaybackStatus>> playback_status;
-            std::shared_ptr<core::dbus::Property<mpris::Player::Properties::TypedPlaybackStatus>> typed_playback_status;
-            std::shared_ptr<core::dbus::Property<mpris::Player::Properties::LoopStatus>> loop_status;
-            std::shared_ptr<core::dbus::Property<mpris::Player::Properties::TypedLoopStatus>> typed_loop_status;
-            std::shared_ptr<core::dbus::Property<mpris::Player::Properties::PlaybackRate>> playback_rate;
-            std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Shuffle>> is_shuffle;
-            std::shared_ptr<core::dbus::Property<mpris::Player::Properties::TypedMetaData>> typed_meta_data_for_current_track;
-            std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Volume>> volume;
-            std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Position>> position;
-            std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Duration>> duration;
-            std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MinimumRate>> minimum_playback_rate;
-            std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MaximumRate>> maximum_playback_rate;
+            std::shared_ptr<core::dbus::Property<Properties::PlaybackStatus>> playback_status;
+            std::shared_ptr<core::dbus::Property<Properties::TypedPlaybackStatus>> typed_playback_status;
+            std::shared_ptr<core::dbus::Property<Properties::LoopStatus>> loop_status;
+            std::shared_ptr<core::dbus::Property<Properties::TypedLoopStatus>> typed_loop_status;
+            std::shared_ptr<core::dbus::Property<Properties::PlaybackRate>> playback_rate;
+            std::shared_ptr<core::dbus::Property<Properties::Shuffle>> is_shuffle;
+            std::shared_ptr<core::dbus::Property<Properties::TypedMetaData>> typed_meta_data_for_current_track;
+            std::shared_ptr<core::dbus::Property<Properties::Volume>> volume;
+            std::shared_ptr<core::dbus::Property<Properties::Position>> position;
+            std::shared_ptr<core::dbus::Property<Properties::Duration>> duration;
+            std::shared_ptr<core::dbus::Property<Properties::MinimumRate>> minimum_playback_rate;
+            std::shared_ptr<core::dbus::Property<Properties::MaximumRate>> maximum_playback_rate;
         } properties;
 
         struct
         {
-            typename core::dbus::Signal<mpris::Player::Signals::Seeked, mpris::Player::Signals::Seeked::ArgumentType>::Ptr seeked_to;
-            typename core::dbus::Signal<mpris::Player::Signals::EndOfStream, mpris::Player::Signals::EndOfStream::ArgumentType>::Ptr end_of_stream;
-            typename core::dbus::Signal<mpris::Player::Signals::PlaybackStatusChanged, mpris::Player::Signals::PlaybackStatusChanged::ArgumentType>::Ptr playback_status_changed;
+            typename core::dbus::Signal<Signals::Seeked, Signals::Seeked::ArgumentType>::Ptr seeked_to;
+            typename core::dbus::Signal<Signals::EndOfStream, Signals::EndOfStream::ArgumentType>::Ptr end_of_stream;
+            typename core::dbus::Signal<Signals::PlaybackStatusChanged, Signals::PlaybackStatusChanged::ArgumentType>::Ptr playback_status_changed;
+
+            dbus::Signal
+            <
+                core::dbus::interfaces::Properties::Signals::PropertiesChanged,
+                core::dbus::interfaces::Properties::Signals::PropertiesChanged::ArgumentType
+            >::Ptr properties_changed;
         } signals;
     };
 };

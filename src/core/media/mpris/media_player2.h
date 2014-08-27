@@ -22,6 +22,8 @@
 #include <core/dbus/macros.h>
 #include <core/dbus/object.h>
 #include <core/dbus/property.h>
+#include <core/dbus/interfaces/properties.h>
+#include <core/dbus/types/variant.h>
 
 #include <string>
 #include <vector>
@@ -102,7 +104,20 @@ struct MediaPlayer2
             // The bus connection that should be used
             core::dbus::Bus::Ptr bus;
             // The dbus object that should implement org.mpris.MediaPlayer2
-            core::dbus::Object::Ptr object;     
+            core::dbus::Object::Ptr object;
+            // Default values assigned to properties on construction
+            struct Defaults
+            {
+                Properties::CanQuit::ValueType can_quit{false};
+                Properties::Fullscreen::ValueType fullscreen{false};
+                Properties::CanSetFullscreen::ValueType can_set_fullscreen{false};
+                Properties::CanRaise::ValueType can_raise{false};
+                Properties::HasTrackList::ValueType has_track_list{false};
+                Properties::Identity::ValueType identity{};
+                Properties::DesktopEntry::ValueType desktop_entry{};
+                Properties::SupportedUriSchemes::ValueType supported_uri_schemes{};
+                Properties::SupportedMimeTypes::ValueType supported_mime_types{};
+            } defaults;
         };
 
         // Creates a new instance, sets up player properties and installs method handlers.
@@ -119,8 +134,50 @@ struct MediaPlayer2
                   configuration.object->get_property<Properties::DesktopEntry>(),
                   configuration.object->get_property<Properties::SupportedUriSchemes>(),
                   configuration.object->get_property<Properties::SupportedMimeTypes>()
+              },
+              signals
+              {
+                  configuration.object->get_signal<core::dbus::interfaces::Properties::Signals::PropertiesChanged>()
               }
-        {            
+        {
+            // Initialize property values of the media_player instance.
+            properties.can_quit->set(false);
+            properties.fullscreen->set(false);
+            properties.can_set_fullscreen->set(false);
+            properties.can_raise->set(false);
+            properties.has_track_list->set(false);
+            properties.can_set_fullscreen->set(false);
+            // TODO(tvoss): Value should be passed as an argument to the ctor.
+            properties.desktop_entry->set(std::string{"mediaplayer-app"});
+            // TODO(tvoss): Value should be passed as an argument to the ctor.
+            properties.identity->set(std::string{"MediaHub::Player instance"});
+            // TODO(tvoss): Value should be queried from the underlying engine.
+            properties.supported_mime_types->set({std::string{"audio/mpeg3"}});
+
+            std::map<std::string, dbus::types::Variant> dict;
+            dict[Properties::CanQuit::name()]
+                    = dbus::types::Variant::encode(properties.can_quit->get());
+            dict[Properties::Fullscreen::name()]
+                    = dbus::types::Variant::encode(properties.fullscreen->get());
+            dict[Properties::CanSetFullscreen::name()]
+                    = dbus::types::Variant::encode(properties.can_set_fullscreen->get());
+            dict[Properties::CanRaise::name()]
+                    = dbus::types::Variant::encode(properties.can_raise->get());
+            dict[Properties::HasTrackList::name()]
+                    = dbus::types::Variant::encode(properties.has_track_list->get());
+            dict[Properties::CanSetFullscreen::name()]
+                    = dbus::types::Variant::encode(properties.can_set_fullscreen->get());
+            dict[Properties::DesktopEntry::name()]
+                    = dbus::types::Variant::encode(properties.desktop_entry->get());
+            dict[Properties::Identity::name()]
+                    = dbus::types::Variant::encode(properties.identity->get());
+            dict[Properties::SupportedMimeTypes::name()]
+                    = dbus::types::Variant::encode(properties.supported_mime_types->get());
+
+            signals.properties_changed->emit(std::make_tuple(
+                                        dbus::traits::Service<Player>::interface_name(),
+                                        dict,
+                                        std::vector<std::string>{}));
         }
 
         // We just store creation time properties here.
@@ -139,6 +196,15 @@ struct MediaPlayer2
             std::shared_ptr<core::dbus::Property<Properties::SupportedUriSchemes>> supported_uri_schemes;
             std::shared_ptr<core::dbus::Property<Properties::SupportedMimeTypes>> supported_mime_types;
         } properties;
+
+        struct
+        {
+            core::dbus::Signal
+            <
+                core::dbus::interfaces::Properties::Signals::PropertiesChanged,
+                core::dbus::interfaces::Properties::Signals::PropertiesChanged::ArgumentType
+            >::Ptr properties_changed;
+        } signals;
     };
 };
 }
