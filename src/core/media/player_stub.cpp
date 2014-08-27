@@ -218,7 +218,7 @@ struct media::PlayerStub::Private
 
         PlaybackCompleteCb playback_complete_cb;
         void *playback_complete_context;
-        core::Signal<uint64_t> seeked_to;
+        core::Signal<int64_t> seeked_to;
         core::Signal<void> end_of_stream;
         core::Signal<media::Player::PlaybackStatus> playback_status_changed;
     } signals;

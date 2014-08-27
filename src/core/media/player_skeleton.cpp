@@ -344,7 +344,7 @@ struct media::PlayerSkeleton::Private
             });
         }
 
-        core::Signal<uint64_t> seeked_to;
+        core::Signal<int64_t> seeked_to;
         core::Signal<void> end_of_stream;
         core::Signal<media::Player::PlaybackStatus> playback_status_changed;
     } signals;
@@ -516,12 +516,12 @@ const core::Property<media::Player::Volume>& media::PlayerSkeleton::volume() con
     return *d->skeleton.properties.volume;
 }
 
-const core::Property<uint64_t>& media::PlayerSkeleton::position() const
+const core::Property<int64_t>& media::PlayerSkeleton::position() const
 {
     return *d->skeleton.properties.position;
 }
 
-const core::Property<uint64_t>& media::PlayerSkeleton::duration() const
+const core::Property<int64_t>& media::PlayerSkeleton::duration() const
 {
     return *d->skeleton.properties.duration;
 }
@@ -556,12 +556,12 @@ core::Property<media::Player::Volume>& media::PlayerSkeleton::volume()
     return *d->skeleton.properties.volume;
 }
 
-core::Property<uint64_t>& media::PlayerSkeleton::position()
+core::Property<int64_t>& media::PlayerSkeleton::position()
 {
     return *d->skeleton.properties.position;
 }
 
-core::Property<uint64_t>& media::PlayerSkeleton::duration()
+core::Property<int64_t>& media::PlayerSkeleton::duration()
 {
     return *d->skeleton.properties.duration;
 }
@@ -622,12 +622,12 @@ core::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::maximum_play
     return *d->skeleton.properties.maximum_playback_rate;
 }
 
-const core::Signal<uint64_t>& media::PlayerSkeleton::seeked_to() const
+const core::Signal<int64_t>& media::PlayerSkeleton::seeked_to() const
 {
     return d->signals.seeked_to;
 }
 
-core::Signal<uint64_t>& media::PlayerSkeleton::seeked_to()
+core::Signal<int64_t>& media::PlayerSkeleton::seeked_to()
 {
     return d->signals.seeked_to;
 }
