@@ -452,7 +452,7 @@ media::PlayerSkeleton::PlayerSkeleton(
 
         d->on_property_value_changed
         <
-            mpris::Player::Properties::MetaData
+            mpris::Player::Properties::Metadata
         >(dict, d->exported.player_properties_changed);
     });
 

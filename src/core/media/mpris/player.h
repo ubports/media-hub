@@ -133,7 +133,7 @@ struct Player
         DBUS_CPP_WRITABLE_PROPERTY_DEF(PlaybackRate, Player, double)
         DBUS_CPP_WRITABLE_PROPERTY_DEF(Rate, Player, double)
         DBUS_CPP_WRITABLE_PROPERTY_DEF(Shuffle, Player, bool)
-        DBUS_CPP_READABLE_PROPERTY_DEF(MetaData, Player, Dictionary)
+        DBUS_CPP_READABLE_PROPERTY_DEF(Metadata, Player, Dictionary)
         DBUS_CPP_READABLE_PROPERTY_DEF(TypedMetaData, Player, core::ubuntu::media::Track::MetaData)
         DBUS_CPP_WRITABLE_PROPERTY_DEF(Volume, Player, double)
         DBUS_CPP_READABLE_PROPERTY_DEF(Position, Player, std::uint64_t)
@@ -180,7 +180,6 @@ struct Player
                   configuration.object->template get_property<mpris::Player::Properties::TypedLoopStatus>(),
                   configuration.object->template get_property<mpris::Player::Properties::PlaybackRate>(),
                   configuration.object->template get_property<mpris::Player::Properties::Shuffle>(),
-                  // configuration.object->template get_property<mpris::Player::Properties::MetaData>(),
                   configuration.object->template get_property<mpris::Player::Properties::TypedMetaData>(),
                   configuration.object->template get_property<mpris::Player::Properties::Volume>(),
                   configuration.object->template get_property<mpris::Player::Properties::Position>(),
@@ -217,7 +216,6 @@ struct Player
             std::shared_ptr<core::dbus::Property<mpris::Player::Properties::TypedLoopStatus>> typed_loop_status;
             std::shared_ptr<core::dbus::Property<mpris::Player::Properties::PlaybackRate>> playback_rate;
             std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Shuffle>> is_shuffle;
-            // std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MetaData>> meta_data_for_current_track;
             std::shared_ptr<core::dbus::Property<mpris::Player::Properties::TypedMetaData>> typed_meta_data_for_current_track;
             std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Volume>> volume;
             std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Position>> position;
