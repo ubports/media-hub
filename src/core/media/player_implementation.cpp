@@ -415,16 +415,19 @@ void media::PlayerImplementation::previous()
 
 void media::PlayerImplementation::play()
 {
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
     d->engine->play();
 }
 
 void media::PlayerImplementation::pause()
 {
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
     d->engine->pause();
 }
 
 void media::PlayerImplementation::stop()
 {
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
     d->engine->stop();
 }
 
