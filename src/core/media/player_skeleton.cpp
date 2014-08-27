@@ -106,6 +106,25 @@ struct media::PlayerSkeleton::Private
         bus->send(reply);
     }
 
+    void handle_play_pause(const core::dbus::Message::Ptr& msg)
+    {
+        switch(impl->playback_status().get())
+        {
+        case core::ubuntu::media::Player::PlaybackStatus::ready:
+        case core::ubuntu::media::Player::PlaybackStatus::paused:
+        case core::ubuntu::media::Player::PlaybackStatus::stopped:
+            impl->play();
+            break;
+        case core::ubuntu::media::Player::PlaybackStatus::playing:
+            impl->pause();
+            break;
+        default:
+            break;
+        }
+
+        bus->send(dbus::Message::make_method_return(msg));
+    }
+
     void handle_seek(const core::dbus::Message::Ptr& in)
     {
         uint64_t ticks;
@@ -550,6 +569,9 @@ media::PlayerSkeleton::PlayerSkeleton(
     auto play = std::bind(&Private::handle_play, d, std::placeholders::_1);
     d->object->install_method_handler<mpris::Player::Play>(play);
     d->exported.object->install_method_handler<mpris::Player::Play>(play);
+
+    auto play_pause = std::bind(&Private::handle_play_pause, d, std::placeholders::_1);
+    d->exported.object->install_method_handler<mpris::Player::PlayPause>(play_pause);
 
     auto seek = std::bind(&Private::handle_seek, d, std::placeholders::_1);
     d->object->install_method_handler<mpris::Player::Seek>(seek);
