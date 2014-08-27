@@ -23,6 +23,7 @@
 #include "player_traits.h"
 #include "property_stub.h"
 #include "the_session_bus.h"
+#include "xesam.h"
 
 #include "mpris/media_player2.h"
 #include "mpris/player.h"
@@ -386,10 +387,22 @@ media::PlayerSkeleton::PlayerSkeleton(
     dict[mpris::MediaPlayer2::Properties::SupportedMimeTypes::name()]
             = dbus::types::Variant::encode(d->exported.media_player.properties.supported_mime_types->get());
 
+    // We announce the initial set of values here.
+    d->exported.media_player_properties_changed->emit(
+                std::make_tuple(
+                    dbus::traits::Service<mpris::MediaPlayer2>::interface_name(),
+                    dict,
+                    std::vector<std::string>{}));
+
     // We wire up player state changes
     d->skeleton.signals.seeked_to->connect([this](std::uint64_t position)
     {
         d->exported.player.signals.seeked_to->emit(position);
+    });
+
+    d->skeleton.properties.duration->changed().connect([this](std::uint64_t duration)
+    {
+        d->exported.player.properties.duration->set(duration);
     });
 
     d->skeleton.properties.position->changed().connect([this](std::uint64_t position)
@@ -407,12 +420,37 @@ media::PlayerSkeleton::PlayerSkeleton(
         d->exported.player.properties.loop_status->set(mpris::Player::LoopStatus::from(status));
     });
 
+    d->skeleton.properties.typed_meta_data_for_current_track->changed().connect([this](const core::ubuntu::media::Track::MetaData& md)
+    {
+        mpris::Player::Dictionary dict;
+
+        if (md.count(xesam::Title::name) > 0)
+            dict[xesam::Title::name] = dbus::types::Variant::encode(md.get(xesam::Title::name));
+        if (md.count(xesam::Album::name) > 0)
+            dict[xesam::Album::name] = dbus::types::Variant::encode(md.get(xesam::Album::name));
+        if (md.count(xesam::Artist::name) > 0)
+            dict[xesam::Artist::name] = dbus::types::Variant::encode(md.get(xesam::Artist::name));
+
+        d->on_property_value_changed
+        <
+            mpris::Player::Properties::MetaData
+        >(dict, d->exported.player_properties_changed);
+    });
+
     d->exported.player.properties.position->changed().connect([this](std::uint64_t position)
     {
         d->on_property_value_changed
         <
             mpris::Player::Properties::Position
         >(position, d->exported.player_properties_changed);
+    });
+
+    d->exported.player.properties.duration->changed().connect([this](std::uint64_t duration)
+    {
+        d->on_property_value_changed
+        <
+            mpris::Player::Properties::Duration
+        >(duration, d->exported.player_properties_changed);
     });
 
     d->exported.player.properties.playback_status->changed().connect([this](const std::string& status)
@@ -431,12 +469,6 @@ media::PlayerSkeleton::PlayerSkeleton(
         >(status, d->exported.player_properties_changed);
     });
 
-    // We announce the initial set of values here.
-    d->exported.media_player_properties_changed->emit(
-                std::make_tuple(
-                    dbus::traits::Service<mpris::MediaPlayer2>::interface_name(),
-                    dict,
-                    std::vector<std::string>{}));
     // Initialize property values of the player instance.
     d->skeleton.properties.can_play->set(true);
     d->exported.player.properties.can_play->set(true);
@@ -455,6 +487,48 @@ media::PlayerSkeleton::PlayerSkeleton(
 
     d->skeleton.properties.can_go_previous->set(true);
     d->exported.player.properties.can_go_previous->set(true);
+
+    d->skeleton.properties.typed_playback_status->set(core::ubuntu::media::Player::PlaybackStatus::null);
+    d->exported.player.properties.playback_status->set(mpris::Player::PlaybackStatus::from(core::ubuntu::media::Player::PlaybackStatus::null));
+
+    d->skeleton.properties.typed_loop_status->set(core::ubuntu::media::Player::LoopStatus::none);
+    d->exported.player.properties.loop_status->set(mpris::Player::LoopStatus::from(core::ubuntu::media::Player::LoopStatus::none));
+
+    d->skeleton.properties.playback_rate->set(1.f);
+    d->exported.player.properties.playback_rate->set(1.f);
+
+    d->skeleton.properties.is_shuffle->set(false);
+    d->exported.player.properties.is_shuffle->set(false);
+
+    d->skeleton.properties.position->set(0);
+    d->exported.player.properties.position->set(0);
+
+    d->skeleton.properties.minimum_playback_rate->set(1.f);
+    d->exported.player.properties.minimum_playback_rate->set(1.f);
+
+    d->skeleton.properties.maximum_playback_rate->set(1.f);
+    d->exported.player.properties.maximum_playback_rate->set(1.f);
+
+    dict.clear();
+    dict[mpris::Player::Properties::CanPlay::name()] = dbus::types::Variant::encode(d->exported.player.properties.can_play->get());
+    dict[mpris::Player::Properties::CanPause::name()] = dbus::types::Variant::encode(d->exported.player.properties.can_pause->get());
+    dict[mpris::Player::Properties::CanSeek::name()] = dbus::types::Variant::encode(d->exported.player.properties.can_seek->get());
+    dict[mpris::Player::Properties::CanControl::name()] = dbus::types::Variant::encode(d->exported.player.properties.can_control->get());
+    dict[mpris::Player::Properties::CanGoNext::name()] = dbus::types::Variant::encode(d->exported.player.properties.can_go_next->get());
+    dict[mpris::Player::Properties::CanGoPrevious::name()] = dbus::types::Variant::encode(d->exported.player.properties.can_go_previous->get());
+    dict[mpris::Player::Properties::PlaybackStatus::name()] = dbus::types::Variant::encode(d->exported.player.properties.playback_status->get());
+    dict[mpris::Player::Properties::LoopStatus::name()] = dbus::types::Variant::encode(d->exported.player.properties.loop_status->get());
+    dict[mpris::Player::Properties::PlaybackRate::name()] = dbus::types::Variant::encode(d->exported.player.properties.playback_rate->get());
+    dict[mpris::Player::Properties::Shuffle::name()] = dbus::types::Variant::encode(d->exported.player.properties.is_shuffle->get());
+    dict[mpris::Player::Properties::Position::name()] = dbus::types::Variant::encode(d->exported.player.properties.position->get());
+    dict[mpris::Player::Properties::MinimumRate::name()] = dbus::types::Variant::encode(d->exported.player.properties.minimum_playback_rate->get());
+    dict[mpris::Player::Properties::MaximumRate::name()] = dbus::types::Variant::encode(d->exported.player.properties.maximum_playback_rate->get());
+
+    d->exported.player_properties_changed->emit(
+                std::make_tuple(
+                    dbus::traits::Service<mpris::Player>::interface_name(),
+                    dict,
+                    std::vector<std::string>{}));
 
     // Setup method handlers for mpris::Player methods.
     auto next = std::bind(&Private::handle_next, d, std::placeholders::_1);

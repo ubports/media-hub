@@ -133,7 +133,7 @@ struct Player
         DBUS_CPP_WRITABLE_PROPERTY_DEF(PlaybackRate, Player, double)
         DBUS_CPP_WRITABLE_PROPERTY_DEF(Rate, Player, double)
         DBUS_CPP_WRITABLE_PROPERTY_DEF(Shuffle, Player, bool)
-        // DBUS_CPP_READABLE_PROPERTY_DEF(MetaData, Player, Dictionary)
+        DBUS_CPP_READABLE_PROPERTY_DEF(MetaData, Player, Dictionary)
         DBUS_CPP_READABLE_PROPERTY_DEF(TypedMetaData, Player, core::ubuntu::media::Track::MetaData)
         DBUS_CPP_WRITABLE_PROPERTY_DEF(Volume, Player, double)
         DBUS_CPP_READABLE_PROPERTY_DEF(Position, Player, std::uint64_t)
