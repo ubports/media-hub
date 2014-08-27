@@ -408,12 +408,12 @@ const core::Property<media::Player::Volume>& media::PlayerStub::volume() const
     return *d->properties.volume;
 }
 
-const core::Property<uint64_t>& media::PlayerStub::position() const
+const core::Property<int64_t>& media::PlayerStub::position() const
 {
     return *d->properties.position;
 }
 
-const core::Property<uint64_t>& media::PlayerStub::duration() const
+const core::Property<int64_t>& media::PlayerStub::duration() const
 {
     return *d->properties.duration;
 }
@@ -448,7 +448,7 @@ core::Property<media::Player::Volume>& media::PlayerStub::volume()
     return *d->properties.volume;
 }
 
-const core::Signal<uint64_t>& media::PlayerStub::seeked_to() const
+const core::Signal<int64_t>& media::PlayerStub::seeked_to() const
 {
     return d->signals.seeked_to;
 }

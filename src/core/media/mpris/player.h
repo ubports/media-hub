@@ -118,7 +118,7 @@ struct Player
 
     struct Signals
     {
-        DBUS_CPP_SIGNAL_DEF(Seeked, Player, std::uint64_t)
+        DBUS_CPP_SIGNAL_DEF(Seeked, Player, std::int64_t)
         DBUS_CPP_SIGNAL_DEF(EndOfStream, Player, void)
         DBUS_CPP_SIGNAL_DEF(PlaybackStatusChanged, Player, core::ubuntu::media::Player::PlaybackStatus)
     };
@@ -137,8 +137,8 @@ struct Player
         DBUS_CPP_READABLE_PROPERTY_DEF(Metadata, Player, Dictionary)
         DBUS_CPP_READABLE_PROPERTY_DEF(TypedMetaData, Player, core::ubuntu::media::Track::MetaData)
         DBUS_CPP_WRITABLE_PROPERTY_DEF(Volume, Player, double)
-        DBUS_CPP_READABLE_PROPERTY_DEF(Position, Player, std::uint64_t)
-        DBUS_CPP_READABLE_PROPERTY_DEF(Duration, Player, std::uint64_t)
+        DBUS_CPP_READABLE_PROPERTY_DEF(Position, Player, std::int64_t)
+        DBUS_CPP_READABLE_PROPERTY_DEF(Duration, Player, std::int64_t)
         DBUS_CPP_READABLE_PROPERTY_DEF(MinimumRate, Player, double)
         DBUS_CPP_READABLE_PROPERTY_DEF(MaximumRate, Player, double)
         DBUS_CPP_READABLE_PROPERTY_DEF(IsVideoSource, Player, bool)
