@@ -28,6 +28,7 @@
 #include "mpris/media_player2.h"
 #include "mpris/metadata.h"
 #include "mpris/player.h"
+#include "mpris/playlists.h"
 
 #include <core/dbus/object.h>
 #include <core/dbus/property.h>
@@ -320,7 +321,8 @@ struct media::PlayerSkeleton::Private
               service{dbus::Service::add_service(bus, "org.mpris.MediaPlayer2.MediaHub.Session" + std::to_string(counter++))},
               object{service->add_object_for_path(dbus::types::ObjectPath{"/org/mpris/MediaPlayer2"})},
               media_player{mpris::MediaPlayer2::Skeleton::Configuration{bus, object, media_player_defaults()}},
-              player{mpris::Player::Skeleton::Configuration{bus, object, player_defaults()}}
+              player{mpris::Player::Skeleton::Configuration{bus, object, player_defaults()}},
+              playlists{mpris::Playlists::Skeleton::Configuration{bus, object, mpris::Playlists::Skeleton::Configuration::Defaults{}}}
         {
             object->install_method_handler<core::dbus::interfaces::Properties::GetAll>([this](const core::dbus::Message::Ptr& msg)
             {
@@ -332,6 +334,8 @@ struct media::PlayerSkeleton::Private
                     reply->writer() << player.get_all_properties();
                 else if (itf == mpris::MediaPlayer2::name())
                     reply->writer() << media_player.get_all_properties();
+                else if (itf == mpris::Playlists::name())
+                    reply->writer() << playlists.get_all_properties();
 
                 Exported::bus->send(reply);
             });
@@ -343,6 +347,7 @@ struct media::PlayerSkeleton::Private
 
         mpris::MediaPlayer2::Skeleton media_player;
         mpris::Player::Skeleton player;
+        mpris::Playlists::Skeleton playlists;
     } exported;
 
     struct Signals
