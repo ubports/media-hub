@@ -26,6 +26,7 @@
 #include "xesam.h"
 
 #include "mpris/media_player2.h"
+#include "mpris/metadata.h"
 #include "mpris/player.h"
 
 #include <core/dbus/object.h>
@@ -46,9 +47,11 @@ unsigned int counter = {0};
 struct media::PlayerSkeleton::Private
 {
     Private(media::PlayerSkeleton* player,
+            CoverArtResolver cover_art_resolver,
             const std::shared_ptr<core::dbus::Bus>& bus,
             const std::shared_ptr<core::dbus::Object>& session)
         : impl(player),
+          cover_art_resolver(cover_art_resolver),
           bus(bus),
           object(session),
           apparmor_session(nullptr),
@@ -280,6 +283,7 @@ struct media::PlayerSkeleton::Private
     }
 
     media::PlayerSkeleton* impl;
+    CoverArtResolver cover_art_resolver;
     dbus::Bus::Ptr bus;
     dbus::Object::Ptr object;
     dbus::Object::Ptr apparmor_session;
@@ -374,10 +378,19 @@ struct media::PlayerSkeleton::Private
 
 };
 
+media::PlayerSkeleton::CoverArtResolver media::PlayerSkeleton::always_missing_cover_art_resolver()
+{
+    return [](const std::string&, const std::string&, const std::string&)
+    {
+        return "file:///usr/share/unity/icons/album_missing.png";
+    };
+}
+
 media::PlayerSkeleton::PlayerSkeleton(
         const std::shared_ptr<core::dbus::Bus>& bus,
-        const std::shared_ptr<core::dbus::Object>& session)
-        : d(new Private{this, bus, session})
+        const std::shared_ptr<core::dbus::Object>& session,
+        CoverArtResolver cover_art_resolver)
+        : d(new Private{this, cover_art_resolver, bus, session})
 {
     // We wire up player state changes
     d->skeleton.signals.seeked_to->connect([this](std::uint64_t position)
@@ -409,12 +422,24 @@ media::PlayerSkeleton::PlayerSkeleton(
     {
         mpris::Player::Dictionary dict;
 
-        if (md.count(xesam::Title::name) > 0)
+        bool has_title = md.count(xesam::Title::name) > 0;
+        bool has_album_name = md.count(xesam::Album::name) > 0;
+        bool has_artist_name = md.count(xesam::Artist::name) > 0;
+
+        if (has_title)
             dict[xesam::Title::name] = dbus::types::Variant::encode(md.get(xesam::Title::name));
-        if (md.count(xesam::Album::name) > 0)
+        if (has_album_name)
             dict[xesam::Album::name] = dbus::types::Variant::encode(md.get(xesam::Album::name));
-        if (md.count(xesam::Artist::name) > 0)
+        if (has_artist_name)
             dict[xesam::Artist::name] = dbus::types::Variant::encode(md.get(xesam::Artist::name));
+
+        dict[mpris::metadata::ArtUrl::name]
+                = dbus::types::Variant::encode(
+                    d->cover_art_resolver(
+                        has_title ? md.get(xesam::Title::name) : "",
+                        has_album_name ? md.get(xesam::Album::name) : "",
+                        has_artist_name ? md.get(xesam::Artist::name) : ""
+                        ));
 
         d->on_property_value_changed
         <

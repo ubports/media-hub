@@ -71,9 +71,26 @@ class PlayerSkeleton : public core::ubuntu::media::Player
     virtual core::Signal<PlaybackStatus>& playback_status_changed();
 
   protected:
+    // Functional modelling a helper to resolve artist/album names to
+    // cover art.
+    typedef std::function
+    <
+        std::string             // Returns a URL pointing to the album art
+        (
+            const std::string&, // The title of the track
+            const std::string&, // The name of the album
+            const std::string&  // The name of the artist
+        )
+    > CoverArtResolver;
+
+    // Return a CoverArtResolver that always resolves to
+    // file:///usr/share/unity/icons/album_missing.png
+    static CoverArtResolver always_missing_cover_art_resolver();
+
     PlayerSkeleton(
             const std::shared_ptr<core::dbus::Bus>& bus,
-            const std::shared_ptr<core::dbus::Object>& session);
+            const std::shared_ptr<core::dbus::Object>& session,
+            CoverArtResolver cover_art_resolver = always_missing_cover_art_resolver());
 
     virtual core::Property<PlaybackStatus>& playback_status();
     virtual core::Property<bool>& can_play();
