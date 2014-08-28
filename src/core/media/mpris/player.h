@@ -245,11 +245,6 @@ struct Player
             properties.minimum_playback_rate->set(configuration.defaults.minimum_rate);
             properties.maximum_playback_rate->set(configuration.defaults.maximum_rate);            
 
-            signals.properties_changed->emit(std::make_tuple(
-                            dbus::traits::Service<Player>::interface_name(),
-                            get_all_properties(),
-                            Player::Skeleton::the_empty_list_of_invalided_properties()));
-
             properties.position->changed().connect([this](std::int64_t position)
             {
                 on_property_value_changed<Properties::Position>(position);

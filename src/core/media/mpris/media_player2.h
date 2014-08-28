@@ -149,11 +149,6 @@ struct MediaPlayer2
             properties.desktop_entry->set(configuration.defaults.desktop_entry);
             properties.identity->set(configuration.defaults.identity);
             properties.supported_mime_types->set(configuration.defaults.supported_mime_types);
-
-            signals.properties_changed->emit(std::make_tuple(
-                                        dbus::traits::Service<Player>::interface_name(),
-                                        get_all_properties(),
-                                        std::vector<std::string>{}));
         }
 
         std::map<std::string, core::dbus::types::Variant> get_all_properties()
