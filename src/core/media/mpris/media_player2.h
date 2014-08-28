@@ -141,43 +141,44 @@ struct MediaPlayer2
               }
         {
             // Initialize property values of the media_player instance.
-            properties.can_quit->set(false);
-            properties.fullscreen->set(false);
-            properties.can_set_fullscreen->set(false);
-            properties.can_raise->set(false);
-            properties.has_track_list->set(false);
-            properties.can_set_fullscreen->set(false);
-            // TODO(tvoss): Value should be passed as an argument to the ctor.
-            properties.desktop_entry->set(std::string{"mediaplayer-app"});
-            // TODO(tvoss): Value should be passed as an argument to the ctor.
-            properties.identity->set(std::string{"MediaHub::Player instance"});
-            // TODO(tvoss): Value should be queried from the underlying engine.
-            properties.supported_mime_types->set({std::string{"audio/mpeg3"}});
-
-            std::map<std::string, dbus::types::Variant> dict;
-            dict[Properties::CanQuit::name()]
-                    = dbus::types::Variant::encode(properties.can_quit->get());
-            dict[Properties::Fullscreen::name()]
-                    = dbus::types::Variant::encode(properties.fullscreen->get());
-            dict[Properties::CanSetFullscreen::name()]
-                    = dbus::types::Variant::encode(properties.can_set_fullscreen->get());
-            dict[Properties::CanRaise::name()]
-                    = dbus::types::Variant::encode(properties.can_raise->get());
-            dict[Properties::HasTrackList::name()]
-                    = dbus::types::Variant::encode(properties.has_track_list->get());
-            dict[Properties::CanSetFullscreen::name()]
-                    = dbus::types::Variant::encode(properties.can_set_fullscreen->get());
-            dict[Properties::DesktopEntry::name()]
-                    = dbus::types::Variant::encode(properties.desktop_entry->get());
-            dict[Properties::Identity::name()]
-                    = dbus::types::Variant::encode(properties.identity->get());
-            dict[Properties::SupportedMimeTypes::name()]
-                    = dbus::types::Variant::encode(properties.supported_mime_types->get());
+            properties.can_quit->set(configuration.defaults.can_quit);
+            properties.fullscreen->set(configuration.defaults.fullscreen);
+            properties.can_set_fullscreen->set(configuration.defaults.can_set_fullscreen);
+            properties.can_raise->set(configuration.defaults.can_raise);
+            properties.has_track_list->set(configuration.defaults.has_track_list);
+            properties.desktop_entry->set(configuration.defaults.desktop_entry);
+            properties.identity->set(configuration.defaults.identity);
+            properties.supported_mime_types->set(configuration.defaults.supported_mime_types);
 
             signals.properties_changed->emit(std::make_tuple(
                                         dbus::traits::Service<Player>::interface_name(),
-                                        dict,
+                                        get_all_properties(),
                                         std::vector<std::string>{}));
+        }
+
+        std::map<std::string, core::dbus::types::Variant> get_all_properties()
+        {
+            std::map<std::string, dbus::types::Variant> dict;
+            dict[Properties::CanQuit::name()]
+                    = core::dbus::types::Variant::encode(properties.can_quit->get());
+            dict[Properties::Fullscreen::name()]
+                    = core::dbus::types::Variant::encode(properties.fullscreen->get());
+            dict[Properties::CanSetFullscreen::name()]
+                    = core::dbus::types::Variant::encode(properties.can_set_fullscreen->get());
+            dict[Properties::CanRaise::name()]
+                    = core::dbus::types::Variant::encode(properties.can_raise->get());
+            dict[Properties::HasTrackList::name()]
+                    = core::dbus::types::Variant::encode(properties.has_track_list->get());
+            dict[Properties::CanSetFullscreen::name()]
+                    = core::dbus::types::Variant::encode(properties.can_set_fullscreen->get());
+            dict[Properties::DesktopEntry::name()]
+                    = core::dbus::types::Variant::encode(properties.desktop_entry->get());
+            dict[Properties::Identity::name()]
+                    = core::dbus::types::Variant::encode(properties.identity->get());
+            dict[Properties::SupportedMimeTypes::name()]
+                    = core::dbus::types::Variant::encode(properties.supported_mime_types->get());
+
+            return dict;
         }
 
         // We just store creation time properties here.

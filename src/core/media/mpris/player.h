@@ -243,8 +243,47 @@ struct Player
             properties.position->set(configuration.defaults.position);
             properties.duration->set(configuration.defaults.duration);
             properties.minimum_playback_rate->set(configuration.defaults.minimum_rate);
-            properties.maximum_playback_rate->set(configuration.defaults.maximum_rate);
+            properties.maximum_playback_rate->set(configuration.defaults.maximum_rate);            
 
+            signals.properties_changed->emit(std::make_tuple(
+                            dbus::traits::Service<Player>::interface_name(),
+                            get_all_properties(),
+                            Player::Skeleton::the_empty_list_of_invalided_properties()));
+
+            properties.position->changed().connect([this](std::int64_t position)
+            {
+                on_property_value_changed<Properties::Position>(position);
+            });
+
+            properties.duration->changed().connect([this](std::int64_t duration)
+            {
+                on_property_value_changed<Properties::Duration>(duration);
+            });
+
+            properties.playback_status->changed().connect([this](const std::string& status)
+            {
+                on_property_value_changed<Properties::PlaybackStatus>(status);
+            });
+
+            properties.loop_status->changed().connect([this](const std::string& status)
+            {
+                on_property_value_changed<Properties::LoopStatus>(status);
+            });                       
+        }
+
+        template<typename Property>
+        void on_property_value_changed(const typename Property::ValueType& value)
+        {
+            Dictionary dict; dict[Property::name()] = dbus::types::Variant::encode(value);
+
+            signals.properties_changed->emit(std::make_tuple(
+                            dbus::traits::Service<Player>::interface_name(),
+                            dict,
+                            the_empty_list_of_invalided_properties()));
+        }
+
+        Dictionary get_all_properties()
+        {
             Dictionary dict;
             dict[Properties::CanPlay::name()] = dbus::types::Variant::encode(properties.can_play->get());
             dict[Properties::CanPause::name()] = dbus::types::Variant::encode(properties.can_pause->get());
@@ -263,43 +302,8 @@ struct Player
             dict[Properties::MinimumRate::name()] = dbus::types::Variant::encode(properties.minimum_playback_rate->get());
             dict[Properties::MaximumRate::name()] = dbus::types::Variant::encode(properties.maximum_playback_rate->get());
 
-            signals.properties_changed->emit(std::make_tuple(
-                            dbus::traits::Service<Player>::interface_name(),
-                            dict,
-                            Player::Skeleton::the_empty_list_of_invalided_properties()));
-
-            properties.position->changed().connect([this](std::uint64_t position)
-            {
-                on_property_value_changed<Properties::Position>(position);
-            });
-
-            properties.duration->changed().connect([this](std::uint64_t duration)
-            {
-                on_property_value_changed<Properties::Duration>(duration);
-            });
-
-            properties.playback_status->changed().connect([this](const std::string& status)
-            {
-                on_property_value_changed<Properties::PlaybackStatus>(status);
-            });
-
-            properties.loop_status->changed().connect([this](const std::string& status)
-            {
-                on_property_value_changed<Properties::LoopStatus>(status);
-            });
+            return dict;
         }
-
-        template<typename Property>
-        void on_property_value_changed(const typename Property::ValueType& value)
-        {
-            Dictionary dict; dict[Property::name()] = dbus::types::Variant::encode(value);
-
-            signals.properties_changed->emit(std::make_tuple(
-                            dbus::traits::Service<Player>::interface_name(),
-                            dict,
-                            the_empty_list_of_invalided_properties()));
-        }
-
 
         // We just store creation time properties
         Configuration configuration;

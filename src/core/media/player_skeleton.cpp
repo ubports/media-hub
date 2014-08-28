@@ -61,7 +61,7 @@ struct media::PlayerSkeleton::Private
               skeleton.signals.playback_status_changed
           }
     {
-    }
+    }    
 
     void handle_next(const core::dbus::Message::Ptr& msg)
     {
@@ -82,10 +82,6 @@ struct media::PlayerSkeleton::Private
         impl->pause();
         auto reply = dbus::Message::make_method_return(msg);
         bus->send(reply);
-    }
-
-    void handle_playpause(DBusMessage*)
-    {
     }
 
     void handle_stop(const core::dbus::Message::Ptr& msg)
@@ -292,7 +288,7 @@ struct media::PlayerSkeleton::Private
 
     struct Exported
     {
-        static mpris::MediaPlayer2::Skeleton::Configuration::Defaults defaults()
+        static mpris::MediaPlayer2::Skeleton::Configuration::Defaults media_player_defaults()
         {
             mpris::MediaPlayer2::Skeleton::Configuration::Defaults defaults;
             // TODO(tvoss): These three elements really should be configurable.
@@ -303,14 +299,41 @@ struct media::PlayerSkeleton::Private
             return defaults;
         }
 
-        explicit Exported(const dbus::Bus::Ptr& bus)
-            : service{dbus::Service::add_service(bus, "org.mpris.MediaPlayer2.MediaHub.Session" + std::to_string(counter++))},
-              object{service->add_object_for_path(dbus::types::ObjectPath{"/org/mpris/MediaPlayer2"})},
-              media_player{mpris::MediaPlayer2::Skeleton::Configuration{bus, object, defaults()}},
-              player{mpris::Player::Skeleton::Configuration{bus, object, mpris::Player::Skeleton::Configuration::Defaults{}}}
+        static mpris::Player::Skeleton::Configuration::Defaults player_defaults()
         {
+            mpris::Player::Skeleton::Configuration::Defaults defaults;
+
+            // Disabled as track list is not fully implemented yet.
+            defaults.can_go_next = false;
+            // Disabled as track list is not fully implemented yet.
+            defaults.can_go_previous = false;
+
+            return defaults;
         }
 
+        explicit Exported(const dbus::Bus::Ptr& bus)
+            : bus{bus},
+              service{dbus::Service::add_service(bus, "org.mpris.MediaPlayer2.MediaHub.Session" + std::to_string(counter++))},
+              object{service->add_object_for_path(dbus::types::ObjectPath{"/org/mpris/MediaPlayer2"})},
+              media_player{mpris::MediaPlayer2::Skeleton::Configuration{bus, object, media_player_defaults()}},
+              player{mpris::Player::Skeleton::Configuration{bus, object, player_defaults()}}
+        {
+            object->install_method_handler<core::dbus::interfaces::Properties::GetAll>([this](const core::dbus::Message::Ptr& msg)
+            {
+                // Extract the interface
+                std::string itf; msg->reader() >> itf;
+                core::dbus::Message::Ptr reply = core::dbus::Message::make_method_return(msg);
+
+                if (itf == mpris::Player::name())
+                    reply->writer() << player.get_all_properties();
+                else if (itf == mpris::MediaPlayer2::name())
+                    reply->writer() << media_player.get_all_properties();
+
+                Exported::bus->send(reply);
+            });
+        }
+
+        dbus::Bus::Ptr bus;
         dbus::Service::Ptr service;
         dbus::Object::Ptr object;
 
