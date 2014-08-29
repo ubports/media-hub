@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
+ *              Jim Hodapp <jim.hodapp@canonical.com>
  */
 
 #include <stdio.h>
@@ -164,6 +165,11 @@ struct gstreamer::Engine::Private
         playbin.set_volume(new_volume.value);
     }
 
+    void on_audio_stream_role_changed(const media::Player::AudioStreamRole& new_audio_role)
+    {
+        playbin.set_audio_stream_role(new_audio_role);
+    }
+
     void on_about_to_finish()
     {
         state = Engine::State::ready;
@@ -188,6 +194,7 @@ struct gstreamer::Engine::Private
     Private()
         : meta_data_extractor(new gstreamer::MetaDataExtractor()),
           volume(media::Engine::Volume(1.)),
+          audio_role(media::Player::multimedia),    // This is the default audio role for all clients
           is_video_source(false),
           is_audio_source(false),
           about_to_finish_connection(
@@ -211,6 +218,12 @@ struct gstreamer::Engine::Private
               volume.changed().connect(
                   std::bind(
                       &Private::on_volume_changed,
+                      this,
+                      std::placeholders::_1))),
+          on_audio_stream_role_changed_connection(
+              audio_role.changed().connect(
+                  std::bind(
+                      &Private::on_audio_stream_role_changed,
                       this,
                       std::placeholders::_1))),
           on_seeked_to_connection(
@@ -238,6 +251,7 @@ struct gstreamer::Engine::Private
     core::Property<uint64_t> position;
     core::Property<uint64_t> duration;
     core::Property<media::Engine::Volume> volume;
+    core::Property<media::Player::AudioStreamRole> audio_role;
     core::Property<bool> is_video_source;
     core::Property<bool> is_audio_source;
     gstreamer::Playbin playbin;
@@ -245,6 +259,7 @@ struct gstreamer::Engine::Private
     core::ScopedConnection on_state_changed_connection;
     core::ScopedConnection on_tag_available_connection;
     core::ScopedConnection on_volume_changed_connection;
+    core::ScopedConnection on_audio_stream_role_changed_connection;
     core::ScopedConnection on_seeked_to_connection;
     core::ScopedConnection client_disconnected_connection;
     core::ScopedConnection on_end_of_stream_connection;
@@ -377,6 +392,16 @@ const core::Property<core::ubuntu::media::Engine::Volume>& gstreamer::Engine::vo
 core::Property<core::ubuntu::media::Engine::Volume>& gstreamer::Engine::volume()
 {
     return d->volume;
+}
+
+const core::Property<core::ubuntu::media::Player::AudioStreamRole>& gstreamer::Engine::audio_stream_role() const
+{
+    return d->audio_role;
+}
+
+core::Property<core::ubuntu::media::Player::AudioStreamRole>& gstreamer::Engine::audio_stream_role()
+{
+    return d->audio_role;
 }
 
 const core::Property<std::tuple<media::Track::UriType, media::Track::MetaData>>&
