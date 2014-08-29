@@ -1,5 +1,5 @@
 /*
- * Copyright © 2013 Canonical Ltd.
+ * Copyright © 2013-2014 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
+ *              Jim Hodapp <jim.hodapp@canonical.com>
  */
 
 #include "service_implementation.h"
@@ -29,6 +30,8 @@ using namespace std;
 
 struct media::ServiceImplementation::Private
 {
+    typedef map<media::Player::PlayerKey, std::shared_ptr<media::Player>> player_map_t;
+
     Private()
         : key_(0)
     {
@@ -36,8 +39,6 @@ struct media::ServiceImplementation::Private
 
     void track_player(const std::shared_ptr<media::Player>& player)
     {
-        cout << __PRETTY_FUNCTION__ << endl;
-        cout << "key: " << key_ << endl;
         player_map.insert(
                 std::pair<media::Player::PlayerKey,
                 std::shared_ptr<media::Player>>(key_, player));
@@ -52,25 +53,33 @@ struct media::ServiceImplementation::Private
 
     void pause_other_sessions(media::Player::PlayerKey key)
     {
-        cout << __PRETTY_FUNCTION__ << endl;
-        cout << "key: " << key << endl;
-
-        // TODO: Add a field to Player that is the type of player so that certain
-        // types of playback aren't paused below. E.g. a camera click sound shouldn't
-        // pause, nor should it pause background music sessions
-        for (auto& player_pair : player_map)
+        auto player_it = player_map.find(key);
+        if (player_it != player_map.end())
         {
-            if (player_pair.second->playback_status() == Player::playing
-                    && player_pair.first != key)
+            auto &current_player = (*player_it).second;
+            for (auto& player_pair : player_map)
             {
-                cout << "Pausing player with key: " << player_pair.first << endl;
-                player_pair.second->pause();
+                // Only pause a Player if all of the following criteria are met:
+                // 1) currently playing
+                // 2) not the same player as the one passed in my key
+                // 3) new Player has an audio stream role set to multimedia
+                // 4) has an audio stream role set to multimedia
+                if (player_pair.second->playback_status() == Player::playing
+                        && player_pair.first != key
+                        && current_player->audio_stream_role() == media::Player::multimedia
+                        && player_pair.second->audio_stream_role() == media::Player::multimedia)
+                {
+                    cout << "Pausing Player with key: " << player_pair.first << endl;
+                    player_pair.second->pause();
+                }
             }
         }
+        else
+            cerr << "Could not find Player by key: " << key << endl;
     }
 
     // Used for Player instance management
-    std::map<media::Player::PlayerKey, std::shared_ptr<media::Player>> player_map;
+    player_map_t player_map;
     media::Player::PlayerKey key_;
 
 };

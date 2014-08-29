@@ -99,7 +99,7 @@ struct media::PlayerStub::Private
             p->on_frame_available();
         }
         else
-            std::cout << "context is nullptr, can't call on_frame_available()" << std::endl;
+            std::cerr << "context is nullptr, can't call on_frame_available()" << std::endl;
     }
 
     void on_frame_available()
@@ -108,7 +108,7 @@ struct media::PlayerStub::Private
             frame_available_cb(frame_available_context);
         }
         else
-            std::cout << "frame_available_cb is nullptr, can't call frame_available_cb()" << std::endl;
+            std::cerr << "frame_available_cb is nullptr, can't call frame_available_cb()" << std::endl;
     }
 
     void set_frame_available_cb(FrameAvailableCb cb, void *context)
@@ -428,7 +428,6 @@ const core::Property<uint64_t>& media::PlayerStub::duration() const
 
 const core::Property<media::Player::AudioStreamRole>& media::PlayerStub::audio_stream_role() const
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
     return *d->properties.audio_role;
 }
 
@@ -464,7 +463,6 @@ core::Property<media::Player::Volume>& media::PlayerStub::volume()
 
 core::Property<media::Player::AudioStreamRole>& media::PlayerStub::audio_stream_role()
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
     return *d->properties.audio_role;
 }
 

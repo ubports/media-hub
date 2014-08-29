@@ -308,6 +308,7 @@ media::PlayerImplementation::PlayerImplementation(
     loop_status().set(Player::LoopStatus::none);
     position().set(0);
     duration().set(0);
+    audio_stream_role().set(Player::AudioStreamRole::multimedia);
 
     // Make sure that the Position property gets updated from the Engine
     // every time the client requests position
@@ -336,6 +337,13 @@ media::PlayerImplementation::PlayerImplementation(
         return d->engine->is_audio_source().get();
     };
     is_audio_source().install(audio_type_getter);
+
+    // Make sure that the audio_stream_role property gets updated on the Engine side
+    // whenever the client side sets the role
+    audio_stream_role().changed().connect([this](media::Player::AudioStreamRole new_role)
+    {
+        d->engine->audio_stream_role().set(new_role);
+    });
 
     d->engine->about_to_finish_signal().connect([this]()
     {

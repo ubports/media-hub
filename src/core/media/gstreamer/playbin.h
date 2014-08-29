@@ -242,6 +242,7 @@ struct Playbin
         g_object_set (pipeline, "volume", new_volume, NULL);
     }
 
+    /** Translate the AudioStreamRole enum into a string */
     static std::string get_audio_role_str(media::Player::AudioStreamRole audio_role)
     {
         switch (audio_role)
@@ -264,6 +265,7 @@ struct Playbin
         }
     }
 
+    /** Sets the new audio stream role on the pulsesink in playbin */
     void set_audio_stream_role(media::Player::AudioStreamRole new_audio_role)
     {
         GstElement *audio_sink = NULL;
@@ -271,6 +273,7 @@ struct Playbin
 
         std::string role_str("props,media.role=" + get_audio_role_str(new_audio_role));
         std::cout << "Audio stream role: " << role_str << std::endl;
+
         GstStructure *props = gst_structure_from_string (role_str.c_str(), NULL);
         if (audio_sink != nullptr && props != nullptr)
             g_object_set (audio_sink, "stream-properties", props, NULL);

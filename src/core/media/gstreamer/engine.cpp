@@ -310,10 +310,9 @@ bool gstreamer::Engine::play()
     if (result)
     {
         d->state = media::Engine::State::playing;
+        cout << "play" << endl;
         d->playback_status_changed(media::Player::PlaybackStatus::playing);
     }
-
-    cout << "Engine: " << this << endl;
 
     return result;
 }
@@ -325,6 +324,7 @@ bool gstreamer::Engine::stop()
     if (result)
     {
         d->state = media::Engine::State::stopped;
+        cout << "stop" << endl;
         d->playback_status_changed(media::Player::PlaybackStatus::stopped);
     }
 
