@@ -194,7 +194,6 @@ struct gstreamer::Engine::Private
     Private()
         : meta_data_extractor(new gstreamer::MetaDataExtractor()),
           volume(media::Engine::Volume(1.)),
-          audio_role(media::Player::multimedia),    // This is the default audio role for all clients
           is_video_source(false),
           is_audio_source(false),
           about_to_finish_connection(

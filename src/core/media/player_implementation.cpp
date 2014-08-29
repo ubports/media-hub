@@ -309,6 +309,7 @@ media::PlayerImplementation::PlayerImplementation(
     position().set(0);
     duration().set(0);
     audio_stream_role().set(Player::AudioStreamRole::multimedia);
+    d->engine->audio_stream_role().set(Player::AudioStreamRole::multimedia);
 
     // Make sure that the Position property gets updated from the Engine
     // every time the client requests position
