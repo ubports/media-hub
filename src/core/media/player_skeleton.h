@@ -87,10 +87,21 @@ class PlayerSkeleton : public core::ubuntu::media::Player
     // file:///usr/share/unity/icons/album_missing.png
     static CoverArtResolver always_missing_cover_art_resolver();
 
-    PlayerSkeleton(
-            const std::shared_ptr<core::dbus::Bus>& bus,
-            const std::shared_ptr<core::dbus::Object>& session,
-            CoverArtResolver cover_art_resolver = always_missing_cover_art_resolver());
+    // All creation time arguments go here.
+    struct Configuration
+    {
+        // The bus connection we are associated with.
+        std::shared_ptr<core::dbus::Bus> bus;
+        // The session object that we want to expose the skeleton upon.
+        std::shared_ptr<core::dbus::Object> session;
+        // The cover art resolver implementation.
+        CoverArtResolver cover_art_resolver;
+        // Our identity, an identifier we pass out to other parts of the system.
+        // Defaults to the short app id (${PKG_NAME}_${APP}).
+        std::string identity;
+    };
+
+    PlayerSkeleton(const Configuration& configuration);
 
     virtual core::Property<PlaybackStatus>& playback_status();
     virtual core::Property<bool>& can_play();

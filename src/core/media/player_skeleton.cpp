@@ -45,19 +45,22 @@ namespace
 unsigned int counter = {0};
 }
 
-struct media::PlayerSkeleton::Private
+struct media::PlayerSkeleton::Private : public std::enable_shared_from_this<media::PlayerSkeleton::Private>
 {
     Private(media::PlayerSkeleton* player,
+            const std::string& identity,
             CoverArtResolver cover_art_resolver,
             const std::shared_ptr<core::dbus::Bus>& bus,
             const std::shared_ptr<core::dbus::Object>& session)
         : impl(player),
+          identity(identity),
           cover_art_resolver(cover_art_resolver),
           bus(bus),
           object(session),
           apparmor_session(nullptr),
+          dbus_stub{bus},
           skeleton{mpris::Player::Skeleton::Configuration{bus, session, mpris::Player::Skeleton::Configuration::Defaults{}}},
-          exported{bus},
+          exported{identity, bus},
           signals
           {
               skeleton.signals.seeked_to,
@@ -143,25 +146,7 @@ struct media::PlayerSkeleton::Private
 
         auto reply = dbus::Message::make_method_return(in);
         bus->send(reply);
-    }
-
-    std::string get_client_apparmor_context(const core::dbus::Message::Ptr& msg)
-    {
-        auto bus = std::shared_ptr<dbus::Bus>(new dbus::Bus(core::dbus::WellKnownBus::session));
-        bus->install_executor(dbus::asio::make_executor(bus));
-
-        auto stub_service = dbus::Service::use_service(bus, dbus::traits::Service<core::Apparmor>::interface_name());
-        apparmor_session = stub_service->object_for_path(dbus::types::ObjectPath("/org/freedesktop/DBus"));
-        // Get the AppArmor security context for the client
-        auto result = apparmor_session->invoke_method_synchronously<core::Apparmor::getConnectionAppArmorSecurityContext, std::string>(msg->sender());
-        if (result.is_error())
-        {
-            std::cout << "Error getting apparmor profile: " << result.error().print() << std::endl;
-            return std::string();
-        }
-
-        return result.value();
-    }
+    }    
 
     bool does_client_have_access(const std::string& context, const std::string& uri)
     {
@@ -247,19 +232,19 @@ struct media::PlayerSkeleton::Private
     }
 
     void handle_open_uri(const core::dbus::Message::Ptr& in)
-    {
-        Track::UriType uri;
-        in->reader() >> uri;
+    {        
+        dbus_stub.get_connection_app_armor_security_async(in->sender(), [this, in](const std::string& profile)
+        {
+            Track::UriType uri;
+            in->reader() >> uri;
 
-        std::string context = get_client_apparmor_context(in);
-        bool have_access = does_client_have_access(context, uri);
+            bool have_access = does_client_have_access(profile, uri);
 
-        auto reply = dbus::Message::make_method_return(in);
-        if (have_access)
-            reply->writer() << impl->open_uri(uri);
-        else
-            reply->writer() << false;
-        bus->send(reply);
+            auto reply = dbus::Message::make_method_return(in);
+            reply->writer() << (have_access ? impl->open_uri(uri) : false);
+
+            bus->send(reply);
+        });
     }
 
     template<typename Property>
@@ -284,21 +269,24 @@ struct media::PlayerSkeleton::Private
     }
 
     media::PlayerSkeleton* impl;
+    std::string identity;
     CoverArtResolver cover_art_resolver;
     dbus::Bus::Ptr bus;
     dbus::Object::Ptr object;
     dbus::Object::Ptr apparmor_session;
 
+    org::freedesktop::dbus::DBus::Stub dbus_stub;
+
     mpris::Player::Skeleton skeleton;
 
     struct Exported
     {
-        static mpris::MediaPlayer2::Skeleton::Configuration::Defaults media_player_defaults()
+        static mpris::MediaPlayer2::Skeleton::Configuration::Defaults media_player_defaults(const std::string& identity)
         {
             mpris::MediaPlayer2::Skeleton::Configuration::Defaults defaults;
             // TODO(tvoss): These three elements really should be configurable.
-            defaults.identity = "MediaHub";
-            defaults.desktop_entry = "mediaplayer-app";
+            defaults.identity = identity;
+            defaults.desktop_entry = identity;
             defaults.supported_mime_types = {"audio/mpeg3"};
 
             return defaults;
@@ -316,11 +304,11 @@ struct media::PlayerSkeleton::Private
             return defaults;
         }
 
-        explicit Exported(const dbus::Bus::Ptr& bus)
+        explicit Exported(const std::string& identity, const dbus::Bus::Ptr& bus)
             : bus{bus},
               service{dbus::Service::add_service(bus, "org.mpris.MediaPlayer2.MediaHub.Session" + std::to_string(counter++))},
               object{service->add_object_for_path(dbus::types::ObjectPath{"/org/mpris/MediaPlayer2"})},
-              media_player{mpris::MediaPlayer2::Skeleton::Configuration{bus, object, media_player_defaults()}},
+              media_player{mpris::MediaPlayer2::Skeleton::Configuration{bus, object, media_player_defaults(identity)}},
               player{mpris::Player::Skeleton::Configuration{bus, object, player_defaults()}},
               playlists{mpris::Playlists::Skeleton::Configuration{bus, object, mpris::Playlists::Skeleton::Configuration::Defaults{}}}
         {
@@ -391,11 +379,8 @@ media::PlayerSkeleton::CoverArtResolver media::PlayerSkeleton::always_missing_co
     };
 }
 
-media::PlayerSkeleton::PlayerSkeleton(
-        const std::shared_ptr<core::dbus::Bus>& bus,
-        const std::shared_ptr<core::dbus::Object>& session,
-        CoverArtResolver cover_art_resolver)
-        : d(new Private{this, cover_art_resolver, bus, session})
+media::PlayerSkeleton::PlayerSkeleton(const media::PlayerSkeleton::Configuration& config)
+        : d(new Private{this, config.identity, config.cover_art_resolver, config.bus, config.session})
 {
     // We wire up player state changes
     d->skeleton.signals.seeked_to->connect([this](std::uint64_t position)

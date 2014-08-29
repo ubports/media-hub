@@ -88,7 +88,7 @@ std::shared_ptr<media::Player> media::ServiceImplementation::create_session(
         const media::Player::Configuration& conf)
 {
     std::shared_ptr<media::Player> player = std::make_shared<media::PlayerImplementation>(
-            conf.bus, conf.session, shared_from_this(), d->key());
+            conf.identity, conf.bus, conf.session, shared_from_this(), d->key());
     d->track_player(player);
     return player;
 }

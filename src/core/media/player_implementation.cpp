@@ -287,11 +287,21 @@ struct media::PlayerImplementation::Private
 };
 
 media::PlayerImplementation::PlayerImplementation(
+        const std::string& identity,
         const std::shared_ptr<core::dbus::Bus>& bus,
         const std::shared_ptr<core::dbus::Object>& session,
         const std::shared_ptr<Service>& service,
         PlayerKey key)
-    : media::PlayerSkeleton(bus, session),
+    : media::PlayerSkeleton
+      {
+          media::PlayerSkeleton::Configuration
+          {
+              bus,
+              session,
+              media::PlayerSkeleton::always_missing_cover_art_resolver(),
+              identity
+          }
+      },
       d(new Private(
             this,
             session->path(),

@@ -36,6 +36,7 @@ class PlayerImplementation : public PlayerSkeleton
 {
 public:
     PlayerImplementation(
+            const std::string& identity,
             const std::shared_ptr<core::dbus::Bus>& bus,
             const std::shared_ptr<core::dbus::Object>& session,
             const std::shared_ptr<Service>& service,
