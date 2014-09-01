@@ -62,7 +62,7 @@ struct DBus
             : object
               {
                   core::dbus::Service::use_service<org::freedesktop::dbus::DBus>(bus)
-                      ->object_for_path(core::dbus::types::ObjectPath{"/org/freedesktop/DBus}"})
+                      ->object_for_path(core::dbus::types::ObjectPath{"/org/freedesktop/DBus"})
               }
         {
         }
