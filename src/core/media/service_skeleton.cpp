@@ -38,6 +38,24 @@ namespace media = core::ubuntu::media;
 namespace
 {
 std::map<dbus::types::ObjectPath, std::shared_ptr<media::Player>> session_store;
+
+// The sound indicator is not able to handle .desktop files contained within click
+// packages. For that, we translate the short app id to a desktop entry that we know
+// is present in /usr/share. See https://bugs.launchpad.net/indicator-sound/+bug/1364241
+std::string translate_short_app_id(const std::string& app_id)
+{
+    static const std::map<std::string, std::string> lut
+    {
+        {"com.ubuntu.music_music", "mediaplayer-app"}
+    };
+
+    auto it = lut.find(app_id);
+
+    if (it == lut.end())
+        return app_id;
+
+    return it->second;
+}
 }
 
 struct media::ServiceSkeleton::Private
@@ -87,6 +105,7 @@ struct media::ServiceSkeleton::Private
             if (std::regex_match(identity, match, regex))
             {
                 identity = std::string{match[index_package]} + "_" + std::string{match[index_app]};
+                identity = translate_short_app_id(identity);
             }
 
             media::Player::Configuration config
