@@ -38,24 +38,6 @@ namespace media = core::ubuntu::media;
 namespace
 {
 std::map<dbus::types::ObjectPath, std::shared_ptr<media::Player>> session_store;
-
-// The sound indicator is not able to handle .desktop files contained within click
-// packages. For that, we translate the short app id to a desktop entry that we know
-// is present in /usr/share. See https://bugs.launchpad.net/indicator-sound/+bug/1364241
-std::string translate_short_app_id(const std::string& app_id)
-{
-    static const std::map<std::string, std::string> lut
-    {
-        {"com.ubuntu.music_music", "mediaplayer-app"}
-    };
-
-    auto it = lut.find(app_id);
-
-    if (it == lut.end())
-        return app_id;
-
-    return it->second;
-}
 }
 
 struct media::ServiceSkeleton::Private
@@ -89,28 +71,9 @@ struct media::ServiceSkeleton::Private
 
         dbus_stub.get_connection_app_armor_security_async(msg->sender(), [this, msg, op](const std::string& profile)
         {
-            // We post-process the profile name and try to extract the short app id.
-            // Please see https://wiki.ubuntu.com/AppStore/Interfaces/ApplicationId.
-            static const std::regex regex{"(.*)_(.*)_(.*)"};
-            static constexpr std::size_t index_package{1};
-            static constexpr std::size_t index_app{2};
-
-            std::string identity{profile};
-
-            // We store our matches here.
-            std::smatch match;
-
-            // See if the application id matches the pattern described in
-            // https://wiki.ubuntu.com/AppStore/Interfaces/ApplicationId
-            if (std::regex_match(identity, match, regex))
-            {
-                identity = std::string{match[index_package]} + "_" + std::string{match[index_app]};
-                identity = translate_short_app_id(identity);
-            }
-
             media::Player::Configuration config
             {
-                identity,
+                profile,
                 impl->access_bus(),
                 impl->access_service()->add_object_for_path(op)
             };
