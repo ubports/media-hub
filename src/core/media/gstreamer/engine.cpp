@@ -207,6 +207,10 @@ bool gstreamer::Engine::play()
 
 bool gstreamer::Engine::stop()
 {
+    // No need to wait, and we can immediately return.
+    if (d->state == media::Engine::State::stopped)
+        return true;
+
     auto result = d->playbin.set_state_and_wait(GST_STATE_NULL);
 
     if (result)
