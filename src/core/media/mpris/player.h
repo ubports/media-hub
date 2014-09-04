@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
+ *              Jim Hodapp <jim.hodapp@canonical.com>
  */
 
 #ifndef MPRIS_PLAYER_H_
@@ -76,6 +77,7 @@ struct Player
         WRITABLE_PROPERTY(Volume, Player, double)
         READABLE_PROPERTY(Position, Player, uint64_t)
         READABLE_PROPERTY(Duration, Player, uint64_t)
+        WRITABLE_PROPERTY(AudioStreamRole, Player, core::ubuntu::media::Player::AudioStreamRole)
         READABLE_PROPERTY(MinimumRate, Player, double)
         READABLE_PROPERTY(MaximumRate, Player, double)
         READABLE_PROPERTY(IsVideoSource, Player, bool)

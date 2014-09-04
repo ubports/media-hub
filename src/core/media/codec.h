@@ -1,5 +1,5 @@
 /*
- * Copyright © 2013 Canonical Ltd.
+ * Copyright © 2013-2014 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
+ *              Jim Hodapp <jim.hodapp@canonical.com>
  */
 
 #ifndef CODEC_H_
@@ -146,6 +147,46 @@ struct Codec<core::ubuntu::media::Player::LoopStatus>
     static void decode_argument(core::dbus::Message::Reader& out, core::ubuntu::media::Player::LoopStatus& in)
     {
         in = static_cast<core::ubuntu::media::Player::LoopStatus>(out.pop_int16());
+    }
+};
+
+namespace helper
+{
+template<>
+struct TypeMapper<core::ubuntu::media::Player::AudioStreamRole>
+{
+    constexpr static ArgumentType type_value()
+    {
+        return core::dbus::ArgumentType::int16;
+    }
+    constexpr static bool is_basic_type()
+    {
+        return false;
+    }
+    constexpr static bool requires_signature()
+    {
+        return false;
+    }
+
+    static std::string signature()
+    {
+        static const std::string s = TypeMapper<std::int16_t>::signature();
+        return s;
+    }
+};
+}
+
+template<>
+struct Codec<core::ubuntu::media::Player::AudioStreamRole>
+{
+    static void encode_argument(core::dbus::Message::Writer& out, const core::ubuntu::media::Player::AudioStreamRole& in)
+    {
+        out.push_int16(static_cast<std::int16_t>(in));
+    }
+
+    static void decode_argument(core::dbus::Message::Reader& out, core::ubuntu::media::Player::AudioStreamRole& in)
+    {
+        in = static_cast<core::ubuntu::media::Player::AudioStreamRole>(out.pop_int16());
     }
 };
 

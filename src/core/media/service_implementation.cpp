@@ -1,5 +1,5 @@
 /*
- * Copyright © 2013 Canonical Ltd.
+ * Copyright © 2013-2014 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
+ *              Jim Hodapp <jim.hodapp@canonical.com>
  */
 
 #include "service_implementation.h"
@@ -32,6 +33,8 @@ using namespace std;
 
 struct media::ServiceImplementation::Private
 {
+    typedef map<media::Player::PlayerKey, std::shared_ptr<media::Player>> player_map_t;
+
     Private()
         : key_(0)
     {
@@ -47,9 +50,11 @@ struct media::ServiceImplementation::Private
         auto stub_service = dbus::Service::use_service(bus, "com.canonical.indicator.power");
         indicator_power_session = stub_service->object_for_path(dbus::types::ObjectPath("/com/canonical/indicator/power/Battery"));
         power_level = indicator_power_session->get_property<core::IndicatorPower::PowerLevel>();
-        power_level->changed().connect([](const core::IndicatorPower::PowerLevel::ValueType &level)
+        power_level->changed().connect([this](const core::IndicatorPower::PowerLevel::ValueType &level)
         {
-            std::cout << "Power level property changed: " << level << std::endl;
+            // When the battery level hits 2%, pause all multimedia sessions
+            if (level == "critical")
+                pause_all_multimedia_sessions();
         });
     }
 
@@ -63,8 +68,6 @@ struct media::ServiceImplementation::Private
 
     void track_player(const std::shared_ptr<media::Player>& player)
     {
-        cout << __PRETTY_FUNCTION__ << endl;
-        cout << "key: " << key_ << endl;
         player_map.insert(
                 std::pair<media::Player::PlayerKey,
                 std::shared_ptr<media::Player>>(key_, player));
@@ -79,25 +82,44 @@ struct media::ServiceImplementation::Private
 
     void pause_other_sessions(media::Player::PlayerKey key)
     {
-        cout << __PRETTY_FUNCTION__ << endl;
-        cout << "key: " << key << endl;
+        auto player_it = player_map.find(key);
+        if (player_it != player_map.end())
+        {
+            auto &current_player = (*player_it).second;
+            for (auto& player_pair : player_map)
+            {
+                // Only pause a Player if all of the following criteria are met:
+                // 1) currently playing
+                // 2) not the same player as the one passed in my key
+                // 3) new Player has an audio stream role set to multimedia
+                // 4) has an audio stream role set to multimedia
+                if (player_pair.second->playback_status() == Player::playing
+                        && player_pair.first != key
+                        && current_player->audio_stream_role() == media::Player::multimedia
+                        && player_pair.second->audio_stream_role() == media::Player::multimedia)
+                {
+                    cout << "Pausing Player with key: " << player_pair.first << endl;
+                    player_pair.second->pause();
+                }
+            }
+        }
+        else
+            cerr << "Could not find Player by key: " << key << endl;
+    }
 
-        // TODO: Add a field to Player that is the type of player so that certain
-        // types of playback aren't paused below. E.g. a camera click sound shouldn't
-        // pause, nor should it pause background music sessions
+    // Pauses all multimedia audio stream role type Players
+    void pause_all_multimedia_sessions()
+    {
         for (auto& player_pair : player_map)
         {
             if (player_pair.second->playback_status() == Player::playing
-                    && player_pair.first != key)
-            {
-                cout << "Pausing player with key: " << player_pair.first << endl;
+                    && player_pair.second->audio_stream_role() == media::Player::multimedia)
                 player_pair.second->pause();
-            }
         }
     }
 
     // Used for Player instance management
-    std::map<media::Player::PlayerKey, std::shared_ptr<media::Player>> player_map;
+    player_map_t player_map;
     media::Player::PlayerKey key_;
     std::thread worker;
     dbus::Bus::Ptr bus;
