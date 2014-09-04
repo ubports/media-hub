@@ -18,10 +18,13 @@
 
 #include "service_implementation.h"
 
+#include "indicator_power_service.h"
 #include "player_configuration.h"
 #include "player_implementation.h"
 
 #include <map>
+#include <memory>
+#include <thread>
 
 namespace media = core::ubuntu::media;
 
@@ -32,6 +35,31 @@ struct media::ServiceImplementation::Private
     Private()
         : key_(0)
     {
+        bus = std::shared_ptr<dbus::Bus>(new dbus::Bus(core::dbus::WellKnownBus::session));
+        bus->install_executor(dbus::asio::make_executor(bus));
+        worker = std::thread([this]()
+        {
+            bus->run();
+        });
+
+        // Connect the property change signal that will allow media-hub to take appropriate action
+        // when the battery level reaches critical
+        std::cout << "Installing power level signal connection" << std::endl;
+        auto stub_service = dbus::Service::use_service(bus, dbus::traits::Service<core::IndicatorPower>::interface_name());
+        indicator_power_session = stub_service->object_for_path(dbus::types::ObjectPath("/com/canonical/indicator/power/Battery"));
+        power_level = indicator_power_session->get_property<core::IndicatorPower::PowerLevel>();
+        power_level->changed().connect([](const core::IndicatorPower::PowerLevel::ValueType &level)
+        {
+            std::cout << "Power level property changed: " << level << std::endl;
+        });
+    }
+
+    ~Private()
+    {
+        bus->stop();
+
+        if (worker.joinable())
+            worker.join();
     }
 
     void track_player(const std::shared_ptr<media::Player>& player)
@@ -72,6 +100,10 @@ struct media::ServiceImplementation::Private
     // Used for Player instance management
     std::map<media::Player::PlayerKey, std::shared_ptr<media::Player>> player_map;
     media::Player::PlayerKey key_;
+    std::thread worker;
+    dbus::Bus::Ptr bus;
+    std::shared_ptr<dbus::Object> indicator_power_session;
+    std::shared_ptr<core::dbus::Property<core::IndicatorPower::PowerLevel>> power_level;
 
 };
 
