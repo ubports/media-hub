@@ -44,8 +44,7 @@ struct media::ServiceImplementation::Private
 
         // Connect the property change signal that will allow media-hub to take appropriate action
         // when the battery level reaches critical
-        std::cout << "Installing power level signal connection" << std::endl;
-        auto stub_service = dbus::Service::use_service(bus, dbus::traits::Service<core::IndicatorPower>::interface_name());
+        auto stub_service = dbus::Service::use_service(bus, "com.canonical.indicator.power");
         indicator_power_session = stub_service->object_for_path(dbus::types::ObjectPath("/com/canonical/indicator/power/Battery"));
         power_level = indicator_power_session->get_property<core::IndicatorPower::PowerLevel>();
         power_level->changed().connect([](const core::IndicatorPower::PowerLevel::ValueType &level)
