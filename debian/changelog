@@ -4,6 +4,16 @@ media-hub (2.0.0) UNRELEASED; urgency=medium
 
  -- Thomas Voß <thomas.voss@canonical.com>  Thu, 28 Aug 2014 09:10:33 +0200
 
+media-hub (1.0.0+14.10.20140829.1-0ubuntu1) utopic; urgency=low
+
+  [ Jim Hodapp ]
+  * Add an audio stream role that allows the client app to categorize
+    what type of audio stream it's requesting playback for. Pause
+    playback of playing Players only if the requesting Player and other
+    Player are both of role multimedia .
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 29 Aug 2014 21:47:29 +0000
+
 media-hub (1.0.0+14.10.20140818-0ubuntu1) utopic; urgency=low
 
   [ Jim Hodapp ]

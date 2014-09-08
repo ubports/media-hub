@@ -564,6 +564,11 @@ const core::Property<int64_t>& media::PlayerSkeleton::duration() const
     return *d->skeleton.properties.duration;
 }
 
+const core::Property<media::Player::AudioStreamRole>& media::PlayerSkeleton::audio_stream_role() const
+{
+    return *d->skeleton.properties.audio_stream_role;
+}
+
 const core::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::minimum_playback_rate() const
 {
     return *d->skeleton.properties.minimum_playback_rate;
@@ -602,6 +607,11 @@ core::Property<int64_t>& media::PlayerSkeleton::position()
 core::Property<int64_t>& media::PlayerSkeleton::duration()
 {
     return *d->skeleton.properties.duration;
+}
+
+core::Property<media::Player::AudioStreamRole>& media::PlayerSkeleton::audio_stream_role()
+{
+    return *d->skeleton.properties.audio_stream_role;
 }
 
 core::Property<media::Player::PlaybackStatus>& media::PlayerSkeleton::playback_status()

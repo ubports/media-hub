@@ -1,5 +1,5 @@
 /*
- * Copyright © 2013 Canonical Ltd.
+ * Copyright © 2013-2014 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
+ *              Jim Hodapp <jim.hodapp@canonical.com>
  */
 #ifndef CORE_UBUNTU_MEDIA_ENGINE_H_
 #define CORE_UBUNTU_MEDIA_ENGINE_H_
@@ -90,6 +91,9 @@ public:
 
     virtual const core::Property<Volume>& volume() const = 0;
     virtual core::Property<Volume>& volume() = 0;
+
+    virtual const core::Property<core::ubuntu::media::Player::AudioStreamRole>& audio_stream_role() const = 0;
+    virtual core::Property<core::ubuntu::media::Player::AudioStreamRole>& audio_stream_role() = 0;
 
     virtual const core::Property<std::tuple<Track::UriType, Track::MetaData>>& track_meta_data() const = 0;
 
