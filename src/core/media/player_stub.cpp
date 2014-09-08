@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
+ *              Jim Hodapp <jim.hodapp@canonical.com>
  */
 
 #include <core/media/service.h>
@@ -72,6 +73,7 @@ struct media::PlayerStub::Private
                     object->get_property<mpris::Player::Properties::Volume>(),
                     object->get_property<mpris::Player::Properties::Position>(),
                     object->get_property<mpris::Player::Properties::Duration>(),
+                    object->get_property<mpris::Player::Properties::AudioStreamRole>(),
                     object->get_property<mpris::Player::Properties::MinimumRate>(),
                     object->get_property<mpris::Player::Properties::MaximumRate>()
                 },
@@ -95,7 +97,7 @@ struct media::PlayerStub::Private
             p->on_frame_available();
         }
         else
-            std::cout << "context is nullptr, can't call on_frame_available()" << std::endl;
+            std::cerr << "context is nullptr, can't call on_frame_available()" << std::endl;
     }
 
     void on_frame_available()
@@ -104,7 +106,7 @@ struct media::PlayerStub::Private
             frame_available_cb(frame_available_context);
         }
         else
-            std::cout << "frame_available_cb is nullptr, can't call frame_available_cb()" << std::endl;
+            std::cerr << "frame_available_cb is nullptr, can't call frame_available_cb()" << std::endl;
     }
 
     void set_frame_available_cb(FrameAvailableCb cb, void *context)
@@ -157,6 +159,7 @@ struct media::PlayerStub::Private
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Volume>> volume;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Position>> position;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Duration>> duration;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::AudioStreamRole>> audio_role;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MinimumRate>> minimum_playback_rate;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MaximumRate>> maximum_playback_rate;
     } properties;
@@ -418,6 +421,11 @@ const core::Property<uint64_t>& media::PlayerStub::duration() const
     return *d->properties.duration;
 }
 
+const core::Property<media::Player::AudioStreamRole>& media::PlayerStub::audio_stream_role() const
+{
+    return *d->properties.audio_role;
+}
+
 const core::Property<media::Player::PlaybackRate>& media::PlayerStub::minimum_playback_rate() const
 {
     return *d->properties.minimum_playback_rate;
@@ -446,6 +454,11 @@ core::Property<bool>& media::PlayerStub::is_shuffle()
 core::Property<media::Player::Volume>& media::PlayerStub::volume()
 {
     return *d->properties.volume;
+}
+
+core::Property<media::Player::AudioStreamRole>& media::PlayerStub::audio_stream_role()
+{
+    return *d->properties.audio_role;
 }
 
 const core::Signal<uint64_t>& media::PlayerStub::seeked_to() const

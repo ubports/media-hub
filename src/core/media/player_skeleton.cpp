@@ -61,6 +61,7 @@ struct media::PlayerSkeleton::Private
               object->get_property<mpris::Player::Properties::Volume>(),
               object->get_property<mpris::Player::Properties::Position>(),
               object->get_property<mpris::Player::Properties::Duration>(),
+              object->get_property<mpris::Player::Properties::AudioStreamRole>(),
               object->get_property<mpris::Player::Properties::MinimumRate>(),
               object->get_property<mpris::Player::Properties::MaximumRate>()
           },
@@ -277,6 +278,7 @@ struct media::PlayerSkeleton::Private
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Volume>> volume;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Position>> position;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Duration>> duration;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::AudioStreamRole>> audio_role;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MinimumRate>> minimum_playback_rate;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MaximumRate>> maximum_playback_rate;
     } properties;
@@ -455,6 +457,11 @@ const core::Property<uint64_t>& media::PlayerSkeleton::duration() const
     return *d->properties.duration;
 }
 
+const core::Property<media::Player::AudioStreamRole>& media::PlayerSkeleton::audio_stream_role() const
+{
+    return *d->properties.audio_role;
+}
+
 const core::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::minimum_playback_rate() const
 {
     return *d->properties.minimum_playback_rate;
@@ -493,6 +500,11 @@ core::Property<uint64_t>& media::PlayerSkeleton::position()
 core::Property<uint64_t>& media::PlayerSkeleton::duration()
 {
     return *d->properties.duration;
+}
+
+core::Property<media::Player::AudioStreamRole>& media::PlayerSkeleton::audio_stream_role()
+{
+    return *d->properties.audio_role;
 }
 
 core::Property<media::Player::PlaybackStatus>& media::PlayerSkeleton::playback_status()

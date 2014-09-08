@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
+ *              Jim Hodapp <jim.hodapp@canonical.com>
  */
 
 #ifndef MPRIS_PLAYER_H_
@@ -114,7 +115,7 @@ struct Player
 
         DBUS_CPP_WRITABLE_PROPERTY_DEF(LoopStatus, Player, std::string)
         DBUS_CPP_WRITABLE_PROPERTY_DEF(TypedLoopStatus, Player, core::ubuntu::media::Player::LoopStatus)
-
+        DBUS_CPP_WRITABLE_PROPERTY_DEF(AudioStreamRole, Player, core::ubuntu::media::Player::AudioStreamRole)
         DBUS_CPP_WRITABLE_PROPERTY_DEF(PlaybackRate, Player, double)
         DBUS_CPP_WRITABLE_PROPERTY_DEF(Rate, Player, double)
         DBUS_CPP_WRITABLE_PROPERTY_DEF(Shuffle, Player, bool)
@@ -163,6 +164,7 @@ struct Player
                   configuration.object->template get_property<mpris::Player::Properties::TypedPlaybackStatus>(),
                   configuration.object->template get_property<mpris::Player::Properties::LoopStatus>(),
                   configuration.object->template get_property<mpris::Player::Properties::TypedLoopStatus>(),
+                  configuration.object->template get_property<mpris::Player::Properties::AudioStreamRole>(),
                   configuration.object->template get_property<mpris::Player::Properties::PlaybackRate>(),
                   configuration.object->template get_property<mpris::Player::Properties::Shuffle>(),
                   configuration.object->template get_property<mpris::Player::Properties::TypedMetaData>(),
@@ -194,11 +196,11 @@ struct Player
             std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanGoPrevious>> can_go_previous;
             std::shared_ptr<core::dbus::Property<mpris::Player::Properties::IsVideoSource>> is_video_source;
             std::shared_ptr<core::dbus::Property<mpris::Player::Properties::IsAudioSource>> is_audio_source;
-
             std::shared_ptr<core::dbus::Property<mpris::Player::Properties::PlaybackStatus>> playback_status;
             std::shared_ptr<core::dbus::Property<mpris::Player::Properties::TypedPlaybackStatus>> typed_playback_status;
             std::shared_ptr<core::dbus::Property<mpris::Player::Properties::LoopStatus>> loop_status;
             std::shared_ptr<core::dbus::Property<mpris::Player::Properties::TypedLoopStatus>> typed_loop_status;
+            std::shared_ptr<core::dbus::Property<mpris::Player::Properties::AudioStreamRole>> audio_stream_role;
             std::shared_ptr<core::dbus::Property<mpris::Player::Properties::PlaybackRate>> playback_rate;
             std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Shuffle>> is_shuffle;
             std::shared_ptr<core::dbus::Property<mpris::Player::Properties::TypedMetaData>> meta_data_for_current_track;

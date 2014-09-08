@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
+ *              Jim Hodapp <jim.hodapp@canonical.com>
  */
 #ifndef CORE_UBUNTU_MEDIA_GSTREAMER_ENGINE_H_
 #define CORE_UBUNTU_MEDIA_GSTREAMER_ENGINE_H_
@@ -48,6 +49,9 @@ public:
 
     const core::Property<core::ubuntu::media::Engine::Volume>& volume() const;
     core::Property<core::ubuntu::media::Engine::Volume>& volume();
+
+    const core::Property<core::ubuntu::media::Player::AudioStreamRole>& audio_stream_role() const;
+    core::Property<core::ubuntu::media::Player::AudioStreamRole>& audio_stream_role();
 
     const core::Property<std::tuple<core::ubuntu::media::Track::UriType, core::ubuntu::media::Track::MetaData>>& track_meta_data() const;
 
