@@ -153,7 +153,7 @@ struct MediaPlayer2
 
         std::map<std::string, core::dbus::types::Variant> get_all_properties()
         {
-            std::map<std::string, dbus::types::Variant> dict;
+            std::map<std::string, core::dbus::types::Variant> dict;
             dict[Properties::CanQuit::name()]
                     = core::dbus::types::Variant::encode(properties.can_quit->get());
             dict[Properties::Fullscreen::name()]

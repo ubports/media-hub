@@ -36,8 +36,23 @@ namespace media
 class ServiceSkeleton : public core::dbus::Skeleton<core::ubuntu::media::Service>
 {
   public:
+
+    typedef std::function
+    <
+        void(
+            const core::ubuntu::media::Player::PlayerKey&,
+            const std::shared_ptr<core::ubuntu::media::Player>&
+        )
+    > PlayerEnumerator;
+
     ServiceSkeleton();
     ~ServiceSkeleton();
+
+    bool has_player_for_key(const Player::PlayerKey& key) const;
+    std::shared_ptr<Player> player_for_key(const Player::PlayerKey& key) const;
+    void enumerate_players(const PlayerEnumerator& enumerator) const;
+
+    void set_current_player_for_key(const Player::PlayerKey& key);
 
     void run();
     void stop();

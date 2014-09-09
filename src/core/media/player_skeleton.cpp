@@ -40,11 +40,6 @@
 namespace dbus = core::dbus;
 namespace media = core::ubuntu::media;
 
-namespace
-{
-unsigned int counter = {0};
-}
-
 struct media::PlayerSkeleton::Private : public std::enable_shared_from_this<media::PlayerSkeleton::Private>
 {
     Private(media::PlayerSkeleton* player,
@@ -60,7 +55,6 @@ struct media::PlayerSkeleton::Private : public std::enable_shared_from_this<medi
           apparmor_session(nullptr),
           dbus_stub{bus},
           skeleton{mpris::Player::Skeleton::Configuration{bus, session, mpris::Player::Skeleton::Configuration::Defaults{}}},
-          exported{identity, bus},
           signals
           {
               skeleton.signals.seeked_to,
@@ -277,66 +271,7 @@ struct media::PlayerSkeleton::Private : public std::enable_shared_from_this<medi
 
     org::freedesktop::dbus::DBus::Stub dbus_stub;
 
-    mpris::Player::Skeleton skeleton;
-
-    struct Exported
-    {
-        static mpris::MediaPlayer2::Skeleton::Configuration::Defaults media_player_defaults(const std::string& identity)
-        {
-            mpris::MediaPlayer2::Skeleton::Configuration::Defaults defaults;
-            // TODO(tvoss): These three elements really should be configurable.
-            defaults.identity = identity;
-            defaults.desktop_entry = identity;
-            defaults.supported_mime_types = {"audio/mpeg3"};
-
-            return defaults;
-        }
-
-        static mpris::Player::Skeleton::Configuration::Defaults player_defaults()
-        {
-            mpris::Player::Skeleton::Configuration::Defaults defaults;
-
-            // Disabled as track list is not fully implemented yet.
-            defaults.can_go_next = false;
-            // Disabled as track list is not fully implemented yet.
-            defaults.can_go_previous = false;
-
-            return defaults;
-        }
-
-        explicit Exported(const std::string& identity, const dbus::Bus::Ptr& bus)
-            : bus{bus},
-              service{dbus::Service::add_service(bus, "org.mpris.MediaPlayer2.MediaHub.Session" + std::to_string(counter++))},
-              object{service->add_object_for_path(dbus::types::ObjectPath{"/org/mpris/MediaPlayer2"})},
-              media_player{mpris::MediaPlayer2::Skeleton::Configuration{bus, object, media_player_defaults(identity)}},
-              player{mpris::Player::Skeleton::Configuration{bus, object, player_defaults()}},
-              playlists{mpris::Playlists::Skeleton::Configuration{bus, object, mpris::Playlists::Skeleton::Configuration::Defaults{}}}
-        {
-            object->install_method_handler<core::dbus::interfaces::Properties::GetAll>([this](const core::dbus::Message::Ptr& msg)
-            {
-                // Extract the interface
-                std::string itf; msg->reader() >> itf;
-                core::dbus::Message::Ptr reply = core::dbus::Message::make_method_return(msg);
-
-                if (itf == mpris::Player::name())
-                    reply->writer() << player.get_all_properties();
-                else if (itf == mpris::MediaPlayer2::name())
-                    reply->writer() << media_player.get_all_properties();
-                else if (itf == mpris::Playlists::name())
-                    reply->writer() << playlists.get_all_properties();
-
-                Exported::bus->send(reply);
-            });
-        }
-
-        dbus::Bus::Ptr bus;
-        dbus::Service::Ptr service;
-        dbus::Object::Ptr object;
-
-        mpris::MediaPlayer2::Skeleton media_player;
-        mpris::Player::Skeleton player;
-        mpris::Playlists::Skeleton playlists;
-    } exported;
+    mpris::Player::Skeleton skeleton;    
 
     struct Signals
     {
@@ -382,96 +317,30 @@ media::PlayerSkeleton::CoverArtResolver media::PlayerSkeleton::always_missing_co
 media::PlayerSkeleton::PlayerSkeleton(const media::PlayerSkeleton::Configuration& config)
         : d(new Private{this, config.identity, config.cover_art_resolver, config.bus, config.session})
 {
-    // We wire up player state changes
-    d->skeleton.signals.seeked_to->connect([this](std::uint64_t position)
-    {
-        d->exported.player.signals.seeked_to->emit(position);
-    });
-
-    d->skeleton.properties.duration->changed().connect([this](std::uint64_t duration)
-    {
-        d->exported.player.properties.duration->set(duration);
-    });
-
-    d->skeleton.properties.position->changed().connect([this](std::uint64_t position)
-    {
-        d->exported.player.properties.position->set(position);
-    });
-
-    d->skeleton.properties.typed_playback_status->changed().connect([this](core::ubuntu::media::Player::PlaybackStatus status)
-    {
-        d->exported.player.properties.playback_status->set(mpris::Player::PlaybackStatus::from(status));
-    });
-
-    d->skeleton.properties.typed_loop_status->changed().connect([this](core::ubuntu::media::Player::LoopStatus status)
-    {
-        d->exported.player.properties.loop_status->set(mpris::Player::LoopStatus::from(status));
-    });
-
-    d->skeleton.properties.typed_meta_data_for_current_track->changed().connect([this](const core::ubuntu::media::Track::MetaData& md)
-    {
-        mpris::Player::Dictionary dict;
-
-        bool has_title = md.count(xesam::Title::name) > 0;
-        bool has_album_name = md.count(xesam::Album::name) > 0;
-        bool has_artist_name = md.count(xesam::Artist::name) > 0;
-
-        if (has_title)
-            dict[xesam::Title::name] = dbus::types::Variant::encode(md.get(xesam::Title::name));
-        if (has_album_name)
-            dict[xesam::Album::name] = dbus::types::Variant::encode(md.get(xesam::Album::name));
-        if (has_artist_name)
-            dict[xesam::Artist::name] = dbus::types::Variant::encode(md.get(xesam::Artist::name));
-
-        dict[mpris::metadata::ArtUrl::name]
-                = dbus::types::Variant::encode(
-                    d->cover_art_resolver(
-                        has_title ? md.get(xesam::Title::name) : "",
-                        has_album_name ? md.get(xesam::Album::name) : "",
-                        has_artist_name ? md.get(xesam::Artist::name) : ""
-                        ));
-
-        d->on_property_value_changed
-        <
-            mpris::Player::Properties::Metadata
-        >(dict, d->exported.player.signals.properties_changed);
-    });
-
     // Setup method handlers for mpris::Player methods.
     auto next = std::bind(&Private::handle_next, d, std::placeholders::_1);
     d->object->install_method_handler<mpris::Player::Next>(next);
-    d->exported.object->install_method_handler<mpris::Player::Next>(next);
 
     auto previous = std::bind(&Private::handle_previous, d, std::placeholders::_1);
     d->object->install_method_handler<mpris::Player::Previous>(previous);
-    d->exported.object->install_method_handler<mpris::Player::Previous>(previous);
 
     auto pause = std::bind(&Private::handle_pause, d, std::placeholders::_1);
     d->object->install_method_handler<mpris::Player::Pause>(pause);
-    d->exported.object->install_method_handler<mpris::Player::Pause>(pause);
 
     auto stop = std::bind(&Private::handle_stop, d, std::placeholders::_1);
     d->object->install_method_handler<mpris::Player::Stop>(stop);
-    d->exported.object->install_method_handler<mpris::Player::Stop>(stop);
 
     auto play = std::bind(&Private::handle_play, d, std::placeholders::_1);
     d->object->install_method_handler<mpris::Player::Play>(play);
-    d->exported.object->install_method_handler<mpris::Player::Play>(play);
-
-    auto play_pause = std::bind(&Private::handle_play_pause, d, std::placeholders::_1);
-    d->exported.object->install_method_handler<mpris::Player::PlayPause>(play_pause);
 
     auto seek = std::bind(&Private::handle_seek, d, std::placeholders::_1);
     d->object->install_method_handler<mpris::Player::Seek>(seek);
-    d->exported.object->install_method_handler<mpris::Player::Seek>(seek);
 
     auto set_position = std::bind(&Private::handle_set_position, d, std::placeholders::_1);
     d->object->install_method_handler<mpris::Player::SetPosition>(set_position);
-    d->exported.object->install_method_handler<mpris::Player::SetPosition>(set_position);
 
     auto open_uri = std::bind(&Private::handle_open_uri, d, std::placeholders::_1);
     d->object->install_method_handler<mpris::Player::OpenUri>(open_uri);
-    d->exported.object->install_method_handler<mpris::Player::OpenUri>(open_uri);
 
     // All the method handlers that exceed the mpris spec go here.
     d->object->install_method_handler<mpris::Player::CreateVideoSink>(

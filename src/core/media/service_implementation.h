@@ -39,10 +39,6 @@ class ServiceImplementation : public ServiceSkeleton
     std::shared_ptr<Player> create_session(const Player::Configuration&);
 
     void pause_other_sessions(Player::PlayerKey key);
-
-  private:
-    struct Private;
-    std::shared_ptr<Private> d;
 };
 }
 }
