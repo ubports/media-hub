@@ -1,3 +1,15 @@
+media-hub (1.0.0+14.10.20140908-0ubuntu1) utopic; urgency=low
+
+  [ Jim Hodapp ]
+  * When power hits the low or very low levels, pause all Players with
+    role of multimedia. When the warning notification is cleared from
+    the screen, resume playback.
+
+  [ Ricardo Salveti de Araujo ]
+  * playbin: fixing audio-sink gst property name
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Mon, 08 Sep 2014 14:26:38 +0000
+
 media-hub (1.0.0+14.10.20140829.1-0ubuntu1) utopic; urgency=low
 
   [ Jim Hodapp ]
