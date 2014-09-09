@@ -21,6 +21,7 @@
 
 #include <core/media/service.h>
 
+#include "cover_art_resolver.h"
 #include "service_traits.h"
 
 #include <core/dbus/skeleton.h>
@@ -35,23 +36,32 @@ namespace media
 {
 class ServiceSkeleton : public core::dbus::Skeleton<core::ubuntu::media::Service>
 {
-  public:
-
+public:
+    // Functor for enumerating all known (key, player) pairs.
     typedef std::function
     <
         void(
+            // The key of the player.
             const core::ubuntu::media::Player::PlayerKey&,
+            // The actual player instance.
             const std::shared_ptr<core::ubuntu::media::Player>&
         )
     > PlayerEnumerator;
 
-    ServiceSkeleton();
+    ServiceSkeleton(const CoverArtResolver& cover_art_resolver = always_missing_cover_art_resolver());
     ~ServiceSkeleton();
 
+    // We keep track of all known player sessions here and render them accessible via
+    // the key. All of these functions are thread-safe but not reentrant.
+    // Returns true iff a player is known for the given key.
     bool has_player_for_key(const Player::PlayerKey& key) const;
+    // Returns the player for the given key or throws std::out_of_range if no player is known
+    // for the given key.
     std::shared_ptr<Player> player_for_key(const Player::PlayerKey& key) const;
+    // Enumerates all known players and invokes the given enumerator for each
+    // (key, player) pair.
     void enumerate_players(const PlayerEnumerator& enumerator) const;
-
+    // Makes the player known under the given key current.
     void set_current_player_for_key(const Player::PlayerKey& key);
 
     void run();

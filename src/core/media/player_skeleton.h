@@ -73,23 +73,7 @@ class PlayerSkeleton : public core::ubuntu::media::Player
     virtual const core::Signal<void>& end_of_stream() const;
     virtual core::Signal<PlaybackStatus>& playback_status_changed();
 
-  protected:
-    // Functional modelling a helper to resolve artist/album names to
-    // cover art.
-    typedef std::function
-    <
-        std::string             // Returns a URL pointing to the album art
-        (
-            const std::string&, // The title of the track
-            const std::string&, // The name of the album
-            const std::string&  // The name of the artist
-        )
-    > CoverArtResolver;
-
-    // Return a CoverArtResolver that always resolves to
-    // file:///usr/share/unity/icons/album_missing.png
-    static CoverArtResolver always_missing_cover_art_resolver();
-
+protected:
     // All creation time arguments go here.
     struct Configuration
     {
@@ -97,8 +81,6 @@ class PlayerSkeleton : public core::ubuntu::media::Player
         std::shared_ptr<core::dbus::Bus> bus;
         // The session object that we want to expose the skeleton upon.
         std::shared_ptr<core::dbus::Object> session;
-        // The cover art resolver implementation.
-        CoverArtResolver cover_art_resolver;
         // Our identity, an identifier we pass out to other parts of the system.
         // Defaults to the short app id (${PKG_NAME}_${APP}).
         std::string identity;

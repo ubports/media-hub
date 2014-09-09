@@ -44,12 +44,10 @@ struct media::PlayerSkeleton::Private : public std::enable_shared_from_this<medi
 {
     Private(media::PlayerSkeleton* player,
             const std::string& identity,
-            CoverArtResolver cover_art_resolver,
             const std::shared_ptr<core::dbus::Bus>& bus,
             const std::shared_ptr<core::dbus::Object>& session)
         : impl(player),
           identity(identity),
-          cover_art_resolver(cover_art_resolver),
           bus(bus),
           object(session),
           apparmor_session(nullptr),
@@ -264,7 +262,6 @@ struct media::PlayerSkeleton::Private : public std::enable_shared_from_this<medi
 
     media::PlayerSkeleton* impl;
     std::string identity;
-    CoverArtResolver cover_art_resolver;
     dbus::Bus::Ptr bus;
     dbus::Object::Ptr object;
     dbus::Object::Ptr apparmor_session;
@@ -306,16 +303,8 @@ struct media::PlayerSkeleton::Private : public std::enable_shared_from_this<medi
 
 };
 
-media::PlayerSkeleton::CoverArtResolver media::PlayerSkeleton::always_missing_cover_art_resolver()
-{
-    return [](const std::string&, const std::string&, const std::string&)
-    {
-        return "file:///usr/share/unity/icons/album_missing.png";
-    };
-}
-
 media::PlayerSkeleton::PlayerSkeleton(const media::PlayerSkeleton::Configuration& config)
-        : d(new Private{this, config.identity, config.cover_art_resolver, config.bus, config.session})
+        : d(new Private{this, config.identity, config.bus, config.session})
 {
     // Setup method handlers for mpris::Player methods.
     auto next = std::bind(&Private::handle_next, d, std::placeholders::_1);

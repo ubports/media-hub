@@ -298,7 +298,6 @@ media::PlayerImplementation::PlayerImplementation(
           {
               bus,
               session,
-              media::PlayerSkeleton::always_missing_cover_art_resolver(),
               identity
           }
       },

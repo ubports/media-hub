@@ -74,6 +74,7 @@ add_library(
 
     ${MPRIS_HEADERS}
 
+    cover_art_resolver.cpp
     engine.cpp
     gstreamer/engine.cpp
 

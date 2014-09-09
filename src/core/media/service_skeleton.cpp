@@ -48,12 +48,12 @@ core::Signal<void> the_empty_signal;
 
 struct media::ServiceSkeleton::Private
 {
-    Private(media::ServiceSkeleton* impl)
+    Private(media::ServiceSkeleton* impl, const media::CoverArtResolver& resolver)
         : impl(impl),
           object(impl->access_service()->add_object_for_path(
                      dbus::traits::Service<media::Service>::object_path())),
           dbus_stub(impl->access_bus()),
-          exported(impl->access_bus())
+          exported(impl->access_bus(), resolver)
     {
         object->install_method_handler<mpris::Service::CreateSession>(
                     std::bind(
@@ -157,13 +157,14 @@ struct media::ServiceSkeleton::Private
             return defaults;
         }
 
-        explicit Exported(const dbus::Bus::Ptr& bus)
+        explicit Exported(const dbus::Bus::Ptr& bus, const media::CoverArtResolver& cover_art_resolver)
             : bus{bus},
               service{dbus::Service::add_service(bus, "org.mpris.MediaPlayer2.MediaHub")},
               object{service->add_object_for_path(dbus::types::ObjectPath{"/org/mpris/MediaPlayer2"})},
               media_player{mpris::MediaPlayer2::Skeleton::Configuration{bus, object, media_player_defaults()}},
               player{mpris::Player::Skeleton::Configuration{bus, object, player_defaults()}},
-              playlists{mpris::Playlists::Skeleton::Configuration{bus, object, mpris::Playlists::Skeleton::Configuration::Defaults{}}}
+              playlists{mpris::Playlists::Skeleton::Configuration{bus, object, mpris::Playlists::Skeleton::Configuration::Defaults{}}},
+              cover_art_resolver{cover_art_resolver}
         {
             object->install_method_handler<core::dbus::interfaces::Properties::GetAll>([this](const core::dbus::Message::Ptr& msg)
             {
@@ -305,6 +306,12 @@ struct media::ServiceSkeleton::Private
                 if (has_artist_name)
                     dict[xesam::Artist::name] = dbus::types::Variant::encode(md.get(xesam::Artist::name));
 
+                dict[mpris::metadata::ArtUrl::name] = dbus::types::Variant::encode(
+                            cover_art_resolver(
+                                has_title ? md.get(xesam::Title::name) : "",
+                                has_album_name ? md.get(xesam::Album::name) : "",
+                                has_artist_name ? md.get(xesam::Artist::name) : ""));
+
                 mpris::Player::Dictionary wrap;
                 wrap[mpris::Player::Properties::Metadata::name()] = dbus::types::Variant::encode(dict);
 
@@ -340,6 +347,8 @@ struct media::ServiceSkeleton::Private
         mpris::Player::Skeleton player;
         mpris::Playlists::Skeleton playlists;
 
+        // Helper to resolve (title, artist, album) tuples to cover art.
+        media::CoverArtResolver cover_art_resolver;
         // The actual player instance.
         std::weak_ptr<media::Player> current_player;
         // We track event connections.
@@ -373,9 +382,9 @@ struct media::ServiceSkeleton::Private
     } exported;
 };
 
-media::ServiceSkeleton::ServiceSkeleton()
+media::ServiceSkeleton::ServiceSkeleton(const media::CoverArtResolver& resolver)
     : dbus::Skeleton<media::Service>(the_session_bus()),
-      d(new Private(this))
+      d(new Private(this, resolver))
 {
 }
 
