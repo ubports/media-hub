@@ -242,7 +242,12 @@ struct media::ServiceSkeleton::Private
                 auto sp = current_player.lock();
 
                 if (sp)
-                    sp->next();
+                {
+                    if (sp->playback_status() == media::Player::PlaybackStatus::playing)
+                        sp->pause();
+                    else if (sp->playback_status() != media::Player::PlaybackStatus::null)
+                        sp->play();
+                }
 
                 Exported::bus->send(core::dbus::Message::make_method_return(msg));
             };
