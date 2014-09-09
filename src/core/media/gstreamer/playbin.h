@@ -269,7 +269,7 @@ struct Playbin
     void set_audio_stream_role(media::Player::AudioStreamRole new_audio_role)
     {
         GstElement *audio_sink = NULL;
-        g_object_get (pipeline, "audio_sink", &audio_sink, NULL);
+        g_object_get (pipeline, "audio-sink", &audio_sink, NULL);
 
         std::string role_str("props,media.role=" + get_audio_role_str(new_audio_role));
         std::cout << "Audio stream role: " << role_str << std::endl;

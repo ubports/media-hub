@@ -32,13 +32,20 @@ class Player;
 
 class ServiceImplementation : public ServiceSkeleton
 {
-  public:
+public:
     ServiceImplementation ();
     ~ServiceImplementation ();
 
     std::shared_ptr<Player> create_session(const Player::Configuration&);
 
     void pause_other_sessions(Player::PlayerKey key);
+
+private:
+    void pause_all_multimedia_sessions();
+    void resume_multimedia_session();
+
+    struct Private;
+    std::shared_ptr<Private> d;
 };
 }
 }
