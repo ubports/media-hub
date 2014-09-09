@@ -339,6 +339,12 @@ struct media::ServiceSkeleton::Private
             player.properties.can_control->set(false);
         }
 
+        void unset_if_current(const std::shared_ptr<media::Player>& cp)
+        {
+            if (cp == current_player.lock())
+                unset_current_player();
+        }
+
         dbus::Bus::Ptr bus;
         dbus::Service::Ptr service;
         dbus::Object::Ptr object;
@@ -414,6 +420,17 @@ void media::ServiceSkeleton::set_current_player_for_key(const media::Player::Pla
         return;
 
     d->exported.set_current_player(player_for_key(key));
+}
+
+void media::ServiceSkeleton::remove_player_for_key(const media::Player::PlayerKey& key)
+{
+    if (not has_player_for_key(key))
+        return;
+
+    auto player = player_for_key(key);
+
+    d->session_store.erase(key);
+    d->exported.unset_if_current(player);
 }
 
 void media::ServiceSkeleton::run()

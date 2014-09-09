@@ -284,6 +284,7 @@ struct media::PlayerImplementation::Private
     std::unique_ptr<timeout> wakelock_timeout;
     Engine::State previous_state;
     PlayerImplementation::PlayerKey key;
+    core::Signal<> on_client_disconnected;
 };
 
 media::PlayerImplementation::PlayerImplementation(
@@ -374,6 +375,8 @@ media::PlayerImplementation::PlayerImplementation(
         // If the client disconnects, make sure both wakelock types
         // are cleared
         d->clear_wakelocks();
+        // And tell the outside world that the client has gone away
+        d->on_client_disconnected();
     });
 
     d->engine->seeked_to_signal().connect([this](uint64_t value)
@@ -462,4 +465,9 @@ void media::PlayerImplementation::set_playback_complete_callback(
 void media::PlayerImplementation::seek_to(const std::chrono::microseconds& ms)
 {
     d->engine->seek_to(ms);
+}
+
+const core::Signal<>& media::PlayerImplementation::on_client_disconnected() const
+{
+    return d->on_client_disconnected;
 }

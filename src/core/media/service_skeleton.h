@@ -61,6 +61,8 @@ public:
     // Enumerates all known players and invokes the given enumerator for each
     // (key, player) pair.
     void enumerate_players(const PlayerEnumerator& enumerator) const;
+    // Removes the player for the given key, and unsets it if it is the current one.
+    void remove_player_for_key(const Player::PlayerKey& key);
     // Makes the player known under the given key current.
     void set_current_player_for_key(const Player::PlayerKey& key);
 

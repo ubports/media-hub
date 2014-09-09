@@ -98,8 +98,15 @@ media::ServiceImplementation::~ServiceImplementation()
 std::shared_ptr<media::Player> media::ServiceImplementation::create_session(
         const media::Player::Configuration& conf)
 {
-    std::shared_ptr<media::Player> player = std::make_shared<media::PlayerImplementation>(
+    auto player = std::make_shared<media::PlayerImplementation>(
             conf.identity, conf.bus, conf.session, shared_from_this(), conf.key);
+
+    auto key = conf.key;
+    player->on_client_disconnected().connect([this, key]()
+    {
+        remove_player_for_key(key);
+    });
+
     return player;
 }
 
