@@ -23,9 +23,18 @@
 #include <core/dbus/bus.h>
 #include <core/dbus/object.h>
 
+// Our internal structure for handing down parameters from the skeleton
+// to the implementation in a way that is opaque to the client.
 struct core::ubuntu::media::Player::Configuration
 {
+    // An identifier that is helpful in referencing the player instance
+    // across multiple services.
+    std::string identity;
+    // Unique key for identifying the session.
+    core::ubuntu::media::Player::PlayerKey key;
+    // The bus connection to expose objects on.
     std::shared_ptr<core::dbus::Bus> bus;
+    // The actual session object representing a player instance.
     std::shared_ptr<core::dbus::Object> session;
 };
 

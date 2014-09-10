@@ -221,7 +221,7 @@ struct media::PlayerStub::Private
 
         PlaybackCompleteCb playback_complete_cb;
         void *playback_complete_context;
-        core::Signal<uint64_t> seeked_to;
+        core::Signal<int64_t> seeked_to;
         core::Signal<void> end_of_stream;
         core::Signal<media::Player::PlaybackStatus> playback_status_changed;
     } signals;
@@ -411,12 +411,12 @@ const core::Property<media::Player::Volume>& media::PlayerStub::volume() const
     return *d->properties.volume;
 }
 
-const core::Property<uint64_t>& media::PlayerStub::position() const
+const core::Property<int64_t>& media::PlayerStub::position() const
 {
     return *d->properties.position;
 }
 
-const core::Property<uint64_t>& media::PlayerStub::duration() const
+const core::Property<int64_t>& media::PlayerStub::duration() const
 {
     return *d->properties.duration;
 }
@@ -461,7 +461,7 @@ core::Property<media::Player::AudioStreamRole>& media::PlayerStub::audio_stream_
     return *d->properties.audio_role;
 }
 
-const core::Signal<uint64_t>& media::PlayerStub::seeked_to() const
+const core::Signal<int64_t>& media::PlayerStub::seeked_to() const
 {
     return d->signals.seeked_to;
 }

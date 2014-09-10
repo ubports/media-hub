@@ -1,0 +1,16 @@
+{
+global:
+    extern "C++" {
+        core::ubuntu::media::*;
+	typeinfo?for?core::ubuntu::media::*;
+	typeinfo?name?for?core::ubuntu::media::*;
+	VTT?for?core::ubuntu::media::*;
+	virtual?thunk?to?core::ubuntu::media::*;
+	vtable?for?core::ubuntu::media::*;
+	std::hash*;
+    };
+local:
+    extern "C++" {
+        *;
+    };
+};

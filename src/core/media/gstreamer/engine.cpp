@@ -58,105 +58,7 @@ struct gstreamer::Engine::Private
     void on_tag_available(const gstreamer::Bus::Message::Detail::Tag& tag)
     {
         media::Track::MetaData md;
-
-        gst_tag_list_foreach(
-                    tag.tag_list,
-                    [](const GstTagList *list,
-                    const gchar* tag,
-                    gpointer user_data)
-        {
-            (void) list;
-
-            static const std::map<std::string, std::string> gstreamer_to_mpris_tag_lut =
-            {
-                {GST_TAG_ALBUM, media::Engine::Xesam::album()},
-                {GST_TAG_ALBUM_ARTIST, media::Engine::Xesam::album_artist()},
-                {GST_TAG_ARTIST, media::Engine::Xesam::artist()},
-                {GST_TAG_LYRICS, media::Engine::Xesam::as_text()},
-                {GST_TAG_COMMENT, media::Engine::Xesam::comment()},
-                {GST_TAG_COMPOSER, media::Engine::Xesam::composer()},
-                {GST_TAG_DATE, media::Engine::Xesam::content_created()},
-                {GST_TAG_ALBUM_VOLUME_NUMBER, media::Engine::Xesam::disc_number()},
-                {GST_TAG_GENRE, media::Engine::Xesam::genre()},
-                {GST_TAG_TITLE, media::Engine::Xesam::title()},
-                {GST_TAG_TRACK_NUMBER, media::Engine::Xesam::track_number()},
-                {GST_TAG_USER_RATING, media::Engine::Xesam::user_rating()}
-            };
-
-            auto md = static_cast<media::Track::MetaData*>(user_data);
-            std::stringstream ss;
-
-            switch(gst_tag_get_type(tag))
-            {
-            case G_TYPE_BOOLEAN:
-            {
-                gboolean value;
-                if (gst_tag_list_get_boolean(list, tag, &value))
-                    ss << value;
-                break;
-            }
-            case G_TYPE_INT:
-            {
-                gint value;
-                if (gst_tag_list_get_int(list, tag, &value))
-                    ss << value;
-                break;
-            }
-            case G_TYPE_UINT:
-            {
-                guint value;
-                if (gst_tag_list_get_uint(list, tag, &value))
-                    ss << value;
-                break;
-            }
-            case G_TYPE_INT64:
-            {
-                gint64 value;
-                if (gst_tag_list_get_int64(list, tag, &value))
-                    ss << value;
-                break;
-            }
-            case G_TYPE_UINT64:
-            {
-                guint64 value;
-                if (gst_tag_list_get_uint64(list, tag, &value))
-                    ss << value;
-                break;
-            }
-            case G_TYPE_FLOAT:
-            {
-                gfloat value;
-                if (gst_tag_list_get_float(list, tag, &value))
-                    ss << value;
-                break;
-            }
-            case G_TYPE_DOUBLE:
-            {
-                double value;
-                if (gst_tag_list_get_double(list, tag, &value))
-                    ss << value;
-                break;
-            }
-            case G_TYPE_STRING:
-            {
-                gchar* value;
-                if (gst_tag_list_get_string(list, tag, &value))
-                {
-                    ss << value;
-                    g_free(value);
-                }
-                break;
-            }
-            default:
-                break;
-            }
-
-            (*md).set(
-                        (gstreamer_to_mpris_tag_lut.count(tag) > 0 ? gstreamer_to_mpris_tag_lut.at(tag) : tag),
-                        ss.str());
-        },
-        &md);
-
+        gstreamer::MetaDataExtractor::on_tag_available(tag, md);
         track_meta_data.set(std::make_tuple(playbin.uri(), md));
     }
 
@@ -318,6 +220,10 @@ bool gstreamer::Engine::play()
 
 bool gstreamer::Engine::stop()
 {
+    // No need to wait, and we can immediately return.
+    if (d->state == media::Engine::State::stopped)
+        return true;
+
     auto result = d->playbin.set_state_and_wait(GST_STATE_NULL);
 
     if (result)

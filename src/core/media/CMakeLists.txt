@@ -1,6 +1,10 @@
 pkg_check_modules(PC_GSTREAMER_1_0 REQUIRED gstreamer-1.0)
 include_directories(${PC_GSTREAMER_1_0_INCLUDE_DIRS} ${HYBRIS_MEDIA_CFLAGS})
 
+# We compile with all symbols visible by default. For the shipping library, we strip
+# out all symbols that are not in core::ubuntu::media*
+set(symbol_map "${CMAKE_SOURCE_DIR}/symbols.map")
+
 file(GLOB MPRIS_HEADERS mpris/ *.h)
 
 add_library(
@@ -22,6 +26,8 @@ set_target_properties(
   PROPERTIES
   VERSION ${UBUNTU_MEDIA_HUB_VERSION_MAJOR}.${UBUNTU_MEDIA_HUB_VERSION_MINOR}.${UBUNTU_MEDIA_HUB_VERSION_PATCH}
   SOVERSION ${UBUNTU_MEDIA_HUB_VERSION_MAJOR}
+  LINK_FLAGS "${ldflags} -Wl,--version-script,${symbol_map}"
+  LINK_DEPENDS ${symbol_map}
 )
 
 add_library(
@@ -43,6 +49,8 @@ set_target_properties(
   PROPERTIES
   VERSION ${UBUNTU_MEDIA_HUB_VERSION_MAJOR}.${UBUNTU_MEDIA_HUB_VERSION_MINOR}.${UBUNTU_MEDIA_HUB_VERSION_PATCH}
   SOVERSION ${UBUNTU_MEDIA_HUB_VERSION_MAJOR}
+  LINK_FLAGS "${ldflags} -Wl,--version-script,${symbol_map}"
+  LINK_DEPENDS ${symbol_map}
 )
 
 target_link_libraries(
@@ -66,6 +74,7 @@ add_library(
 
     ${MPRIS_HEADERS}
 
+    cover_art_resolver.cpp
     engine.cpp
     gstreamer/engine.cpp
 

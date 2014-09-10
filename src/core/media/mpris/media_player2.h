@@ -22,6 +22,8 @@
 #include <core/dbus/macros.h>
 #include <core/dbus/object.h>
 #include <core/dbus/property.h>
+#include <core/dbus/interfaces/properties.h>
+#include <core/dbus/types/variant.h>
 
 #include <string>
 #include <vector>
@@ -103,7 +105,20 @@ struct MediaPlayer2
             // The bus connection that should be used
             core::dbus::Bus::Ptr bus;
             // The dbus object that should implement org.mpris.MediaPlayer2
-            core::dbus::Object::Ptr object;     
+            core::dbus::Object::Ptr object;
+            // Default values assigned to properties on construction
+            struct Defaults
+            {
+                Properties::CanQuit::ValueType can_quit{false};
+                Properties::Fullscreen::ValueType fullscreen{false};
+                Properties::CanSetFullscreen::ValueType can_set_fullscreen{false};
+                Properties::CanRaise::ValueType can_raise{false};
+                Properties::HasTrackList::ValueType has_track_list{false};
+                Properties::Identity::ValueType identity{};
+                Properties::DesktopEntry::ValueType desktop_entry{};
+                Properties::SupportedUriSchemes::ValueType supported_uri_schemes{};
+                Properties::SupportedMimeTypes::ValueType supported_mime_types{};
+            } defaults;
         };
 
         // Creates a new instance, sets up player properties and installs method handlers.
@@ -120,8 +135,46 @@ struct MediaPlayer2
                   configuration.object->get_property<Properties::DesktopEntry>(),
                   configuration.object->get_property<Properties::SupportedUriSchemes>(),
                   configuration.object->get_property<Properties::SupportedMimeTypes>()
+              },
+              signals
+              {
+                  configuration.object->get_signal<core::dbus::interfaces::Properties::Signals::PropertiesChanged>()
               }
-        {            
+        {
+            // Initialize property values of the media_player instance.
+            properties.can_quit->set(configuration.defaults.can_quit);
+            properties.fullscreen->set(configuration.defaults.fullscreen);
+            properties.can_set_fullscreen->set(configuration.defaults.can_set_fullscreen);
+            properties.can_raise->set(configuration.defaults.can_raise);
+            properties.has_track_list->set(configuration.defaults.has_track_list);
+            properties.desktop_entry->set(configuration.defaults.desktop_entry);
+            properties.identity->set(configuration.defaults.identity);
+            properties.supported_mime_types->set(configuration.defaults.supported_mime_types);
+        }
+
+        std::map<std::string, core::dbus::types::Variant> get_all_properties()
+        {
+            std::map<std::string, core::dbus::types::Variant> dict;
+            dict[Properties::CanQuit::name()]
+                    = core::dbus::types::Variant::encode(properties.can_quit->get());
+            dict[Properties::Fullscreen::name()]
+                    = core::dbus::types::Variant::encode(properties.fullscreen->get());
+            dict[Properties::CanSetFullscreen::name()]
+                    = core::dbus::types::Variant::encode(properties.can_set_fullscreen->get());
+            dict[Properties::CanRaise::name()]
+                    = core::dbus::types::Variant::encode(properties.can_raise->get());
+            dict[Properties::HasTrackList::name()]
+                    = core::dbus::types::Variant::encode(properties.has_track_list->get());
+            dict[Properties::CanSetFullscreen::name()]
+                    = core::dbus::types::Variant::encode(properties.can_set_fullscreen->get());
+            dict[Properties::DesktopEntry::name()]
+                    = core::dbus::types::Variant::encode(properties.desktop_entry->get());
+            dict[Properties::Identity::name()]
+                    = core::dbus::types::Variant::encode(properties.identity->get());
+            dict[Properties::SupportedMimeTypes::name()]
+                    = core::dbus::types::Variant::encode(properties.supported_mime_types->get());
+
+            return dict;
         }
 
         // We just store creation time properties here.
@@ -140,6 +193,15 @@ struct MediaPlayer2
             std::shared_ptr<core::dbus::Property<Properties::SupportedUriSchemes>> supported_uri_schemes;
             std::shared_ptr<core::dbus::Property<Properties::SupportedMimeTypes>> supported_mime_types;
         } properties;
+
+        struct
+        {
+            core::dbus::Signal
+            <
+                core::dbus::interfaces::Properties::Signals::PropertiesChanged,
+                core::dbus::interfaces::Properties::Signals::PropertiesChanged::ArgumentType
+            >::Ptr properties_changed;
+        } signals;
     };
 };
 }

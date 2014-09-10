@@ -1,5 +1,5 @@
-/*
- * Copyright © 2013 Canonical Ltd.
+/**
+ * Copyright (C) 2013-2014 Canonical Ltd
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -16,24 +16,12 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#include "the_session_bus.h"
+#include "cover_art_resolver.h"
 
-#include <core/dbus/asio/executor.h>
-
-namespace
+core::ubuntu::media::CoverArtResolver core::ubuntu::media::always_missing_cover_art_resolver()
 {
-std::once_flag once;
-}
-
-core::dbus::Bus::Ptr core::ubuntu::media::the_session_bus()
-{
-    static core::dbus::Bus::Ptr bus
-            = std::make_shared<core::dbus::Bus>(
-                core::dbus::WellKnownBus::session);
-    static core::dbus::Executor::Ptr executor
-            = core::dbus::asio::make_executor(bus);
-
-    std::call_once(once, [](){bus->install_executor(executor);});
-
-    return bus;
+    return [](const std::string&, const std::string&, const std::string&)
+    {
+        return "file:///usr/share/unity/icons/album_missing.png";
+    };
 }
