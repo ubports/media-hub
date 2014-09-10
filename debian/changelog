@@ -1,6 +1,10 @@
 media-hub (2.0.0) UNRELEASED; urgency=medium
 
+  [ Thomas Voß ]
   * Bump major version to account for signature changes in public interface. 
+
+  [ Ubuntu daily release ]
+  * debian/libmedia-hub-common2.symbols: auto-update to released version
 
  -- Thomas Voß <thomas.voss@canonical.com>  Thu, 28 Aug 2014 09:10:33 +0200
 
