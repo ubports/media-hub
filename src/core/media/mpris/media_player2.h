@@ -35,7 +35,8 @@ struct MediaPlayer2
 {
     static const std::string& name()
     {
-        static const std::string s{"org.mpris.MediaPlayer2"}; return s;
+        static const std::string s{"org.mpris.MediaPlayer2"};
+        return s;
     }
 
     struct Methods
