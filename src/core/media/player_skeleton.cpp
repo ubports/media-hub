@@ -250,14 +250,14 @@ struct media::PlayerSkeleton::Private : public std::enable_shared_from_this<medi
     {
         typedef std::map<std::string, dbus::types::Variant> Dictionary;
 
-        static const std::vector<std::string> the_empty_list_of_invalided_properties;
+        static const std::vector<std::string> the_empty_list_of_invalidated_properties;
 
         Dictionary dict; dict[Property::name()] = dbus::types::Variant::encode(value);
 
         signal->emit(std::make_tuple(
                         dbus::traits::Service<typename Property::Interface>::interface_name(),
                         dict,
-                        the_empty_list_of_invalided_properties));
+                        the_empty_list_of_invalidated_properties));
     }
 
     media::PlayerSkeleton* impl;

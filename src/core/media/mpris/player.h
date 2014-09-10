@@ -155,7 +155,7 @@ struct Player
     // Convenience struct to create a skeleton implementation for org.mpris.MediaPlayer2.Player
     struct Skeleton
     {
-        static const std::vector<std::string>& the_empty_list_of_invalided_properties()
+        static const std::vector<std::string>& the_empty_list_of_invalidated_properties()
         {
             static const std::vector<std::string> instance; return instance;
         }
@@ -277,7 +277,7 @@ struct Player
             signals.properties_changed->emit(std::make_tuple(
                             dbus::traits::Service<Player>::interface_name(),
                             dict,
-                            the_empty_list_of_invalided_properties()));
+                            the_empty_list_of_invalidated_properties()));
         }
 
         Dictionary get_all_properties()
