@@ -322,6 +322,9 @@ media::PlayerSkeleton::PlayerSkeleton(const media::PlayerSkeleton::Configuration
     auto play = std::bind(&Private::handle_play, d, std::placeholders::_1);
     d->object->install_method_handler<mpris::Player::Play>(play);
 
+    auto play_pause = std::bind(&Private::handle_play_pause, d, std::placeholders::_1);
+    d->object->install_method_handler<mpris::Player::PlayPause>(play_pause);
+
     auto seek = std::bind(&Private::handle_seek, d, std::placeholders::_1);
     d->object->install_method_handler<mpris::Player::Seek>(seek);
 
