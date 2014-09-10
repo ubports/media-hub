@@ -1,4 +1,4 @@
-media-hub (2.0.0) UNRELEASED; urgency=medium
+media-hub (2.0.0+14.10.20140910.2-0ubuntu1) utopic; urgency=medium
 
   [ Thomas Voß ]
   * Bump major version to account for signature changes in public interface. 
@@ -6,7 +6,12 @@ media-hub (2.0.0) UNRELEASED; urgency=medium
   [ Ubuntu daily release ]
   * debian/libmedia-hub-common2.symbols: auto-update to released version
 
- -- Thomas Voß <thomas.voss@canonical.com>  Thu, 28 Aug 2014 09:10:33 +0200
+  [ thomas-voss ]
+  * Get rid of custom macros and use the ones provided by dbus-cpp.
+    Adjust to changes due to making org.mpris.MediaPlayer2.Player
+    compliant to the spec.
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Wed, 10 Sep 2014 21:11:02 +0000
 
 media-hub (1.0.0+14.10.20140908-0ubuntu1) utopic; urgency=low
 
