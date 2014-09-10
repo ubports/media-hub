@@ -39,7 +39,7 @@ namespace media
 {
 class Service;
 
-class PlayerSkeleton : public core::dbus::Skeleton<core::ubuntu::media::Player>
+class PlayerSkeleton : public core::ubuntu::media::Player
 {
   public:
     ~PlayerSkeleton();
@@ -74,7 +74,9 @@ class PlayerSkeleton : public core::dbus::Skeleton<core::ubuntu::media::Player>
     virtual core::Signal<PlaybackStatus>& playback_status_changed();
 
   protected:
-    PlayerSkeleton(const core::dbus::types::ObjectPath& session_path);
+    PlayerSkeleton(
+            const std::shared_ptr<core::dbus::Bus>& bus,
+            const std::shared_ptr<core::dbus::Object>& session);
 
     virtual core::Property<PlaybackStatus>& playback_status();
     virtual core::Property<bool>& can_play();

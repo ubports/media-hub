@@ -64,7 +64,11 @@ struct media::ServiceSkeleton::Private
         ss << "/core/ubuntu/media/Service/sessions/" << session_counter++;
 
         dbus::types::ObjectPath op{ss.str()};
-        media::Player::Configuration config{op};
+        media::Player::Configuration config
+        {
+            impl->access_bus(),
+            impl->access_service()->add_object_for_path(op)
+        };
 
         try
         {
@@ -104,7 +108,6 @@ struct media::ServiceSkeleton::Private
 
     media::ServiceSkeleton* impl;
     dbus::Object::Ptr object;
-
 };
 
 media::ServiceSkeleton::ServiceSkeleton()

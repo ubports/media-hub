@@ -33,12 +33,12 @@ namespace media
 {
 class Service;
 
-class PlayerStub : public core::dbus::Stub<Player>
+class PlayerStub : public Player
 {
   public:
     explicit PlayerStub(
         const std::shared_ptr<Service>& parent,
-        const core::dbus::types::ObjectPath& object);
+        const std::shared_ptr<core::dbus::Object>& object);
 
     ~PlayerStub();
 

@@ -1,6 +1,8 @@
 pkg_check_modules(PC_GSTREAMER_1_0 REQUIRED gstreamer-1.0)
 include_directories(${PC_GSTREAMER_1_0_INCLUDE_DIRS} ${HYBRIS_MEDIA_CFLAGS})
 
+file(GLOB MPRIS_HEADERS mpris/ *.h)
+
 add_library(
   media-hub-common SHARED
 
@@ -61,6 +63,8 @@ install(
 
 add_library(
     media-hub-service
+
+    ${MPRIS_HEADERS}
 
     engine.cpp
     gstreamer/engine.cpp

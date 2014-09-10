@@ -36,7 +36,8 @@ class PlayerImplementation : public PlayerSkeleton
 {
 public:
     PlayerImplementation(
-            const core::dbus::types::ObjectPath& session_path,
+            const std::shared_ptr<core::dbus::Bus>& bus,
+            const std::shared_ptr<core::dbus::Object>& session,
             const std::shared_ptr<Service>& service,
             PlayerKey key);
     ~PlayerImplementation();
