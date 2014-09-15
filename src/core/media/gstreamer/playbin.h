@@ -288,6 +288,9 @@ struct Playbin
 
     void setup_source(GstElement *source)
     {
+        if (source == NULL)
+          return;
+
         if (!request_cookies.empty()) {
             if (g_object_class_find_property(G_OBJECT_GET_CLASS(source),
                                              "cookies") != NULL) {
