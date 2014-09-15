@@ -208,7 +208,9 @@ public:
                 break;
             case GST_MESSAGE_ANY:
                 break;
-            }
+            default:
+                break;
+            }						
         }
 
         GstMessage* message;

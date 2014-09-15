@@ -64,6 +64,13 @@ struct Playbin
         thiz->signals.about_to_finish();
     }
 
+    static void source_setup(GstElement*,
+                             GstElement *source,
+                             gpointer user_data)
+    {
+        static_cast<Playbin*>(user_data)->setup_source(source);
+    }
+
     Playbin()
         : pipeline(gst_element_factory_make("playbin", pipeline_name().c_str())),
           bus{gst_element_get_bus(pipeline)},
@@ -87,6 +94,13 @@ struct Playbin
                     pipeline,
                     "about-to-finish",
                     G_CALLBACK(about_to_finish),
+                    this
+                    );
+
+        g_signal_connect(
+                    pipeline,
+                    "source-setup",
+                    G_CALLBACK(source_setup),
                     this
                     );
 
@@ -258,13 +272,40 @@ struct Playbin
         return static_cast<uint64_t>(dur);
     }
 
-    void set_uri(const std::string& uri)
+    void set_uri(const std::string& uri,
+                 const std::string& cookies = std::string(),
+                 const std::string& user_agent = std::string())
     {
         g_object_set(pipeline, "uri", uri.c_str(), NULL);
         if (is_video_file(uri))
             file_type = MEDIA_FILE_TYPE_VIDEO;
         else if (is_audio_file(uri))
             file_type = MEDIA_FILE_TYPE_AUDIO;
+
+        request_cookies = cookies;
+        request_user_agent = user_agent;
+    }
+
+    void setup_source(GstElement *source)
+    {
+        if (source == NULL)
+          return;
+
+        if (!request_cookies.empty()) {
+            if (g_object_class_find_property(G_OBJECT_GET_CLASS(source),
+                                             "cookies") != NULL) {
+                gchar ** cookies = g_strsplit(request_cookies.c_str(), ";", 0);
+                g_object_set(source, "cookies", cookies, NULL);
+                g_strfreev(cookies);
+            }
+        }
+
+        if (!request_user_agent.empty()) {
+            if (g_object_class_find_property(G_OBJECT_GET_CLASS(source),
+                                             "user-agent") != NULL) {
+                g_object_set(source, "user-agent", request_user_agent.c_str(), NULL);
+            }
+        }
     }
 
     std::string uri() const
@@ -400,6 +441,8 @@ struct Playbin
     SurfaceTextureClientHybris stc_hybris;
     core::Connection on_new_message_connection;
     bool is_seeking;
+    std::string request_cookies;
+    std::string request_user_agent;
     struct
     {
         core::Signal<void> about_to_finish;
