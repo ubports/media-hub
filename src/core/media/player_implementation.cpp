@@ -79,11 +79,8 @@ struct media::PlayerImplementation::Private
 
         /*
          * Wakelock state logic:
-         *
-         * PLAYING->READY: delay 4 seconds and try to clear current wakelock type
-         * PLAYING->PAUSED or PLAYING->STOPPED: delay 4 seconds and try to clear current wakelock type
-         * READY->PAUSED: request a new wakelock (system or display)
-         * PLAYING->PAUSED: delay 4 seconds and try to clear current wakelock type
+         * PLAYING->READY or PLAYING->PAUSED or PLAYING->STOPPED: delay 4 seconds and try to clear current wakelock type
+         * ANY STATE->PLAYING: request a new wakelock (system or display)
          */
         engine->state().changed().connect(
                     [parent, this](const Engine::State& state)
@@ -107,25 +104,23 @@ struct media::PlayerImplementation::Private
                 parent->meta_data_for_current_track().set(std::get<1>(engine->track_meta_data().get()));
                 // And update our playback status.
                 parent->playback_status().set(media::Player::playing);
-                if (previous_state == Engine::State::stopped || previous_state == Engine::State::paused)
-                {
-                    request_power_state();
-                }
+                request_power_state();
                 break;
             }
             case Engine::State::stopped:
             {
                 parent->playback_status().set(media::Player::stopped);
+                if (previous_state ==  Engine::State::playing)
+                {
+                    wakelock_timeout.reset(new timeout(4000, true, std::bind(&Private::clear_wakelock,
+                                     this, std::placeholders::_1), current_wakelock_type()));
+                }
                 break;
             }
             case Engine::State::paused:
             {
                 parent->playback_status().set(media::Player::paused);
-                if (previous_state == Engine::State::ready)
-                {
-                    request_power_state();
-                }
-                else if (previous_state == Engine::State::playing)
+                if (previous_state == Engine::State::playing)
                 {
                     wakelock_timeout.reset(new timeout(4000, true, std::bind(&Private::clear_wakelock,
                                     this, std::placeholders::_1), current_wakelock_type()));
