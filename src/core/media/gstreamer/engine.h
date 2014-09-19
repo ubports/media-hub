@@ -33,9 +33,7 @@ public:
     const core::Property<State>& state() const;
 
     bool open_resource_for_uri(const core::ubuntu::media::Track::UriType& uri);
-    bool open_resource_for_uri(const core::ubuntu::media::Track::UriType& uri,
-                                const std::string& cookies,
-                                const std::string& user_agent);
+    bool open_resource_for_uri(const core::ubuntu::media::Track::UriType& uri, const core::ubuntu::media::Player::HeadersType& headers);
     void create_video_sink(uint32_t texture_id);
 
     bool play();

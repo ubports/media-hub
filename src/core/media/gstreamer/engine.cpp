@@ -271,10 +271,9 @@ bool gstreamer::Engine::open_resource_for_uri(const media::Track::UriType& uri)
     return true;
 }
 
-bool gstreamer::Engine::open_resource_for_uri(const media::Track::UriType& uri, const std::string& cookies,
-        const std::string& user_agent)
+bool gstreamer::Engine::open_resource_for_uri(const media::Track::UriType& uri, const core::ubuntu::media::Player::HeadersType& headers)
 {
-    d->playbin.set_uri(uri, cookies, user_agent);
+    d->playbin.set_uri(uri, headers);
     return true;
 }
 

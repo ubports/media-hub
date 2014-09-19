@@ -15,6 +15,8 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
+#include <syslog.h>
+
 #include "player_implementation.h"
 
 #include <unistd.h>
@@ -276,10 +278,10 @@ bool media::PlayerImplementation::open_uri(const Track::UriType& uri)
     return d->engine->open_resource_for_uri(uri);
 }
 
-bool media::PlayerImplementation::open_uri(const Track::UriType& uri, const std::string& cookies,
-        const std::string& user_agent)
+bool media::PlayerImplementation::open_uri(const Track::UriType& uri, const Player::HeadersType& headers)
 {
-    return d->engine->open_resource_for_uri(uri, cookies, user_agent);
+    syslog(LOG_DEBUG, "open_uri(headers)");
+    return d->engine->open_resource_for_uri(uri, headers);
 }
 
 void media::PlayerImplementation::create_video_sink(uint32_t texture_id)

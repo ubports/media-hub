@@ -41,6 +41,7 @@ class Player : public std::enable_shared_from_this<Player>
     typedef double Volume;
     typedef uint32_t PlayerKey;
     typedef void* GLConsumerWrapperHybris;
+    typedef std::map<std::string, std::string> HeadersType;
 
     /** Used to set a callback function to be called when a frame is ready to be rendered **/
     typedef void (*FrameAvailableCbHybris)(GLConsumerWrapperHybris wrapper, void *context);
@@ -82,8 +83,7 @@ class Player : public std::enable_shared_from_this<Player>
     virtual PlayerKey key() const = 0;
 
     virtual bool open_uri(const Track::UriType& uri) = 0;
-    virtual bool open_uri(const Track::UriType& uri, const std::string& cookies,
-            const std::string& user_agent) = 0;
+    virtual bool open_uri(const Track::UriType& uri, const HeadersType&) = 0;
     virtual void create_video_sink(uint32_t texture_id) = 0;
     virtual GLConsumerWrapperHybris gl_consumer() const = 0;
     virtual void next() = 0;

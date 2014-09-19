@@ -19,6 +19,7 @@
 #ifndef GSTREAMER_PLAYBIN_H_
 #define GSTREAMER_PLAYBIN_H_
 
+#include <syslog.h>
 #include "bus.h"
 #include "../mpris/player.h"
 
@@ -273,39 +274,41 @@ struct Playbin
     }
 
     void set_uri(const std::string& uri,
-                 const std::string& cookies = std::string(),
-                 const std::string& user_agent = std::string())
+                  const core::ubuntu::media::Player::HeadersType& headers = core::ubuntu::media::Player::HeadersType())
     {
+      syslog(LOG_DEBUG, "set_uri");
+
         g_object_set(pipeline, "uri", uri.c_str(), NULL);
         if (is_video_file(uri))
             file_type = MEDIA_FILE_TYPE_VIDEO;
         else if (is_audio_file(uri))
             file_type = MEDIA_FILE_TYPE_AUDIO;
 
-        request_cookies = cookies;
-        request_user_agent = user_agent;
+        request_headers = headers;
     }
 
     void setup_source(GstElement *source)
     {
-        if (source == NULL)
+        if (source == NULL || request_headers.empty())
           return;
 
-        if (!request_cookies.empty()) {
+        /*
+        if (request_headers.find("Cookie") != request_headers.end()) {
             if (g_object_class_find_property(G_OBJECT_GET_CLASS(source),
                                              "cookies") != NULL) {
-                gchar ** cookies = g_strsplit(request_cookies.c_str(), ";", 0);
+                gchar ** cookies = g_strsplit(request_headers["Cookie"].c_str(), ";", 0);
                 g_object_set(source, "cookies", cookies, NULL);
                 g_strfreev(cookies);
             }
         }
 
-        if (!request_user_agent.empty()) {
+        if (request_headers.find("User-Agent") != request_headers.end()) {
             if (g_object_class_find_property(G_OBJECT_GET_CLASS(source),
                                              "user-agent") != NULL) {
-                g_object_set(source, "user-agent", request_user_agent.c_str(), NULL);
+                g_object_set(source, "user-agent", request_headers["User-Agent"].c_str(), NULL);
             }
         }
+        */
     }
 
     std::string uri() const
@@ -441,8 +444,7 @@ struct Playbin
     SurfaceTextureClientHybris stc_hybris;
     core::Connection on_new_message_connection;
     bool is_seeking;
-    std::string request_cookies;
-    std::string request_user_agent;
+    core::ubuntu::media::Player::HeadersType request_headers;
     struct
     {
         core::Signal<void> about_to_finish;

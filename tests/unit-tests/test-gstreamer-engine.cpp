@@ -154,6 +154,7 @@ TEST(GStreamerEngine, setting_uri_and_starting_video_playback_works)
 TEST(GStreamerEngine, setting_uri_and_audio_playback_with_http_headers_works)
 {
     const std::string test_audio_uri{"http://stream-dc1.radioparadise.com/mp3-32"};
+    const core::ubuntu::media::Player::HeadersType headers{{ "User-Agent", "MediaHub" }};
 
     core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
                 core::ubuntu::media::Engine::State::ready);
@@ -166,7 +167,7 @@ TEST(GStreamerEngine, setting_uri_and_audio_playback_with_http_headers_works)
                     std::ref(wst),
                     std::placeholders::_1));
 
-    EXPECT_TRUE(engine.open_resource_for_uri(test_audio_uri, "", "MediaHub"));
+    EXPECT_TRUE(engine.open_resource_for_uri(test_audio_uri, headers));
     EXPECT_TRUE(engine.play());
     EXPECT_TRUE(wst.wait_for_state_for(
                     core::ubuntu::media::Engine::State::playing,

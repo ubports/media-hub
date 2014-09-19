@@ -275,10 +275,9 @@ bool media::PlayerStub::open_uri(const media::Track::UriType& uri)
     return op.value();
 }
 
-bool media::PlayerStub::open_uri(const Track::UriType& uri, const std::string& cookies,
-        const std::string& user_agent)
+bool media::PlayerStub::open_uri(const Track::UriType& uri, const Player::HeadersType& headers)
 {
-    auto op = d->object->invoke_method_synchronously<mpris::Player::OpenUriExtended, bool>(uri, cookies, user_agent);
+    auto op = d->object->invoke_method_synchronously<mpris::Player::OpenUriExtended, bool>(uri, headers);
 
     return op.value();
 }

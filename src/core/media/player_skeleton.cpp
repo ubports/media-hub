@@ -16,6 +16,7 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
+#include <syslog.h>
 #include "apparmor.h"
 #include "codec.h"
 #include "player_skeleton.h"
@@ -245,20 +246,37 @@ struct media::PlayerSkeleton::Private
 
     void handle_open_uri_extended(const core::dbus::Message::Ptr& in)
     {
+        syslog(LOG_DEBUG, "handle_open_uri_extended()");
+
+        std::string log_message;
         Track::UriType uri;
-        std::string cookies, user_agent;
+        Player::HeadersType headers;
+
+        log_message = "handle_open_uri_extended()";
+        log_message += in->signature();
+        log_message += ".";
+        log_message += in->member();
+        syslog(LOG_DEBUG, "%s", log_message.c_str());
+
+        log_message = "handle_open_uri_extended(); read uri";
+        syslog(LOG_DEBUG, "%s", log_message.c_str());
         in->reader() >> uri;
-        in->reader() >> cookies;
-        in->reader() >> user_agent;
+
+        log_message = "handle_open_uri_extended(); read headers";
+        syslog(LOG_DEBUG, "%s", log_message.c_str());
+        in->reader() >> headers;
+        syslog(LOG_DEBUG, "handle_open_uri_extended(); after read headers");
 
         std::string context = get_client_apparmor_context(in);
         bool have_access = does_client_have_access(context, uri);
 
+        syslog(LOG_DEBUG, "handle_open_uri_extended(): before open");
         auto reply = dbus::Message::make_method_return(in);
         if (have_access)
-            reply->writer() << impl->open_uri(uri, cookies, user_agent);
+            reply->writer() << impl->open_uri(uri, headers);
         else
             reply->writer() << false;
+        syslog(LOG_DEBUG, "handle_open_uri_extended(): after open");
         impl->access_bus()->send(reply);
     }
 
