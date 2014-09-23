@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
+ *              Jim Hodapp <jim.hodapp@canonical.com>
  */
 #ifndef CORE_UBUNTU_MEDIA_PLAYER_H_
 #define CORE_UBUNTU_MEDIA_PLAYER_H_
@@ -73,6 +74,19 @@ class Player : public std::enable_shared_from_this<Player>
         playlist
     };
 
+    /**
+     * Audio stream role types used to categorize audio playback.
+     * multimedia is the default role type and will be automatically
+     * paused by media-hub when other types need to play.
+     */
+    enum AudioStreamRole
+    {
+        alarm,
+        alert,
+        multimedia,
+        phone
+    };
+
     Player(const Player&) = delete;
     virtual ~Player();
 
@@ -112,15 +126,17 @@ class Player : public std::enable_shared_from_this<Player>
     virtual const core::Property<Volume>& volume() const = 0;
     virtual const core::Property<PlaybackRate>& minimum_playback_rate() const = 0;
     virtual const core::Property<PlaybackRate>& maximum_playback_rate() const = 0;
-    virtual const core::Property<uint64_t>& position() const = 0;
-    virtual const core::Property<uint64_t>& duration() const = 0;
+    virtual const core::Property<int64_t>& position() const = 0;
+    virtual const core::Property<int64_t>& duration() const = 0;
+    virtual const core::Property<AudioStreamRole>& audio_stream_role() const = 0;
 
     virtual core::Property<LoopStatus>& loop_status() = 0;
     virtual core::Property<PlaybackRate>& playback_rate() = 0;
     virtual core::Property<bool>& is_shuffle() = 0;
     virtual core::Property<Volume>& volume() = 0;
+    virtual core::Property<AudioStreamRole>& audio_stream_role() = 0;
 
-    virtual const core::Signal<uint64_t>& seeked_to() const = 0;
+    virtual const core::Signal<int64_t>& seeked_to() const = 0;
     virtual const core::Signal<void>& end_of_stream() const = 0;
     virtual core::Signal<PlaybackStatus>& playback_status_changed() = 0;
   protected:

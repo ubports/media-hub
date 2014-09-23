@@ -131,6 +131,8 @@ struct Playbin
         // in a state that is ready for the next client that connects to the
         // service
         reset_pipeline();
+        // Signal to the Player class that the client side has disconnected
+        signals.client_disconnected();
     }
 
     void reset_pipeline()
@@ -252,7 +254,52 @@ struct Playbin
 
     void set_volume(double new_volume)
     {
-        g_object_set(pipeline, "volume", new_volume, NULL);
+        g_object_set (pipeline, "volume", new_volume, NULL);
+    }
+
+    /** Translate the AudioStreamRole enum into a string */
+    static std::string get_audio_role_str(media::Player::AudioStreamRole audio_role)
+    {
+        switch (audio_role)
+        {
+            case media::Player::AudioStreamRole::alarm:
+                return "alarm";
+                break;
+            case media::Player::AudioStreamRole::alert:
+                return "alert";
+                break;
+            case media::Player::AudioStreamRole::multimedia:
+                return "multimedia";
+                break;
+            case media::Player::AudioStreamRole::phone:
+                return "phone";
+                break;
+            default:
+                return "multimedia";
+                break;
+        }
+    }
+
+    /** Sets the new audio stream role on the pulsesink in playbin */
+    void set_audio_stream_role(media::Player::AudioStreamRole new_audio_role)
+    {
+        GstElement *audio_sink = NULL;
+        g_object_get (pipeline, "audio-sink", &audio_sink, NULL);
+
+        std::string role_str("props,media.role=" + get_audio_role_str(new_audio_role));
+        std::cout << "Audio stream role: " << role_str << std::endl;
+
+        GstStructure *props = gst_structure_from_string (role_str.c_str(), NULL);
+        if (audio_sink != nullptr && props != nullptr)
+            g_object_set (audio_sink, "stream-properties", props, NULL);
+        else
+        {
+            std::cerr <<
+                "Warning: couldn't set audio stream role - couldn't get audio_sink from pipeline" <<
+                std::endl;
+        }
+
+        gst_structure_free (props);
     }
 
     uint64_t position() const
@@ -456,6 +503,7 @@ struct Playbin
         core::Signal<uint64_t> on_seeked_to;
         core::Signal<void> on_end_of_stream;
         core::Signal<media::Player::PlaybackStatus> on_playback_status_changed;
+        core::Signal<void> client_disconnected;
     } signals;
 };
 }

@@ -53,7 +53,11 @@ std::shared_ptr<media::Player> media::ServiceStub::create_session(const media::P
     if (op.is_error())
         throw std::runtime_error("Problem creating session: " + op.error());
 
-    return std::shared_ptr<media::Player>(new media::PlayerStub(shared_from_this(), op.value()));
+    return std::shared_ptr<media::Player>(new media::PlayerStub
+    {
+        shared_from_this(),
+        access_service()->object_for_path(op.value())
+    });
 }
 
 void media::ServiceStub::pause_other_sessions(media::Player::PlayerKey key)

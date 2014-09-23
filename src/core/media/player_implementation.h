@@ -36,7 +36,9 @@ class PlayerImplementation : public PlayerSkeleton
 {
 public:
     PlayerImplementation(
-            const core::dbus::types::ObjectPath& session_path,
+            const std::string& identity,
+            const std::shared_ptr<core::dbus::Bus>& bus,
+            const std::shared_ptr<core::dbus::Object>& session,
             const std::shared_ptr<Service>& service,
             PlayerKey key);
     ~PlayerImplementation();
@@ -57,6 +59,7 @@ public:
     virtual void set_playback_complete_callback(PlaybackCompleteCb cb, void *context);
     virtual void seek_to(const std::chrono::microseconds& offset);
 
+    const core::Signal<>& on_client_disconnected() const;
 private:
     struct Private;
     std::unique_ptr<Private> d;

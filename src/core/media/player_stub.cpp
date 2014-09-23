@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
+ *              Jim Hodapp <jim.hodapp@canonical.com>
  */
 
 #include <core/media/service.h>
@@ -45,8 +46,7 @@ namespace media = core::ubuntu::media;
 struct media::PlayerStub::Private
 {
     Private(const std::shared_ptr<Service>& parent,
-            const std::shared_ptr<dbus::Service>& remote,
-            const dbus::types::ObjectPath& path
+            const std::shared_ptr<core::dbus::Object>& object
             ) : parent(parent),
                 texture_id(0),
                 igbc_wrapper(nullptr),
@@ -54,8 +54,7 @@ struct media::PlayerStub::Private
                 decoding_session(decoding_service_create_session()),
                 frame_available_cb(nullptr),
                 frame_available_context(nullptr),
-                path(path),
-                object(remote->object_for_path(path)),
+                object(object),
                 properties
                 {
                     object->get_property<mpris::Player::Properties::CanPlay>(),
@@ -66,14 +65,15 @@ struct media::PlayerStub::Private
                     object->get_property<mpris::Player::Properties::CanGoPrevious>(),
                     object->get_property<mpris::Player::Properties::IsVideoSource>(),
                     object->get_property<mpris::Player::Properties::IsAudioSource>(),
-                    object->get_property<mpris::Player::Properties::PlaybackStatus>(),
-                    object->get_property<mpris::Player::Properties::LoopStatus>(),
+                    object->get_property<mpris::Player::Properties::TypedPlaybackStatus>(),
+                    object->get_property<mpris::Player::Properties::TypedLoopStatus>(),
                     object->get_property<mpris::Player::Properties::PlaybackRate>(),
                     object->get_property<mpris::Player::Properties::Shuffle>(),
-                    object->get_property<mpris::Player::Properties::MetaData>(),
+                    object->get_property<mpris::Player::Properties::TypedMetaData>(),
                     object->get_property<mpris::Player::Properties::Volume>(),
                     object->get_property<mpris::Player::Properties::Position>(),
                     object->get_property<mpris::Player::Properties::Duration>(),
+                    object->get_property<mpris::Player::Properties::AudioStreamRole>(),
                     object->get_property<mpris::Player::Properties::MinimumRate>(),
                     object->get_property<mpris::Player::Properties::MaximumRate>()
                 },
@@ -97,7 +97,7 @@ struct media::PlayerStub::Private
             p->on_frame_available();
         }
         else
-            std::cout << "context is nullptr, can't call on_frame_available()" << std::endl;
+            std::cerr << "context is nullptr, can't call on_frame_available()" << std::endl;
     }
 
     void on_frame_available()
@@ -106,7 +106,7 @@ struct media::PlayerStub::Private
             frame_available_cb(frame_available_context);
         }
         else
-            std::cout << "frame_available_cb is nullptr, can't call frame_available_cb()" << std::endl;
+            std::cerr << "frame_available_cb is nullptr, can't call frame_available_cb()" << std::endl;
     }
 
     void set_frame_available_cb(FrameAvailableCb cb, void *context)
@@ -138,8 +138,6 @@ struct media::PlayerStub::Private
     FrameAvailableCb frame_available_cb;
     void *frame_available_context;
 
-    dbus::Bus::Ptr bus;
-    dbus::types::ObjectPath path;
     dbus::Object::Ptr object;
 
     struct
@@ -153,14 +151,15 @@ struct media::PlayerStub::Private
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::IsVideoSource>> is_video_source;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::IsAudioSource>> is_audio_source;
 
-        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::PlaybackStatus>> playback_status;
-        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::LoopStatus>> loop_status;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::TypedPlaybackStatus>> playback_status;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::TypedLoopStatus>> loop_status;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::PlaybackRate>> playback_rate;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Shuffle>> is_shuffle;
-        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MetaData>> meta_data_for_current_track;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::TypedMetaData>> meta_data_for_current_track;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Volume>> volume;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Position>> position;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Duration>> duration;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::AudioStreamRole>> audio_role;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MinimumRate>> minimum_playback_rate;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MaximumRate>> maximum_playback_rate;
     } properties;
@@ -222,7 +221,7 @@ struct media::PlayerStub::Private
 
         PlaybackCompleteCb playback_complete_cb;
         void *playback_complete_context;
-        core::Signal<uint64_t> seeked_to;
+        core::Signal<int64_t> seeked_to;
         core::Signal<void> end_of_stream;
         core::Signal<media::Player::PlaybackStatus> playback_status_changed;
     } signals;
@@ -230,9 +229,8 @@ struct media::PlayerStub::Private
 
 media::PlayerStub::PlayerStub(
     const std::shared_ptr<Service>& parent,
-    const dbus::types::ObjectPath& object_path)
-        : dbus::Stub<Player>(the_session_bus()),
-          d(new Private{parent, access_service(), object_path})
+    const std::shared_ptr<core::dbus::Object>& object)
+        : d(new Private{parent, object})
 {
     auto bus = the_session_bus();
     worker = std::move(std::thread([bus]()
@@ -256,7 +254,7 @@ std::shared_ptr<media::TrackList> media::PlayerStub::track_list()
     {
         d->track_list = std::make_shared<media::TrackListStub>(
                     shared_from_this(),
-                    dbus::types::ObjectPath(d->path.as_string() + "/TrackList"));
+                    dbus::types::ObjectPath(d->object->path().as_string() + "/TrackList"));
     }
     return d->track_list;
 }
@@ -420,14 +418,19 @@ const core::Property<media::Player::Volume>& media::PlayerStub::volume() const
     return *d->properties.volume;
 }
 
-const core::Property<uint64_t>& media::PlayerStub::position() const
+const core::Property<int64_t>& media::PlayerStub::position() const
 {
     return *d->properties.position;
 }
 
-const core::Property<uint64_t>& media::PlayerStub::duration() const
+const core::Property<int64_t>& media::PlayerStub::duration() const
 {
     return *d->properties.duration;
+}
+
+const core::Property<media::Player::AudioStreamRole>& media::PlayerStub::audio_stream_role() const
+{
+    return *d->properties.audio_role;
 }
 
 const core::Property<media::Player::PlaybackRate>& media::PlayerStub::minimum_playback_rate() const
@@ -460,7 +463,12 @@ core::Property<media::Player::Volume>& media::PlayerStub::volume()
     return *d->properties.volume;
 }
 
-const core::Signal<uint64_t>& media::PlayerStub::seeked_to() const
+core::Property<media::Player::AudioStreamRole>& media::PlayerStub::audio_stream_role()
+{
+    return *d->properties.audio_role;
+}
+
+const core::Signal<int64_t>& media::PlayerStub::seeked_to() const
 {
     return d->signals.seeked_to;
 }

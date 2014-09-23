@@ -13,11 +13,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
+ *              Jim Hodapp <jim.hodapp@canonical.com>
  */
 
 #include <syslog.h>
 
 #include "player_implementation.h"
+#include "util/timeout.h"
 
 #include <unistd.h>
 
@@ -30,6 +32,7 @@
 
 #include <exception>
 #include <iostream>
+#include <mutex>
 
 #define UNUSED __attribute__((unused))
 
@@ -40,6 +43,14 @@ using namespace std;
 
 struct media::PlayerImplementation::Private
 {
+    enum class wakelock_clear_t
+    {
+        WAKELOCK_CLEAR_INACTIVE,
+        WAKELOCK_CLEAR_DISPLAY,
+        WAKELOCK_CLEAR_SYSTEM,
+        WAKELOCK_CLEAR_INVALID
+    };
+
     Private(PlayerImplementation* parent,
             const dbus::types::ObjectPath& session_path,
             const std::shared_ptr<media::Service>& service,
@@ -53,7 +64,10 @@ struct media::PlayerImplementation::Private
                   session_path.as_string() + "/TrackList",
                   engine->meta_data_extractor())),
           sys_lock_name("media-hub-music-playback"),
-          active_display_on_request(false),
+          disp_cookie(-1),
+          system_wakelock_count(0),
+          display_wakelock_count(0),
+          previous_state(Engine::State::stopped),
           key(key)
     {
         auto bus = std::shared_ptr<dbus::Bus>(new dbus::Bus(core::dbus::WellKnownBus::system));
@@ -65,6 +79,11 @@ struct media::PlayerImplementation::Private
         auto uscreen_stub_service = dbus::Service::use_service(bus, dbus::traits::Service<core::UScreen>::interface_name());
         uscreen_session = uscreen_stub_service->object_for_path(dbus::types::ObjectPath("/com/canonical/Unity/Screen"));
 
+        /*
+         * Wakelock state logic:
+         * PLAYING->READY or PLAYING->PAUSED or PLAYING->STOPPED: delay 4 seconds and try to clear current wakelock type
+         * ANY STATE->PLAYING: request a new wakelock (system or display)
+         */
         engine->state().changed().connect(
                     [parent, this](const Engine::State& state)
         {
@@ -73,11 +92,19 @@ struct media::PlayerImplementation::Private
             case Engine::State::ready:
             {
                 parent->playback_status().set(media::Player::ready);
-                clear_power_state();
+                if (previous_state == Engine::State::playing)
+                {
+                    wakelock_timeout.reset(new timeout(4000, true, std::bind(&Private::clear_wakelock,
+                                    this, std::placeholders::_1), current_wakelock_type()));
+                }
                 break;
             }
             case Engine::State::playing:
             {
+                // We update the track meta data prior to updating the playback status.
+                // Some MPRIS clients expect this order of events.
+                parent->meta_data_for_current_track().set(std::get<1>(engine->track_meta_data().get()));
+                // And update our playback status.
                 parent->playback_status().set(media::Player::playing);
                 request_power_state();
                 break;
@@ -85,20 +112,37 @@ struct media::PlayerImplementation::Private
             case Engine::State::stopped:
             {
                 parent->playback_status().set(media::Player::stopped);
-                clear_power_state();
+                if (previous_state ==  Engine::State::playing)
+                {
+                    wakelock_timeout.reset(new timeout(4000, true, std::bind(&Private::clear_wakelock,
+                                     this, std::placeholders::_1), current_wakelock_type()));
+                }
                 break;
             }
             case Engine::State::paused:
             {
                 parent->playback_status().set(media::Player::paused);
-                clear_power_state();
+                if (previous_state == Engine::State::playing)
+                {
+                    wakelock_timeout.reset(new timeout(4000, true, std::bind(&Private::clear_wakelock,
+                                    this, std::placeholders::_1), current_wakelock_type()));
+                }
                 break;
             }
             default:
                 break;
             };
-        });
 
+            // Keep track of the previous Engine playback state:
+            previous_state = state;
+        });
+    }
+
+    ~Private()
+    {
+        // Make sure that we don't hold on to the wakelocks if media-hub-server
+        // ever gets restarted manually or automatically
+        clear_wakelocks();
     }
 
     void request_power_state()
@@ -107,60 +151,91 @@ struct media::PlayerImplementation::Private
         {
             if (parent->is_video_source())
             {
-                if (!active_display_on_request)
+                if (++display_wakelock_count == 1)
                 {
                     auto result = uscreen_session->invoke_method_synchronously<core::UScreen::keepDisplayOn, int>();
                     if (result.is_error())
                         throw std::runtime_error(result.error().print());
-
                     disp_cookie = result.value();
-                    active_display_on_request = true;
+                    cout << "Requested new display wakelock" << endl;
                 }
             }
             else
             {
-                if (sys_cookie.empty())
+                if (++system_wakelock_count == 1)
                 {
                     auto result = powerd_session->invoke_method_synchronously<core::Powerd::requestSysState, std::string>(sys_lock_name, static_cast<int>(1));
                     if (result.is_error())
                         throw std::runtime_error(result.error().print());
-
                     sys_cookie = result.value();
+                    cout << "Requested new system wakelock" << endl;
                 }
             }
         }
-        catch(std::exception& e)
+        catch(const std::exception& e)
         {
             std::cerr << "Warning: failed to request power state: ";
             std::cerr << e.what() << std::endl;
         }
     }
 
-    void clear_power_state()
+    void clear_wakelock(const wakelock_clear_t &wakelock)
     {
+        cout << __PRETTY_FUNCTION__ << endl;
         try
         {
-            if (parent->is_video_source())
+            switch (wakelock)
             {
-                if (active_display_on_request)
-                {
-                    uscreen_session->invoke_method_synchronously<core::UScreen::removeDisplayOnRequest, void>(disp_cookie);
-                    active_display_on_request = false;
-                }
-            }
-            else
-            {
-                if (!sys_cookie.empty())
-                {
-                    powerd_session->invoke_method_synchronously<core::Powerd::clearSysState, void>(sys_cookie);
-                    sys_cookie.clear();
-                }
+                case wakelock_clear_t::WAKELOCK_CLEAR_INACTIVE:
+                    break;
+                case wakelock_clear_t::WAKELOCK_CLEAR_SYSTEM:
+                    // Only actually clear the system wakelock once the count reaches zero
+                    if (--system_wakelock_count == 0)
+                    {
+                        cout << "Clearing system wakelock" << endl;
+                        powerd_session->invoke_method_synchronously<core::Powerd::clearSysState, void>(sys_cookie);
+                        sys_cookie.clear();
+                    }
+                    break;
+                case wakelock_clear_t::WAKELOCK_CLEAR_DISPLAY:
+                    // Only actually clear the display wakelock once the count reaches zero
+                    if (--display_wakelock_count == 0)
+                    {
+                        cout << "Clearing display wakelock" << endl;
+                        uscreen_session->invoke_method_synchronously<core::UScreen::removeDisplayOnRequest, void>(disp_cookie);
+                        disp_cookie = -1;
+                    }
+                    break;
+                case wakelock_clear_t::WAKELOCK_CLEAR_INVALID:
+                default:
+                    cerr << "Can't clear invalid wakelock type" << endl;
             }
         }
-        catch(std::exception& e)
+        catch(const std::exception& e)
         {
             std::cerr << "Warning: failed to clear power state: ";
             std::cerr << e.what() << std::endl;
+        }
+    }
+
+    wakelock_clear_t current_wakelock_type() const
+    {
+        return (parent->is_video_source()) ?
+            wakelock_clear_t::WAKELOCK_CLEAR_DISPLAY : wakelock_clear_t::WAKELOCK_CLEAR_SYSTEM;
+    }
+
+    void clear_wakelocks()
+    {
+        // Clear both types of wakelocks (display and system)
+        if (system_wakelock_count.load() > 0)
+        {
+            system_wakelock_count = 1;
+            clear_wakelock(wakelock_clear_t::WAKELOCK_CLEAR_SYSTEM);
+        }
+        if (display_wakelock_count.load() > 0)
+        {
+            display_wakelock_count = 1;
+            clear_wakelock(wakelock_clear_t::WAKELOCK_CLEAR_DISPLAY);
         }
     }
 
@@ -173,19 +248,33 @@ struct media::PlayerImplementation::Private
     std::shared_ptr<dbus::Object> uscreen_session;
     std::string sys_lock_name;
     int disp_cookie;
-    bool active_display_on_request;
     std::string sys_cookie;
+    std::atomic<int> system_wakelock_count;
+    std::atomic<int> display_wakelock_count;
+    std::unique_ptr<timeout> wakelock_timeout;
+    Engine::State previous_state;
     PlayerImplementation::PlayerKey key;
+    core::Signal<> on_client_disconnected;
 };
 
 media::PlayerImplementation::PlayerImplementation(
-        const dbus::types::ObjectPath& session_path,
+        const std::string& identity,
+        const std::shared_ptr<core::dbus::Bus>& bus,
+        const std::shared_ptr<core::dbus::Object>& session,
         const std::shared_ptr<Service>& service,
         PlayerKey key)
-    : media::PlayerSkeleton(session_path),
+    : media::PlayerSkeleton
+      {
+          media::PlayerSkeleton::Configuration
+          {
+              bus,
+              session,
+              identity
+          }
+      },
       d(new Private(
             this,
-            session_path,
+            session->path(),
             service,
             key))
 {
@@ -203,6 +292,8 @@ media::PlayerImplementation::PlayerImplementation(
     loop_status().set(Player::LoopStatus::none);
     position().set(0);
     duration().set(0);
+    audio_stream_role().set(Player::AudioStreamRole::multimedia);
+    d->engine->audio_stream_role().set(Player::AudioStreamRole::multimedia);
 
     // Make sure that the Position property gets updated from the Engine
     // every time the client requests position
@@ -232,6 +323,13 @@ media::PlayerImplementation::PlayerImplementation(
     };
     is_audio_source().install(audio_type_getter);
 
+    // Make sure that the audio_stream_role property gets updated on the Engine side
+    // whenever the client side sets the role
+    audio_stream_role().changed().connect([this](media::Player::AudioStreamRole new_role)
+    {
+        d->engine->audio_stream_role().set(new_role);
+    });
+
     d->engine->about_to_finish_signal().connect([this]()
     {
         if (d->track_list->has_next())
@@ -240,6 +338,15 @@ media::PlayerImplementation::PlayerImplementation(
             if (!uri.empty())
                 d->parent->open_uri(uri);
         }
+    });
+
+    d->engine->client_disconnected_signal().connect([this]()
+    {
+        // If the client disconnects, make sure both wakelock types
+        // are cleared
+        d->clear_wakelocks();
+        // And tell the outside world that the client has gone away
+        d->on_client_disconnected();
     });
 
     d->engine->seeked_to_signal().connect([this](uint64_t value)
@@ -315,6 +422,7 @@ void media::PlayerImplementation::pause()
 
 void media::PlayerImplementation::stop()
 {
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
     d->engine->stop();
 }
 
@@ -333,4 +441,9 @@ void media::PlayerImplementation::set_playback_complete_callback(
 void media::PlayerImplementation::seek_to(const std::chrono::microseconds& ms)
 {
     d->engine->seek_to(ms);
+}
+
+const core::Signal<>& media::PlayerImplementation::on_client_disconnected() const
+{
+    return d->on_client_disconnected;
 }

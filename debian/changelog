@@ -1,3 +1,135 @@
+media-hub (2.0.0+14.10.20140917-0ubuntu1) utopic; urgency=low
+
+  [ Alberto Aguirre ]
+  * Fix wake lock state machine and subtle race conditions on wake lock
+    refcounts. (LP: #1368786)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Wed, 17 Sep 2014 19:59:51 +0000
+
+media-hub (2.0.0+14.10.20140910.2-0ubuntu1) utopic; urgency=medium
+
+  [ Thomas Voß ]
+  * Bump major version to account for signature changes in public interface. 
+
+  [ Ubuntu daily release ]
+  * debian/libmedia-hub-common2.symbols: auto-update to released version
+
+  [ thomas-voss ]
+  * Get rid of custom macros and use the ones provided by dbus-cpp.
+    Adjust to changes due to making org.mpris.MediaPlayer2.Player
+    compliant to the spec.
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Wed, 10 Sep 2014 21:11:02 +0000
+
+media-hub (1.0.0+14.10.20140908-0ubuntu1) utopic; urgency=low
+
+  [ Jim Hodapp ]
+  * When power hits the low or very low levels, pause all Players with
+    role of multimedia. When the warning notification is cleared from
+    the screen, resume playback.
+
+  [ Ricardo Salveti de Araujo ]
+  * playbin: fixing audio-sink gst property name
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Mon, 08 Sep 2014 14:26:38 +0000
+
+media-hub (1.0.0+14.10.20140829.1-0ubuntu1) utopic; urgency=low
+
+  [ Jim Hodapp ]
+  * Add an audio stream role that allows the client app to categorize
+    what type of audio stream it's requesting playback for. Pause
+    playback of playing Players only if the requesting Player and other
+    Player are both of role multimedia .
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 29 Aug 2014 21:47:29 +0000
+
+media-hub (1.0.0+14.10.20140818-0ubuntu1) utopic; urgency=low
+
+  [ Jim Hodapp ]
+  * Allow confined apps to play sounds from /usr/share/sounds
+
+  [ CI bot ]
+  * Allow confined apps to play sounds from /usr/share/sounds.
+    debian/usr.bin.media-hub-server: remove 'audit deny owner /** m,'
+    since it. is overriding the rule to allow mmap of /tmp/orcexec files
+    (AppArmor will still deny other mmap access) - LP: #1357348 (LP:
+    #1357348)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Mon, 18 Aug 2014 20:12:10 +0000
+
+media-hub (1.0.0+14.10.20140813-0ubuntu2) utopic; urgency=medium
+
+  * debian/usr.bin.media-hub-server: remove 'audit deny owner /** m,' since it
+    is overriding the rule to allow mmap of /tmp/orcexec files (AppArmor will
+    still deny other mmap access)
+    - LP: #1357348
+
+ -- Jamie Strandboge <jamie@ubuntu.com>  Fri, 15 Aug 2014 07:22:05 -0500
+
+media-hub (1.0.0+14.10.20140813-0ubuntu1) utopic; urgency=low
+
+  [ Jim Hodapp ]
+  * Allow music to advance to the next song when the device is not
+    charging (LP: #1342351)
+
+  [ Jim Hodapp<jim.hodapp@canonical.com> ]
+  * Allow music to advance to the next song when the device is not
+    charging (LP: #1342351)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Wed, 13 Aug 2014 01:42:00 +0000
+
+media-hub (1.0.0+14.10.20140808.1-0ubuntu1) utopic; urgency=low
+
+  [ Ubuntu daily release ]
+  * New rebuild forced
+
+  [ Ricardo Salveti de Araujo ]
+  * add /media to allowed playback paths for SD card support
+
+  [ Oliver Grawert ]
+  * add /media to allowed playback paths for SD card support
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 08 Aug 2014 02:29:10 +0000
+
+media-hub (1.0.0+14.10.20140731-0ubuntu1) utopic; urgency=low
+
+  [ Jim Hodapp ]
+  * Allow mmap access for media-hub-server to /tmp/orcexec* to fix
+    apparmor denials (LP: #1350870)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 31 Jul 2014 17:04:25 +0000
+
+media-hub (1.0.0+14.10.20140724.1-0ubuntu1) utopic; urgency=medium
+
+  [ Alfonso Sanchez-Beato (email Canonical) ]
+  * Fix 720p limit for OEM device
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 24 Jul 2014 14:37:18 +0000
+
+media-hub (1.0.0+14.10.20140722-0ubuntu1) utopic; urgency=low
+
+  [ thomas-voss ]
+  * Bump major revision and so name to account for toolchain update.
+
+  [ Steve Langasek ]
+  * Bump major revision and so name to account for toolchain update.
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Tue, 22 Jul 2014 01:45:03 +0000
+
+media-hub (0.0.2+14.10.20140715-0ubuntu1) utopic; urgency=low
+
+  * New rebuild forced
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Tue, 15 Jul 2014 14:16:45 +0000
+
+media-hub (0.0.2+14.10.20140710-0ubuntu1) utopic; urgency=low
+
+  [ Ricardo Mendoza ]
+  * Increase default timeout for MPRIS handlers. (Author: Alfonso
+    Sanchez-Beato)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 10 Jul 2014 12:57:59 +0000
+
 media-hub (0.0.2+14.10.20140624.4-0ubuntu3) utopic; urgency=medium
 
   * apparmor: add missing proc file used by the mediatek soc

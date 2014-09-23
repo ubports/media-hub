@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
+ *              Jim Hodapp <jim.hodapp@canonical.com>
  */
 
 #ifndef CORE_UBUNTU_MEDIA_PLAYER_SKELETON_H_
@@ -38,7 +39,7 @@ namespace media
 {
 class Service;
 
-class PlayerSkeleton : public core::dbus::Skeleton<core::ubuntu::media::Player>
+class PlayerSkeleton : public core::ubuntu::media::Player
 {
   public:
     ~PlayerSkeleton();
@@ -58,20 +59,34 @@ class PlayerSkeleton : public core::dbus::Skeleton<core::ubuntu::media::Player>
     virtual const core::Property<Volume>& volume() const;
     virtual const core::Property<PlaybackRate>& minimum_playback_rate() const;
     virtual const core::Property<PlaybackRate>& maximum_playback_rate() const;
-    virtual const core::Property<uint64_t>& position() const;
-    virtual const core::Property<uint64_t>& duration() const;
+    virtual const core::Property<int64_t>& position() const;
+    virtual const core::Property<int64_t>& duration() const;
+    virtual const core::Property<AudioStreamRole>& audio_stream_role() const;
 
     virtual core::Property<LoopStatus>& loop_status();
     virtual core::Property<PlaybackRate>& playback_rate();
     virtual core::Property<bool>& is_shuffle();
     virtual core::Property<Volume>& volume();
+    virtual core::Property<AudioStreamRole>& audio_stream_role();
 
-    virtual const core::Signal<uint64_t>& seeked_to() const;
+    virtual const core::Signal<int64_t>& seeked_to() const;
     virtual const core::Signal<void>& end_of_stream() const;
     virtual core::Signal<PlaybackStatus>& playback_status_changed();
 
-  protected:
-    PlayerSkeleton(const core::dbus::types::ObjectPath& session_path);
+protected:
+    // All creation time arguments go here.
+    struct Configuration
+    {
+        // The bus connection we are associated with.
+        std::shared_ptr<core::dbus::Bus> bus;
+        // The session object that we want to expose the skeleton upon.
+        std::shared_ptr<core::dbus::Object> session;
+        // Our identity, an identifier we pass out to other parts of the system.
+        // Defaults to the short app id (${PKG_NAME}_${APP}).
+        std::string identity;
+    };
+
+    PlayerSkeleton(const Configuration& configuration);
 
     virtual core::Property<PlaybackStatus>& playback_status();
     virtual core::Property<bool>& can_play();
@@ -84,15 +99,15 @@ class PlayerSkeleton : public core::dbus::Skeleton<core::ubuntu::media::Player>
     virtual core::Property<Track::MetaData>& meta_data_for_current_track();
     virtual core::Property<PlaybackRate>& minimum_playback_rate();
     virtual core::Property<PlaybackRate>& maximum_playback_rate();
-    virtual core::Property<uint64_t>& position();
-    virtual core::Property<uint64_t>& duration();
+    virtual core::Property<int64_t>& position();
+    virtual core::Property<int64_t>& duration();
 
-    virtual core::Signal<uint64_t>& seeked_to();
+    virtual core::Signal<int64_t>& seeked_to();
     virtual core::Signal<void>& end_of_stream();
 
   private:
     struct Private;
-    std::unique_ptr<Private> d;
+    std::shared_ptr<Private> d;
 };
 }
 }
