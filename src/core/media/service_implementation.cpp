@@ -103,11 +103,13 @@ std::shared_ptr<media::Player> media::ServiceImplementation::create_session(
 
     auto key = conf.key;
 
-    auto self = shared_from_this();
-    std::weak_ptr<Service> weak_self = self;
-    player->on_client_disconnected().connect([this, key, weak_self]()
+    std::weak_ptr<Service> weak_self{shared_from_this()};
+    player->on_client_disconnected().connect([this, weak_self, key]()
     {
-        std::thread([this, key, weak_self]{
+        // remove_player_for_key may destroy the player instance
+        // which can deadlock on the on_client_disconnected signal whose destructor
+        // waits for this dispatch to finish
+        std::thread([this, weak_self, key]{
             if (weak_self.lock())
                 remove_player_for_key(key);
         }).detach();
