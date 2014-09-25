@@ -28,6 +28,7 @@
 #include "unity_screen_service.h"
 #include "gstreamer/engine.h"
 
+#include <memory>
 #include <exception>
 #include <iostream>
 #include <mutex>
@@ -39,7 +40,8 @@ namespace dbus = core::dbus;
 
 using namespace std;
 
-struct media::PlayerImplementation::Private
+struct media::PlayerImplementation::Private :
+        public std::enable_shared_from_this<Private>
 {
     enum class wakelock_clear_t
     {
@@ -92,8 +94,7 @@ struct media::PlayerImplementation::Private
                 parent->playback_status().set(media::Player::ready);
                 if (previous_state == Engine::State::playing)
                 {
-                    wakelock_timeout.reset(new timeout(4000, true, std::bind(&Private::clear_wakelock,
-                                    this, std::placeholders::_1), current_wakelock_type()));
+                    timeout(4000, true, make_clear_wakelock_functor());
                 }
                 break;
             }
@@ -112,8 +113,7 @@ struct media::PlayerImplementation::Private
                 parent->playback_status().set(media::Player::stopped);
                 if (previous_state ==  Engine::State::playing)
                 {
-                    wakelock_timeout.reset(new timeout(4000, true, std::bind(&Private::clear_wakelock,
-                                     this, std::placeholders::_1), current_wakelock_type()));
+                    timeout(4000, true, make_clear_wakelock_functor());
                 }
                 break;
             }
@@ -122,8 +122,7 @@ struct media::PlayerImplementation::Private
                 parent->playback_status().set(media::Player::paused);
                 if (previous_state == Engine::State::playing)
                 {
-                    wakelock_timeout.reset(new timeout(4000, true, std::bind(&Private::clear_wakelock,
-                                    this, std::placeholders::_1), current_wakelock_type()));
+                    timeout(4000, true, make_clear_wakelock_functor());
                 }
                 break;
             }
@@ -237,6 +236,16 @@ struct media::PlayerImplementation::Private
         }
     }
 
+    std::function<void()> make_clear_wakelock_functor()
+    {
+        std::weak_ptr<Private> weak_self{shared_from_this()};
+        auto wakelock_type = current_wakelock_type();
+        return [weak_self, wakelock_type] {
+            if (auto self = weak_self.lock())
+                self->clear_wakelock(wakelock_type);
+        };
+    }
+
     PlayerImplementation* parent;
     std::shared_ptr<Service> service;
     std::shared_ptr<Engine> engine;
@@ -249,7 +258,6 @@ struct media::PlayerImplementation::Private
     std::string sys_cookie;
     std::atomic<int> system_wakelock_count;
     std::atomic<int> display_wakelock_count;
-    std::unique_ptr<timeout> wakelock_timeout;
     Engine::State previous_state;
     PlayerImplementation::PlayerKey key;
     core::Signal<> on_client_disconnected;
@@ -270,7 +278,7 @@ media::PlayerImplementation::PlayerImplementation(
               identity
           }
       },
-      d(new Private(
+      d(make_shared<Private>(
             this,
             session->path(),
             service,
