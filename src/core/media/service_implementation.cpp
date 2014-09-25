@@ -102,9 +102,15 @@ std::shared_ptr<media::Player> media::ServiceImplementation::create_session(
             conf.identity, conf.bus, conf.session, shared_from_this(), conf.key);
 
     auto key = conf.key;
-    player->on_client_disconnected().connect([this, key]()
+
+    auto self = shared_from_this();
+    std::weak_ptr<Service> weak_self = self;
+    player->on_client_disconnected().connect([this, key, weak_self]()
     {
-        remove_player_for_key(key);
+        std::thread([this, key, weak_self]{
+            if (weak_self.lock())
+                remove_player_for_key(key);
+        }).detach();
     });
 
     return player;
