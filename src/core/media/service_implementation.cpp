@@ -107,7 +107,6 @@ std::shared_ptr<media::Player> media::ServiceImplementation::create_session(
             conf.identity, conf.bus, conf.session, shared_from_this(), conf.key);
 
     auto key = conf.key;
-
     player->on_client_disconnected().connect([this, key]()
     {
         // Call remove_player_for_key asynchronously otherwise deadlock can occur
