@@ -246,6 +246,10 @@ struct media::PlayerImplementation::Private :
 
     std::function<void()> make_clear_wakelock_functor()
     {
+        // Since this functor will be executed on a separate detached thread
+        // the execution of the functor may surpass the lifetime of this Private
+        // object instance. By keeping a weak_ptr to the private object instance
+        // we can check if the object is dead before calling methods on it
         std::weak_ptr<Private> weak_self{shared_from_this()};
         auto wakelock_type = current_wakelock_type();
         return [weak_self, wakelock_type] {
