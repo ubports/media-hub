@@ -174,9 +174,7 @@ public:
                 break;
             default:
                 break;
-            default:
-                break;
-            }						
+            }
         }
 
         GstMessage* message;

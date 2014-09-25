@@ -240,6 +240,24 @@ struct media::PlayerSkeleton::Private : public std::enable_shared_from_this<medi
         });
     }
 
+    void handle_open_uri_extended(const core::dbus::Message::Ptr& in)
+    {
+        dbus_stub.get_connection_app_armor_security_async(in->sender(), [this, in](const std::string& profile)
+        {
+            Track::UriType uri;
+            Player::HeadersType headers;
+
+            in->reader() >> uri;
+            in->reader() >> headers;
+
+            bool have_access = does_client_have_access(profile, uri);
+            auto reply = dbus::Message::make_method_return(in);
+            reply->writer() << (have_access ? impl->open_uri(uri, headers) : false);
+
+            bus->send(reply);
+        });
+    }
+
     template<typename Property>
     void on_property_value_changed(
             const typename Property::ValueType& value,
@@ -261,41 +279,6 @@ struct media::PlayerSkeleton::Private : public std::enable_shared_from_this<medi
                         the_empty_list_of_invalidated_properties));
     }
 
-    void handle_open_uri_extended(const core::dbus::Message::Ptr& in)
-    {
-        syslog(LOG_DEBUG, "handle_open_uri_extended()");
-
-        std::string log_message;
-        Track::UriType uri;
-        Player::HeadersType headers;
-
-        log_message = "handle_open_uri_extended()";
-        log_message += in->signature();
-        log_message += ".";
-        log_message += in->member();
-        syslog(LOG_DEBUG, "%s", log_message.c_str());
-
-        log_message = "handle_open_uri_extended(); read uri";
-        syslog(LOG_DEBUG, "%s", log_message.c_str());
-        in->reader() >> uri;
-
-        log_message = "handle_open_uri_extended(); read headers";
-        syslog(LOG_DEBUG, "%s", log_message.c_str());
-        in->reader() >> headers;
-        syslog(LOG_DEBUG, "handle_open_uri_extended(); after read headers");
-
-        std::string context = get_client_apparmor_context(in);
-        bool have_access = does_client_have_access(context, uri);
-
-        syslog(LOG_DEBUG, "handle_open_uri_extended(): before open");
-        auto reply = dbus::Message::make_method_return(in);
-        if (have_access)
-            reply->writer() << impl->open_uri(uri, headers);
-        else
-            reply->writer() << false;
-        syslog(LOG_DEBUG, "handle_open_uri_extended(): after open");
-        impl->access_bus()->send(reply);
-    }
 
     media::PlayerSkeleton* impl;
     std::string identity;

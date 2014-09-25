@@ -116,6 +116,7 @@ struct Player
     DBUS_CPP_METHOD_DEF(CreateVideoSink, Player)
     DBUS_CPP_METHOD_DEF(Key, Player)
     DBUS_CPP_METHOD_DEF(OpenUri, Player)
+    DBUS_CPP_METHOD_DEF(OpenUriExtended, Player)
 
     struct Signals
     {
