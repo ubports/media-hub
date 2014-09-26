@@ -23,6 +23,8 @@
 #include "player_configuration.h"
 #include "player_implementation.h"
 
+#include <boost/asio.hpp>
+
 #include <cstdint>
 #include <map>
 #include <memory>
@@ -35,10 +37,11 @@ using namespace std;
 struct media::ServiceImplementation::Private
 {
     Private()
-        : resume_key(std::numeric_limits<std::uint32_t>::max())
+        : resume_key(std::numeric_limits<std::uint32_t>::max()),
+          keep_alive(io_service)
     {
         bus = std::shared_ptr<dbus::Bus>(new dbus::Bus(core::dbus::WellKnownBus::session));
-        bus->install_executor(dbus::asio::make_executor(bus));
+        bus->install_executor(dbus::asio::make_executor(bus, io_service));
         worker = std::move(std::thread([this]()
         {
             bus->run();
@@ -65,6 +68,8 @@ struct media::ServiceImplementation::Private
     media::Player::PlayerKey resume_key;
     std::thread worker;
     dbus::Bus::Ptr bus;
+    boost::asio::io_service io_service;
+    boost::asio::io_service::work keep_alive;
     std::shared_ptr<dbus::Object> indicator_power_session;
     std::shared_ptr<core::dbus::Property<core::IndicatorPower::PowerLevel>> power_level;
     std::shared_ptr<core::dbus::Property<core::IndicatorPower::IsWarning>> is_warning;
@@ -104,7 +109,15 @@ std::shared_ptr<media::Player> media::ServiceImplementation::create_session(
     auto key = conf.key;
     player->on_client_disconnected().connect([this, key]()
     {
-        remove_player_for_key(key);
+        // Call remove_player_for_key asynchronously otherwise deadlock can occur
+        // if called within this dispatcher context.
+        // remove_player_for_key can destroy the player instance which in turn
+        // destroys the "on_client_disconnected" signal whose destructor will wait
+        // until all dispatches are done
+        d->io_service.post([this, key]()
+        {
+            remove_player_for_key(key);
+        });
     });
 
     return player;
