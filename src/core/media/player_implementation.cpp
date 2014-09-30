@@ -16,8 +16,6 @@
  *              Jim Hodapp <jim.hodapp@canonical.com>
  */
 
-#include <syslog.h>
-
 #include "player_implementation.h"
 #include "util/timeout.h"
 
@@ -294,6 +292,8 @@ media::PlayerImplementation::PlayerImplementation(
     duration().set(0);
     audio_stream_role().set(Player::AudioStreamRole::multimedia);
     d->engine->audio_stream_role().set(Player::AudioStreamRole::multimedia);
+    lifetime().set(Player::Lifetime::normal);
+    d->engine->lifetime().set(Player::Lifetime::normal);
 
     // Make sure that the Position property gets updated from the Engine
     // every time the client requests position
@@ -328,6 +328,11 @@ media::PlayerImplementation::PlayerImplementation(
     audio_stream_role().changed().connect([this](media::Player::AudioStreamRole new_role)
     {
         d->engine->audio_stream_role().set(new_role);
+    });
+
+    lifetime().changed().connect([this](media::Player::Lifetime lifetime)
+    {
+        d->engine->lifetime().set(lifetime);
     });
 
     d->engine->about_to_finish_signal().connect([this]()
@@ -387,7 +392,6 @@ bool media::PlayerImplementation::open_uri(const Track::UriType& uri)
 
 bool media::PlayerImplementation::open_uri(const Track::UriType& uri, const Player::HeadersType& headers)
 {
-    syslog(LOG_DEBUG, "open_uri(headers)");
     return d->engine->open_resource_for_uri(uri, headers);
 }
 

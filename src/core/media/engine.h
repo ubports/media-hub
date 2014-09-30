@@ -96,6 +96,9 @@ public:
     virtual const core::Property<core::ubuntu::media::Player::AudioStreamRole>& audio_stream_role() const = 0;
     virtual core::Property<core::ubuntu::media::Player::AudioStreamRole>& audio_stream_role() = 0;
 
+    virtual const core::Property<core::ubuntu::media::Player::Lifetime>& lifetime() const = 0;
+    virtual core::Property<core::ubuntu::media::Player::Lifetime>& lifetime() = 0;
+
     virtual const core::Property<std::tuple<Track::UriType, Track::MetaData>>& track_meta_data() const = 0;
 
     virtual const core::Signal<void>& about_to_finish_signal() const = 0;

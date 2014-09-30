@@ -54,6 +54,9 @@ public:
     const core::Property<core::ubuntu::media::Player::AudioStreamRole>& audio_stream_role() const;
     core::Property<core::ubuntu::media::Player::AudioStreamRole>& audio_stream_role();
 
+    const core::Property<core::ubuntu::media::Player::Lifetime>& lifetime() const;
+    core::Property<core::ubuntu::media::Player::Lifetime>& lifetime();
+
     const core::Property<std::tuple<core::ubuntu::media::Track::UriType, core::ubuntu::media::Track::MetaData>>& track_meta_data() const;
 
     const core::Signal<void>& about_to_finish_signal() const;

@@ -17,7 +17,6 @@
  *              Jim Hodapp <jim.hodapp@canonical.com>
  */
 
-#include <syslog.h>
 #include "apparmor.h"
 #include "codec.h"
 #include "player_skeleton.h"
@@ -454,6 +453,11 @@ const core::Property<media::Player::AudioStreamRole>& media::PlayerSkeleton::aud
     return *d->skeleton.properties.audio_stream_role;
 }
 
+const core::Property<media::Player::Lifetime>& media::PlayerSkeleton::lifetime() const
+{
+    return *d->skeleton.properties.lifetime;
+}
+
 const core::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::minimum_playback_rate() const
 {
     return *d->skeleton.properties.minimum_playback_rate;
@@ -497,6 +501,11 @@ core::Property<int64_t>& media::PlayerSkeleton::duration()
 core::Property<media::Player::AudioStreamRole>& media::PlayerSkeleton::audio_stream_role()
 {
     return *d->skeleton.properties.audio_stream_role;
+}
+
+core::Property<media::Player::Lifetime>& media::PlayerSkeleton::lifetime()
+{
+    return *d->skeleton.properties.lifetime;
 }
 
 core::Property<media::Player::PlaybackStatus>& media::PlayerSkeleton::playback_status()

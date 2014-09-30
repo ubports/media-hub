@@ -19,7 +19,6 @@
 #ifndef GSTREAMER_PLAYBIN_H_
 #define GSTREAMER_PLAYBIN_H_
 
-#include <syslog.h>
 #include "bus.h"
 #include "../mpris/player.h"
 
@@ -130,7 +129,12 @@ struct Playbin
         // When the client dies, tear down the current pipeline and get it
         // in a state that is ready for the next client that connects to the
         // service
-        reset_pipeline();
+
+        // Don't reset the pipeline if we want to resume
+        if (player_lifetime != media::Player::Lifetime::resumable) {
+            reset_pipeline();
+        }
+
         // Signal to the Player class that the client side has disconnected
         signals.client_disconnected();
     }
@@ -302,6 +306,11 @@ struct Playbin
         gst_structure_free (props);
     }
 
+    void set_lifetime(media::Player::Lifetime lifetime)
+    {
+        player_lifetime = lifetime;
+    }
+
     uint64_t position() const
     {
         int64_t pos = 0;
@@ -323,7 +332,7 @@ struct Playbin
     void set_uri(const std::string& uri,
                   const core::ubuntu::media::Player::HeadersType& headers = core::ubuntu::media::Player::HeadersType())
     {
-      syslog(LOG_DEBUG, "set_uri");
+       reset_pipeline();
 
         g_object_set(pipeline, "uri", uri.c_str(), NULL);
         if (is_video_file(uri))
@@ -492,6 +501,7 @@ struct Playbin
     core::Connection on_new_message_connection;
     bool is_seeking;
     core::ubuntu::media::Player::HeadersType request_headers;
+    media::Player::Lifetime player_lifetime;
     struct
     {
         core::Signal<void> about_to_finish;
