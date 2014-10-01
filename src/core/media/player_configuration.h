@@ -20,11 +20,22 @@
 
 #include <core/media/player.h>
 
-#include <core/dbus/types/object_path.h>
+#include <core/dbus/bus.h>
+#include <core/dbus/object.h>
 
+// Our internal structure for handing down parameters from the skeleton
+// to the implementation in a way that is opaque to the client.
 struct core::ubuntu::media::Player::Configuration
 {
-    core::dbus::types::ObjectPath object_path;
+    // An identifier that is helpful in referencing the player instance
+    // across multiple services.
+    std::string identity;
+    // Unique key for identifying the session.
+    core::ubuntu::media::Player::PlayerKey key;
+    // The bus connection to expose objects on.
+    std::shared_ptr<core::dbus::Bus> bus;
+    // The actual session object representing a player instance.
+    std::shared_ptr<core::dbus::Object> session;
 };
 
 #endif // CORE_UBUNTU_MEDIA_PLAYER_CLIENT_CONFIGURATION_H_

@@ -21,6 +21,14 @@
 
 #include <core/dbus/bus.h>
 
+namespace core
+{
+namespace ubuntu
+{
+namespace media
+{
 core::dbus::Bus::Ptr the_session_bus();
-
+}
+}
+}
 #endif // THE_SESSION_BUS_H_

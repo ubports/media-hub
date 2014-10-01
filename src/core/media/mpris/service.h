@@ -19,7 +19,7 @@
 #ifndef MPRIS_SERVICE_H_
 #define MPRIS_SERVICE_H_
 
-#include "macros.h"
+#include <core/dbus/macros.h>
 
 #include <chrono>
 #include <string>
@@ -47,10 +47,36 @@ struct Service
                 return s;
             }
         };
+
+        struct CreatingFixedSession
+        {
+            static const std::string& name()
+            {
+                static const std::string s
+                {
+                    "core.ubuntu.media.Service.Error.CreatingFixedSession"
+                };
+                return s;
+            }
+        };
+
+        struct ResumingSession
+        {
+            static const std::string& name()
+            {
+                static const std::string s
+                {
+                    "core.ubuntu.media.Service.Error.ResumingSession"
+                };
+                return s;
+            }
+        };
     };
 
-    METHOD(CreateSession, Service, std::chrono::seconds(1))
-    METHOD(PauseOtherSessions, Service, std::chrono::seconds(1))
+    DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(CreateSession, Service, 1000)
+    DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(CreateFixedSession, Service, 1000)
+    DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(ResumeSession, Service, 1000)
+    DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(PauseOtherSessions, Service, 1000)
 };
 }
 

@@ -33,12 +33,12 @@ namespace media
 {
 class Service;
 
-class PlayerStub : public core::dbus::Stub<Player>
+class PlayerStub : public Player
 {
   public:
     explicit PlayerStub(
         const std::shared_ptr<Service>& parent,
-        const core::dbus::types::ObjectPath& object);
+        const std::shared_ptr<core::dbus::Object>& object);
 
     ~PlayerStub();
 
@@ -46,8 +46,7 @@ class PlayerStub : public core::dbus::Stub<Player>
     virtual PlayerKey key() const;
 
     virtual bool open_uri(const Track::UriType& uri);
-    virtual bool open_uri(const Track::UriType& uri, const std::string& cookies,
-            const std::string& user_agent);
+    virtual bool open_uri(const Track::UriType& uri, const Player::HeadersType& headers);
     virtual void create_video_sink(uint32_t texture_id);
     virtual GLConsumerWrapperHybris gl_consumer() const;
     virtual void next();
@@ -75,15 +74,19 @@ class PlayerStub : public core::dbus::Stub<Player>
     virtual const core::Property<Volume>& volume() const;
     virtual const core::Property<PlaybackRate>& minimum_playback_rate() const;
     virtual const core::Property<PlaybackRate>& maximum_playback_rate() const;
-    virtual const core::Property<uint64_t>& position() const;
-    virtual const core::Property<uint64_t>& duration() const;
+    virtual const core::Property<int64_t>& position() const;
+    virtual const core::Property<int64_t>& duration() const;
+    virtual const core::Property<AudioStreamRole>& audio_stream_role() const;
+    virtual const core::Property<Lifetime>& lifetime() const;
 
     virtual core::Property<LoopStatus>& loop_status();
     virtual core::Property<PlaybackRate>& playback_rate();
     virtual core::Property<bool>& is_shuffle();
     virtual core::Property<Volume>& volume();
+    virtual core::Property<AudioStreamRole>& audio_stream_role();
+    virtual core::Property<Lifetime>& lifetime();
 
-    virtual const core::Signal<uint64_t>& seeked_to() const;
+    virtual const core::Signal<int64_t>& seeked_to() const;
     virtual const core::Signal<void>& end_of_stream() const;
     virtual core::Signal<PlaybackStatus>& playback_status_changed();
 

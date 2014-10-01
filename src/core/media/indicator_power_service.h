@@ -13,7 +13,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- *      Author: Ricardo Mendoza <ricardo.mendoza@canonical.com>
+ *      Author: Jim Hodapp <jim.hodapp@canonical.com>
  */
 
 #include <core/dbus/dbus.h>
@@ -28,46 +28,47 @@
 #include <core/dbus/asio/executor.h>
 
 #include <string>
-#include <vector>
-#include <chrono>
 
 namespace core
 {
 
-struct Powerd
+struct IndicatorPower
 {
     static std::string& name()
     {
-        static std::string s = "com.canonical.powerd";
+        static std::string s = "com.canonical.indicator.power.Battery";
         return s;
     }
 
-    struct requestSysState
+    struct PowerLevel
     {
         static std::string name()
         {
-            static std::string s = "requestSysState";
+            static std::string s = "PowerLevel";
             return s;
         }
 
-        static const std::chrono::milliseconds default_timeout() { return std::chrono::seconds{1}; }
-
-        typedef Powerd Interface;
+        typedef IndicatorPower Interface;
+        // Possible values: "ok", "low", "very_low", "critical"
+        typedef std::string ValueType;
+        static const bool readable = true;
+        static const bool writable = false;
     };
 
-    struct clearSysState
+    struct IsWarning
     {
         static std::string name()
         {
-            static std::string s = "clearSysState";
+            static std::string s = "IsWarning";
             return s;
         }
 
-        static const std::chrono::milliseconds default_timeout() { return std::chrono::seconds{1}; }
-
-        typedef Powerd Interface;
+        typedef IndicatorPower Interface;
+        typedef bool ValueType;
+        static const bool readable = true;
+        static const bool writable = false;
     };
 
-};
+}; // IndicatorPower
 
 }

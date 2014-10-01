@@ -129,7 +129,14 @@ struct Playbin
         // When the client dies, tear down the current pipeline and get it
         // in a state that is ready for the next client that connects to the
         // service
-        reset_pipeline();
+
+        // Don't reset the pipeline if we want to resume
+        if (player_lifetime != media::Player::Lifetime::resumable) {
+            reset_pipeline();
+        }
+
+        // Signal to the Player class that the client side has disconnected
+        signals.client_disconnected();
     }
 
     void reset_pipeline()
@@ -251,7 +258,57 @@ struct Playbin
 
     void set_volume(double new_volume)
     {
-        g_object_set(pipeline, "volume", new_volume, NULL);
+        g_object_set (pipeline, "volume", new_volume, NULL);
+    }
+
+    /** Translate the AudioStreamRole enum into a string */
+    static std::string get_audio_role_str(media::Player::AudioStreamRole audio_role)
+    {
+        switch (audio_role)
+        {
+            case media::Player::AudioStreamRole::alarm:
+                return "alarm";
+                break;
+            case media::Player::AudioStreamRole::alert:
+                return "alert";
+                break;
+            case media::Player::AudioStreamRole::multimedia:
+                return "multimedia";
+                break;
+            case media::Player::AudioStreamRole::phone:
+                return "phone";
+                break;
+            default:
+                return "multimedia";
+                break;
+        }
+    }
+
+    /** Sets the new audio stream role on the pulsesink in playbin */
+    void set_audio_stream_role(media::Player::AudioStreamRole new_audio_role)
+    {
+        GstElement *audio_sink = NULL;
+        g_object_get (pipeline, "audio-sink", &audio_sink, NULL);
+
+        std::string role_str("props,media.role=" + get_audio_role_str(new_audio_role));
+        std::cout << "Audio stream role: " << role_str << std::endl;
+
+        GstStructure *props = gst_structure_from_string (role_str.c_str(), NULL);
+        if (audio_sink != nullptr && props != nullptr)
+            g_object_set (audio_sink, "stream-properties", props, NULL);
+        else
+        {
+            std::cerr <<
+                "Warning: couldn't set audio stream role - couldn't get audio_sink from pipeline" <<
+                std::endl;
+        }
+
+        gst_structure_free (props);
+    }
+
+    void set_lifetime(media::Player::Lifetime lifetime)
+    {
+        player_lifetime = lifetime;
     }
 
     uint64_t position() const
@@ -273,37 +330,37 @@ struct Playbin
     }
 
     void set_uri(const std::string& uri,
-                 const std::string& cookies = std::string(),
-                 const std::string& user_agent = std::string())
+                  const core::ubuntu::media::Player::HeadersType& headers = core::ubuntu::media::Player::HeadersType())
     {
+       reset_pipeline();
+
         g_object_set(pipeline, "uri", uri.c_str(), NULL);
         if (is_video_file(uri))
             file_type = MEDIA_FILE_TYPE_VIDEO;
         else if (is_audio_file(uri))
             file_type = MEDIA_FILE_TYPE_AUDIO;
 
-        request_cookies = cookies;
-        request_user_agent = user_agent;
+        request_headers = headers;
     }
 
     void setup_source(GstElement *source)
     {
-        if (source == NULL)
+        if (source == NULL || request_headers.empty())
           return;
 
-        if (!request_cookies.empty()) {
+        if (request_headers.find("Cookie") != request_headers.end()) {
             if (g_object_class_find_property(G_OBJECT_GET_CLASS(source),
                                              "cookies") != NULL) {
-                gchar ** cookies = g_strsplit(request_cookies.c_str(), ";", 0);
+                gchar ** cookies = g_strsplit(request_headers["Cookie"].c_str(), ";", 0);
                 g_object_set(source, "cookies", cookies, NULL);
                 g_strfreev(cookies);
             }
         }
 
-        if (!request_user_agent.empty()) {
+        if (request_headers.find("User-Agent") != request_headers.end()) {
             if (g_object_class_find_property(G_OBJECT_GET_CLASS(source),
                                              "user-agent") != NULL) {
-                g_object_set(source, "user-agent", request_user_agent.c_str(), NULL);
+                g_object_set(source, "user-agent", request_headers["User-Agent"].c_str(), NULL);
             }
         }
     }
@@ -441,8 +498,8 @@ struct Playbin
     SurfaceTextureClientHybris stc_hybris;
     core::Connection on_new_message_connection;
     bool is_seeking;
-    std::string request_cookies;
-    std::string request_user_agent;
+    core::ubuntu::media::Player::HeadersType request_headers;
+    media::Player::Lifetime player_lifetime;
     struct
     {
         core::Signal<void> about_to_finish;
@@ -454,6 +511,7 @@ struct Playbin
         core::Signal<uint64_t> on_seeked_to;
         core::Signal<void> on_end_of_stream;
         core::Signal<media::Player::PlaybackStatus> on_playback_status_changed;
+        core::Signal<void> client_disconnected;
     } signals;
 };
 }

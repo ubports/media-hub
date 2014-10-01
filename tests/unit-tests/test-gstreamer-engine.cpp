@@ -20,6 +20,7 @@
 #include <core/media/player.h>
 #include <core/media/track_list.h>
 
+#include "core/media/xesam.h"
 #include "core/media/gstreamer/engine.h"
 
 #include "../test_data.h"
@@ -79,18 +80,18 @@ TEST(GStreamerEngine, setting_uri_and_starting_audio_only_playback_works)
     engine.track_meta_data().changed().connect(
                 [](const std::tuple<media::Track::UriType, media::Track::MetaData>& md)
                 {
-                    if (0 < std::get<1>(md).count(media::Engine::Xesam::album()))
-                        EXPECT_EQ("Ezwa", std::get<1>(md).get(media::Engine::Xesam::album()));
-                    if (0 < std::get<1>(md).count(media::Engine::Xesam::album_artist()))
-                        EXPECT_EQ("Ezwa", std::get<1>(md).get(media::Engine::Xesam::album_artist()));
-                    if (0 < std::get<1>(md).count(media::Engine::Xesam::artist()))
-                        EXPECT_EQ("Ezwa", std::get<1>(md).get(media::Engine::Xesam::artist()));
-                    if (0 < std::get<1>(md).count(media::Engine::Xesam::disc_number()))
-                        EXPECT_EQ("42", std::get<1>(md).get(media::Engine::Xesam::disc_number()));
-                    if (0 < std::get<1>(md).count(media::Engine::Xesam::genre()))
-                        EXPECT_EQ("Test", std::get<1>(md).get(media::Engine::Xesam::genre()));
-                    if (0 < std::get<1>(md).count(media::Engine::Xesam::track_number()))
-                        EXPECT_EQ("42", std::get<1>(md).get(media::Engine::Xesam::track_number()));
+                    if (0 < std::get<1>(md).count(xesam::Album::name))
+                        EXPECT_EQ("Ezwa", std::get<1>(md).get(xesam::Album::name));
+                    if (0 < std::get<1>(md).count(xesam::AlbumArtist::name))
+                        EXPECT_EQ("Ezwa", std::get<1>(md).get(xesam::AlbumArtist::name));
+                    if (0 < std::get<1>(md).count(xesam::Artist::name))
+                        EXPECT_EQ("Ezwa", std::get<1>(md).get(xesam::Artist::name));
+                    if (0 < std::get<1>(md).count(xesam::DiscNumber::name))
+                        EXPECT_EQ("42", std::get<1>(md).get(xesam::DiscNumber::name));
+                    if (0 < std::get<1>(md).count(xesam::Genre::name))
+                        EXPECT_EQ("Test", std::get<1>(md).get(xesam::Genre::name));
+                    if (0 < std::get<1>(md).count(xesam::TrackNumber::name))
+                        EXPECT_EQ("42", std::get<1>(md).get(xesam::TrackNumber::name));
                 });
 
     engine.state().changed().connect(
@@ -126,12 +127,12 @@ TEST(GStreamerEngine, setting_uri_and_starting_video_playback_works)
     engine.track_meta_data().changed().connect(
                 [](const std::tuple<media::Track::UriType, media::Track::MetaData>& md)
                 {
-                    if (0 < std::get<1>(md).count(media::Engine::Xesam::album()))
-                        EXPECT_EQ("Test series", std::get<1>(md).get(media::Engine::Xesam::album()));
-                    if (0 < std::get<1>(md).count(media::Engine::Xesam::artist()))
-                        EXPECT_EQ("Canonical", std::get<1>(md).get(media::Engine::Xesam::artist()));
-                    if (0 < std::get<1>(md).count(media::Engine::Xesam::genre()))
-                        EXPECT_EQ("Documentary", std::get<1>(md).get(media::Engine::Xesam::genre()));
+                    if (0 < std::get<1>(md).count(xesam::Album::name))
+                        EXPECT_EQ("Test series", std::get<1>(md).get(xesam::Album::name));
+                    if (0 < std::get<1>(md).count(xesam::Artist::name))
+                        EXPECT_EQ("Canonical", std::get<1>(md).get(xesam::Artist::name));
+                    if (0 < std::get<1>(md).count(xesam::Genre::name))
+                        EXPECT_EQ("Documentary", std::get<1>(md).get(xesam::Genre::name));
                 });
 
     engine.state().changed().connect(
@@ -154,6 +155,7 @@ TEST(GStreamerEngine, setting_uri_and_starting_video_playback_works)
 TEST(GStreamerEngine, setting_uri_and_audio_playback_with_http_headers_works)
 {
     const std::string test_audio_uri{"http://stream-dc1.radioparadise.com/mp3-32"};
+    const core::ubuntu::media::Player::HeadersType headers{{ "User-Agent", "MediaHub" }};
 
     core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
                 core::ubuntu::media::Engine::State::ready);
@@ -166,7 +168,7 @@ TEST(GStreamerEngine, setting_uri_and_audio_playback_with_http_headers_works)
                     std::ref(wst),
                     std::placeholders::_1));
 
-    EXPECT_TRUE(engine.open_resource_for_uri(test_audio_uri, "", "MediaHub"));
+    EXPECT_TRUE(engine.open_resource_for_uri(test_audio_uri, headers));
     EXPECT_TRUE(engine.play());
     EXPECT_TRUE(wst.wait_for_state_for(
                     core::ubuntu::media::Engine::State::playing,
@@ -367,17 +369,17 @@ TEST(GStreamerEngine, meta_data_extractor_provides_correct_tags)
     gstreamer::Engine engine;
     auto md = engine.meta_data_extractor()->meta_data_for_track_with_uri(test_file_uri);
 
-    if (0 < md.count(media::Engine::Xesam::album()))
-        EXPECT_EQ("Test", md.get(media::Engine::Xesam::album()));
-    if (0 < md.count(media::Engine::Xesam::album_artist()))
-        EXPECT_EQ("Test", md.get(media::Engine::Xesam::album_artist()));
-    if (0 < md.count(media::Engine::Xesam::artist()))
-        EXPECT_EQ("Test", md.get(media::Engine::Xesam::artist()));
-    if (0 < md.count(media::Engine::Xesam::disc_number()))
-        EXPECT_EQ("42", md.get(media::Engine::Xesam::disc_number()));
-    if (0 < md.count(media::Engine::Xesam::genre()))
-        EXPECT_EQ("Test", md.get(media::Engine::Xesam::genre()));
-    if (0 < md.count(media::Engine::Xesam::track_number()))
-        EXPECT_EQ("42", md.get(media::Engine::Xesam::track_number()));
+    if (0 < md.count(xesam::Album::name))
+        EXPECT_EQ("Test", md.get(xesam::Album::name));
+    if (0 < md.count(xesam::AlbumArtist::name))
+        EXPECT_EQ("Test", md.get(xesam::AlbumArtist::name));
+    if (0 < md.count(xesam::Artist::name))
+        EXPECT_EQ("Test", md.get(xesam::Artist::name));
+    if (0 < md.count(xesam::DiscNumber::name))
+        EXPECT_EQ("42", md.get(xesam::DiscNumber::name));
+    if (0 < md.count(xesam::Genre::name))
+        EXPECT_EQ("Test", md.get(xesam::Genre::name));
+    if (0 < md.count(xesam::TrackNumber::name))
+        EXPECT_EQ("42", md.get(xesam::TrackNumber::name));
 }
 

@@ -1,5 +1,5 @@
-/*
- * Copyright © 2013-2014 Canonical Ltd.
+/**
+ * Copyright (C) 2013-2014 Canonical Ltd
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -16,32 +16,12 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#ifndef PLAYER_TRAITS_H_
-#define PLAYER_TRAITS_H_
+#include "cover_art_resolver.h"
 
-#include <core/dbus/traits/service.h>
-
-namespace core
+core::ubuntu::media::CoverArtResolver core::ubuntu::media::always_missing_cover_art_resolver()
 {
-namespace dbus
-{
-namespace traits
-{
-template<>
-struct Service<core::ubuntu::media::Player>
-{
-    static const std::string& interface_name()
+    return [](const std::string&, const std::string&, const std::string&)
     {
-        static const std::string s
-        {
-            "core.ubuntu.media.Service.Player"
-        };
-        return s;
-    }
-};
+        return "file:///usr/share/unity/icons/album_missing.png";
+    };
 }
-}
-}
-
-
-#endif // PLAYER_TRAITS_H_

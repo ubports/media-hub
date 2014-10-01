@@ -25,7 +25,7 @@ namespace
 std::once_flag once;
 }
 
-core::dbus::Bus::Ptr the_session_bus()
+core::dbus::Bus::Ptr core::ubuntu::media::the_session_bus()
 {
     static core::dbus::Bus::Ptr bus
             = std::make_shared<core::dbus::Bus>(

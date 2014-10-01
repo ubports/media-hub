@@ -36,7 +36,9 @@ class PlayerImplementation : public PlayerSkeleton
 {
 public:
     PlayerImplementation(
-            const core::dbus::types::ObjectPath& session_path,
+            const std::string& identity,
+            const std::shared_ptr<core::dbus::Bus>& bus,
+            const std::shared_ptr<core::dbus::Object>& session,
             const std::shared_ptr<Service>& service,
             PlayerKey key);
     ~PlayerImplementation();
@@ -45,8 +47,7 @@ public:
     virtual PlayerKey key() const;
 
     virtual bool open_uri(const Track::UriType& uri);
-    virtual bool open_uri(const Track::UriType& uri, const std::string& cookies,
-            const std::string& user_agent);
+    virtual bool open_uri(const Track::UriType& uri, const Player::HeadersType& headers);
     virtual void create_video_sink(uint32_t texture_id);
     virtual GLConsumerWrapperHybris gl_consumer() const;
     virtual void next();
@@ -58,9 +59,10 @@ public:
     virtual void set_playback_complete_callback(PlaybackCompleteCb cb, void *context);
     virtual void seek_to(const std::chrono::microseconds& offset);
 
+    const core::Signal<>& on_client_disconnected() const;
 private:
     struct Private;
-    std::unique_ptr<Private> d;
+    std::shared_ptr<Private> d;
 };
 }
 }

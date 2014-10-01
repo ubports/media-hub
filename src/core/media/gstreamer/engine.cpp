@@ -1,5 +1,5 @@
 /*
- * Copyright © 2013 Canonical Ltd.
+ * Copyright © 2013-2014 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
+ *              Jim Hodapp <jim.hodapp@canonical.com>
  */
 
 #include <stdio.h>
@@ -57,111 +58,23 @@ struct gstreamer::Engine::Private
     void on_tag_available(const gstreamer::Bus::Message::Detail::Tag& tag)
     {
         media::Track::MetaData md;
-
-        gst_tag_list_foreach(
-                    tag.tag_list,
-                    [](const GstTagList *list,
-                    const gchar* tag,
-                    gpointer user_data)
-        {
-            (void) list;
-
-            static const std::map<std::string, std::string> gstreamer_to_mpris_tag_lut =
-            {
-                {GST_TAG_ALBUM, media::Engine::Xesam::album()},
-                {GST_TAG_ALBUM_ARTIST, media::Engine::Xesam::album_artist()},
-                {GST_TAG_ARTIST, media::Engine::Xesam::artist()},
-                {GST_TAG_LYRICS, media::Engine::Xesam::as_text()},
-                {GST_TAG_COMMENT, media::Engine::Xesam::comment()},
-                {GST_TAG_COMPOSER, media::Engine::Xesam::composer()},
-                {GST_TAG_DATE, media::Engine::Xesam::content_created()},
-                {GST_TAG_ALBUM_VOLUME_NUMBER, media::Engine::Xesam::disc_number()},
-                {GST_TAG_GENRE, media::Engine::Xesam::genre()},
-                {GST_TAG_TITLE, media::Engine::Xesam::title()},
-                {GST_TAG_TRACK_NUMBER, media::Engine::Xesam::track_number()},
-                {GST_TAG_USER_RATING, media::Engine::Xesam::user_rating()}
-            };
-
-            auto md = static_cast<media::Track::MetaData*>(user_data);
-            std::stringstream ss;
-
-            switch(gst_tag_get_type(tag))
-            {
-            case G_TYPE_BOOLEAN:
-            {
-                gboolean value;
-                if (gst_tag_list_get_boolean(list, tag, &value))
-                    ss << value;
-                break;
-            }
-            case G_TYPE_INT:
-            {
-                gint value;
-                if (gst_tag_list_get_int(list, tag, &value))
-                    ss << value;
-                break;
-            }
-            case G_TYPE_UINT:
-            {
-                guint value;
-                if (gst_tag_list_get_uint(list, tag, &value))
-                    ss << value;
-                break;
-            }
-            case G_TYPE_INT64:
-            {
-                gint64 value;
-                if (gst_tag_list_get_int64(list, tag, &value))
-                    ss << value;
-                break;
-            }
-            case G_TYPE_UINT64:
-            {
-                guint64 value;
-                if (gst_tag_list_get_uint64(list, tag, &value))
-                    ss << value;
-                break;
-            }
-            case G_TYPE_FLOAT:
-            {
-                gfloat value;
-                if (gst_tag_list_get_float(list, tag, &value))
-                    ss << value;
-                break;
-            }
-            case G_TYPE_DOUBLE:
-            {
-                double value;
-                if (gst_tag_list_get_double(list, tag, &value))
-                    ss << value;
-                break;
-            }
-            case G_TYPE_STRING:
-            {
-                gchar* value;
-                if (gst_tag_list_get_string(list, tag, &value))
-                {
-                    ss << value;
-                    g_free(value);
-                }
-                break;
-            }
-            default:
-                break;
-            }
-
-            (*md).set(
-                        (gstreamer_to_mpris_tag_lut.count(tag) > 0 ? gstreamer_to_mpris_tag_lut.at(tag) : tag),
-                        ss.str());
-        },
-        &md);
-
+        gstreamer::MetaDataExtractor::on_tag_available(tag, md);
         track_meta_data.set(std::make_tuple(playbin.uri(), md));
     }
 
     void on_volume_changed(const media::Engine::Volume& new_volume)
     {
         playbin.set_volume(new_volume.value);
+    }
+
+    void on_audio_stream_role_changed(const media::Player::AudioStreamRole& new_audio_role)
+    {
+        playbin.set_audio_stream_role(new_audio_role);
+    }
+
+    void on_lifetime_changed(const media::Player::Lifetime& lifetime)
+    {
+        playbin.set_lifetime(lifetime);
     }
 
     void on_about_to_finish()
@@ -173,6 +86,11 @@ struct gstreamer::Engine::Private
     void on_seeked_to(uint64_t value)
     {
         seeked_to(value);
+    }
+
+    void on_client_disconnected()
+    {
+        client_disconnected();
     }
 
     void on_end_of_stream()
@@ -208,12 +126,29 @@ struct gstreamer::Engine::Private
                       &Private::on_volume_changed,
                       this,
                       std::placeholders::_1))),
+          on_audio_stream_role_changed_connection(
+              audio_role.changed().connect(
+                  std::bind(
+                      &Private::on_audio_stream_role_changed,
+                      this,
+                      std::placeholders::_1))),
+          on_lifetime_changed_connection(
+              lifetime.changed().connect(
+                  std::bind(
+                      &Private::on_lifetime_changed,
+                      this,
+                      std::placeholders::_1))),
           on_seeked_to_connection(
               playbin.signals.on_seeked_to.connect(
                   std::bind(
                       &Private::on_seeked_to,
                       this,
                       std::placeholders::_1))),
+          client_disconnected_connection(
+              playbin.signals.client_disconnected.connect(
+                  std::bind(
+                      &Private::on_client_disconnected,
+                      this))),
           on_end_of_stream_connection(
               playbin.signals.on_end_of_stream.connect(
                   std::bind(
@@ -228,6 +163,8 @@ struct gstreamer::Engine::Private
     core::Property<uint64_t> position;
     core::Property<uint64_t> duration;
     core::Property<media::Engine::Volume> volume;
+    core::Property<media::Player::AudioStreamRole> audio_role;
+    core::Property<media::Player::Lifetime> lifetime;
     core::Property<bool> is_video_source;
     core::Property<bool> is_audio_source;
     gstreamer::Playbin playbin;
@@ -235,11 +172,15 @@ struct gstreamer::Engine::Private
     core::ScopedConnection on_state_changed_connection;
     core::ScopedConnection on_tag_available_connection;
     core::ScopedConnection on_volume_changed_connection;
+    core::ScopedConnection on_audio_stream_role_changed_connection;
+    core::ScopedConnection on_lifetime_changed_connection;
     core::ScopedConnection on_seeked_to_connection;
+    core::ScopedConnection client_disconnected_connection;
     core::ScopedConnection on_end_of_stream_connection;
 
     core::Signal<void> about_to_finish;
     core::Signal<uint64_t> seeked_to;
+    core::Signal<void> client_disconnected;
     core::Signal<void> end_of_stream;
     core::Signal<media::Player::PlaybackStatus> playback_status_changed;
 };
@@ -271,10 +212,9 @@ bool gstreamer::Engine::open_resource_for_uri(const media::Track::UriType& uri)
     return true;
 }
 
-bool gstreamer::Engine::open_resource_for_uri(const media::Track::UriType& uri, const std::string& cookies,
-        const std::string& user_agent)
+bool gstreamer::Engine::open_resource_for_uri(const media::Track::UriType& uri, const core::ubuntu::media::Player::HeadersType& headers)
 {
-    d->playbin.set_uri(uri, cookies, user_agent);
+    d->playbin.set_uri(uri, headers);
     return true;
 }
 
@@ -290,21 +230,25 @@ bool gstreamer::Engine::play()
     if (result)
     {
         d->state = media::Engine::State::playing;
+        cout << "play" << endl;
         d->playback_status_changed(media::Player::PlaybackStatus::playing);
     }
-
-    cout << "Engine: " << this << endl;
 
     return result;
 }
 
 bool gstreamer::Engine::stop()
 {
+    // No need to wait, and we can immediately return.
+    if (d->state == media::Engine::State::stopped)
+        return true;
+
     auto result = d->playbin.set_state_and_wait(GST_STATE_NULL);
 
     if (result)
     {
         d->state = media::Engine::State::stopped;
+        cout << "stop" << endl;
         d->playback_status_changed(media::Player::PlaybackStatus::stopped);
     }
 
@@ -374,6 +318,26 @@ core::Property<core::ubuntu::media::Engine::Volume>& gstreamer::Engine::volume()
     return d->volume;
 }
 
+const core::Property<core::ubuntu::media::Player::AudioStreamRole>& gstreamer::Engine::audio_stream_role() const
+{
+    return d->audio_role;
+}
+
+const core::Property<core::ubuntu::media::Player::Lifetime>& gstreamer::Engine::lifetime() const
+{
+    return d->lifetime;
+}
+
+core::Property<core::ubuntu::media::Player::AudioStreamRole>& gstreamer::Engine::audio_stream_role()
+{
+    return d->audio_role;
+}
+
+core::Property<core::ubuntu::media::Player::Lifetime>& gstreamer::Engine::lifetime()
+{
+    return d->lifetime;
+}
+
 const core::Property<std::tuple<media::Track::UriType, media::Track::MetaData>>&
 gstreamer::Engine::track_meta_data() const
 {
@@ -388,6 +352,11 @@ const core::Signal<void>& gstreamer::Engine::about_to_finish_signal() const
 const core::Signal<uint64_t>& gstreamer::Engine::seeked_to_signal() const
 {
     return d->seeked_to;
+}
+
+const core::Signal<void>& gstreamer::Engine::client_disconnected_signal() const
+{
+    return d->client_disconnected;
 }
 
 const core::Signal<void>& gstreamer::Engine::end_of_stream_signal() const

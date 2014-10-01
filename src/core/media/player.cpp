@@ -24,7 +24,13 @@ namespace media = core::ubuntu::media;
 
 const media::Player::Configuration& media::Player::Client::default_configuration()
 {
-    static const media::Player::Configuration config;
+    static const media::Player::Configuration config
+    {
+        std::string{""},
+        0,
+        nullptr,
+        nullptr
+    };
     return config;
 }
 

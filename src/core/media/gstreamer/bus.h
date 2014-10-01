@@ -52,8 +52,6 @@ public:
             case GST_MESSAGE_UNKNOWN:
                 throw std::runtime_error("Cannot construct message for type unknown");
                 break;
-            case GST_MESSAGE_EOS:
-                break;
             case GST_MESSAGE_ERROR:
             {
                 gst_message_parse_error(
@@ -78,7 +76,6 @@ public:
                     g_free(detail.error_warning_info.debug);
                 };
                 break;
-                break;
             case GST_MESSAGE_INFO:
                 gst_message_parse_info(
                             msg,
@@ -89,7 +86,6 @@ public:
                     g_error_free(detail.error_warning_info.error);
                     g_free(detail.error_warning_info.debug);
                 };
-                break;
                 break;
             case GST_MESSAGE_TAG:
                 gst_message_parse_tag(
@@ -111,8 +107,6 @@ public:
                             &detail.state_changed.old_state,
                             &detail.state_changed.new_state,
                             &detail.state_changed.pending_state);
-                break;
-            case GST_MESSAGE_STATE_DIRTY:
                 break;
             case GST_MESSAGE_STEP_DONE:
                 gst_message_parse_step_done(
@@ -142,14 +136,6 @@ public:
                             msg,
                             &detail.clock_new.clock);
                 break;
-            case GST_MESSAGE_STRUCTURE_CHANGE:
-                break;
-            case GST_MESSAGE_STREAM_STATUS:
-                break;
-            case GST_MESSAGE_APPLICATION:
-                break;
-            case GST_MESSAGE_ELEMENT:
-                break;
             case GST_MESSAGE_SEGMENT_START:
                 gst_message_parse_segment_start(
                             msg,
@@ -162,18 +148,10 @@ public:
                             &detail.segment_done.format,
                             &detail.segment_done.position);
                 break;
-            case GST_MESSAGE_DURATION_CHANGED:
-                break;
-            case GST_MESSAGE_LATENCY:
-                break;
-            case GST_MESSAGE_ASYNC_START:
-                break;
             case GST_MESSAGE_ASYNC_DONE:
                 gst_message_parse_async_done(
                             msg,
                             &detail.async_done.running_time);
-                break;
-            case GST_MESSAGE_REQUEST_STATE:
                 break;
             case GST_MESSAGE_STEP_START:
                 gst_message_parse_step_start(
@@ -194,23 +172,9 @@ public:
                             &detail.qos.timestamp,
                             &detail.qos.duration);
                 break;
-            case GST_MESSAGE_PROGRESS:
-                break;
-            case GST_MESSAGE_TOC:
-                break;
-            case GST_MESSAGE_RESET_TIME:
-                break;
-            case GST_MESSAGE_STREAM_START:
-                break;
-            case GST_MESSAGE_NEED_CONTEXT:
-                break;
-            case GST_MESSAGE_HAVE_CONTEXT:
-                break;
-            case GST_MESSAGE_ANY:
-                break;
             default:
                 break;
-            }						
+            }
         }
 
         GstMessage* message;
