@@ -348,7 +348,6 @@ struct Playbin
         if (source == NULL || request_headers.empty())
           return;
 
-        /*
         if (request_headers.find("Cookie") != request_headers.end()) {
             if (g_object_class_find_property(G_OBJECT_GET_CLASS(source),
                                              "cookies") != NULL) {
@@ -364,7 +363,6 @@ struct Playbin
                 g_object_set(source, "user-agent", request_headers["User-Agent"].c_str(), NULL);
             }
         }
-        */
     }
 
     std::string uri() const

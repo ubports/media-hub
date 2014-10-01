@@ -246,8 +246,7 @@ struct media::PlayerSkeleton::Private : public std::enable_shared_from_this<medi
             Track::UriType uri;
             Player::HeadersType headers;
 
-            in->reader() >> uri;
-            in->reader() >> headers;
+            in->reader() >> uri >> headers;
 
             bool have_access = does_client_have_access(profile, uri);
             auto reply = dbus::Message::make_method_return(in);
@@ -363,9 +362,10 @@ media::PlayerSkeleton::PlayerSkeleton(const media::PlayerSkeleton::Configuration
         std::bind(&Private::handle_key,
                   d,
                   std::placeholders::_1));
+
     d->object->install_method_handler<mpris::Player::OpenUriExtended>(
         std::bind(&Private::handle_open_uri_extended,
-                  std::ref(d),
+                  d,
                   std::placeholders::_1));
 }
 
