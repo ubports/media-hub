@@ -62,7 +62,7 @@ public:
     const core::Signal<>& on_client_disconnected() const;
 private:
     struct Private;
-    std::unique_ptr<Private> d;
+    std::shared_ptr<Private> d;
 };
 }
 }

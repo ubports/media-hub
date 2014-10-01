@@ -1,3 +1,12 @@
+media-hub (2.0.0+14.10.20140926-0ubuntu1) utopic; urgency=low
+
+  [ Alberto Aguirre ]
+  * Prevent dead object access by asynchronous calls to clear_wakelock
+    in media::PlayerImplementation::Private
+  * Fix self deadlock when clients disconnect from media::Player
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 26 Sep 2014 04:06:06 +0000
+
 media-hub (2.0.0+14.10.20140917-0ubuntu1) utopic; urgency=low
 
   [ Alberto Aguirre ]

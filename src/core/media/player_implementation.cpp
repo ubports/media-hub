@@ -28,6 +28,7 @@
 #include "unity_screen_service.h"
 #include "gstreamer/engine.h"
 
+#include <memory>
 #include <exception>
 #include <iostream>
 #include <mutex>
@@ -39,7 +40,8 @@ namespace dbus = core::dbus;
 
 using namespace std;
 
-struct media::PlayerImplementation::Private
+struct media::PlayerImplementation::Private :
+        public std::enable_shared_from_this<Private>
 {
     enum class wakelock_clear_t
     {
@@ -66,7 +68,8 @@ struct media::PlayerImplementation::Private
           system_wakelock_count(0),
           display_wakelock_count(0),
           previous_state(Engine::State::stopped),
-          key(key)
+          key(key),
+          engine_state_change_connection(engine->state().changed().connect(make_state_change_handler()))
     {
         auto bus = std::shared_ptr<dbus::Bus>(new dbus::Bus(core::dbus::WellKnownBus::system));
         bus->install_executor(dbus::asio::make_executor(bus));
@@ -76,14 +79,28 @@ struct media::PlayerImplementation::Private
 
         auto uscreen_stub_service = dbus::Service::use_service(bus, dbus::traits::Service<core::UScreen>::interface_name());
         uscreen_session = uscreen_stub_service->object_for_path(dbus::types::ObjectPath("/com/canonical/Unity/Screen"));
+    }
 
+    ~Private()
+    {
+        // Make sure that we don't hold on to the wakelocks if media-hub-server
+        // ever gets restarted manually or automatically
+        clear_wakelocks();
+
+        // The engine destructor can lead to a stop change state which will
+        // trigger the state change handler. Ensure the handler is not called
+        // by disconnecting the state change signal
+        engine_state_change_connection.disconnect();
+    }
+
+    std::function<void(const Engine::State& state)> make_state_change_handler()
+    {
         /*
          * Wakelock state logic:
          * PLAYING->READY or PLAYING->PAUSED or PLAYING->STOPPED: delay 4 seconds and try to clear current wakelock type
          * ANY STATE->PLAYING: request a new wakelock (system or display)
          */
-        engine->state().changed().connect(
-                    [parent, this](const Engine::State& state)
+        return [this](const Engine::State& state)
         {
             switch(state)
             {
@@ -92,8 +109,7 @@ struct media::PlayerImplementation::Private
                 parent->playback_status().set(media::Player::ready);
                 if (previous_state == Engine::State::playing)
                 {
-                    wakelock_timeout.reset(new timeout(4000, true, std::bind(&Private::clear_wakelock,
-                                    this, std::placeholders::_1), current_wakelock_type()));
+                    timeout(4000, true, make_clear_wakelock_functor());
                 }
                 break;
             }
@@ -112,8 +128,7 @@ struct media::PlayerImplementation::Private
                 parent->playback_status().set(media::Player::stopped);
                 if (previous_state ==  Engine::State::playing)
                 {
-                    wakelock_timeout.reset(new timeout(4000, true, std::bind(&Private::clear_wakelock,
-                                     this, std::placeholders::_1), current_wakelock_type()));
+                    timeout(4000, true, make_clear_wakelock_functor());
                 }
                 break;
             }
@@ -122,8 +137,7 @@ struct media::PlayerImplementation::Private
                 parent->playback_status().set(media::Player::paused);
                 if (previous_state == Engine::State::playing)
                 {
-                    wakelock_timeout.reset(new timeout(4000, true, std::bind(&Private::clear_wakelock,
-                                    this, std::placeholders::_1), current_wakelock_type()));
+                    timeout(4000, true, make_clear_wakelock_functor());
                 }
                 break;
             }
@@ -133,14 +147,7 @@ struct media::PlayerImplementation::Private
 
             // Keep track of the previous Engine playback state:
             previous_state = state;
-        });
-    }
-
-    ~Private()
-    {
-        // Make sure that we don't hold on to the wakelocks if media-hub-server
-        // ever gets restarted manually or automatically
-        clear_wakelocks();
+        };
     }
 
     void request_power_state()
@@ -237,6 +244,20 @@ struct media::PlayerImplementation::Private
         }
     }
 
+    std::function<void()> make_clear_wakelock_functor()
+    {
+        // Since this functor will be executed on a separate detached thread
+        // the execution of the functor may surpass the lifetime of this Private
+        // object instance. By keeping a weak_ptr to the private object instance
+        // we can check if the object is dead before calling methods on it
+        std::weak_ptr<Private> weak_self{shared_from_this()};
+        auto wakelock_type = current_wakelock_type();
+        return [weak_self, wakelock_type] {
+            if (auto self = weak_self.lock())
+                self->clear_wakelock(wakelock_type);
+        };
+    }
+
     PlayerImplementation* parent;
     std::shared_ptr<Service> service;
     std::shared_ptr<Engine> engine;
@@ -249,10 +270,10 @@ struct media::PlayerImplementation::Private
     std::string sys_cookie;
     std::atomic<int> system_wakelock_count;
     std::atomic<int> display_wakelock_count;
-    std::unique_ptr<timeout> wakelock_timeout;
     Engine::State previous_state;
     PlayerImplementation::PlayerKey key;
     core::Signal<> on_client_disconnected;
+    core::Connection engine_state_change_connection;
 };
 
 media::PlayerImplementation::PlayerImplementation(
@@ -270,7 +291,7 @@ media::PlayerImplementation::PlayerImplementation(
               identity
           }
       },
-      d(new Private(
+      d(make_shared<Private>(
             this,
             session->path(),
             service,
