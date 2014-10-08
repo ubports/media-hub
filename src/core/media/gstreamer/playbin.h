@@ -74,7 +74,8 @@ struct Playbin
                       &Playbin::on_new_message,
                       this,
                       std::placeholders::_1))),
-          is_seeking(false)
+          is_seeking(false),
+          client_is_dead(false)
     {
         if (!pipeline)
             throw std::runtime_error("Could not create pipeline for playbin.");
@@ -112,6 +113,7 @@ struct Playbin
 
     void on_client_died()
     {
+        client_is_dead = true;
         std::cout << "Client died, resetting pipeline" << std::endl;
         // When the client dies, tear down the current pipeline and get it
         // in a state that is ready for the next client that connects to the
@@ -336,6 +338,9 @@ struct Playbin
             std::chrono::milliseconds{5000}
         };
 
+        if (client_is_dead)
+            return false;
+
         auto ret = gst_element_set_state(pipeline, new_state);
         bool result = false; GstState current, pending;
         switch(ret)
@@ -448,6 +453,7 @@ struct Playbin
     SurfaceTextureClientHybris stc_hybris;
     core::Connection on_new_message_connection;
     bool is_seeking;
+    std::atomic<bool> client_is_dead;
     struct
     {
         core::Signal<void> about_to_finish;
