@@ -389,10 +389,29 @@ media::PlayerImplementation::~PlayerImplementation()
     // Install null getters as these properties may be destroyed
     // after the engine has been destroyed since they are owned by the
     // base class.
-    position().install([]{return 0;});
-    duration().install([]{return 0;});
-    is_video_source().install([]{return false;});
-    is_audio_source().install([]{return false;});
+    std::function<uint64_t()> position_getter = [this]()
+    {
+        return static_cast<uint64_t>(0);
+    };
+    position().install(position_getter);
+
+    std::function<uint64_t()> duration_getter = [this]()
+    {
+        return static_cast<uint64_t>(0);
+    };
+    duration().install(duration_getter);
+
+    std::function<bool()> video_type_getter = [this]()
+    {
+        return false;
+    };
+    is_video_source().install(video_type_getter);
+
+    std::function<bool()> audio_type_getter = [this]()
+    {
+        return false;
+    };
+    is_audio_source().install(audio_type_getter);
 }
 
 std::shared_ptr<media::TrackList> media::PlayerImplementation::track_list()
