@@ -96,6 +96,7 @@ struct Playbin
 
     ~Playbin()
     {
+        decoding_service_set_client_death_cb(&Playbin::on_client_died_cb, nullptr);
         if (pipeline)
             gst_object_unref(pipeline);
     }
