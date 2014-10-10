@@ -72,6 +72,13 @@ struct gstreamer::Engine::Private
         playbin.set_audio_stream_role(new_audio_role);
     }
 
+    void on_orientation_changed(const media::Player::Orientation& o)
+    {
+        // Update the local orientation Property, which should then update the Player
+        // orientation Property
+        orientation.set(o);
+    }
+
     void on_about_to_finish()
     {
         state = Engine::State::ready;
@@ -128,6 +135,12 @@ struct gstreamer::Engine::Private
                       &Private::on_audio_stream_role_changed,
                       this,
                       std::placeholders::_1))),
+          on_orientation_changed_connection(
+              playbin.signals.on_orientation_changed.connect(
+                  std::bind(
+                      &Private::on_orientation_changed,
+                      this,
+                      std::placeholders::_1))),
           on_seeked_to_connection(
               playbin.signals.on_seeked_to.connect(
                   std::bind(
@@ -163,6 +176,7 @@ struct gstreamer::Engine::Private
     core::ScopedConnection on_tag_available_connection;
     core::ScopedConnection on_volume_changed_connection;
     core::ScopedConnection on_audio_stream_role_changed_connection;
+    core::ScopedConnection on_orientation_changed_connection;
     core::ScopedConnection on_seeked_to_connection;
     core::ScopedConnection client_disconnected_connection;
     core::ScopedConnection on_end_of_stream_connection;

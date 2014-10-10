@@ -31,6 +31,12 @@
 #include <chrono>
 #include <string>
 
+// Uncomment to generate a dot file at the time that the pipeline
+// goes to the PLAYING state. Make sure to export GST_DEBUG_DUMP_DOT_DIR
+// before starting media-hub-server. To convert the dot file to something
+// other image format, use: dot pipeline.dot -Tpng -o pipeline.png
+//#define DEBUG_GST_PIPELINE
+
 namespace media = core::ubuntu::media;
 
 namespace gstreamer
@@ -157,13 +163,10 @@ struct Playbin
                 gchar *orientation;
                 if (gst_tag_list_get_string(message.detail.tag.tag_list, "image-orientation", &orientation))
                 {
-                    std::cout << "Found the image-orientation tag in the taglist (" << __FUNCTION__ << ":" << __LINE__ << ")" << std::endl;
-                    std::cout << "orientation: " << orientation << std::endl;
+                    // If the image-orientation tag is in the GstTagList, signal the Engine
                     signals.on_orientation_changed(orientation_lut(orientation));
                     g_free (orientation);
                 }
-                else
-                    std::cout << "Did not find the image-orientation tag in the taglist (" << __FUNCTION__ << ":" << __LINE__ << ")" << std::endl;
 
                 signals.on_tag_available(message.detail.tag);
             }
@@ -283,10 +286,7 @@ struct Playbin
         if (g_strcmp0(orientation, "rotate-0") == 0)
             return media::Player::Orientation::rotate0;
         else if (g_strcmp0(orientation, "rotate-90") == 0)
-        {
-            std::cout << "rotate-90" << std::endl;
             return media::Player::Orientation::rotate90;
-        }
         else if (g_strcmp0(orientation, "rotate-180") == 0)
             return media::Player::Orientation::rotate180;
         else if (g_strcmp0(orientation, "rotate-270") == 0)
@@ -335,21 +335,6 @@ struct Playbin
         return static_cast<uint64_t>(dur);
     }
 
-/*
-    void processOrientation(const std::string &orientation)
-    {
-        std::cout << __PRETTY_FUNCTION__ << std::endl;
-        if (orientation == "rotate-90")
-        {
-            std::cout << "Setting rotate-90 matrix" << std::endl;
-            // Row-major format
-            trans_matrix[0] = 0;  trans_matrix[1] = 1; trans_matrix[2] = 0;
-            trans_matrix[3] = -1; trans_matrix[4] = 0; trans_matrix[5] = 0;
-            trans_matrix[6] = 0;  trans_matrix[7] = 0; trans_matrix[8] = 1;
-        }
-    }
-*/
-
     void set_uri(const std::string& uri)
     {
         g_object_set(pipeline, "uri", uri.c_str(), NULL);
@@ -395,11 +380,13 @@ struct Playbin
                         &current,
                         &pending,
                         state_change_timeout.count());
+#ifdef DEBUG_GST_PIPELINE
         if (new_state == GST_STATE_PLAYING)
         {
             std::cout << "Dumping pipeline dot file" << std::endl;
             GST_DEBUG_BIN_TO_DOT_FILE((GstBin*)pipeline, GST_DEBUG_GRAPH_SHOW_ALL, "pipeline");
         }
+#endif
             break;
         }
 

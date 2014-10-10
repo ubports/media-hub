@@ -361,6 +361,13 @@ media::PlayerImplementation::PlayerImplementation(
         d->engine->audio_stream_role().set(new_role);
     });
 
+    // When the value of the orientation Property is changed in the Engine by playbin,
+    // update the Player's cached value
+    d->engine->orientation().changed().connect([this](const Player::Orientation& o)
+    {
+        orientation().set(o);
+    });
+
     d->engine->about_to_finish_signal().connect([this]()
     {
         if (d->track_list->has_next())
@@ -393,13 +400,6 @@ media::PlayerImplementation::PlayerImplementation(
     d->engine->playback_status_changed_signal().connect([this](const Player::PlaybackStatus& status)
     {
         playback_status_changed()(status);
-    });
-
-    // When the value of the orientation Property is changed in the Engine by playbin,
-    // update the Player's cached value
-    d->engine->orientation().changed().connect([this](const Player::Orientation& o)
-    {
-        orientation().set(o);
     });
 }
 

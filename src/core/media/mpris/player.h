@@ -132,7 +132,7 @@ struct Player
         DBUS_CPP_WRITABLE_PROPERTY_DEF(LoopStatus, Player, std::string)
         DBUS_CPP_WRITABLE_PROPERTY_DEF(TypedLoopStatus, Player, core::ubuntu::media::Player::LoopStatus)
         DBUS_CPP_WRITABLE_PROPERTY_DEF(AudioStreamRole, Player, core::ubuntu::media::Player::AudioStreamRole)
-        DBUS_CPP_WRITABLE_PROPERTY_DEF(Orientation, Player, core::ubuntu::media::Player::Orientation)
+        DBUS_CPP_READABLE_PROPERTY_DEF(Orientation, Player, core::ubuntu::media::Player::Orientation)
         DBUS_CPP_WRITABLE_PROPERTY_DEF(PlaybackRate, Player, double)
         DBUS_CPP_WRITABLE_PROPERTY_DEF(Rate, Player, double)
         DBUS_CPP_WRITABLE_PROPERTY_DEF(Shuffle, Player, bool)
@@ -192,6 +192,7 @@ struct Player
                 Properties::Duration::ValueType duration{0};
                 Properties::MinimumRate::ValueType minimum_rate{1.f};
                 Properties::MaximumRate::ValueType maximum_rate{1.f};
+                Properties::Orientation::ValueType orientation{core::ubuntu::media::Player::Orientation::rotate0};
             } defaults;
         };
 
@@ -250,6 +251,12 @@ struct Player
             properties.duration->set(configuration.defaults.duration);
             properties.minimum_playback_rate->set(configuration.defaults.minimum_rate);
             properties.maximum_playback_rate->set(configuration.defaults.maximum_rate);
+
+            // Make sure the Orientation Property gets sent over DBus to the client
+            properties.orientation->changed().connect([this](const core::ubuntu::media::Player::Orientation& o)
+            {
+                on_property_value_changed<Properties::Orientation>(o);
+            });
 
             properties.position->changed().connect([this](std::int64_t position)
             {
