@@ -1,3 +1,10 @@
+media-hub (2.0.0+14.10.20141010-0ubuntu1) utopic; urgency=low
+
+  [ Alberto Aguirre ]
+  * Fix potential access to dead objects. (LP: #1364483)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 10 Oct 2014 19:46:25 +0000
+
 media-hub (2.0.0+14.10.20140926-0ubuntu1) utopic; urgency=low
 
   [ Alberto Aguirre ]
