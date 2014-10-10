@@ -57,6 +57,7 @@ struct media::PlayerStub::Private
                 object(object),
                 properties
                 {
+                    // Link the properties from the server side to the client side over the bus
                     object->get_property<mpris::Player::Properties::CanPlay>(),
                     object->get_property<mpris::Player::Properties::CanPause>(),
                     object->get_property<mpris::Player::Properties::CanSeek>(),
@@ -66,7 +67,6 @@ struct media::PlayerStub::Private
                     object->get_property<mpris::Player::Properties::IsVideoSource>(),
                     object->get_property<mpris::Player::Properties::IsAudioSource>(),
                     object->get_property<mpris::Player::Properties::TypedPlaybackStatus>(),
-                    object->get_property<mpris::Player::Properties::Orientation>(),
                     object->get_property<mpris::Player::Properties::TypedLoopStatus>(),
                     object->get_property<mpris::Player::Properties::PlaybackRate>(),
                     object->get_property<mpris::Player::Properties::Shuffle>(),
@@ -75,6 +75,7 @@ struct media::PlayerStub::Private
                     object->get_property<mpris::Player::Properties::Position>(),
                     object->get_property<mpris::Player::Properties::Duration>(),
                     object->get_property<mpris::Player::Properties::AudioStreamRole>(),
+                    object->get_property<mpris::Player::Properties::Orientation>(),
                     object->get_property<mpris::Player::Properties::MinimumRate>(),
                     object->get_property<mpris::Player::Properties::MaximumRate>()
                 },
@@ -83,7 +84,6 @@ struct media::PlayerStub::Private
                     object->get_signal<mpris::Player::Signals::Seeked>(),
                     object->get_signal<mpris::Player::Signals::EndOfStream>(),
                     object->get_signal<mpris::Player::Signals::PlaybackStatusChanged>()
-                    //object->get_signal<mpris::Player::Signals::OrientationChanged>()
                 }
     {
     }
@@ -154,7 +154,6 @@ struct media::PlayerStub::Private
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::IsAudioSource>> is_audio_source;
 
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::TypedPlaybackStatus>> playback_status;
-        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Orientation>> orientation;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::TypedLoopStatus>> loop_status;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::PlaybackRate>> playback_rate;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Shuffle>> is_shuffle;
@@ -163,6 +162,7 @@ struct media::PlayerStub::Private
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Position>> position;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Duration>> duration;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::AudioStreamRole>> audio_role;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Orientation>> orientation;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MinimumRate>> minimum_playback_rate;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MaximumRate>> maximum_playback_rate;
     } properties;
@@ -172,28 +172,22 @@ struct media::PlayerStub::Private
         typedef core::dbus::Signal<mpris::Player::Signals::Seeked, mpris::Player::Signals::Seeked::ArgumentType> DBusSeekedToSignal;
         typedef core::dbus::Signal<mpris::Player::Signals::EndOfStream, mpris::Player::Signals::EndOfStream::ArgumentType> DBusEndOfStreamSignal;
         typedef core::dbus::Signal<mpris::Player::Signals::PlaybackStatusChanged, mpris::Player::Signals::PlaybackStatusChanged::ArgumentType> DBusPlaybackStatusChangedSignal;
-        //typedef core::dbus::Signal<mpris::Player::Signals::OrientationChanged, mpris::Player::Signals::OrientationChanged::ArgumentType> DBusOrientationChangedSignal;
 
         Signals(const std::shared_ptr<DBusSeekedToSignal>& seeked,
                 const std::shared_ptr<DBusEndOfStreamSignal>& eos,
                 const std::shared_ptr<DBusPlaybackStatusChangedSignal>& status)
-                //const std::shared_ptr<DBusOrientationChangedSignal>& orientation)
             : dbus
               {
                   seeked,
                   eos,
                   status
-                  //orientation
               },
               playback_complete_cb(nullptr),
               playback_complete_context(nullptr),
               seeked_to(),
               end_of_stream(),
               playback_status_changed()
-              //orientation_changed()
         {
-            std::cout << "Creating PlayerStub::Private" << std::endl;
-
             dbus.seeked_to->connect([this](std::uint64_t value)
             {
                 std::cout << "seeked_to signal arrived via the bus." << std::endl;
@@ -213,14 +207,6 @@ struct media::PlayerStub::Private
                 std::cout << "PlaybackStatusChanged signal arrived via the bus." << std::endl;
                 playback_status_changed(status);
             });
-
-#if 0
-            dbus.orientation_changed->connect([this](const media::Player::Orientation& orientation)
-            {
-                std::cout << "OrientationChanged signal arrived via the bus." << std::endl;
-                orientation_changed(orientation);
-            });
-#endif
         }
 
         struct DBus
@@ -228,7 +214,6 @@ struct media::PlayerStub::Private
             std::shared_ptr<DBusSeekedToSignal> seeked_to;
             std::shared_ptr<DBusEndOfStreamSignal> end_of_stream;
             std::shared_ptr<DBusPlaybackStatusChangedSignal> playback_status_changed;
-            //std::shared_ptr<DBusOrientationChangedSignal> orientation_changed;
         } dbus;
 
         void set_playback_complete_cb(PlaybackCompleteCb cb, void *context)
@@ -242,7 +227,6 @@ struct media::PlayerStub::Private
         core::Signal<int64_t> seeked_to;
         core::Signal<void> end_of_stream;
         core::Signal<media::Player::PlaybackStatus> playback_status_changed;
-        //core::Signal<media::Player::Orientation> orientation_changed;
     } signals;
 };
 
@@ -256,7 +240,6 @@ media::PlayerStub::PlayerStub(
     {
         bus->run();
     }));
-    std::cout << "Creating PlayerStub" << std::endl;
 }
 
 media::PlayerStub::~PlayerStub()
@@ -406,11 +389,6 @@ const core::Property<media::Player::PlaybackStatus>& media::PlayerStub::playback
     return *d->properties.playback_status;
 }
 
-const core::Property<media::Player::Orientation>& media::PlayerStub::orientation() const
-{
-    return *d->properties.orientation;
-}
-
 const core::Property<media::Player::LoopStatus>& media::PlayerStub::loop_status() const
 {
     return *d->properties.loop_status;
@@ -449,6 +427,11 @@ const core::Property<int64_t>& media::PlayerStub::duration() const
 const core::Property<media::Player::AudioStreamRole>& media::PlayerStub::audio_stream_role() const
 {
     return *d->properties.audio_role;
+}
+
+const core::Property<media::Player::Orientation>& media::PlayerStub::orientation() const
+{
+    return *d->properties.orientation;
 }
 
 const core::Property<media::Player::PlaybackRate>& media::PlayerStub::minimum_playback_rate() const
@@ -495,13 +478,6 @@ const core::Signal<void>& media::PlayerStub::end_of_stream() const
 {
     return d->signals.end_of_stream;
 }
-
-#if 0
-core::Signal<media::Player::Orientation>& media::PlayerStub::orientation_changed()
-{
-    return d->signals.orientation_changed;
-}
-#endif
 
 core::Signal<media::Player::PlaybackStatus>& media::PlayerStub::playback_status_changed()
 {

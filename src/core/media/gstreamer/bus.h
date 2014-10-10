@@ -88,24 +88,13 @@ public:
                 };
                 break;
             case GST_MESSAGE_TAG:
-            {
-                char *orientation;
                 gst_message_parse_tag(
                             msg,
                             &detail.tag.tag_list);
-                if (gst_tag_list_get_string(detail.tag.tag_list, "image-orientation", &orientation))
-                {
-                    std::cout << "Found the image-orientation tag in the taglist (" << __FUNCTION__ << ":" << __LINE__ << ")" << std::endl;
-                    g_free (orientation);
-                }
-                else
-                    std::cout << "Did not find the image-orientation tag in the taglist (" << __FUNCTION__ << ":" << __LINE__ << ")" << std::endl;
                 cleanup = [this]()
                 {
-                    std::cout << "Unreffing GstTagList" << std::endl;
-                    gst_tag_list_unref(detail.tag.tag_list);
+                    gst_tag_list_free(detail.tag.tag_list);
                 };
-            }
                 break;
             case GST_MESSAGE_BUFFERING:
                 gst_message_parse_buffering(

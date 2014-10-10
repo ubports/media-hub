@@ -58,10 +58,9 @@ struct media::PlayerSkeleton::Private : public std::enable_shared_from_this<medi
               skeleton.signals.seeked_to,
               skeleton.signals.end_of_stream,
               skeleton.signals.playback_status_changed
-              //skeleton.signals.orientation_changed
           }
     {
-    }
+    }    
 
     void handle_next(const core::dbus::Message::Ptr& msg)
     {
@@ -139,7 +138,7 @@ struct media::PlayerSkeleton::Private : public std::enable_shared_from_this<medi
 
         auto reply = dbus::Message::make_method_return(in);
         bus->send(reply);
-    }
+    }    
 
     bool does_client_have_access(const std::string& context, const std::string& uri)
     {
@@ -225,7 +224,7 @@ struct media::PlayerSkeleton::Private : public std::enable_shared_from_this<medi
     }
 
     void handle_open_uri(const core::dbus::Message::Ptr& in)
-    {
+    {        
         dbus_stub.get_connection_app_armor_security_async(in->sender(), [this, in](const std::string& profile)
         {
             Track::UriType uri;
@@ -269,19 +268,17 @@ struct media::PlayerSkeleton::Private : public std::enable_shared_from_this<medi
 
     org::freedesktop::dbus::DBus::Stub dbus_stub;
 
-    mpris::Player::Skeleton skeleton;
+    mpris::Player::Skeleton skeleton;    
 
     struct Signals
     {
         typedef core::dbus::Signal<mpris::Player::Signals::Seeked, mpris::Player::Signals::Seeked::ArgumentType> DBusSeekedToSignal;
         typedef core::dbus::Signal<mpris::Player::Signals::EndOfStream, mpris::Player::Signals::EndOfStream::ArgumentType> DBusEndOfStreamSignal;
         typedef core::dbus::Signal<mpris::Player::Signals::PlaybackStatusChanged, mpris::Player::Signals::PlaybackStatusChanged::ArgumentType> DBusPlaybackStatusChangedSignal;
-        //typedef core::dbus::Signal<mpris::Player::Signals::OrientationChanged, mpris::Player::Signals::OrientationChanged::ArgumentType> DBusOrientationChangedSignal;
 
         Signals(const std::shared_ptr<DBusSeekedToSignal>& remote_seeked,
                 const std::shared_ptr<DBusEndOfStreamSignal>& remote_eos,
                 const std::shared_ptr<DBusPlaybackStatusChangedSignal>& remote_playback_status_changed)
-                //const std::shared_ptr<DBusOrientationChangedSignal>& remote_orientation_changed)
         {
             seeked_to.connect([remote_seeked](std::uint64_t value)
             {
@@ -297,20 +294,11 @@ struct media::PlayerSkeleton::Private : public std::enable_shared_from_this<medi
             {
                 remote_playback_status_changed->emit(status);
             });
-
-#if 0
-            orientation_changed.connect([remote_orientation_changed](const media::Player::Orientation& orientation)
-            {
-                std::cout << "Emitting orientation_changed signal" << std::endl;
-                remote_orientation_changed->emit(orientation);
-            });
-#endif
         }
 
         core::Signal<int64_t> seeked_to;
         core::Signal<void> end_of_stream;
         core::Signal<media::Player::PlaybackStatus> playback_status_changed;
-        //core::Signal<media::Player::Orientation> orientation_changed;
     } signals;
 
 };
@@ -402,11 +390,6 @@ const core::Property<media::Player::PlaybackStatus>& media::PlayerSkeleton::play
     return *d->skeleton.properties.typed_playback_status;
 }
 
-const core::Property<media::Player::Orientation>& media::PlayerSkeleton::orientation() const
-{
-    return *d->skeleton.properties.orientation;
-}
-
 const core::Property<media::Player::LoopStatus>& media::PlayerSkeleton::loop_status() const
 {
     return *d->skeleton.properties.typed_loop_status;
@@ -445,6 +428,11 @@ const core::Property<int64_t>& media::PlayerSkeleton::duration() const
 const core::Property<media::Player::AudioStreamRole>& media::PlayerSkeleton::audio_stream_role() const
 {
     return *d->skeleton.properties.audio_stream_role;
+}
+
+const core::Property<media::Player::Orientation>& media::PlayerSkeleton::orientation() const
+{
+    return *d->skeleton.properties.orientation;
 }
 
 const core::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::minimum_playback_rate() const
@@ -492,14 +480,14 @@ core::Property<media::Player::AudioStreamRole>& media::PlayerSkeleton::audio_str
     return *d->skeleton.properties.audio_stream_role;
 }
 
-core::Property<media::Player::PlaybackStatus>& media::PlayerSkeleton::playback_status()
-{
-    return *d->skeleton.properties.typed_playback_status;
-}
-
 core::Property<media::Player::Orientation>& media::PlayerSkeleton::orientation()
 {
     return *d->skeleton.properties.orientation;
+}
+
+core::Property<media::Player::PlaybackStatus>& media::PlayerSkeleton::playback_status()
+{
+    return *d->skeleton.properties.typed_playback_status;
 }
 
 core::Property<bool>& media::PlayerSkeleton::can_play()
@@ -537,6 +525,7 @@ core::Property<bool>& media::PlayerSkeleton::is_audio_source()
     return *d->skeleton.properties.is_audio_source;
 }
 
+
 core::Property<media::Track::MetaData>& media::PlayerSkeleton::meta_data_for_current_track()
 {
     return *d->skeleton.properties.typed_meta_data_for_current_track;
@@ -571,13 +560,6 @@ core::Signal<void>& media::PlayerSkeleton::end_of_stream()
 {
     return d->signals.end_of_stream;
 }
-
-#if 0
-core::Signal<media::Player::Orientation>& media::PlayerSkeleton::orientation_changed()
-{
-    return d->signals.orientation_changed;
-}
-#endif
 
 core::Signal<media::Player::PlaybackStatus>& media::PlayerSkeleton::playback_status_changed()
 {

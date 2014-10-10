@@ -47,7 +47,7 @@ struct media::PlayerImplementation::Private
         WAKELOCK_CLEAR_DISPLAY,
         WAKELOCK_CLEAR_SYSTEM,
         WAKELOCK_CLEAR_INVALID
-    };    
+    };
 
     Private(PlayerImplementation* parent,
             const dbus::types::ObjectPath& session_path,
@@ -308,7 +308,7 @@ media::PlayerImplementation::PlayerImplementation(
             service,
             key))
 {
-    // Initializing default values for properties
+    // Initialize default values for Player interface properties
     can_play().set(true);
     can_pause().set(true);
     can_seek().set(true);
@@ -319,13 +319,12 @@ media::PlayerImplementation::PlayerImplementation(
     is_shuffle().set(true);
     playback_rate().set(1.f);
     playback_status().set(Player::PlaybackStatus::null);
-    orientation().set(Player::Orientation::rotate0);
-    //d->engine->orientation().set(Player::Orientation::rotate0);
     loop_status().set(Player::LoopStatus::none);
     position().set(0);
     duration().set(0);
     audio_stream_role().set(Player::AudioStreamRole::multimedia);
     d->engine->audio_stream_role().set(Player::AudioStreamRole::multimedia);
+    orientation().set(Player::Orientation::rotate0);
 
     // Make sure that the Position property gets updated from the Engine
     // every time the client requests position
@@ -354,12 +353,6 @@ media::PlayerImplementation::PlayerImplementation(
         return d->engine->is_audio_source().get();
     };
     is_audio_source().install(audio_type_getter);
-
-    std::function<media::Player::Orientation()> orientation_getter = [this]()
-    {
-        return d->engine->orientation().get();
-    };
-    orientation().install(orientation_getter);
 
     // Make sure that the audio_stream_role property gets updated on the Engine side
     // whenever the client side sets the role
@@ -397,18 +390,16 @@ media::PlayerImplementation::PlayerImplementation(
         end_of_stream()();
     });
 
-#if 0
-    // When the orientation is set from the pipeline, update the DBus property
-    d->engine->orientation_changed_signal().connect([this](const Player::Orientation& orientation)
-    {
-        std::cout << "Connecting orientation_changed signal" << std::endl;
-        orientation_changed()(orientation);
-    });
-#endif
-
     d->engine->playback_status_changed_signal().connect([this](const Player::PlaybackStatus& status)
     {
         playback_status_changed()(status);
+    });
+
+    // When the value of the orientation Property is changed in the Engine by playbin,
+    // update the Player's cached value
+    d->engine->orientation().changed().connect([this](const Player::Orientation& o)
+    {
+        orientation().set(o);
     });
 }
 

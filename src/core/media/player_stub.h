@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
+ *              Jim Hodapp <jim.hodapp@canonical.com>
  */
 
 #ifndef CORE_UBUNTU_MEDIA_PLAYER_STUB_H_
@@ -66,7 +67,6 @@ class PlayerStub : public Player
     virtual const core::Property<bool>& is_video_source() const;
     virtual const core::Property<bool>& is_audio_source() const;
     virtual const core::Property<PlaybackStatus>& playback_status() const;
-    virtual const core::Property<Orientation>& orientation() const;
     virtual const core::Property<LoopStatus>& loop_status() const;
     virtual const core::Property<PlaybackRate>& playback_rate() const;
     virtual const core::Property<bool>& is_shuffle() const;
@@ -77,6 +77,7 @@ class PlayerStub : public Player
     virtual const core::Property<int64_t>& position() const;
     virtual const core::Property<int64_t>& duration() const;
     virtual const core::Property<AudioStreamRole>& audio_stream_role() const;
+    virtual const core::Property<Orientation>& orientation() const;
 
     virtual core::Property<LoopStatus>& loop_status();
     virtual core::Property<PlaybackRate>& playback_rate();
@@ -87,7 +88,6 @@ class PlayerStub : public Player
     virtual const core::Signal<int64_t>& seeked_to() const;
     virtual const core::Signal<void>& end_of_stream() const;
     virtual core::Signal<PlaybackStatus>& playback_status_changed();
-    //virtual core::Signal<Orientation>& orientation_changed();
 
   private:
     struct Private;

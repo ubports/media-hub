@@ -52,7 +52,6 @@ class PlayerSkeleton : public core::ubuntu::media::Player
     virtual const core::Property<bool>& is_video_source() const;
     virtual const core::Property<bool>& is_audio_source() const;
     virtual const core::Property<PlaybackStatus>& playback_status() const;
-    virtual const core::Property<Orientation>& orientation() const;
     virtual const core::Property<LoopStatus>& loop_status() const;
     virtual const core::Property<PlaybackRate>& playback_rate() const;
     virtual const core::Property<bool>& is_shuffle() const;
@@ -63,6 +62,7 @@ class PlayerSkeleton : public core::ubuntu::media::Player
     virtual const core::Property<int64_t>& position() const;
     virtual const core::Property<int64_t>& duration() const;
     virtual const core::Property<AudioStreamRole>& audio_stream_role() const;
+    virtual const core::Property<Orientation>& orientation() const;
 
     virtual core::Property<LoopStatus>& loop_status();
     virtual core::Property<PlaybackRate>& playback_rate();
@@ -73,7 +73,6 @@ class PlayerSkeleton : public core::ubuntu::media::Player
     virtual const core::Signal<int64_t>& seeked_to() const;
     virtual const core::Signal<void>& end_of_stream() const;
     virtual core::Signal<PlaybackStatus>& playback_status_changed();
-    //virtual core::Signal<Orientation>& orientation_changed();
 
 protected:
     // All creation time arguments go here.
@@ -90,8 +89,9 @@ protected:
 
     PlayerSkeleton(const Configuration& configuration);
 
+    // These properties are not exposed to the client, but still need to be
+    // able to be settable from within the Player:
     virtual core::Property<PlaybackStatus>& playback_status();
-    virtual core::Property<Orientation>& orientation();
     virtual core::Property<bool>& can_play();
     virtual core::Property<bool>& can_pause();
     virtual core::Property<bool>& can_seek();
@@ -104,6 +104,7 @@ protected:
     virtual core::Property<PlaybackRate>& maximum_playback_rate();
     virtual core::Property<int64_t>& position();
     virtual core::Property<int64_t>& duration();
+    virtual core::Property<Orientation>& orientation();
 
     virtual core::Signal<int64_t>& seeked_to();
     virtual core::Signal<void>& end_of_stream();
