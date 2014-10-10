@@ -50,6 +50,8 @@ public:
     const core::Property<core::ubuntu::media::Engine::Volume>& volume() const;
     core::Property<core::ubuntu::media::Engine::Volume>& volume();
 
+    const core::Property<core::ubuntu::media::Player::Orientation>& orientation() const;
+
     const core::Property<core::ubuntu::media::Player::AudioStreamRole>& audio_stream_role() const;
     core::Property<core::ubuntu::media::Player::AudioStreamRole>& audio_stream_role();
 
@@ -60,6 +62,7 @@ public:
     const core::Signal<void>& client_disconnected_signal() const;
     const core::Signal<void>& end_of_stream_signal() const;
     const core::Signal<core::ubuntu::media::Player::PlaybackStatus>& playback_status_changed_signal() const;
+    //const core::Signal<core::ubuntu::media::Player::Orientation>& orientation_changed_signal() const;
 
 private:
     struct Private;

@@ -86,6 +86,14 @@ class Player : public std::enable_shared_from_this<Player>
         phone
     };
 
+    enum Orientation
+    {
+        rotate0,
+        rotate90,
+        rotate180,
+        rotate270
+    };
+
     Player(const Player&) = delete;
     virtual ~Player();
 
@@ -117,6 +125,7 @@ class Player : public std::enable_shared_from_this<Player>
     virtual const core::Property<bool>& is_video_source() const = 0;
     virtual const core::Property<bool>& is_audio_source() const = 0;
     virtual const core::Property<PlaybackStatus>& playback_status() const = 0;
+    virtual const core::Property<Orientation>& orientation() const = 0;
     virtual const core::Property<LoopStatus>& loop_status() const = 0;
     virtual const core::Property<PlaybackRate>& playback_rate() const = 0;
     virtual const core::Property<bool>& is_shuffle() const = 0;
@@ -137,6 +146,7 @@ class Player : public std::enable_shared_from_this<Player>
     virtual const core::Signal<int64_t>& seeked_to() const = 0;
     virtual const core::Signal<void>& end_of_stream() const = 0;
     virtual core::Signal<PlaybackStatus>& playback_status_changed() = 0;
+    //virtual core::Signal<Orientation>& orientation_changed() = 0;
   protected:
     Player();
 

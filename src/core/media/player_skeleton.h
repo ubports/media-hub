@@ -52,6 +52,7 @@ class PlayerSkeleton : public core::ubuntu::media::Player
     virtual const core::Property<bool>& is_video_source() const;
     virtual const core::Property<bool>& is_audio_source() const;
     virtual const core::Property<PlaybackStatus>& playback_status() const;
+    virtual const core::Property<Orientation>& orientation() const;
     virtual const core::Property<LoopStatus>& loop_status() const;
     virtual const core::Property<PlaybackRate>& playback_rate() const;
     virtual const core::Property<bool>& is_shuffle() const;
@@ -72,6 +73,7 @@ class PlayerSkeleton : public core::ubuntu::media::Player
     virtual const core::Signal<int64_t>& seeked_to() const;
     virtual const core::Signal<void>& end_of_stream() const;
     virtual core::Signal<PlaybackStatus>& playback_status_changed();
+    //virtual core::Signal<Orientation>& orientation_changed();
 
 protected:
     // All creation time arguments go here.
@@ -89,6 +91,7 @@ protected:
     PlayerSkeleton(const Configuration& configuration);
 
     virtual core::Property<PlaybackStatus>& playback_status();
+    virtual core::Property<Orientation>& orientation();
     virtual core::Property<bool>& can_play();
     virtual core::Property<bool>& can_pause();
     virtual core::Property<bool>& can_seek();

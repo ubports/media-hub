@@ -153,7 +153,20 @@ struct Playbin
             signals.on_info(message.detail.error_warning_info);
             break;
         case GST_MESSAGE_TAG:
-            signals.on_tag_available(message.detail.tag);
+            {
+                gchar *orientation;
+                if (gst_tag_list_get_string(message.detail.tag.tag_list, "image-orientation", &orientation))
+                {
+                    std::cout << "Found the image-orientation tag in the taglist (" << __FUNCTION__ << ":" << __LINE__ << ")" << std::endl;
+                    std::cout << "orientation: " << orientation << std::endl;
+                    signals.on_orientation_changed(orientation_lut(orientation));
+                    g_free (orientation);
+                }
+                else
+                    std::cout << "Did not find the image-orientation tag in the taglist (" << __FUNCTION__ << ":" << __LINE__ << ")" << std::endl;
+
+                signals.on_tag_available(message.detail.tag);
+            }
             break;
         case GST_MESSAGE_STATE_CHANGED:
             signals.on_state_changed(message.detail.state_changed);
@@ -265,6 +278,23 @@ struct Playbin
         }
     }
 
+    media::Player::Orientation orientation_lut(const gchar *orientation)
+    {
+        if (g_strcmp0(orientation, "rotate-0") == 0)
+            return media::Player::Orientation::rotate0;
+        else if (g_strcmp0(orientation, "rotate-90") == 0)
+        {
+            std::cout << "rotate-90" << std::endl;
+            return media::Player::Orientation::rotate90;
+        }
+        else if (g_strcmp0(orientation, "rotate-180") == 0)
+            return media::Player::Orientation::rotate180;
+        else if (g_strcmp0(orientation, "rotate-270") == 0)
+            return media::Player::Orientation::rotate270;
+        else
+            return media::Player::Orientation::rotate0;
+    }
+
     /** Sets the new audio stream role on the pulsesink in playbin */
     void set_audio_stream_role(media::Player::AudioStreamRole new_audio_role)
     {
@@ -304,6 +334,21 @@ struct Playbin
         // FIXME: this should be int64_t, but dbus-cpp doesn't seem to handle it correctly
         return static_cast<uint64_t>(dur);
     }
+
+/*
+    void processOrientation(const std::string &orientation)
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+        if (orientation == "rotate-90")
+        {
+            std::cout << "Setting rotate-90 matrix" << std::endl;
+            // Row-major format
+            trans_matrix[0] = 0;  trans_matrix[1] = 1; trans_matrix[2] = 0;
+            trans_matrix[3] = -1; trans_matrix[4] = 0; trans_matrix[5] = 0;
+            trans_matrix[6] = 0;  trans_matrix[7] = 0; trans_matrix[8] = 1;
+        }
+    }
+*/
 
     void set_uri(const std::string& uri)
     {
@@ -350,6 +395,11 @@ struct Playbin
                         &current,
                         &pending,
                         state_change_timeout.count());
+        if (new_state == GST_STATE_PLAYING)
+        {
+            std::cout << "Dumping pipeline dot file" << std::endl;
+            GST_DEBUG_BIN_TO_DOT_FILE((GstBin*)pipeline, GST_DEBUG_GRAPH_SHOW_ALL, "pipeline");
+        }
             break;
         }
 
@@ -458,6 +508,7 @@ struct Playbin
         core::Signal<uint64_t> on_seeked_to;
         core::Signal<void> on_end_of_stream;
         core::Signal<media::Player::PlaybackStatus> on_playback_status_changed;
+        core::Signal<media::Player::Orientation> on_orientation_changed;
         core::Signal<void> client_disconnected;
     } signals;
 };

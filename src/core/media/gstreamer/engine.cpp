@@ -151,7 +151,9 @@ struct gstreamer::Engine::Private
     core::Property<std::tuple<media::Track::UriType, media::Track::MetaData>> track_meta_data;
     core::Property<uint64_t> position;
     core::Property<uint64_t> duration;
+    core::Property<float*> transformation_matrix;
     core::Property<media::Engine::Volume> volume;
+    core::Property<media::Player::Orientation> orientation;
     core::Property<media::Player::AudioStreamRole> audio_role;
     core::Property<bool> is_video_source;
     core::Property<bool> is_audio_source;
@@ -170,6 +172,7 @@ struct gstreamer::Engine::Private
     core::Signal<void> client_disconnected;
     core::Signal<void> end_of_stream;
     core::Signal<media::Player::PlaybackStatus> playback_status_changed;
+    core::Signal<media::Player::Orientation> orientation_changed;
 };
 
 gstreamer::Engine::Engine() : d(new Private{})
@@ -299,6 +302,11 @@ core::Property<core::ubuntu::media::Engine::Volume>& gstreamer::Engine::volume()
     return d->volume;
 }
 
+const core::Property<core::ubuntu::media::Player::Orientation>& gstreamer::Engine::orientation() const
+{
+    return d->orientation;
+}
+
 const core::Property<core::ubuntu::media::Player::AudioStreamRole>& gstreamer::Engine::audio_stream_role() const
 {
     return d->audio_role;
@@ -339,3 +347,10 @@ const core::Signal<media::Player::PlaybackStatus>& gstreamer::Engine::playback_s
 {
     return d->playback_status_changed;
 }
+
+#if 0
+const core::Signal<media::Player::Orientation>& gstreamer::Engine::orientation_changed_signal() const
+{
+    return d->orientation_changed;
+}
+#endif
