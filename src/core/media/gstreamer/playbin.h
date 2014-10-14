@@ -74,6 +74,9 @@ struct Playbin
         : pipeline(gst_element_factory_make("playbin", pipeline_name().c_str())),
           bus{gst_element_get_bus(pipeline)},
           file_type(MEDIA_FILE_TYPE_NONE),
+          video_sink(nullptr),
+          video_height(0),
+          video_width(0),
           on_new_message_connection(
               bus.on_new_message.connect(
                   std::bind(
@@ -220,9 +223,9 @@ struct Playbin
 
         if (::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME") != nullptr)
         {
-            auto video_sink = gst_element_factory_make (
-                    ::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME"),
-                    "video-sink");
+            video_sink = gst_element_factory_make (
+                ::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME"),
+                "video-sink");
 
             std::cout << "video_sink: " << ::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME") << std::endl;
 
@@ -240,7 +243,6 @@ struct Playbin
 
         if (::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME") != nullptr)
         {
-            GstElement *video_sink = NULL;
             g_object_get (pipeline, "video_sink", &video_sink, NULL);
 
             // Get the service-side BufferQueue (IGraphicBufferProducer) and associate it with
@@ -380,13 +382,16 @@ struct Playbin
                         &current,
                         &pending,
                         state_change_timeout.count());
-#ifdef DEBUG_GST_PIPELINE
+
         if (new_state == GST_STATE_PLAYING)
         {
+            // Get the video height/width from the video sink
+            get_video_dimensions();
+#ifdef DEBUG_GST_PIPELINE
             std::cout << "Dumping pipeline dot file" << std::endl;
             GST_DEBUG_BIN_TO_DOT_FILE((GstBin*)pipeline, GST_DEBUG_GRAPH_SHOW_ALL, "pipeline");
-        }
 #endif
+        }
             break;
         }
 
@@ -401,6 +406,29 @@ struct Playbin
                     GST_FORMAT_TIME,
                     (GstSeekFlags)(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_KEY_UNIT),
                     ms.count() * 1000);
+    }
+
+    void get_video_dimensions()
+    {
+        if (video_sink != nullptr && g_strcmp0(::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME"), "mirsink") == 0)
+        {
+            g_object_get (video_sink, "height", &video_height, nullptr);
+            g_object_get (video_sink, "width", &video_width, nullptr);
+            std::cout << "video_height: " << video_height << ", video_width: " << video_width << std::endl;
+            signals.on_add_frame_dimension(video_height, video_width);
+        }
+        else
+            std::cerr << "Could not get the height/width of each video frame" << std::endl;
+    }
+
+    int get_video_height() const
+    {
+        return video_height;
+    }
+
+    int get_video_width() const
+    {
+        return video_width;
     }
 
     std::string get_file_content_type(const std::string& uri) const
@@ -482,6 +510,9 @@ struct Playbin
     gstreamer::Bus bus;
     MediaFileType file_type;
     SurfaceTextureClientHybris stc_hybris;
+    GstElement* video_sink;
+    uint32_t video_height;
+    uint32_t video_width;
     core::Connection on_new_message_connection;
     bool is_seeking;
     struct
@@ -496,6 +527,7 @@ struct Playbin
         core::Signal<void> on_end_of_stream;
         core::Signal<media::Player::PlaybackStatus> on_playback_status_changed;
         core::Signal<media::Player::Orientation> on_orientation_changed;
+        core::Signal<uint32_t, uint32_t> on_add_frame_dimension;
         core::Signal<void> client_disconnected;
     } signals;
 };

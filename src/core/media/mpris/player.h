@@ -122,6 +122,7 @@ struct Player
         DBUS_CPP_SIGNAL_DEF(Seeked, Player, std::int64_t)
         DBUS_CPP_SIGNAL_DEF(EndOfStream, Player, void)
         DBUS_CPP_SIGNAL_DEF(PlaybackStatusChanged, Player, core::ubuntu::media::Player::PlaybackStatus)
+        DBUS_CPP_SIGNAL_DEF(VideoDimensionChanged, Player, std::uint64_t)
     };
 
     struct Properties
@@ -228,6 +229,7 @@ struct Player
                   configuration.object->template get_signal<Signals::Seeked>(),
                   configuration.object->template get_signal<Signals::EndOfStream>(),
                   configuration.object->template get_signal<Signals::PlaybackStatusChanged>(),
+                  configuration.object->template get_signal<Signals::VideoDimensionChanged>(),
                   configuration.object->template get_signal<core::dbus::interfaces::Properties::Signals::PropertiesChanged>()
               }
         {
@@ -350,6 +352,7 @@ struct Player
             typename core::dbus::Signal<Signals::Seeked, Signals::Seeked::ArgumentType>::Ptr seeked_to;
             typename core::dbus::Signal<Signals::EndOfStream, Signals::EndOfStream::ArgumentType>::Ptr end_of_stream;
             typename core::dbus::Signal<Signals::PlaybackStatusChanged, Signals::PlaybackStatusChanged::ArgumentType>::Ptr playback_status_changed;
+            typename core::dbus::Signal<Signals::VideoDimensionChanged, Signals::VideoDimensionChanged::ArgumentType>::Ptr video_dimension_changed;
 
             dbus::Signal
             <
