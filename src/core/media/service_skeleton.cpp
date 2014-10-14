@@ -34,6 +34,8 @@
 #include <core/dbus/object.h>
 #include <core/dbus/types/object_path.h>
 
+#include <core/posix/this_process.h>
+
 #include <map>
 #include <regex>
 #include <sstream>
@@ -157,9 +159,20 @@ struct media::ServiceSkeleton::Private
             return defaults;
         }
 
+        static std::string service_name()
+        {
+            static const bool export_to_indicator_sound_via_mpris
+            {
+                core::posix::this_process::env::get("UBUNTU_MEDIA_HUB_EXPORT_TO_INDICATOR_VIA_MPRIS", "0") == "1"
+            };
+
+            return export_to_indicator_sound_via_mpris ? "org.mpris.MediaPlayer2.MediaHub" :
+                                                         "hidden.org.mpris.MediaPlayer2.MediaHub";
+        }
+
         explicit Exported(const dbus::Bus::Ptr& bus, const media::CoverArtResolver& cover_art_resolver)
             : bus{bus},
-              service{dbus::Service::add_service(bus, "org.mpris.MediaPlayer2.MediaHub")},
+              service{dbus::Service::add_service(bus, service_name())},
               object{service->add_object_for_path(dbus::types::ObjectPath{"/org/mpris/MediaPlayer2"})},
               media_player{mpris::MediaPlayer2::Skeleton::Configuration{bus, object, media_player_defaults()}},
               player{mpris::Player::Skeleton::Configuration{bus, object, player_defaults()}},
