@@ -1,3 +1,11 @@
+media-hub (2.0.0+14.10.20141014-0ubuntu1) utopic; urgency=low
+
+  [ thomas-voss ]
+  * Only expose the service as MPRIS instance if explicitly requested
+    via env variable. (LP: #1381069)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Tue, 14 Oct 2014 17:37:41 +0000
+
 media-hub (2.0.0+14.10.20141010-0ubuntu1) utopic; urgency=low
 
   [ Alberto Aguirre ]
