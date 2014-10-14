@@ -172,6 +172,10 @@ struct gstreamer::Engine::Private
     {
     }
 
+    // Ensure the playbin is the last item destroyed
+    // otherwise properties could try to access a dead playbin object
+    gstreamer::Playbin playbin;
+
     std::shared_ptr<Engine::MetaDataExtractor> meta_data_extractor;
     core::Property<Engine::State> state;
     core::Property<std::tuple<media::Track::UriType, media::Track::MetaData>> track_meta_data;
@@ -182,7 +186,7 @@ struct gstreamer::Engine::Private
     core::Property<media::Player::Orientation> orientation;
     core::Property<bool> is_video_source;
     core::Property<bool> is_audio_source;
-    gstreamer::Playbin playbin;
+
     core::ScopedConnection about_to_finish_connection;
     core::ScopedConnection on_state_changed_connection;
     core::ScopedConnection on_tag_available_connection;

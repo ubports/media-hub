@@ -40,7 +40,7 @@
 namespace dbus = core::dbus;
 namespace media = core::ubuntu::media;
 
-struct media::PlayerSkeleton::Private : public std::enable_shared_from_this<media::PlayerSkeleton::Private>
+struct media::PlayerSkeleton::Private
 {
     Private(media::PlayerSkeleton* player,
             const std::string& identity,
@@ -357,6 +357,19 @@ media::PlayerSkeleton::PlayerSkeleton(const media::PlayerSkeleton::Configuration
 
 media::PlayerSkeleton::~PlayerSkeleton()
 {
+   // The session object may outlive the private instance
+   // so uninstall all method handlers.
+   d->object->uninstall_method_handler<mpris::Player::Next>();
+   d->object->uninstall_method_handler<mpris::Player::Previous>();
+   d->object->uninstall_method_handler<mpris::Player::Pause>();
+   d->object->uninstall_method_handler<mpris::Player::Stop>();
+   d->object->uninstall_method_handler<mpris::Player::Play>();
+   d->object->uninstall_method_handler<mpris::Player::PlayPause>();
+   d->object->uninstall_method_handler<mpris::Player::Seek>();
+   d->object->uninstall_method_handler<mpris::Player::SetPosition>();
+   d->object->uninstall_method_handler<mpris::Player::OpenUri>();
+   d->object->uninstall_method_handler<mpris::Player::CreateVideoSink>();
+   d->object->uninstall_method_handler<mpris::Player::Key>();
 }
 
 const core::Property<bool>& media::PlayerSkeleton::can_play() const

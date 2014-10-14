@@ -1,3 +1,27 @@
+media-hub (2.0.0+14.10.20141010-0ubuntu1) utopic; urgency=low
+
+  [ Alberto Aguirre ]
+  * Fix potential access to dead objects. (LP: #1364483)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 10 Oct 2014 19:46:25 +0000
+
+media-hub (2.0.0+14.10.20140926-0ubuntu1) utopic; urgency=low
+
+  [ Alberto Aguirre ]
+  * Prevent dead object access by asynchronous calls to clear_wakelock
+    in media::PlayerImplementation::Private
+  * Fix self deadlock when clients disconnect from media::Player
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 26 Sep 2014 04:06:06 +0000
+
+media-hub (2.0.0+14.10.20140917-0ubuntu1) utopic; urgency=low
+
+  [ Alberto Aguirre ]
+  * Fix wake lock state machine and subtle race conditions on wake lock
+    refcounts. (LP: #1368786)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Wed, 17 Sep 2014 19:59:51 +0000
+
 media-hub (2.0.0+14.10.20140910.2-0ubuntu1) utopic; urgency=medium
 
   [ Thomas Voß ]
