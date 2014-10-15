@@ -105,6 +105,10 @@
   # camera click
   /{,android/}system/media/audio/ui/camera_click.ogg r,
 
+  # custom sounds
+  /custom/usr/share/sounds/ r,
+  /custom/usr/share/sounds/** r,
+
   # Allow read on click install directories, removable media and files in
   # /usr/local/share.
   /usr/share/** r,
