@@ -1,3 +1,15 @@
+media-hub (2.0.0+14.10.20141015.1-0ubuntu1) 14.09; urgency=low
+
+  [ Ubuntu daily release ]
+  * New rebuild forced
+
+  [ Ricardo Mendoza ]
+  * Make use of MediaRecorderObserver interface from hybris to register
+    as listeners for recording operations, so that we can then decide
+    whether to hold a screen lock or not. (LP: #1362658)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Wed, 15 Oct 2014 21:15:45 +0000
+
 media-hub (2.0.0+14.10.20141015-0ubuntu1) 14.09; urgency=low
 
   [ Jamie Strandboge ]
