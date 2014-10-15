@@ -1,3 +1,17 @@
+media-hub (2.0.0+14.10.20141015-0ubuntu1) 14.09; urgency=low
+
+  [ Jamie Strandboge ]
+  * debian/usr.bin.media-hub-server: update for recent denials: allow
+    read access to /etc/udev/udev.conf (LP: #1356883). add video
+    abstraction. silence access to /run/udev/data/** like we do
+    elsewhere. allow read on /dev/video*. allow read on
+    /sys/devices/**/video4linux/video**. allow read on
+    /sys/devices/**/video4linux/**/uevent (LP: #1356883)
+  * debian/usr.bin.media-hub-server: allow reads on custom sounds (LP:
+    #1377966) (LP: #1377966)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Wed, 15 Oct 2014 17:45:58 +0000
+
 media-hub (2.0.0+14.10.20141014-0ubuntu1) utopic; urgency=low
 
   [ thomas-voss ]
