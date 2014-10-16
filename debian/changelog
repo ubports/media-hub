@@ -1,3 +1,16 @@
+media-hub (2.0.0+14.10.20141016-0ubuntu1) 14.09; urgency=low
+
+  [ Jim Hodapp ]
+  * Add an Orientation property which will indicate how the video should
+    be rotated for playback vs how it was recorded. Get the video frame
+    height/width from mirsink and pass it to the media-hub client via a
+    Signal. (LP: #1191934)
+
+  [ Ubuntu daily release ]
+  * New rebuild forced
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 16 Oct 2014 20:02:01 +0000
+
 media-hub (2.0.0+14.10.20141015.1-0ubuntu1) 14.09; urgency=low
 
   [ Ubuntu daily release ]
