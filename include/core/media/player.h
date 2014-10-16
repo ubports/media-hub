@@ -86,6 +86,14 @@ class Player : public std::enable_shared_from_this<Player>
         phone
     };
 
+    enum Orientation
+    {
+        rotate0,
+        rotate90,
+        rotate180,
+        rotate270
+    };
+
     Player(const Player&) = delete;
     virtual ~Player();
 
@@ -127,6 +135,7 @@ class Player : public std::enable_shared_from_this<Player>
     virtual const core::Property<int64_t>& position() const = 0;
     virtual const core::Property<int64_t>& duration() const = 0;
     virtual const core::Property<AudioStreamRole>& audio_stream_role() const = 0;
+    virtual const core::Property<Orientation>& orientation() const = 0;
 
     virtual core::Property<LoopStatus>& loop_status() = 0;
     virtual core::Property<PlaybackRate>& playback_rate() = 0;
@@ -137,6 +146,11 @@ class Player : public std::enable_shared_from_this<Player>
     virtual const core::Signal<int64_t>& seeked_to() const = 0;
     virtual const core::Signal<void>& end_of_stream() const = 0;
     virtual core::Signal<PlaybackStatus>& playback_status_changed() = 0;
+    /**
+     * Called when the video height/width change. Passes height and width as a bitmask with
+     * height in the upper 32 bits and width in the lower 32 bits (both unsigned values)
+     */
+    virtual const core::Signal<uint64_t>& video_dimension_changed() const = 0;
   protected:
     Player();
 

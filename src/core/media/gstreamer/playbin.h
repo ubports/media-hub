@@ -31,6 +31,12 @@
 #include <chrono>
 #include <string>
 
+// Uncomment to generate a dot file at the time that the pipeline
+// goes to the PLAYING state. Make sure to export GST_DEBUG_DUMP_DOT_DIR
+// before starting media-hub-server. To convert the dot file to something
+// other image format, use: dot pipeline.dot -Tpng -o pipeline.png
+//#define DEBUG_GST_PIPELINE
+
 namespace media = core::ubuntu::media;
 
 namespace gstreamer
@@ -68,6 +74,9 @@ struct Playbin
         : pipeline(gst_element_factory_make("playbin", pipeline_name().c_str())),
           bus{gst_element_get_bus(pipeline)},
           file_type(MEDIA_FILE_TYPE_NONE),
+          video_sink(nullptr),
+          video_height(0),
+          video_width(0),
           on_new_message_connection(
               bus.on_new_message.connect(
                   std::bind(
@@ -153,7 +162,17 @@ struct Playbin
             signals.on_info(message.detail.error_warning_info);
             break;
         case GST_MESSAGE_TAG:
-            signals.on_tag_available(message.detail.tag);
+            {
+                gchar *orientation;
+                if (gst_tag_list_get_string(message.detail.tag.tag_list, "image-orientation", &orientation))
+                {
+                    // If the image-orientation tag is in the GstTagList, signal the Engine
+                    signals.on_orientation_changed(orientation_lut(orientation));
+                    g_free (orientation);
+                }
+
+                signals.on_tag_available(message.detail.tag);
+            }
             break;
         case GST_MESSAGE_STATE_CHANGED:
             signals.on_state_changed(message.detail.state_changed);
@@ -204,9 +223,9 @@ struct Playbin
 
         if (::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME") != nullptr)
         {
-            auto video_sink = gst_element_factory_make (
-                    ::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME"),
-                    "video-sink");
+            video_sink = gst_element_factory_make (
+                ::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME"),
+                "video-sink");
 
             std::cout << "video_sink: " << ::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME") << std::endl;
 
@@ -224,7 +243,6 @@ struct Playbin
 
         if (::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME") != nullptr)
         {
-            GstElement *video_sink = NULL;
             g_object_get (pipeline, "video_sink", &video_sink, NULL);
 
             // Get the service-side BufferQueue (IGraphicBufferProducer) and associate it with
@@ -263,6 +281,20 @@ struct Playbin
                 return "multimedia";
                 break;
         }
+    }
+
+    media::Player::Orientation orientation_lut(const gchar *orientation)
+    {
+        if (g_strcmp0(orientation, "rotate-0") == 0)
+            return media::Player::Orientation::rotate0;
+        else if (g_strcmp0(orientation, "rotate-90") == 0)
+            return media::Player::Orientation::rotate90;
+        else if (g_strcmp0(orientation, "rotate-180") == 0)
+            return media::Player::Orientation::rotate180;
+        else if (g_strcmp0(orientation, "rotate-270") == 0)
+            return media::Player::Orientation::rotate270;
+        else
+            return media::Player::Orientation::rotate0;
     }
 
     /** Sets the new audio stream role on the pulsesink in playbin */
@@ -350,6 +382,16 @@ struct Playbin
                         &current,
                         &pending,
                         state_change_timeout.count());
+
+        if (new_state == GST_STATE_PLAYING)
+        {
+            // Get the video height/width from the video sink
+            get_video_dimensions();
+#ifdef DEBUG_GST_PIPELINE
+            std::cout << "Dumping pipeline dot file" << std::endl;
+            GST_DEBUG_BIN_TO_DOT_FILE((GstBin*)pipeline, GST_DEBUG_GRAPH_SHOW_ALL, "pipeline");
+#endif
+        }
             break;
         }
 
@@ -364,6 +406,29 @@ struct Playbin
                     GST_FORMAT_TIME,
                     (GstSeekFlags)(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_KEY_UNIT),
                     ms.count() * 1000);
+    }
+
+    void get_video_dimensions()
+    {
+        if (video_sink != nullptr && g_strcmp0(::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME"), "mirsink") == 0)
+        {
+            g_object_get (video_sink, "height", &video_height, nullptr);
+            g_object_get (video_sink, "width", &video_width, nullptr);
+            std::cout << "video_height: " << video_height << ", video_width: " << video_width << std::endl;
+            signals.on_add_frame_dimension(video_height, video_width);
+        }
+        else
+            std::cerr << "Could not get the height/width of each video frame" << std::endl;
+    }
+
+    int get_video_height() const
+    {
+        return video_height;
+    }
+
+    int get_video_width() const
+    {
+        return video_width;
     }
 
     std::string get_file_content_type(const std::string& uri) const
@@ -445,6 +510,9 @@ struct Playbin
     gstreamer::Bus bus;
     MediaFileType file_type;
     SurfaceTextureClientHybris stc_hybris;
+    GstElement* video_sink;
+    uint32_t video_height;
+    uint32_t video_width;
     core::Connection on_new_message_connection;
     bool is_seeking;
     struct
@@ -458,6 +526,8 @@ struct Playbin
         core::Signal<uint64_t> on_seeked_to;
         core::Signal<void> on_end_of_stream;
         core::Signal<media::Player::PlaybackStatus> on_playback_status_changed;
+        core::Signal<media::Player::Orientation> on_orientation_changed;
+        core::Signal<uint32_t, uint32_t> on_add_frame_dimension;
         core::Signal<void> client_disconnected;
     } signals;
 };

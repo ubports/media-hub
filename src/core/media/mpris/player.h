@@ -122,6 +122,7 @@ struct Player
         DBUS_CPP_SIGNAL_DEF(Seeked, Player, std::int64_t)
         DBUS_CPP_SIGNAL_DEF(EndOfStream, Player, void)
         DBUS_CPP_SIGNAL_DEF(PlaybackStatusChanged, Player, core::ubuntu::media::Player::PlaybackStatus)
+        DBUS_CPP_SIGNAL_DEF(VideoDimensionChanged, Player, std::uint64_t)
     };
 
     struct Properties
@@ -132,6 +133,7 @@ struct Player
         DBUS_CPP_WRITABLE_PROPERTY_DEF(LoopStatus, Player, std::string)
         DBUS_CPP_WRITABLE_PROPERTY_DEF(TypedLoopStatus, Player, core::ubuntu::media::Player::LoopStatus)
         DBUS_CPP_WRITABLE_PROPERTY_DEF(AudioStreamRole, Player, core::ubuntu::media::Player::AudioStreamRole)
+        DBUS_CPP_READABLE_PROPERTY_DEF(Orientation, Player, core::ubuntu::media::Player::Orientation)
         DBUS_CPP_WRITABLE_PROPERTY_DEF(PlaybackRate, Player, double)
         DBUS_CPP_WRITABLE_PROPERTY_DEF(Rate, Player, double)
         DBUS_CPP_WRITABLE_PROPERTY_DEF(Shuffle, Player, bool)
@@ -191,6 +193,7 @@ struct Player
                 Properties::Duration::ValueType duration{0};
                 Properties::MinimumRate::ValueType minimum_rate{1.f};
                 Properties::MaximumRate::ValueType maximum_rate{1.f};
+                Properties::Orientation::ValueType orientation{core::ubuntu::media::Player::Orientation::rotate0};
             } defaults;
         };
 
@@ -211,6 +214,7 @@ struct Player
                   configuration.object->template get_property<Properties::LoopStatus>(),
                   configuration.object->template get_property<Properties::TypedLoopStatus>(),
                   configuration.object->template get_property<Properties::AudioStreamRole>(),
+                  configuration.object->template get_property<Properties::Orientation>(),
                   configuration.object->template get_property<Properties::PlaybackRate>(),
                   configuration.object->template get_property<Properties::Shuffle>(),
                   configuration.object->template get_property<Properties::TypedMetaData>(),
@@ -225,6 +229,7 @@ struct Player
                   configuration.object->template get_signal<Signals::Seeked>(),
                   configuration.object->template get_signal<Signals::EndOfStream>(),
                   configuration.object->template get_signal<Signals::PlaybackStatusChanged>(),
+                  configuration.object->template get_signal<Signals::VideoDimensionChanged>(),
                   configuration.object->template get_signal<core::dbus::interfaces::Properties::Signals::PropertiesChanged>()
               }
         {
@@ -241,12 +246,19 @@ struct Player
             properties.loop_status->set(configuration.defaults.loop_status);
             properties.typed_loop_status->set(configuration.defaults.typed_loop_status);
             properties.audio_stream_role->set(core::ubuntu::media::Player::AudioStreamRole::multimedia);
+            properties.orientation->set(core::ubuntu::media::Player::Orientation::rotate0);
             properties.playback_rate->set(configuration.defaults.playback_rate);
             properties.is_shuffle->set(configuration.defaults.shuffle);
             properties.position->set(configuration.defaults.position);
             properties.duration->set(configuration.defaults.duration);
             properties.minimum_playback_rate->set(configuration.defaults.minimum_rate);
-            properties.maximum_playback_rate->set(configuration.defaults.maximum_rate);            
+            properties.maximum_playback_rate->set(configuration.defaults.maximum_rate);
+
+            // Make sure the Orientation Property gets sent over DBus to the client
+            properties.orientation->changed().connect([this](const core::ubuntu::media::Player::Orientation& o)
+            {
+                on_property_value_changed<Properties::Orientation>(o);
+            });
 
             properties.position->changed().connect([this](std::int64_t position)
             {
@@ -266,7 +278,7 @@ struct Player
             properties.loop_status->changed().connect([this](const std::string& status)
             {
                 on_property_value_changed<Properties::LoopStatus>(status);
-            });                       
+            });
         }
 
         template<typename Property>
@@ -294,6 +306,7 @@ struct Player
             dict[Properties::LoopStatus::name()] = dbus::types::Variant::encode(properties.loop_status->get());
             dict[Properties::TypedLoopStatus::name()] = dbus::types::Variant::encode(properties.typed_loop_status->get());
             dict[Properties::AudioStreamRole::name()] = dbus::types::Variant::encode(properties.audio_stream_role->get());
+            dict[Properties::Orientation::name()] = dbus::types::Variant::encode(properties.orientation->get());
             dict[Properties::PlaybackRate::name()] = dbus::types::Variant::encode(properties.playback_rate->get());
             dict[Properties::Shuffle::name()] = dbus::types::Variant::encode(properties.is_shuffle->get());
             dict[Properties::Duration::name()] = dbus::types::Variant::encode(properties.duration->get());
@@ -323,6 +336,7 @@ struct Player
             std::shared_ptr<core::dbus::Property<Properties::LoopStatus>> loop_status;
             std::shared_ptr<core::dbus::Property<Properties::TypedLoopStatus>> typed_loop_status;
             std::shared_ptr<core::dbus::Property<Properties::AudioStreamRole>> audio_stream_role;
+            std::shared_ptr<core::dbus::Property<Properties::Orientation>> orientation;
             std::shared_ptr<core::dbus::Property<Properties::PlaybackRate>> playback_rate;
             std::shared_ptr<core::dbus::Property<Properties::Shuffle>> is_shuffle;
             std::shared_ptr<core::dbus::Property<Properties::TypedMetaData>> typed_meta_data_for_current_track;
@@ -338,6 +352,7 @@ struct Player
             typename core::dbus::Signal<Signals::Seeked, Signals::Seeked::ArgumentType>::Ptr seeked_to;
             typename core::dbus::Signal<Signals::EndOfStream, Signals::EndOfStream::ArgumentType>::Ptr end_of_stream;
             typename core::dbus::Signal<Signals::PlaybackStatusChanged, Signals::PlaybackStatusChanged::ArgumentType>::Ptr playback_status_changed;
+            typename core::dbus::Signal<Signals::VideoDimensionChanged, Signals::VideoDimensionChanged::ArgumentType>::Ptr video_dimension_changed;
 
             dbus::Signal
             <
