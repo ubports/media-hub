@@ -1,3 +1,10 @@
+media-hub (2.0.0+14.10.20141020-0ubuntu1) utopic; urgency=low
+
+  [ Alberto Aguirre ]
+  * Move worker thread from player stub to service stub.
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Mon, 20 Oct 2014 13:47:46 +0000
+
 media-hub (2.0.0+14.10.20141015.1-0ubuntu1) 14.09; urgency=low
 
   [ Ubuntu daily release ]
