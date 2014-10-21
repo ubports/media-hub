@@ -5200,6 +5200,9 @@ static void mg_ev_handler(struct ns_connection *nc, int ev, void *p) {
   }
 }
 
+/*
+    Broken, but not needed.
+
 static void iter2(struct ns_connection *nc, int ev, void *param) {
   mg_handler_t func = NULL;
   struct connection *conn = (struct connection *) nc->user_data;
@@ -5208,7 +5211,7 @@ static void iter2(struct ns_connection *nc, int ev, void *param) {
   (void) ev;
 
   //DBG(("%p [%s]", conn, msg));
-  if (sscanf(msg, "%p %n", (void**)&func, &n) && func != NULL) {
+  if (sscanf(msg, "%p %n", &func, &n) && func != NULL) {
     conn->mg_conn.callback_param = (void *) (msg + n);
     func(&conn->mg_conn, MG_POLL);
   }
@@ -5221,7 +5224,7 @@ void mg_wakeup_server_ex(struct mg_server *server, mg_handler_t cb,
   int len;
 
   // Encode callback (cb) into a buffer
-  len = snprintf(buf, sizeof(buf), "%p ", (void*)(int)cb);
+  len = snprintf(buf, sizeof(buf), "%p ", cb);
   va_start(ap, fmt);
   len += vsnprintf(buf + len, sizeof(buf) - len, fmt, ap);
   va_end(ap);
@@ -5229,6 +5232,7 @@ void mg_wakeup_server_ex(struct mg_server *server, mg_handler_t cb,
   // "len + 1" is to include terminating \0 in the message
   ns_broadcast(&server->ns_mgr, iter2, buf, len + 1);
 }
+*/
 
 void mg_wakeup_server(struct mg_server *server) {
   ns_broadcast(&server->ns_mgr, NULL, (void *) "", 0);
