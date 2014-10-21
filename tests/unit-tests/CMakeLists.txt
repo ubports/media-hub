@@ -4,6 +4,11 @@ include_directories(
     ${PC_GSTREAMER_1_0_INCLUDE_DIRS}
 )
 
+add_library(mongoose mongoose.c)
+set_target_properties(
+    mongoose
+    PROPERTIES COMPILE_FLAGS "-std=c99")
+
 add_executable(
     test-gstreamer-engine
 
@@ -34,10 +39,13 @@ target_link_libraries(
     ${GLog_LIBRARY}
     ${PC_GSTREAMER_1_0_LIBRARIES}
     ${GIO_LIBRARIES}
+    ${PROCESS_CPP_LIBRARIES}
 
     gmock
     gmock_main
     gtest
+
+    mongoose
 )
 
 add_test(test-gstreamer-engine ${CMAKE_CURRENT_BINARY_DIR}/test-gstreamer-engine)
