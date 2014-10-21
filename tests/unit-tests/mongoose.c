@@ -2008,7 +2008,8 @@ static process_id_t start_process(const char *interp, const char *cmd,
   (void) env;
 
   if (pid == 0) {
-    (void) chdir(dir);
+    if (chdir(dir) == -1)
+        exit(EXIT_FAILURE);
     (void) dup2(sock, 0);
     (void) dup2(sock, 1);
     closesocket(sock);
