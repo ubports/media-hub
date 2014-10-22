@@ -248,20 +248,10 @@ media::PlayerStub::PlayerStub(
     const std::shared_ptr<core::dbus::Object>& object)
         : d(new Private{parent, object})
 {
-    auto bus = the_session_bus();
-    worker = std::move(std::thread([bus]()
-    {
-        bus->run();
-    }));
 }
 
 media::PlayerStub::~PlayerStub()
 {
-    auto bus = the_session_bus();
-    bus->stop();
-
-    if (worker.joinable())
-        worker.join();
 }
 
 std::shared_ptr<media::TrackList> media::PlayerStub::track_list()

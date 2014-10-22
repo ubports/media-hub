@@ -93,7 +93,6 @@ class PlayerStub : public Player
   private:
     struct Private;
     std::unique_ptr<Private> d;
-    std::thread worker;
 };
 }
 }
