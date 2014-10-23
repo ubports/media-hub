@@ -278,7 +278,6 @@ struct media::PlayerSkeleton::Private
                         the_empty_list_of_invalidated_properties));
     }
 
-
     media::PlayerSkeleton* impl;
     std::string identity;
     dbus::Bus::Ptr bus;
@@ -393,6 +392,7 @@ media::PlayerSkeleton::~PlayerSkeleton()
    d->object->uninstall_method_handler<mpris::Player::OpenUri>();
    d->object->uninstall_method_handler<mpris::Player::CreateVideoSink>();
    d->object->uninstall_method_handler<mpris::Player::Key>();
+   d->object->uninstall_method_handler<mpris::Player::OpenUriExtended>();
 }
 
 const core::Property<bool>& media::PlayerSkeleton::can_play() const

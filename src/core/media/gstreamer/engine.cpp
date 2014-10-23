@@ -149,6 +149,8 @@ struct gstreamer::Engine::Private
               playbin.signals.on_orientation_changed.connect(
                   std::bind(
                       &Private::on_orientation_changed,
+                      this,
+                      std::placeholders::_1))),
           on_lifetime_changed_connection(
               lifetime.changed().connect(
                   std::bind(

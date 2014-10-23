@@ -160,6 +160,7 @@ struct media::ServiceSkeleton::Private
                     };
 
                     auto session = impl->create_session(config);
+                    session->lifetime().set(media::Player::Lifetime::resumable);
 
                     bool inserted = false;
                     std::tie(std::ignore, inserted)
