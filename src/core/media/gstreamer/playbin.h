@@ -68,6 +68,9 @@ struct Playbin
                              GstElement *source,
                              gpointer user_data)
     {
+        if (user_data == nullptr)
+            return;
+
         static_cast<Playbin*>(user_data)->setup_source(source);
     }
 
@@ -81,7 +84,8 @@ struct Playbin
                       &Playbin::on_new_message,
                       this,
                       std::placeholders::_1))),
-          is_seeking(false)
+          is_seeking(false),
+          player_lifetime(media::Player::Lifetime::normal)
     {
         if (!pipeline)
             throw std::runtime_error("Could not create pipeline for playbin.");
