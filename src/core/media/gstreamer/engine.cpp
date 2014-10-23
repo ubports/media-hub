@@ -72,6 +72,13 @@ struct gstreamer::Engine::Private
         playbin.set_audio_stream_role(new_audio_role);
     }
 
+    void on_orientation_changed(const media::Player::Orientation& o)
+    {
+        // Update the local orientation Property, which should then update the Player
+        // orientation Property
+        orientation.set(o);
+    }
+
     void on_lifetime_changed(const media::Player::Lifetime& lifetime)
     {
         playbin.set_lifetime(lifetime);
@@ -98,9 +105,15 @@ struct gstreamer::Engine::Private
         end_of_stream();
     }
 
+    void on_video_dimension_changed(uint32_t height, uint32_t width)
+    {
+        video_dimension_changed(height, width);
+    }
+
     Private()
         : meta_data_extractor(new gstreamer::MetaDataExtractor()),
           volume(media::Engine::Volume(1.)),
+          orientation(media::Player::Orientation::rotate0),
           is_video_source(false),
           is_audio_source(false),
           about_to_finish_connection(
@@ -132,6 +145,10 @@ struct gstreamer::Engine::Private
                       &Private::on_audio_stream_role_changed,
                       this,
                       std::placeholders::_1))),
+          on_orientation_changed_connection(
+              playbin.signals.on_orientation_changed.connect(
+                  std::bind(
+                      &Private::on_orientation_changed,
           on_lifetime_changed_connection(
               lifetime.changed().connect(
                   std::bind(
@@ -153,9 +170,20 @@ struct gstreamer::Engine::Private
               playbin.signals.on_end_of_stream.connect(
                   std::bind(
                       &Private::on_end_of_stream,
-                      this)))
+                      this))),
+          on_video_dimension_changed_connection(
+              playbin.signals.on_add_frame_dimension.connect(
+                  std::bind(
+                      &Private::on_video_dimension_changed,
+                      this,
+                      std::placeholders::_1,
+                      std::placeholders::_2)))
     {
     }
+
+    // Ensure the playbin is the last item destroyed
+    // otherwise properties could try to access a dead playbin object
+    gstreamer::Playbin playbin;
 
     std::shared_ptr<Engine::MetaDataExtractor> meta_data_extractor;
     core::Property<Engine::State> state;
@@ -164,25 +192,29 @@ struct gstreamer::Engine::Private
     core::Property<uint64_t> duration;
     core::Property<media::Engine::Volume> volume;
     core::Property<media::Player::AudioStreamRole> audio_role;
+    core::Property<media::Player::Orientation> orientation;
     core::Property<media::Player::Lifetime> lifetime;
     core::Property<bool> is_video_source;
     core::Property<bool> is_audio_source;
-    gstreamer::Playbin playbin;
+
     core::ScopedConnection about_to_finish_connection;
     core::ScopedConnection on_state_changed_connection;
     core::ScopedConnection on_tag_available_connection;
     core::ScopedConnection on_volume_changed_connection;
     core::ScopedConnection on_audio_stream_role_changed_connection;
+    core::ScopedConnection on_orientation_changed_connection;
     core::ScopedConnection on_lifetime_changed_connection;
     core::ScopedConnection on_seeked_to_connection;
     core::ScopedConnection client_disconnected_connection;
     core::ScopedConnection on_end_of_stream_connection;
+    core::ScopedConnection on_video_dimension_changed_connection;
 
     core::Signal<void> about_to_finish;
     core::Signal<uint64_t> seeked_to;
     core::Signal<void> client_disconnected;
     core::Signal<void> end_of_stream;
     core::Signal<media::Player::PlaybackStatus> playback_status_changed;
+    core::Signal<uint32_t, uint32_t> video_dimension_changed;
 };
 
 gstreamer::Engine::Engine() : d(new Private{})
@@ -333,6 +365,11 @@ core::Property<core::ubuntu::media::Player::AudioStreamRole>& gstreamer::Engine:
     return d->audio_role;
 }
 
+const core::Property<core::ubuntu::media::Player::Orientation>& gstreamer::Engine::orientation() const
+{
+    return d->orientation;
+}
+
 core::Property<core::ubuntu::media::Player::Lifetime>& gstreamer::Engine::lifetime()
 {
     return d->lifetime;
@@ -367,4 +404,9 @@ const core::Signal<void>& gstreamer::Engine::end_of_stream_signal() const
 const core::Signal<media::Player::PlaybackStatus>& gstreamer::Engine::playback_status_changed_signal() const
 {
     return d->playback_status_changed;
+}
+
+const core::Signal<uint32_t, uint32_t>& gstreamer::Engine::video_dimension_changed_signal() const
+{
+    return d->video_dimension_changed;
 }

@@ -40,7 +40,7 @@
 namespace dbus = core::dbus;
 namespace media = core::ubuntu::media;
 
-struct media::PlayerSkeleton::Private : public std::enable_shared_from_this<media::PlayerSkeleton::Private>
+struct media::PlayerSkeleton::Private
 {
     Private(media::PlayerSkeleton* player,
             const std::string& identity,
@@ -57,10 +57,11 @@ struct media::PlayerSkeleton::Private : public std::enable_shared_from_this<medi
           {
               skeleton.signals.seeked_to,
               skeleton.signals.end_of_stream,
-              skeleton.signals.playback_status_changed
+              skeleton.signals.playback_status_changed,
+              skeleton.signals.video_dimension_changed
           }
     {
-    }    
+    }
 
     void handle_next(const core::dbus::Message::Ptr& msg)
     {
@@ -138,7 +139,7 @@ struct media::PlayerSkeleton::Private : public std::enable_shared_from_this<medi
 
         auto reply = dbus::Message::make_method_return(in);
         bus->send(reply);
-    }    
+    }
 
     bool does_client_have_access(const std::string& context, const std::string& uri)
     {
@@ -224,7 +225,7 @@ struct media::PlayerSkeleton::Private : public std::enable_shared_from_this<medi
     }
 
     void handle_open_uri(const core::dbus::Message::Ptr& in)
-    {        
+    {
         dbus_stub.get_connection_app_armor_security_async(in->sender(), [this, in](const std::string& profile)
         {
             Track::UriType uri;
@@ -286,17 +287,19 @@ struct media::PlayerSkeleton::Private : public std::enable_shared_from_this<medi
 
     org::freedesktop::dbus::DBus::Stub dbus_stub;
 
-    mpris::Player::Skeleton skeleton;    
+    mpris::Player::Skeleton skeleton;
 
     struct Signals
     {
         typedef core::dbus::Signal<mpris::Player::Signals::Seeked, mpris::Player::Signals::Seeked::ArgumentType> DBusSeekedToSignal;
         typedef core::dbus::Signal<mpris::Player::Signals::EndOfStream, mpris::Player::Signals::EndOfStream::ArgumentType> DBusEndOfStreamSignal;
         typedef core::dbus::Signal<mpris::Player::Signals::PlaybackStatusChanged, mpris::Player::Signals::PlaybackStatusChanged::ArgumentType> DBusPlaybackStatusChangedSignal;
+        typedef core::dbus::Signal<mpris::Player::Signals::VideoDimensionChanged, mpris::Player::Signals::VideoDimensionChanged::ArgumentType> DBusVideoDimensionChangedSignal;
 
         Signals(const std::shared_ptr<DBusSeekedToSignal>& remote_seeked,
                 const std::shared_ptr<DBusEndOfStreamSignal>& remote_eos,
-                const std::shared_ptr<DBusPlaybackStatusChangedSignal>& remote_playback_status_changed)
+                const std::shared_ptr<DBusPlaybackStatusChangedSignal>& remote_playback_status_changed,
+                const std::shared_ptr<DBusVideoDimensionChangedSignal>& remote_video_dimension_changed)
         {
             seeked_to.connect([remote_seeked](std::uint64_t value)
             {
@@ -312,11 +315,17 @@ struct media::PlayerSkeleton::Private : public std::enable_shared_from_this<medi
             {
                 remote_playback_status_changed->emit(status);
             });
+
+            video_dimension_changed.connect([remote_video_dimension_changed](uint64_t mask)
+            {
+                remote_video_dimension_changed->emit(mask);
+            });
         }
 
         core::Signal<int64_t> seeked_to;
         core::Signal<void> end_of_stream;
         core::Signal<media::Player::PlaybackStatus> playback_status_changed;
+        core::Signal<uint64_t> video_dimension_changed;
     } signals;
 
 };
@@ -371,6 +380,19 @@ media::PlayerSkeleton::PlayerSkeleton(const media::PlayerSkeleton::Configuration
 
 media::PlayerSkeleton::~PlayerSkeleton()
 {
+   // The session object may outlive the private instance
+   // so uninstall all method handlers.
+   d->object->uninstall_method_handler<mpris::Player::Next>();
+   d->object->uninstall_method_handler<mpris::Player::Previous>();
+   d->object->uninstall_method_handler<mpris::Player::Pause>();
+   d->object->uninstall_method_handler<mpris::Player::Stop>();
+   d->object->uninstall_method_handler<mpris::Player::Play>();
+   d->object->uninstall_method_handler<mpris::Player::PlayPause>();
+   d->object->uninstall_method_handler<mpris::Player::Seek>();
+   d->object->uninstall_method_handler<mpris::Player::SetPosition>();
+   d->object->uninstall_method_handler<mpris::Player::OpenUri>();
+   d->object->uninstall_method_handler<mpris::Player::CreateVideoSink>();
+   d->object->uninstall_method_handler<mpris::Player::Key>();
 }
 
 const core::Property<bool>& media::PlayerSkeleton::can_play() const
@@ -453,6 +475,11 @@ const core::Property<media::Player::AudioStreamRole>& media::PlayerSkeleton::aud
     return *d->skeleton.properties.audio_stream_role;
 }
 
+const core::Property<media::Player::Orientation>& media::PlayerSkeleton::orientation() const
+{
+    return *d->skeleton.properties.orientation;
+}
+
 const core::Property<media::Player::Lifetime>& media::PlayerSkeleton::lifetime() const
 {
     return *d->skeleton.properties.lifetime;
@@ -503,6 +530,11 @@ core::Property<media::Player::AudioStreamRole>& media::PlayerSkeleton::audio_str
     return *d->skeleton.properties.audio_stream_role;
 }
 
+core::Property<media::Player::Orientation>& media::PlayerSkeleton::orientation()
+{
+    return *d->skeleton.properties.orientation;
+}
+
 core::Property<media::Player::Lifetime>& media::PlayerSkeleton::lifetime()
 {
     return *d->skeleton.properties.lifetime;
@@ -548,7 +580,6 @@ core::Property<bool>& media::PlayerSkeleton::is_audio_source()
     return *d->skeleton.properties.is_audio_source;
 }
 
-
 core::Property<media::Track::MetaData>& media::PlayerSkeleton::meta_data_for_current_track()
 {
     return *d->skeleton.properties.typed_meta_data_for_current_track;
@@ -587,4 +618,14 @@ core::Signal<void>& media::PlayerSkeleton::end_of_stream()
 core::Signal<media::Player::PlaybackStatus>& media::PlayerSkeleton::playback_status_changed()
 {
     return d->signals.playback_status_changed;
+}
+
+const core::Signal<uint64_t>& media::PlayerSkeleton::video_dimension_changed() const
+{
+    return d->signals.video_dimension_changed;
+}
+
+core::Signal<uint64_t>& media::PlayerSkeleton::video_dimension_changed()
+{
+    return d->signals.video_dimension_changed;
 }

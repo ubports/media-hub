@@ -39,10 +39,20 @@ media::ServiceStub::ServiceStub()
             dbus::types::ObjectPath(
                 dbus::traits::Service<media::Service>::object_path()))})
 {
+    auto bus = the_session_bus();
+    worker = std::move(std::thread([bus]()
+    {
+        bus->run();
+    }));
 }
 
 media::ServiceStub::~ServiceStub()
 {
+    auto bus = the_session_bus();
+    bus->stop();
+
+    if (worker.joinable())
+        worker.join();
 }
 
 std::shared_ptr<media::Player> media::ServiceStub::create_session(const media::Player::Configuration&)

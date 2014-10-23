@@ -24,6 +24,7 @@ find_package(Boost COMPONENTS filesystem system program_options REQUIRED)
 find_package(GLog)
 pkg_check_modules(DBUS dbus-1 REQUIRED)
 pkg_check_modules(DBUS_CPP dbus-cpp REQUIRED)
+pkg_check_modules(PROCESS_CPP process-cpp REQUIRED)
 pkg_check_modules(PROPERTIES_CPP properties-cpp REQUIRED)
 pkg_check_modules(PROCESS_CPP process-cpp REQUIRED)
 pkg_check_modules(GIO gio-2.0 REQUIRED)
@@ -54,6 +55,7 @@ include_directories(
   ${DBUS_INCLUDE_DIRS}
   ${DBUS_CPP_INCLUDE_DIRS}
   ${GLog_INCLUDE_DIR}
+  ${PROCESS_CPP_INCLUDE_DIRS}
   ${PROPERTIES_CPP_INCLUDE_DIRS}
 
   include/

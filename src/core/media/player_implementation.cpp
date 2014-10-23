@@ -297,7 +297,7 @@ media::PlayerImplementation::PlayerImplementation(
             service,
             key))
 {
-    // Initializing default values for properties
+    // Initialize default values for Player interface properties
     can_play().set(true);
     can_pause().set(true);
     can_seek().set(true);
@@ -313,6 +313,7 @@ media::PlayerImplementation::PlayerImplementation(
     duration().set(0);
     audio_stream_role().set(Player::AudioStreamRole::multimedia);
     d->engine->audio_stream_role().set(Player::AudioStreamRole::multimedia);
+    orientation().set(Player::Orientation::rotate0);
     lifetime().set(Player::Lifetime::normal);
     d->engine->lifetime().set(Player::Lifetime::normal);
 
@@ -349,6 +350,13 @@ media::PlayerImplementation::PlayerImplementation(
     audio_stream_role().changed().connect([this](media::Player::AudioStreamRole new_role)
     {
         d->engine->audio_stream_role().set(new_role);
+    });
+
+    // When the value of the orientation Property is changed in the Engine by playbin,
+    // update the Player's cached value
+    d->engine->orientation().changed().connect([this](const Player::Orientation& o)
+    {
+        orientation().set(o);
     });
 
     lifetime().changed().connect([this](media::Player::Lifetime lifetime)
@@ -389,10 +397,44 @@ media::PlayerImplementation::PlayerImplementation(
     {
         playback_status_changed()(status);
     });
+
+    d->engine->video_dimension_changed_signal().connect([this](uint32_t height, uint32_t width)
+    {
+        uint64_t mask = 0;
+        // Left most 32 bits are for height, right most 32 bits are for width
+        mask = (static_cast<uint64_t>(height) << 32) | static_cast<uint64_t>(width);
+        video_dimension_changed()(mask);
+    });
 }
 
 media::PlayerImplementation::~PlayerImplementation()
 {
+    // Install null getters as these properties may be destroyed
+    // after the engine has been destroyed since they are owned by the
+    // base class.
+    std::function<uint64_t()> position_getter = [this]()
+    {
+        return static_cast<uint64_t>(0);
+    };
+    position().install(position_getter);
+
+    std::function<uint64_t()> duration_getter = [this]()
+    {
+        return static_cast<uint64_t>(0);
+    };
+    duration().install(duration_getter);
+
+    std::function<bool()> video_type_getter = [this]()
+    {
+        return false;
+    };
+    is_video_source().install(video_type_getter);
+
+    std::function<bool()> audio_type_getter = [this]()
+    {
+        return false;
+    };
+    is_audio_source().install(audio_type_getter);
 }
 
 std::shared_ptr<media::TrackList> media::PlayerImplementation::track_list()

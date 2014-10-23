@@ -38,6 +38,7 @@ target_link_libraries(
     ${DBUS_CPP_LDFLAGS}
     ${GLog_LIBRARY}
     ${PC_GSTREAMER_1_0_LIBRARIES}
+    ${PROCESS_CPP_LDFLAGS}
     ${GIO_LIBRARIES}
     ${PROCESS_CPP_LIBRARIES}
 

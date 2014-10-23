@@ -62,6 +62,7 @@ class PlayerSkeleton : public core::ubuntu::media::Player
     virtual const core::Property<int64_t>& position() const;
     virtual const core::Property<int64_t>& duration() const;
     virtual const core::Property<AudioStreamRole>& audio_stream_role() const;
+    virtual const core::Property<Orientation>& orientation() const;
     virtual const core::Property<Lifetime>& lifetime() const;
 
     virtual core::Property<LoopStatus>& loop_status();
@@ -74,6 +75,7 @@ class PlayerSkeleton : public core::ubuntu::media::Player
     virtual const core::Signal<int64_t>& seeked_to() const;
     virtual const core::Signal<void>& end_of_stream() const;
     virtual core::Signal<PlaybackStatus>& playback_status_changed();
+    virtual const core::Signal<uint64_t>& video_dimension_changed() const;
 
 protected:
     // All creation time arguments go here.
@@ -90,6 +92,8 @@ protected:
 
     PlayerSkeleton(const Configuration& configuration);
 
+    // These properties are not exposed to the client, but still need to be
+    // able to be settable from within the Player:
     virtual core::Property<PlaybackStatus>& playback_status();
     virtual core::Property<bool>& can_play();
     virtual core::Property<bool>& can_pause();
@@ -103,9 +107,11 @@ protected:
     virtual core::Property<PlaybackRate>& maximum_playback_rate();
     virtual core::Property<int64_t>& position();
     virtual core::Property<int64_t>& duration();
+    virtual core::Property<Orientation>& orientation();
 
     virtual core::Signal<int64_t>& seeked_to();
     virtual core::Signal<void>& end_of_stream();
+    virtual core::Signal<uint64_t>& video_dimension_changed();
 
   private:
     struct Private;

@@ -216,7 +216,7 @@ private:
         }
 
         gst_object_unref (sinkpad);
-    }    
+    }
 
     GstElement* pipe;
     GstElement* decoder;

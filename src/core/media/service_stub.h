@@ -47,6 +47,7 @@ class ServiceStub : public core::dbus::Stub<core::ubuntu::media::Service>
   private:
     struct Private;
     std::unique_ptr<Private> d;
+    std::thread worker;
 };
 }
 }
