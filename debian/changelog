@@ -1,3 +1,10 @@
+media-hub (2.0.0+14.10.20141030~rtm-0ubuntu1) 14.09; urgency=low
+
+  [ thomas-voss ]
+  * Bump build dependency. (LP: #1386803)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 30 Oct 2014 14:29:53 +0000
+
 media-hub (2.0.0+14.10.20141024~rtm-0ubuntu1) 14.09; urgency=low
 
   [ Alberto Aguirre ]
