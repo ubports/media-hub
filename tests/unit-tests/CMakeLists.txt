@@ -25,6 +25,7 @@ target_link_libraries(
 
     media-hub-common
     media-hub-client
+    call-monitor
     media-hub-test-framework
 
     ${CMAKE_THREAD_LIBS_INIT}
