@@ -120,12 +120,12 @@ private Q_SLOTS:
 
     void offHook()
     {
-        cb(true);
+        cb(false);
     }
 
     void onHook()
     {
-        cb(false);
+        cb(true);
     }
 
 private:

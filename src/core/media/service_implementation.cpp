@@ -76,7 +76,6 @@ struct media::ServiceImplementation::Private
     std::shared_ptr<core::dbus::Property<core::IndicatorPower::PowerLevel>> power_level;
     std::shared_ptr<core::dbus::Property<core::IndicatorPower::IsWarning>> is_warning;
     std::unique_ptr<CallMonitor> call_monitor;
-//    CallMonitor *  call_monitor;
     std::list<media::Player::PlayerKey> paused_sessions;
 };
 
@@ -103,10 +102,10 @@ media::ServiceImplementation::ServiceImplementation() : d(new Private())
     d->call_monitor->on_change([this](CallMonitor::State state) {
         switch (state) {
         case CallMonitor::OffHook:
-            resume_paused_multimedia_sessions();
+            pause_all_multimedia_sessions();
             break;
         case CallMonitor::OnHook:
-            pause_all_multimedia_sessions();
+            resume_paused_multimedia_sessions();
             break;
         }
     });
