@@ -27,6 +27,7 @@
 #include <TelepathyQt/PendingAccount>
 
 #include <list>
+#include <mutex>
 #include <syslog.h>
 
 
@@ -40,6 +41,8 @@ public:
         mCallObserver(Tp::SimpleCallObserver::create(mAccount)) {
         connect(mCallObserver.data(), SIGNAL(callStarted(Tp::CallChannelPtr)), SIGNAL(offHook()));
         connect(mCallObserver.data(), SIGNAL(callEnded(Tp::CallChannelPtr,QString,QString)), SIGNAL(onHook()));
+        connect(mCallObserver.data(), SIGNAL(streamedMediaCallStarted(Tp::StreamedMediaChannelPtr)), SIGNAL(offHook()));
+        connect(mCallObserver.data(), SIGNAL(streamedMediaCallEnded(Tp::StreamedMediaChannelPtr,QString,QString)), SIGNAL(onHook()));
     }
 
 Q_SIGNALS:
@@ -56,9 +59,8 @@ class TelepathyBridge : public QObject
 {
     Q_OBJECT
 public:
-    TelepathyBridge(const std::function<void (bool)>& callback):
-        QObject(0),
-        cb(callback) {
+    TelepathyBridge():
+        QObject(0) {
         Tp::registerTypes();
 
         QTimer::singleShot(0, this, SLOT(accountManagerSetup()));
@@ -70,6 +72,11 @@ public:
             ++it) {
             delete *it;
         }
+    }
+
+    void on_change(const std::function<void(CallMonitor::State)>& func) {
+        std::lock_guard<std::mutex> l(cb_lock);
+        cb = func;
     }
 
 private Q_SLOTS:
@@ -115,21 +122,26 @@ private Q_SLOTS:
             return;
         }
 
-        checkAndAddAccount(Tp::AccountPtr::qObjectCast(pendingReady->proxy())); // BAS
+        checkAndAddAccount(Tp::AccountPtr::qObjectCast(pendingReady->proxy()));
     }
 
     void offHook()
     {
-        cb(false);
+        std::lock_guard<std::mutex> l(cb_lock);
+        if (cb)
+            cb(CallMonitor::OffHook);
     }
 
     void onHook()
     {
-        cb(true);
+        std::lock_guard<std::mutex> l(cb_lock);
+        if (cb)
+            cb(CallMonitor::OnHook);
     }
 
 private:
-    std::function<void (bool)>   cb;
+    std::mutex cb_lock;
+    std::function<void (CallMonitor::State)>   cb;
     Tp::AccountManagerPtr mAccountManager;
     std::list<TelepathyCallMonitor*> mCallMonitors;
 
@@ -156,14 +168,7 @@ public:
             std::thread([this]() {
                 qt::core::world::build_and_run(0, nullptr, [this]() {
                     qt::core::world::enter_with_task([this]() {
-                        auto callback = new TelepathyBridge([this](bool on_hook) {
-                                             if (on_hook) {
-                                                 cb_func(CallMonitor::OnHook);
-                                             } else {
-                                                cb_func(CallMonitor::OffHook);
-                                             }
-                                         });
-                        (void)callback;
+                        mBridge = new TelepathyBridge();
                     });
                 });
             }).detach();
@@ -178,7 +183,7 @@ public:
         qt::core::world::destroy();
     }
 
-    std::function<void(CallMonitor::State)>   cb_func;
+    TelepathyBridge *mBridge;
 };
 
 
@@ -189,12 +194,13 @@ CallMonitor::CallMonitor():
 
 CallMonitor::~CallMonitor()
 {
+    delete d->mBridge;
     delete d;
 }
 
 void CallMonitor::on_change(const std::function<void(CallMonitor::State)>& func)
 {
-    d->cb_func = func;
+    d->mBridge->on_change(func);
 }
 
 #include "call_monitor.moc"
