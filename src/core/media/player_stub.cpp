@@ -193,13 +193,13 @@ struct media::PlayerStub::Private
               playback_status_changed(),
               video_dimension_changed()
         {
-            dbus.seeked_to->connect([this](std::uint64_t value)
+            dbus.seeked_to_connection = dbus.seeked_to->connect([this](std::uint64_t value)
             {
                 std::cout << "seeked_to signal arrived via the bus." << std::endl;
                 seeked_to(value);
             });
 
-            dbus.end_of_stream->connect([this]()
+            dbus.end_of_stream_connection = dbus.end_of_stream->connect([this]()
             {
                 std::cout << "EndOfStream signal arrived via the bus." << std::endl;
                 if (playback_complete_cb)
@@ -207,25 +207,37 @@ struct media::PlayerStub::Private
                 end_of_stream();
             });
 
-            dbus.playback_status_changed->connect([this](const media::Player::PlaybackStatus& status)
+            dbus.playback_status_changed_connection = dbus.playback_status_changed->connect([this](const media::Player::PlaybackStatus& status)
             {
                 std::cout << "PlaybackStatusChanged signal arrived via the bus." << std::endl;
                 playback_status_changed(status);
             });
 
-            dbus.video_dimension_changed->connect([this](uint64_t mask)
+            dbus.video_dimension_changed_connection = dbus.video_dimension_changed->connect([this](uint64_t mask)
             {
                 std::cout << "VideoDimensionChanged signal arrived via the bus." << std::endl;
                 video_dimension_changed(mask);
             });
         }
 
+        ~Signals()
+        {
+            dbus.seeked_to->disconnect(dbus.seeked_to_connection);
+            dbus.end_of_stream->disconnect(dbus.end_of_stream_connection);
+            dbus.playback_status_changed->disconnect(dbus.playback_status_changed_connection);
+            dbus.video_dimension_changed->disconnect(dbus.video_dimension_changed_connection);
+        }
+
         struct DBus
         {
             std::shared_ptr<DBusSeekedToSignal> seeked_to;
+            DBusSeekedToSignal::SubscriptionToken seeked_to_connection;
             std::shared_ptr<DBusEndOfStreamSignal> end_of_stream;
+            DBusEndOfStreamSignal::SubscriptionToken end_of_stream_connection;
             std::shared_ptr<DBusPlaybackStatusChangedSignal> playback_status_changed;
+            DBusPlaybackStatusChangedSignal::SubscriptionToken playback_status_changed_connection;
             std::shared_ptr<DBusVideoDimensionChangedSignal> video_dimension_changed;
+            DBusVideoDimensionChangedSignal::SubscriptionToken video_dimension_changed_connection;
         } dbus;
 
         void set_playback_complete_cb(PlaybackCompleteCb cb, void *context)
