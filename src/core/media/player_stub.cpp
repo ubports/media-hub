@@ -181,9 +181,9 @@ struct media::PlayerStub::Private
                 const std::shared_ptr<DBusVideoDimensionChangedSignal>& d)
             : dbus
               {
-                  seeked, {}
-                  eos, {}
-                  status, {}
+                  seeked, {},
+                  eos, {},
+                  status, {},
                   d, {}
               },
               playback_complete_cb(nullptr),
