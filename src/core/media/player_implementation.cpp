@@ -24,6 +24,7 @@
 #include "engine.h"
 #include "track_list_implementation.h"
 
+#include <hybris/media/media_codec_layer.h>
 #include "powerd_service.h"
 #include "unity_screen_service.h"
 #include "gstreamer/engine.h"
@@ -79,6 +80,8 @@ struct media::PlayerImplementation::Private :
 
         auto uscreen_stub_service = dbus::Service::use_service(bus, dbus::traits::Service<core::UScreen>::interface_name());
         uscreen_session = uscreen_stub_service->object_for_path(dbus::types::ObjectPath("/com/canonical/Unity/Screen"));
+
+        decoding_service_set_client_death_cb(&Private::on_client_died_cb, key, static_cast<void*>(this));
     }
 
     ~Private()
@@ -256,6 +259,20 @@ struct media::PlayerImplementation::Private :
             if (auto self = weak_self.lock())
                 self->clear_wakelock(wakelock_type);
         };
+    }
+
+    static void on_client_died_cb(void *context)
+    {
+        if (context)
+        {
+            Private *p = static_cast<Private*>(context);
+            p->on_client_died();
+        }
+    }
+
+    void on_client_died()
+    {
+        engine->reset();
     }
 
     PlayerImplementation* parent;

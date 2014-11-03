@@ -21,6 +21,6 @@
 
 #define UNUSED __attribute__((unused))
 
-void decoding_service_set_client_death_cb(UNUSED DecodingClientDeathCbHybris callback, UNUSED void *context)
+void decoding_service_set_client_death_cb(UNUSED DecodingClientDeathCbHybris callback, UNUSED uint32_t handle, UNUSED void *context)
 {
 }

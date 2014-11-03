@@ -51,7 +51,7 @@ struct media::PlayerStub::Private
                 texture_id(0),
                 igbc_wrapper(nullptr),
                 glc_wrapper(nullptr),
-                decoding_session(decoding_service_create_session()),
+                decoding_session(nullptr),
                 frame_available_cb(nullptr),
                 frame_available_context(nullptr),
                 object(object),
@@ -87,6 +87,8 @@ struct media::PlayerStub::Private
                     object->get_signal<mpris::Player::Signals::VideoDimensionChanged>()
                 }
     {
+        auto op = object->invoke_method_synchronously<mpris::Player::Key, media::Player::PlayerKey>();
+        decoding_session = decoding_service_create_session(op.value());
     }
 
     ~Private()

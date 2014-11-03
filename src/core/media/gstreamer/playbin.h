@@ -22,8 +22,8 @@
 #include "bus.h"
 #include "../mpris/player.h"
 
-#include <hybris/media/media_codec_layer.h>
 #include <hybris/media/surface_texture_client_hybris.h>
+#include <hybris/media/media_codec_layer.h>
 
 #include <gio/gio.h>
 #include <gst/gst.h>
@@ -98,9 +98,6 @@ struct Playbin
                     G_CALLBACK(about_to_finish),
                     this
                     );
-
-        // When a client of media-hub dies, call on_client_died
-        decoding_service_set_client_death_cb(&Playbin::on_client_died_cb, static_cast<void*>(this));
     }
 
     ~Playbin()
@@ -109,16 +106,7 @@ struct Playbin
             gst_object_unref(pipeline);
     }
 
-    static void on_client_died_cb(void *context)
-    {
-        if (context)
-        {
-            Playbin *pb = static_cast<Playbin*>(context);
-            pb->on_client_died();
-        }
-    }
-
-    void on_client_died()
+    void reset()
     {
         std::cout << "Client died, resetting pipeline" << std::endl;
         // When the client dies, tear down the current pipeline and get it
