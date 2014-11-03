@@ -181,10 +181,10 @@ struct media::PlayerStub::Private
                 const std::shared_ptr<DBusVideoDimensionChangedSignal>& d)
             : dbus
               {
-                  seeked,
-                  eos,
-                  status,
-                  d
+                  seeked, {}
+                  eos, {}
+                  status, {}
+                  d, {}
               },
               playback_complete_cb(nullptr),
               playback_complete_context(nullptr),
