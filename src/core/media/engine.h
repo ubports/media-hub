@@ -95,6 +95,8 @@ public:
     virtual const core::Property<core::ubuntu::media::Player::AudioStreamRole>& audio_stream_role() const = 0;
     virtual core::Property<core::ubuntu::media::Player::AudioStreamRole>& audio_stream_role() = 0;
 
+    virtual const core::Property<core::ubuntu::media::Player::Orientation>& orientation() const = 0;
+
     virtual const core::Property<std::tuple<Track::UriType, Track::MetaData>>& track_meta_data() const = 0;
 
     virtual const core::Signal<void>& about_to_finish_signal() const = 0;
@@ -102,6 +104,7 @@ public:
     virtual const core::Signal<void>& client_disconnected_signal() const = 0;
     virtual const core::Signal<void>& end_of_stream_signal() const = 0;
     virtual const core::Signal<core::ubuntu::media::Player::PlaybackStatus>& playback_status_changed_signal() const = 0;
+    virtual const core::Signal<uint32_t, uint32_t>& video_dimension_changed_signal() const = 0;
 };
 }
 }

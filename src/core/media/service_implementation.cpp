@@ -31,6 +31,10 @@
 #include <memory>
 #include <thread>
 
+#include "util/timeout.h"
+#include "unity_screen_service.h"
+#include <hybris/media/media_recorder_layer.h>
+
 namespace media = core::ubuntu::media;
 
 using namespace std;
@@ -40,6 +44,7 @@ struct media::ServiceImplementation::Private
     Private()
         : resume_key(std::numeric_limits<std::uint32_t>::max()),
           keep_alive(io_service),
+          disp_cookie(0),
           call_monitor(new CallMonitor)
     {
         bus = std::shared_ptr<dbus::Bus>(new dbus::Bus(core::dbus::WellKnownBus::session));
@@ -55,6 +60,16 @@ struct media::ServiceImplementation::Private
         indicator_power_session = stub_service->object_for_path(dbus::types::ObjectPath("/com/canonical/indicator/power/Battery"));
         power_level = indicator_power_session->get_property<core::IndicatorPower::PowerLevel>();
         is_warning = indicator_power_session->get_property<core::IndicatorPower::IsWarning>();
+
+        // Obtain session with Unity.Screen so that we request state when doing recording
+        auto bus = std::shared_ptr<dbus::Bus>(new dbus::Bus(core::dbus::WellKnownBus::system));
+        bus->install_executor(dbus::asio::make_executor(bus));
+
+        auto uscreen_stub_service = dbus::Service::use_service(bus, dbus::traits::Service<core::UScreen>::interface_name());
+        uscreen_session = uscreen_stub_service->object_for_path(dbus::types::ObjectPath("/com/canonical/Unity/Screen"));
+
+        observer = android_media_recorder_observer_new();
+        android_media_recorder_observer_set_cb(observer, &Private::media_recording_started_callback, this);
     }
 
     ~Private()
@@ -63,6 +78,42 @@ struct media::ServiceImplementation::Private
 
         if (worker.joinable())
             worker.join();
+    }
+
+    void media_recording_started(bool started)
+    {
+        if (uscreen_session == nullptr)
+            return;
+
+        if (started)
+        {
+            if (disp_cookie > 0)
+                return;
+
+            auto result = uscreen_session->invoke_method_synchronously<core::UScreen::keepDisplayOn, int>();
+            if (result.is_error())
+                throw std::runtime_error(result.error().print());
+            disp_cookie = result.value();
+        }
+        else
+        {
+            if (disp_cookie != -1)
+            {
+                timeout(4000, true, [this](){
+                    this->uscreen_session->invoke_method_synchronously<core::UScreen::removeDisplayOnRequest, void>(this->disp_cookie);
+                    this->disp_cookie = -1;
+                });
+            }
+        }
+    }
+
+    static void media_recording_started_callback(bool started, void *context)
+    {
+        if (context == nullptr)
+            return;
+
+        auto p = static_cast<Private*>(context);
+        p->media_recording_started(started);
     }
 
     // This holds the key of the multimedia role Player instance that was paused
@@ -75,6 +126,9 @@ struct media::ServiceImplementation::Private
     std::shared_ptr<dbus::Object> indicator_power_session;
     std::shared_ptr<core::dbus::Property<core::IndicatorPower::PowerLevel>> power_level;
     std::shared_ptr<core::dbus::Property<core::IndicatorPower::IsWarning>> is_warning;
+    int disp_cookie;
+    std::shared_ptr<dbus::Object> uscreen_session;
+    MediaRecorderObserver *observer;
     std::unique_ptr<CallMonitor> call_monitor;
     std::list<media::Player::PlayerKey> paused_sessions;
 };

@@ -1,3 +1,71 @@
+media-hub (2.0.0+14.10.20141030~rtm-0ubuntu1) 14.09; urgency=low
+
+  [ thomas-voss ]
+  * Bump build dependency. (LP: #1386803)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 30 Oct 2014 14:29:53 +0000
+
+media-hub (2.0.0+14.10.20141024~rtm-0ubuntu1) 14.09; urgency=low
+
+  [ Alberto Aguirre ]
+  * No change, package rebuild
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 24 Oct 2014 13:04:48 +0000
+
+media-hub (2.0.0+14.10.20141020-0ubuntu1) utopic; urgency=low
+
+  [ Alberto Aguirre ]
+  * Move worker thread from player stub to service stub.
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Mon, 20 Oct 2014 13:47:46 +0000
+
+media-hub (2.0.0+14.10.20141016-0ubuntu1) 14.09; urgency=low
+
+  [ Jim Hodapp ]
+  * Add an Orientation property which will indicate how the video should
+    be rotated for playback vs how it was recorded. Get the video frame
+    height/width from mirsink and pass it to the media-hub client via a
+    Signal. (LP: #1191934)
+
+  [ Ubuntu daily release ]
+  * New rebuild forced
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 16 Oct 2014 20:02:01 +0000
+
+media-hub (2.0.0+14.10.20141015.1-0ubuntu1) 14.09; urgency=low
+
+  [ Ubuntu daily release ]
+  * New rebuild forced
+
+  [ Ricardo Mendoza ]
+  * Make use of MediaRecorderObserver interface from hybris to register
+    as listeners for recording operations, so that we can then decide
+    whether to hold a screen lock or not. (LP: #1362658)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Wed, 15 Oct 2014 21:15:45 +0000
+
+media-hub (2.0.0+14.10.20141015-0ubuntu1) 14.09; urgency=low
+
+  [ Jamie Strandboge ]
+  * debian/usr.bin.media-hub-server: update for recent denials: allow
+    read access to /etc/udev/udev.conf (LP: #1356883). add video
+    abstraction. silence access to /run/udev/data/** like we do
+    elsewhere. allow read on /dev/video*. allow read on
+    /sys/devices/**/video4linux/video**. allow read on
+    /sys/devices/**/video4linux/**/uevent (LP: #1356883)
+  * debian/usr.bin.media-hub-server: allow reads on custom sounds (LP:
+    #1377966) (LP: #1377966)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Wed, 15 Oct 2014 17:45:58 +0000
+
+media-hub (2.0.0+14.10.20141014-0ubuntu1) utopic; urgency=low
+
+  [ thomas-voss ]
+  * Only expose the service as MPRIS instance if explicitly requested
+    via env variable. (LP: #1381069)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Tue, 14 Oct 2014 17:37:41 +0000
+
 media-hub (2.0.0+14.10.20141010-0ubuntu1) utopic; urgency=low
 
   [ Alberto Aguirre ]

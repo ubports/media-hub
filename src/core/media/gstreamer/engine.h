@@ -53,6 +53,8 @@ public:
     const core::Property<core::ubuntu::media::Player::AudioStreamRole>& audio_stream_role() const;
     core::Property<core::ubuntu::media::Player::AudioStreamRole>& audio_stream_role();
 
+    const core::Property<core::ubuntu::media::Player::Orientation>& orientation() const;
+
     const core::Property<std::tuple<core::ubuntu::media::Track::UriType, core::ubuntu::media::Track::MetaData>>& track_meta_data() const;
 
     const core::Signal<void>& about_to_finish_signal() const;
@@ -60,6 +62,7 @@ public:
     const core::Signal<void>& client_disconnected_signal() const;
     const core::Signal<void>& end_of_stream_signal() const;
     const core::Signal<core::ubuntu::media::Player::PlaybackStatus>& playback_status_changed_signal() const;
+    const core::Signal<uint32_t, uint32_t>& video_dimension_changed_signal() const;
 
 private:
     struct Private;

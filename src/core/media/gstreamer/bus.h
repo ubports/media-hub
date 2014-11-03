@@ -93,7 +93,7 @@ public:
                             &detail.tag.tag_list);
                 cleanup = [this]()
                 {
-                    gst_tag_list_free(detail.tag.tag_list);
+                    gst_tag_list_unref(detail.tag.tag_list);
                 };
                 break;
             case GST_MESSAGE_BUFFERING:

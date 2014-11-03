@@ -297,7 +297,7 @@ media::PlayerImplementation::PlayerImplementation(
             service,
             key))
 {
-    // Initializing default values for properties
+    // Initialize default values for Player interface properties
     can_play().set(true);
     can_pause().set(true);
     can_seek().set(true);
@@ -313,6 +313,7 @@ media::PlayerImplementation::PlayerImplementation(
     duration().set(0);
     audio_stream_role().set(Player::AudioStreamRole::multimedia);
     d->engine->audio_stream_role().set(Player::AudioStreamRole::multimedia);
+    orientation().set(Player::Orientation::rotate0);
 
     // Make sure that the Position property gets updated from the Engine
     // every time the client requests position
@@ -349,6 +350,13 @@ media::PlayerImplementation::PlayerImplementation(
         d->engine->audio_stream_role().set(new_role);
     });
 
+    // When the value of the orientation Property is changed in the Engine by playbin,
+    // update the Player's cached value
+    d->engine->orientation().changed().connect([this](const Player::Orientation& o)
+    {
+        orientation().set(o);
+    });
+
     d->engine->about_to_finish_signal().connect([this]()
     {
         if (d->track_list->has_next())
@@ -381,6 +389,14 @@ media::PlayerImplementation::PlayerImplementation(
     d->engine->playback_status_changed_signal().connect([this](const Player::PlaybackStatus& status)
     {
         playback_status_changed()(status);
+    });
+
+    d->engine->video_dimension_changed_signal().connect([this](uint32_t height, uint32_t width)
+    {
+        uint64_t mask = 0;
+        // Left most 32 bits are for height, right most 32 bits are for width
+        mask = (static_cast<uint64_t>(height) << 32) | static_cast<uint64_t>(width);
+        video_dimension_changed()(mask);
     });
 }
 
