@@ -28,7 +28,6 @@
 
 #include <list>
 #include <mutex>
-#include <syslog.h>
 
 
 namespace {
