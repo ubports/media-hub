@@ -383,3 +383,8 @@ const core::Signal<uint32_t, uint32_t>& gstreamer::Engine::video_dimension_chang
 {
     return d->video_dimension_changed;
 }
+
+void gstreamer::Engine::reset()
+{
+    d->playbin.reset();
+}
