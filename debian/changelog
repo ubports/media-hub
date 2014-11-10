@@ -1,3 +1,11 @@
+media-hub (2.0.0+15.04.20141110.1-0ubuntu1) vivid; urgency=low
+
+  [ thomas-voss ]
+  * Bump build dependency on dbus-cpp to pull in exception safe dtor.
+    (LP: #1390618)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Mon, 10 Nov 2014 11:53:11 +0000
+
 media-hub (2.0.0+15.04.20141105.1-0ubuntu1) vivid; urgency=low
 
   [ Ricardo Mendoza ]
