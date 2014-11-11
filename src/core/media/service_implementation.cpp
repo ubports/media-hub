@@ -178,6 +178,15 @@ struct media::ServiceImplementation::Private
         return ret;
     }
 
+    void pause_playback_if_necessary()
+    {
+        if (!headphones_connected && !a2dp_connected)
+        {
+            std::cout << "Signaling to pause all multimedia playback" << std::endl;
+            pause_playback();
+        }
+    }
+
     void update_device_states(uint32_t idx)
     {
         const pa_operation *o = pa_context_get_card_info_by_index(pulse_context, idx,
@@ -192,6 +201,7 @@ struct media::ServiceImplementation::Private
                     Private *p = reinterpret_cast<Private*>(userdata);
                     std::cout << "Getting card info from the context (cb)" << std::endl;
                     std::cout << "name: " << info->name << std::endl;
+                    // Check to see if headphones have been connected/disconnected
                     if (p->is_port_available(info->ports, info->n_ports, "output-wired_headphone"))
                     {
                         std::cout << "Wired headphones detected" << std::endl;
@@ -201,8 +211,10 @@ struct media::ServiceImplementation::Private
                     {
                         std::cout << "Wired headphones disconnected" << std::endl;
                         p->headphones_connected = false;
+                        p->pause_playback_if_necessary();
                     }
 
+                    // Check to see if an A2DP headset has been connected/disconnected
                     if (p->is_port_available(info->ports, info->n_ports, "headset-output"))
                     {
                         std::cout << "A2DP headset detected" << std::endl;
@@ -212,6 +224,7 @@ struct media::ServiceImplementation::Private
                     {
                         std::cout << "A2DP headset disconnected" << std::endl;
                         p->a2dp_connected = false;
+                        p->pause_playback_if_necessary();
                     }
                 }, this);
         (void) o;
@@ -366,9 +379,9 @@ struct media::ServiceImplementation::Private
     pa_mainloop_api *pulse_mainloop_api;
     pa_threaded_mainloop *pulse_mainloop;
     pa_context *pulse_context;
-    // Gets signaled when the headphone jack is removed or an A2DP device is
-    // disconnected
-    core::Signal<OutputDevice> output_device_disconnected;
+    // Gets signaled when both the headphone jack is removed or an A2DP device is
+    // disconnected and playback needs pausing
+    core::Signal<void> pause_playback;
     bool headphones_connected;
     bool a2dp_connected;
 };
@@ -391,6 +404,13 @@ media::ServiceImplementation::ServiceImplementation() : d(new Private())
             resume_multimedia_session();
     });
 
+    d->pause_playback.connect([this]()
+    {
+        std::cout << "Got pause_playback signal, pausing all multimedia sessions" << std::endl;
+        pause_all_multimedia_sessions();
+    });
+
+#if 0
     d->output_device_disconnected.connect([this](const Private::OutputDevice &device)
     {
         switch (device)
@@ -405,6 +425,7 @@ media::ServiceImplementation::ServiceImplementation() : d(new Private())
             std::cerr << "Unknown output device" << std::endl;
         };
     });
+#endif
 }
 
 media::ServiceImplementation::~ServiceImplementation()
