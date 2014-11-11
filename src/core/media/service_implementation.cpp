@@ -44,12 +44,20 @@ using namespace std;
 
 struct media::ServiceImplementation::Private
 {
+    enum class OutputDevice
+    {
+        HEADPHONE,
+        A2DP
+    };
+
     Private()
         : resume_key(std::numeric_limits<std::uint32_t>::max()),
           keep_alive(io_service),
           disp_cookie(0),
           pulse_mainloop_api(nullptr),
-          pulse_context(nullptr)
+          pulse_context(nullptr),
+          headphones_connected(false),
+          a2dp_connected(false)
     {
         bus = std::shared_ptr<dbus::Bus>(new dbus::Bus(core::dbus::WellKnownBus::session));
         bus->install_executor(dbus::asio::make_executor(bus, io_service));
@@ -149,25 +157,66 @@ struct media::ServiceImplementation::Private
         return pulse_mainloop;
     }
 
-#if 0
-    static void context_state_cb_init(pa_context *context, void *userdata)
+    bool is_port_available(pa_card_port_info **ports, uint32_t n_ports, const char *name)
     {
-        Private *p = reinterpret_cast<Private*>(userdata);
-        pa_threaded_mainloop_signal(p->main_loop(), 0);
-    }
-#endif
+        bool ret = false;
 
-    static void context_state_cb(pa_context *context, void *userdata)
-    {
-        (void) context;
-        (void) userdata;
+        if (ports != nullptr && n_ports > 0 && name != nullptr)
+        {
+            for (uint32_t i=0; i<n_ports; i++)
+            {
+                std::cout << "port name: " << ports[i]->name << std::endl;
+                std::cout << "port available? " << ((ports[i]->available == PA_PORT_AVAILABLE_YES) ? "yes" : "no") << std::endl;
+                if (strcmp(ports[i]->name, name) == 0 && ports[i]->available == PA_PORT_AVAILABLE_YES)
+                {
+                    ret = true;
+                    break;
+                }
+            }
+        }
+
+        return ret;
     }
 
-#if 0
-    static void subscribe_cb(pa_context *context, pa_subscription_event_type_t t, uint32_t idx, void *userdata)
+    void update_device_states(uint32_t idx)
     {
+        const pa_operation *o = pa_context_get_card_info_by_index(pulse_context, idx,
+                [](pa_context *context, const pa_card_info *info, int eol, void *userdata)
+                {
+                    (void) context;
+                    (void) eol;
+
+                    if (info == nullptr || userdata == nullptr)
+                        return;
+
+                    Private *p = reinterpret_cast<Private*>(userdata);
+                    (void) p;
+                    std::cout << "Getting card info from the context (cb)" << std::endl;
+                    std::cout << "name: " << info->name << std::endl;
+                    if (p->is_port_available(info->ports, info->n_ports, "output-wired_headphone"))
+                    {
+                        std::cout << "Wired headphones detected" << std::endl;
+                        p->headphones_connected = true;
+                    }
+                    else if (p->headphones_connected == true)
+                    {
+                        std::cout << "Wired headphones disconnected" << std::endl;
+                        p->headphones_connected = false;
+                    }
+
+                    if (p->is_port_available(info->ports, info->n_ports, "headset-output"))
+                    {
+                        std::cout << "A2DP headset detected" << std::endl;
+                        p->a2dp_connected = true;
+                    }
+                    else if (p->a2dp_connected == true)
+                    {
+                        std::cout << "WS2DP headset disconnected" << std::endl;
+                        p->a2dp_connected = false;
+                    }
+                }, this);
+        (void) o;
     }
-#endif
 
     void create_pulse_context()
     {
@@ -239,15 +288,42 @@ struct media::ServiceImplementation::Private
 
         if (ok)
         {
-            pa_context_set_state_callback(pulse_context, context_state_cb, this);
+            pa_context_set_state_callback(pulse_context,
+                    [](pa_context *context, void *userdata)
+                    {
+                        (void) context;
+                        (void) userdata;
+                    }, this);
             pa_context_set_subscribe_callback(pulse_context,
                     [](pa_context *context, pa_subscription_event_type_t t, uint32_t idx, void *userdata)
                     {
                         (void) context;
-                        (void) t;
-                        (void) idx;
-                        (void) userdata;
+
+                        if (userdata == nullptr)
+                            return;
+
+                        Private *p = reinterpret_cast<Private*>(userdata);
                         std::cout << "subscribe_callback lambda" << std::endl;
+                        if ((t & PA_SUBSCRIPTION_EVENT_FACILITY_MASK) == PA_SUBSCRIPTION_EVENT_CARD)
+                        {
+                            std::cout << "Card event" << std::endl;
+                            if ((t & PA_SUBSCRIPTION_EVENT_TYPE_MASK) == PA_SUBSCRIPTION_EVENT_CHANGE)
+                            {
+                                p->update_device_states(idx);
+#if 0
+                                p->output_device_disconnected(device);
+                                std::cout << "Output event change" << std::endl;
+#endif
+                            }
+                            else if ((t & PA_SUBSCRIPTION_EVENT_TYPE_MASK) == PA_SUBSCRIPTION_EVENT_NEW)
+                            {
+                                std::cout << "Output event new" << std::endl;
+                            }
+                            else if ((t & PA_SUBSCRIPTION_EVENT_TYPE_MASK) == PA_SUBSCRIPTION_EVENT_REMOVE)
+                            {
+                                std::cout << "Output device removed" << std::endl;
+                            }
+                        }
                     }, this);
             pa_context_subscribe(pulse_context, PA_SUBSCRIPTION_MASK_CARD, nullptr, this);
         }
@@ -291,12 +367,15 @@ struct media::ServiceImplementation::Private
     pa_mainloop_api *pulse_mainloop_api;
     pa_threaded_mainloop *pulse_mainloop;
     pa_context *pulse_context;
+    // Gets signaled when the headphone jack is removed or an A2DP device is
+    // disconnected
+    core::Signal<OutputDevice> output_device_disconnected;
+    bool headphones_connected;
+    bool a2dp_connected;
 };
 
 media::ServiceImplementation::ServiceImplementation() : d(new Private())
 {
-    cout << __PRETTY_FUNCTION__ << endl;
-
     d->power_level->changed().connect([this](const core::IndicatorPower::PowerLevel::ValueType &level)
     {
         // When the battery level hits 10% or 5%, pause all multimedia sessions.
@@ -311,6 +390,21 @@ media::ServiceImplementation::ServiceImplementation() : d(new Private())
         // resume what the user was previously playing
         if (!notifying)
             resume_multimedia_session();
+    });
+
+    d->output_device_disconnected.connect([this](const Private::OutputDevice &device)
+    {
+        switch (device)
+        {
+        case Private::OutputDevice::HEADPHONE:
+            std::cout << "Headphone disconnected" << std::endl;
+            break;
+        case Private::OutputDevice::A2DP:
+            std::cout << "A2DP disconnected" << std::endl;
+            break;
+        default:
+            std::cerr << "Unknown output device" << std::endl;
+        };
     });
 }
 
