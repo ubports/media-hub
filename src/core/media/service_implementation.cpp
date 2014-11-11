@@ -190,7 +190,6 @@ struct media::ServiceImplementation::Private
                         return;
 
                     Private *p = reinterpret_cast<Private*>(userdata);
-                    (void) p;
                     std::cout << "Getting card info from the context (cb)" << std::endl;
                     std::cout << "name: " << info->name << std::endl;
                     if (p->is_port_available(info->ports, info->n_ports, "output-wired_headphone"))
@@ -211,7 +210,7 @@ struct media::ServiceImplementation::Private
                     }
                     else if (p->a2dp_connected == true)
                     {
-                        std::cout << "WS2DP headset disconnected" << std::endl;
+                        std::cout << "A2DP headset disconnected" << std::endl;
                         p->a2dp_connected = false;
                     }
                 }, this);
