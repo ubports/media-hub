@@ -51,7 +51,7 @@ struct media::PlayerStub::Private
                 texture_id(0),
                 igbc_wrapper(nullptr),
                 glc_wrapper(nullptr),
-                decoding_session(decoding_service_create_session()),
+                decoding_session(nullptr),
                 frame_available_cb(nullptr),
                 frame_available_context(nullptr),
                 object(object),
@@ -88,6 +88,8 @@ struct media::PlayerStub::Private
                     object->get_signal<mpris::Player::Signals::VideoDimensionChanged>()
                 }
     {
+        auto op = object->invoke_method_synchronously<mpris::Player::Key, media::Player::PlayerKey>();
+        decoding_session = decoding_service_create_session(op.value());
     }
 
     ~Private()
@@ -181,19 +183,19 @@ struct media::PlayerStub::Private
                 const std::shared_ptr<DBusEndOfStreamSignal>& eos,
                 const std::shared_ptr<DBusPlaybackStatusChangedSignal>& status,
                 const std::shared_ptr<DBusVideoDimensionChangedSignal>& d)
-            : dbus
+            : playback_complete_cb(nullptr),
+              playback_complete_context(nullptr),
+              seeked_to(),
+              end_of_stream(),
+              playback_status_changed(),
+              video_dimension_changed(),
+              dbus
               {
                   seeked,
                   eos,
                   status,
                   d
-              },
-              playback_complete_cb(nullptr),
-              playback_complete_context(nullptr),
-              seeked_to(),
-              end_of_stream(),
-              playback_status_changed(),
-              video_dimension_changed()
+              }
         {
             dbus.seeked_to->connect([this](std::uint64_t value)
             {
@@ -220,15 +222,7 @@ struct media::PlayerStub::Private
                 std::cout << "VideoDimensionChanged signal arrived via the bus." << std::endl;
                 video_dimension_changed(mask);
             });
-        }
-
-        struct DBus
-        {
-            std::shared_ptr<DBusSeekedToSignal> seeked_to;
-            std::shared_ptr<DBusEndOfStreamSignal> end_of_stream;
-            std::shared_ptr<DBusPlaybackStatusChangedSignal> playback_status_changed;
-            std::shared_ptr<DBusVideoDimensionChangedSignal> video_dimension_changed;
-        } dbus;
+        }       
 
         void set_playback_complete_cb(PlaybackCompleteCb cb, void *context)
         {
@@ -242,6 +236,14 @@ struct media::PlayerStub::Private
         core::Signal<void> end_of_stream;
         core::Signal<media::Player::PlaybackStatus> playback_status_changed;
         core::Signal<uint64_t> video_dimension_changed;
+
+        struct DBus
+        {
+            std::shared_ptr<DBusSeekedToSignal> seeked_to;
+            std::shared_ptr<DBusEndOfStreamSignal> end_of_stream;
+            std::shared_ptr<DBusPlaybackStatusChangedSignal> playback_status_changed;
+            std::shared_ptr<DBusVideoDimensionChangedSignal> video_dimension_changed;
+        } dbus;
     } signals;
 };
 
