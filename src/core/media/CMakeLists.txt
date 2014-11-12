@@ -8,6 +8,8 @@ set(symbol_map "${CMAKE_SOURCE_DIR}/symbols.map")
 
 file(GLOB MPRIS_HEADERS mpris/ *.h)
 
+add_subdirectory(call-monitor)
+
 add_library(
   media-hub-common SHARED
 
@@ -91,7 +93,7 @@ target_link_libraries(
   media-hub-service
 
   media-hub-common
-
+  call-monitor
   ${DBUS_LIBRARIES}
   ${DBUS_CPP_LDFLAGS}
   ${GLog_LIBRARY}
@@ -115,6 +117,7 @@ target_link_libraries(
 
   media-hub-service
   media-hub-client
+  call-monitor
 
   ${DBUS_LIBRARIES}
   ${DBUS_CPP_LDFLAGS}
