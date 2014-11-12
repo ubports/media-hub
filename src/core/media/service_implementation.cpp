@@ -51,6 +51,7 @@ struct media::ServiceImplementation::Private
           disp_cookie(0),
           pulse_mainloop_api(nullptr),
           pulse_context(nullptr),
+          active_idx(-1),
           headphones_connected(false),
           a2dp_connected(false)
     {
@@ -161,8 +162,8 @@ struct media::ServiceImplementation::Private
             for (uint32_t i=0; i<n_ports; i++)
             {
                 //std::cout << "port name: " << ports[i]->name << std::endl;
-                //std::cout << "port available? " << ((ports[i]->available == PA_PORT_AVAILABLE_YES) ? "yes" : "no") << std::endl;
-                if (strcmp(ports[i]->name, name) == 0 && ports[i]->available == PA_PORT_AVAILABLE_YES)
+                //std::cout << "port available? " << ((ports[i]->available != PA_PORT_AVAILABLE_NO) ? "yes" : "no") << std::endl;
+                if (strstr(ports[i]->name, name) != nullptr && ports[i]->available != PA_PORT_AVAILABLE_NO)
                 {
                     ret = true;
                     break;
@@ -173,13 +174,15 @@ struct media::ServiceImplementation::Private
         return ret;
     }
 
-    void pause_playback_if_necessary()
+    void pause_playback_if_necessary(uint32_t idx)
     {
-        if (not headphones_connected && not a2dp_connected)
-        {
-            std::cout << "Signaling to pause all multimedia playback" << std::endl;
-            pause_playback();
-        }
+        if (active_idx != (int) idx)
+            return;
+            
+        if (a2dp_connected and headphones_connected)
+            return;
+            
+        pause_playback();
     }
 
     void update_device_states(uint32_t idx)
@@ -196,35 +199,40 @@ struct media::ServiceImplementation::Private
                     Private *p = reinterpret_cast<Private*>(userdata);
                     std::cout << "Getting card info from the context (cb)" << std::endl;
                     std::cout << "name: " << info->name << std::endl;
-                    // Check to see if headphones have been connected/disconnected
+                    // TODO: Currently hardcoding card name, need to expand for desktop.
                     if (strcmp(info->name, "droid_card.primary") == 0)
                     {
-                        if (p->is_port_available(info->ports, info->n_ports, "output-wired_headphone"))
+                        if (p->is_port_available(info->ports, info->n_ports, "output-wired"))
                         {
                             std::cout << "Wired headphones detected" << std::endl;
+
+                            // Headphones only become active when there is no A2DP device present
+                            if (p->a2dp_connected == false)
+                                p->active_idx = info->index;
+
                             p->headphones_connected = true;
                         }
                         else if (p->headphones_connected == true)
                         {
                             std::cout << "Wired headphones disconnected" << std::endl;
+
                             p->headphones_connected = false;
-                            p->pause_playback_if_necessary();
+                            if (p->a2dp_connected == false)
+                                p->active_idx = info->index;
+
+                            p->pause_playback_if_necessary(info->index);
                         }
                     }
 
-                    // Check to see if an A2DP headset has been connected/disconnected
+                    // TODO: Whenever an A2DP device is present, it is the default media output
+                    // due to the way things are currently setup in Pulse. This might change.
                     if (strstr(info->name, "bluez_card") != nullptr)
                     {
                         if (p->is_port_available(info->ports, info->n_ports, "headset-output"))
                         {
                             std::cout << "A2DP headset detected" << std::endl;
                             p->a2dp_connected = true;
-                        }
-                        else if (p->a2dp_connected == true)
-                        {
-                            std::cout << "A2DP headset disconnected" << std::endl;
-                            p->a2dp_connected = false;
-                            p->pause_playback_if_necessary();
+                            p->active_idx = info->index;
                         }
                     }
                 }, this);
@@ -333,7 +341,11 @@ struct media::ServiceImplementation::Private
                             else if ((t & PA_SUBSCRIPTION_EVENT_TYPE_MASK) == PA_SUBSCRIPTION_EVENT_REMOVE)
                             {
                                 std::cout << "Output device removed" << std::endl;
-                                p->update_device_states(idx);
+
+                                p->pause_playback_if_necessary(idx);
+                                // TODO: Currently only A2DP devices (BT) get their cards removed on disconnection
+                                if (p->a2dp_connected)
+                                    p->a2dp_connected = false;
                             }
                         }
                     }, this);
@@ -382,6 +394,7 @@ struct media::ServiceImplementation::Private
     // Gets signaled when both the headphone jack is removed or an A2DP device is
     // disconnected and playback needs pausing
     core::Signal<void> pause_playback;
+    int active_idx;
     bool headphones_connected;
     bool a2dp_connected;
 };
