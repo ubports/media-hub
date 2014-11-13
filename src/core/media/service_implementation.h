@@ -43,6 +43,7 @@ public:
 
 private:
     void pause_all_multimedia_sessions();
+    void resume_paused_multimedia_sessions();
     void resume_multimedia_session();
 
     struct Private;

@@ -28,6 +28,8 @@ Build-Depends: cmake,
                gstreamer1.0-libav,
                libgstreamer1.0-dev,
                pkg-config,
+               qtbase5-dev,
+               libtelepathy-qt5-dev,
 Standards-Version: 3.9.5
 Homepage: https://launchpad.net/media-hub
 # If you aren't a member of ~phablet-team but need to upload packaging changes,

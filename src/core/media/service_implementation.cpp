@@ -20,6 +20,7 @@
 #include "service_implementation.h"
 
 #include "indicator_power_service.h"
+#include "call-monitor/call_monitor.h"
 #include "player_configuration.h"
 #include "player_implementation.h"
 
@@ -43,7 +44,8 @@ struct media::ServiceImplementation::Private
     Private()
         : resume_key(std::numeric_limits<std::uint32_t>::max()),
           keep_alive(io_service),
-          disp_cookie(0)
+          disp_cookie(0),
+          call_monitor(new CallMonitor)
     {
         bus = std::shared_ptr<dbus::Bus>(new dbus::Bus(core::dbus::WellKnownBus::session));
         bus->install_executor(dbus::asio::make_executor(bus, io_service));
@@ -127,6 +129,8 @@ struct media::ServiceImplementation::Private
     int disp_cookie;
     std::shared_ptr<dbus::Object> uscreen_session;
     MediaRecorderObserver *observer;
+    std::unique_ptr<CallMonitor> call_monitor;
+    std::list<media::Player::PlayerKey> paused_sessions;
 };
 
 media::ServiceImplementation::ServiceImplementation() : d(new Private())
@@ -147,6 +151,17 @@ media::ServiceImplementation::ServiceImplementation() : d(new Private())
         // resume what the user was previously playing
         if (!notifying)
             resume_multimedia_session();
+    });
+
+    d->call_monitor->on_change([this](CallMonitor::State state) {
+        switch (state) {
+        case CallMonitor::OffHook:
+            pause_all_multimedia_sessions();
+            break;
+        case CallMonitor::OnHook:
+            resume_paused_multimedia_sessions();
+            break;
+        }
     });
 }
 
@@ -232,11 +247,19 @@ void media::ServiceImplementation::pause_all_multimedia_sessions()
                           if (player->playback_status() == Player::playing
                               && player->audio_stream_role() == media::Player::multimedia)
                           {
-                              d->resume_key = key;
-                              cout << "Will resume playback of Player with key: " << d->resume_key << endl;
+                              d->paused_sessions.push_back(key);
                               player->pause();
                           }
                       });
+}
+
+void media::ServiceImplementation::resume_paused_multimedia_sessions()
+{
+    std::for_each(d->paused_sessions.begin(), d->paused_sessions.end(), [this](const media::Player::PlayerKey& key) {
+            player_for_key(key)->play();
+        });
+
+    d->paused_sessions.clear();
 }
 
 void media::ServiceImplementation::resume_multimedia_session()
