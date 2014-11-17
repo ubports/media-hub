@@ -52,9 +52,9 @@ struct media::ServiceImplementation::Private
           disp_cookie(0),
           pulse_mainloop_api(nullptr),
           pulse_context(nullptr),
-          active_idx(-1),
           headphones_connected(false),
           a2dp_connected(false),
+          last_changed_idx(0),
           call_monitor(new CallMonitor)
     {
         bus = std::shared_ptr<dbus::Bus>(new dbus::Bus(core::dbus::WellKnownBus::session));
@@ -163,8 +163,6 @@ struct media::ServiceImplementation::Private
         {
             for (uint32_t i=0; i<n_ports; i++)
             {
-                //std::cout << "port name: " << ports[i]->name << std::endl;
-                //std::cout << "port available? " << ((ports[i]->available != PA_PORT_AVAILABLE_NO) ? "yes" : "no") << std::endl;
                 if (strstr(ports[i]->name, name) != nullptr && ports[i]->available != PA_PORT_AVAILABLE_NO)
                 {
                     ret = true;
@@ -176,18 +174,7 @@ struct media::ServiceImplementation::Private
         return ret;
     }
 
-    void pause_playback_if_necessary(uint32_t idx)
-    {
-        if (active_idx != (int) idx)
-            return;
-            
-        if (a2dp_connected and headphones_connected)
-            return;
-            
-        pause_playback();
-    }
-
-    void update_device_states(uint32_t idx)
+    void update_wired_output(uint32_t idx)
     {
         const pa_operation *o = pa_context_get_card_info_by_index(pulse_context, idx,
                 [](pa_context *context, const pa_card_info *info, int eol, void *userdata)
@@ -199,45 +186,63 @@ struct media::ServiceImplementation::Private
                         return;
 
                     Private *p = reinterpret_cast<Private*>(userdata);
-                    std::cout << "Getting card info from the context (cb)" << std::endl;
-                    std::cout << "name: " << info->name << std::endl;
-                    // TODO: Currently hardcoding card name, need to expand for desktop.
-                    if (strcmp(info->name, "droid_card.primary") == 0)
+                    if (p->last_changed_idx == 0) // Base sink, index=0 (Onboard)
                     {
                         if (p->is_port_available(info->ports, info->n_ports, "output-wired"))
                         {
                             std::cout << "Wired headphones detected" << std::endl;
-
-                            // Headphones only become active when there is no A2DP device present
-                            if (p->a2dp_connected == false)
-                                p->active_idx = info->index;
-
                             p->headphones_connected = true;
                         }
                         else if (p->headphones_connected == true)
                         {
                             std::cout << "Wired headphones disconnected" << std::endl;
-
                             p->headphones_connected = false;
-                            if (p->a2dp_connected == false)
-                                p->active_idx = info->index;
-
-                            p->pause_playback_if_necessary(info->index);
-                        }
-                    }
-
-                    // TODO: Whenever an A2DP device is present, it is the default media output
-                    // due to the way things are currently setup in Pulse. This might change.
-                    if (strstr(info->name, "bluez_card") != nullptr)
-                    {
-                        if (p->is_port_available(info->ports, info->n_ports, "headset-output"))
-                        {
-                            std::cout << "A2DP headset detected" << std::endl;
-                            p->a2dp_connected = true;
-                            p->active_idx = info->index;
                         }
                     }
                 }, this);
+        (void) o;
+    }
+
+    void pause_playback_if_necessary(uint32_t idx)
+    {
+        if (headphones_connected)
+            return;
+
+        if (idx == 0)
+            pause_playback();
+    }
+
+    void set_default_sink(const char *name)
+    {
+        const pa_operation *o = pa_context_get_sink_info_by_name(pulse_context, name,
+                [](pa_context *context, const pa_sink_info *i, int eol, void *userdata)
+                {
+                    (void) context;
+
+                    if (eol)
+                        return;
+
+                    Private *p = reinterpret_cast<Private*>(userdata);
+                    std::tuple<uint32_t, uint32_t> new_sink(std::make_tuple(i->index, i->card));
+                    p->pause_playback_if_necessary(i->card);
+                    p->active_sink = new_sink;
+                }, this);
+     
+        (void) o;
+    }
+
+    void update_server_info()
+    {
+        const pa_operation *o = pa_context_get_server_info(pulse_context,
+                [](pa_context *context, const pa_server_info *i, void *userdata)
+                {
+                    (void) context;
+
+                    Private *p = reinterpret_cast<Private*>(userdata);
+                    p->update_wired_output(p->last_changed_idx);
+                    p->set_default_sink(i->default_sink_name);
+                }, this);
+
         (void) o;
     }
 
@@ -317,6 +322,9 @@ struct media::ServiceImplementation::Private
                         (void) context;
                         (void) userdata;
                     }, this);
+
+            update_server_info(); 
+
             pa_context_set_subscribe_callback(pulse_context,
                     [](pa_context *context, pa_subscription_event_type_t t, uint32_t idx, void *userdata)
                     {
@@ -326,32 +334,14 @@ struct media::ServiceImplementation::Private
                             return;
 
                         Private *p = reinterpret_cast<Private*>(userdata);
-                        std::cout << "subscribe_callback lambda" << std::endl;
-                        if ((t & PA_SUBSCRIPTION_EVENT_FACILITY_MASK) == PA_SUBSCRIPTION_EVENT_CARD)
+                        if ((t & PA_SUBSCRIPTION_EVENT_FACILITY_MASK) == PA_SUBSCRIPTION_EVENT_SINK)
                         {
-                            std::cout << "Card event" << std::endl;
                             if ((t & PA_SUBSCRIPTION_EVENT_TYPE_MASK) == PA_SUBSCRIPTION_EVENT_CHANGE)
-                            {
-                                std::cout << "Output event changed" << std::endl;
-                                p->update_device_states(idx);
-                            }
-                            else if ((t & PA_SUBSCRIPTION_EVENT_TYPE_MASK) == PA_SUBSCRIPTION_EVENT_NEW)
-                            {
-                                std::cout << "Output event new" << std::endl;
-                                p->update_device_states(idx);
-                            }
-                            else if ((t & PA_SUBSCRIPTION_EVENT_TYPE_MASK) == PA_SUBSCRIPTION_EVENT_REMOVE)
-                            {
-                                std::cout << "Output device removed" << std::endl;
-
-                                p->pause_playback_if_necessary(idx);
-                                // TODO: Currently only A2DP devices (BT) get their cards removed on disconnection
-                                if (p->a2dp_connected)
-                                    p->a2dp_connected = false;
-                            }
+                                p->last_changed_idx = idx;
+                            p->update_server_info(); 
                         }
                     }, this);
-            pa_context_subscribe(pulse_context, PA_SUBSCRIPTION_MASK_CARD, nullptr, this);
+            pa_context_subscribe(pulse_context, (pa_subscription_mask_t) ((int) PA_SUBSCRIPTION_MASK_SERVER | (int) PA_SUBSCRIPTION_MASK_SINK), nullptr, this);
         }
         else
         {
@@ -396,9 +386,10 @@ struct media::ServiceImplementation::Private
     // Gets signaled when both the headphone jack is removed or an A2DP device is
     // disconnected and playback needs pausing
     core::Signal<void> pause_playback;
-    int active_idx;
     bool headphones_connected;
     bool a2dp_connected;
+    std::tuple<uint32_t, uint32_t> active_sink;
+    int last_changed_idx;
     std::unique_ptr<CallMonitor> call_monitor;
     std::list<media::Player::PlayerKey> paused_sessions;
 };
