@@ -227,9 +227,9 @@ struct media::ServiceImplementation::Private
                     Private *p = reinterpret_cast<Private*>(userdata); 
                     std::tuple<uint32_t, uint32_t, std::string> new_sink(std::make_tuple(i->index, i->card, i->name));
 
-                    fprintf(stderr, "pulsesink: active_sink=('%s',%d,%d) -> ('%s',%d,%d)\n",
-                            std::get<2>(p->active_sink).c_str(), std::get<0>(p->active_sink),
-                            std::get<1>(p->active_sink), i->name, i->index, i->card);
+                    printf("pulsesink: active_sink=('%s',%d,%d) -> ('%s',%d,%d)\n",
+                        std::get<2>(p->active_sink).c_str(), std::get<0>(p->active_sink),
+                        std::get<1>(p->active_sink), i->name, i->index, i->card);
 
                     p->active_sink = new_sink;
                     p->pause_playback_if_necessary();
@@ -356,16 +356,13 @@ struct media::ServiceImplementation::Private
                         if (userdata == nullptr)
                             return;
 
-                        if ((t & PA_SUBSCRIPTION_EVENT_FACILITY_MASK) == PA_SUBSCRIPTION_EVENT_SOURCE)
-                            return;
-
                         Private *p = reinterpret_cast<Private*>(userdata);
                         if ((t & PA_SUBSCRIPTION_EVENT_FACILITY_MASK) == PA_SUBSCRIPTION_EVENT_SINK)
                         {
                             p->update_active_sink(); 
                         }
                     }, this);
-            pa_context_subscribe(pulse_context, (pa_subscription_mask_t) ((int) PA_SUBSCRIPTION_MASK_SERVER | (int) PA_SUBSCRIPTION_MASK_SINK | (int) PA_SUBSCRIPTION_EVENT_SOURCE | (int) PA_SUBSCRIPTION_EVENT_SOURCE_OUTPUT), nullptr, this);
+            pa_context_subscribe(pulse_context, PA_SUBSCRIPTION_MASK_SINK, nullptr, this);
         }
         else
         {
