@@ -351,6 +351,7 @@ struct media::ServiceImplementation::Private
                     [](pa_context *context, pa_subscription_event_type_t t, uint32_t idx, void *userdata)
                     {
                         (void) context;
+                        (void) idx;
 
                         if (userdata == nullptr)
                             return;
