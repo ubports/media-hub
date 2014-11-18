@@ -15,6 +15,7 @@
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  *              Jim Hodapp <jim.hodapp@canonical.com>
+ *              Ricardo Mendoza <ricardo.mendoza@canonical.com>
  *
  * Note: Some of the PulseAudio code was adapted from telepathy-ofono
  */
@@ -28,6 +29,7 @@
 
 #include <boost/asio.hpp>
 
+#include <string>
 #include <cstdint>
 #include <cstring>
 #include <map>
@@ -54,7 +56,7 @@ struct media::ServiceImplementation::Private
           pulse_context(nullptr),
           headphones_connected(false),
           a2dp_connected(false),
-          last_changed_idx(0),
+          primary_idx(0),
           call_monitor(new CallMonitor)
     {
         bus = std::shared_ptr<dbus::Bus>(new dbus::Bus(core::dbus::WellKnownBus::session));
@@ -174,9 +176,9 @@ struct media::ServiceImplementation::Private
         return ret;
     }
 
-    void update_wired_output(uint32_t idx)
+    void update_wired_output()
     {
-        const pa_operation *o = pa_context_get_card_info_by_index(pulse_context, idx,
+        const pa_operation *o = pa_context_get_card_info_by_index(pulse_context, primary_idx,
                 [](pa_context *context, const pa_card_info *info, int eol, void *userdata)
                 {
                     (void) context;
@@ -186,33 +188,33 @@ struct media::ServiceImplementation::Private
                         return;
 
                     Private *p = reinterpret_cast<Private*>(userdata);
-                    if (p->last_changed_idx == 0) // Base sink, index=0 (Onboard)
+                    if (p->is_port_available(info->ports, info->n_ports, "output-wired"))
                     {
-                        if (p->is_port_available(info->ports, info->n_ports, "output-wired"))
-                        {
-                            std::cout << "Wired headphones detected" << std::endl;
-                            p->headphones_connected = true;
-                        }
-                        else if (p->headphones_connected == true)
-                        {
-                            std::cout << "Wired headphones disconnected" << std::endl;
-                            p->headphones_connected = false;
-                        }
+                        if (!p->headphones_connected)
+                            std::cout << "Wired headphones connected" << std::endl;
+                        p->headphones_connected = true;
+                    }
+                    else if (p->headphones_connected == true)
+                    {
+                        std::cout << "Wired headphones disconnected" << std::endl;
+                        p->headphones_connected = false;
+                        p->pause_playback_if_necessary();
                     }
                 }, this);
         (void) o;
     }
 
-    void pause_playback_if_necessary(uint32_t idx)
+    void pause_playback_if_necessary()
     {
         if (headphones_connected)
             return;
 
-        if (idx == 0)
+        // No headphones/fallback on primary sink? Pause.
+        if (std::get<0>(active_sink) == primary_idx)
             pause_playback();
     }
 
-    void set_default_sink(const char *name)
+    void set_active_sink(const char *name)
     {
         const pa_operation *o = pa_context_get_sink_info_by_name(pulse_context, name,
                 [](pa_context *context, const pa_sink_info *i, int eol, void *userdata)
@@ -222,16 +224,21 @@ struct media::ServiceImplementation::Private
                     if (eol)
                         return;
 
-                    Private *p = reinterpret_cast<Private*>(userdata);
-                    std::tuple<uint32_t, uint32_t> new_sink(std::make_tuple(i->index, i->card));
-                    p->pause_playback_if_necessary(i->card);
+                    Private *p = reinterpret_cast<Private*>(userdata); 
+                    std::tuple<uint32_t, uint32_t, std::string> new_sink(std::make_tuple(i->index, i->card, i->name));
+
+                    fprintf(stderr, "pulsesink: active_sink=('%s',%d,%d) -> ('%s',%d,%d)\n",
+                            std::get<2>(p->active_sink).c_str(), std::get<0>(p->active_sink),
+                            std::get<1>(p->active_sink), i->name, i->index, i->card);
+
                     p->active_sink = new_sink;
+                    p->pause_playback_if_necessary();
                 }, this);
      
         (void) o;
     }
 
-    void update_server_info()
+    void update_active_sink()
     {
         const pa_operation *o = pa_context_get_server_info(pulse_context,
                 [](pa_context *context, const pa_server_info *i, void *userdata)
@@ -239,8 +246,9 @@ struct media::ServiceImplementation::Private
                     (void) context;
 
                     Private *p = reinterpret_cast<Private*>(userdata);
-                    p->update_wired_output(p->last_changed_idx);
-                    p->set_default_sink(i->default_sink_name);
+                    if (i->default_sink_name != std::get<2>(p->active_sink))
+                        p->set_active_sink(i->default_sink_name);
+                    p->update_wired_output();
                 }, this);
 
         (void) o;
@@ -323,7 +331,21 @@ struct media::ServiceImplementation::Private
                         (void) userdata;
                     }, this);
 
-            update_server_info(); 
+            //FIXME: Get index for "sink.primary", the default onboard card on Touch.
+            pa_context_get_sink_info_by_name(pulse_context, "sink.primary",
+                    [](pa_context *context, const pa_sink_info *i, int eol, void *userdata)
+                    {
+                        (void) context;
+
+                        if (eol)
+                            return;
+                        
+                        Private *p = reinterpret_cast<Private*>(userdata);
+                        p->primary_idx = i->index;
+                        p->update_wired_output();
+                    }, this);
+            
+            update_active_sink(); 
 
             pa_context_set_subscribe_callback(pulse_context,
                     [](pa_context *context, pa_subscription_event_type_t t, uint32_t idx, void *userdata)
@@ -333,15 +355,16 @@ struct media::ServiceImplementation::Private
                         if (userdata == nullptr)
                             return;
 
+                        if ((t & PA_SUBSCRIPTION_EVENT_FACILITY_MASK) == PA_SUBSCRIPTION_EVENT_SOURCE)
+                            return;
+
                         Private *p = reinterpret_cast<Private*>(userdata);
                         if ((t & PA_SUBSCRIPTION_EVENT_FACILITY_MASK) == PA_SUBSCRIPTION_EVENT_SINK)
                         {
-                            if ((t & PA_SUBSCRIPTION_EVENT_TYPE_MASK) == PA_SUBSCRIPTION_EVENT_CHANGE)
-                                p->last_changed_idx = idx;
-                            p->update_server_info(); 
+                            p->update_active_sink(); 
                         }
                     }, this);
-            pa_context_subscribe(pulse_context, (pa_subscription_mask_t) ((int) PA_SUBSCRIPTION_MASK_SERVER | (int) PA_SUBSCRIPTION_MASK_SINK), nullptr, this);
+            pa_context_subscribe(pulse_context, (pa_subscription_mask_t) ((int) PA_SUBSCRIPTION_MASK_SERVER | (int) PA_SUBSCRIPTION_MASK_SINK | (int) PA_SUBSCRIPTION_EVENT_SOURCE | (int) PA_SUBSCRIPTION_EVENT_SOURCE_OUTPUT), nullptr, this);
         }
         else
         {
@@ -388,8 +411,8 @@ struct media::ServiceImplementation::Private
     core::Signal<void> pause_playback;
     bool headphones_connected;
     bool a2dp_connected;
-    std::tuple<uint32_t, uint32_t> active_sink;
-    int last_changed_idx;
+    std::tuple<uint32_t, uint32_t, std::string> active_sink;
+    uint32_t primary_idx;
     std::unique_ptr<CallMonitor> call_monitor;
     std::list<media::Player::PlayerKey> paused_sessions;
 };
