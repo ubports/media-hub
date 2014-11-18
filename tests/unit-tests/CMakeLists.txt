@@ -42,6 +42,7 @@ target_link_libraries(
     ${PROCESS_CPP_LDFLAGS}
     ${GIO_LIBRARIES}
     ${PROCESS_CPP_LIBRARIES}
+    ${PC_PULSE_AUDIO_LIBRARIES}
 
     gmock
     gmock_main
