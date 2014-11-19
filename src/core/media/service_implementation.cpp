@@ -56,7 +56,8 @@ struct media::ServiceImplementation::Private
           pulse_context(nullptr),
           headphones_connected(false),
           a2dp_connected(false),
-          primary_idx(0),
+          active_sink(std::make_tuple(-1, -1, "")),
+          primary_idx(-1),
           call_monitor(new CallMonitor)
     {
         bus = std::shared_ptr<dbus::Bus>(new dbus::Bus(core::dbus::WellKnownBus::session));
@@ -198,19 +199,23 @@ struct media::ServiceImplementation::Private
                     {
                         std::cout << "Wired headphones disconnected" << std::endl;
                         p->headphones_connected = false;
-                        p->pause_playback_if_necessary();
+                        p->pause_playback_if_necessary(std::get<0>(p->active_sink));
                     }
                 }, this);
         (void) o;
     }
 
-    void pause_playback_if_necessary()
+    void pause_playback_if_necessary(int index)
     {
+        // Catch uninitialized case (active index == -1)
+        if (std::get<0>(active_sink) == -1)
+            return;
+
         if (headphones_connected)
             return;
 
         // No headphones/fallback on primary sink? Pause.
-        if (std::get<0>(active_sink) == primary_idx)
+        if (index == primary_idx)
             pause_playback();
     }
 
@@ -231,8 +236,8 @@ struct media::ServiceImplementation::Private
                         std::get<2>(p->active_sink).c_str(), std::get<0>(p->active_sink),
                         std::get<1>(p->active_sink), i->name, i->index, i->card);
 
+                    p->pause_playback_if_necessary(i->index);
                     p->active_sink = new_sink;
-                    p->pause_playback_if_necessary();
                 }, this);
      
         (void) o;
@@ -281,21 +286,14 @@ struct media::ServiceImplementation::Private
             return;
         }
 
-        if (pa_context_connect(pulse_context, nullptr, PA_CONTEXT_NOAUTOSPAWN, nullptr) < 0)
-        {
-            std::cerr << "Unable to create a connection to the pulseaudio context" << std::endl;
-            pa_threaded_mainloop_unlock(pulse_mainloop);
-            release_pulse_context();
-            return;
-        }
-
+        pa_context_connect(pulse_context, nullptr, pa_context_flags_t((int) PA_CONTEXT_NOAUTOSPAWN | (int) PA_CONTEXT_NOFAIL), nullptr); 
         pa_threaded_mainloop_wait(pulse_mainloop);
 
         while (keep_going)
         {
             switch (pa_context_get_state(pulse_context))
             {
-                case PA_CONTEXT_CONNECTING:
+                case PA_CONTEXT_CONNECTING: // Wait for service to be available
                 case PA_CONTEXT_AUTHORIZING:
                 case PA_CONTEXT_SETTING_NAME:
                     break;
@@ -366,6 +364,7 @@ struct media::ServiceImplementation::Private
         }
         else
         {
+            std::cerr << "Connection to pulseaudio failed or was dropped." << std::endl;
             if (pulse_context != nullptr)
             {
                 pa_context_unref(pulse_context);
@@ -409,8 +408,8 @@ struct media::ServiceImplementation::Private
     core::Signal<void> pause_playback;
     bool headphones_connected;
     bool a2dp_connected;
-    std::tuple<uint32_t, uint32_t, std::string> active_sink;
-    uint32_t primary_idx;
+    std::tuple<int, int, std::string> active_sink;
+    int primary_idx;
     std::unique_ptr<CallMonitor> call_monitor;
     std::list<media::Player::PlayerKey> paused_sessions;
 };
