@@ -1,3 +1,15 @@
+media-hub (2.0.0+15.04.20141120.1-0ubuntu1) vivid; urgency=low
+
+  [ Jim Hodapp ]
+  * Pause playback when a headphone is unplugged or an A2DP device is
+    unpaired (LP: #1368300)
+
+  [ Ricardo Mendoza ]
+  * Pause playback when a headphone is unplugged or an A2DP device is
+    unpaired (LP: #1368300)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 20 Nov 2014 18:33:08 +0000
+
 media-hub (2.0.0+15.04.20141111-0ubuntu1) vivid; urgency=low
 
   [ Ubuntu daily release ]
