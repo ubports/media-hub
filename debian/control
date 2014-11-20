@@ -28,6 +28,7 @@ Build-Depends: cmake,
                gstreamer1.0-libav,
                libgstreamer1.0-dev,
                pkg-config,
+               libpulse-dev,
                qtbase5-dev,
                libtelepathy-qt5-dev,
 Standards-Version: 3.9.5

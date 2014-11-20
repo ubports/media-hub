@@ -1,5 +1,6 @@
 pkg_check_modules(PC_GSTREAMER_1_0 REQUIRED gstreamer-1.0)
-include_directories(${PC_GSTREAMER_1_0_INCLUDE_DIRS} ${HYBRIS_MEDIA_CFLAGS})
+pkg_check_modules(PC_PULSE_AUDIO REQUIRED libpulse)
+include_directories(${PC_GSTREAMER_1_0_INCLUDE_DIRS} ${HYBRIS_MEDIA_CFLAGS} ${PC_PULSE_AUDIO_INCLUDE_DIRS})
 
 # We compile with all symbols visible by default. For the shipping library, we strip
 # out all symbols that are not in core::ubuntu::media*
@@ -100,6 +101,7 @@ target_link_libraries(
   ${PROCESS_CPP_LDFLAGS}
   ${GIO_LIBRARIES}
   ${HYBRIS_MEDIA_LIBRARIES}
+  ${PC_PULSE_AUDIO_LIBRARIES}
 )
 
 include_directories(${PROJECT_SOURCE_DIR}/src/ ${HYBRIS_MEDIA_CFLAGS})

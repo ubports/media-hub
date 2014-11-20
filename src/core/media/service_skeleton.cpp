@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
+ *              Jim Hodapp <jim.hodapp@canonical.com>
  */
 
 #include "service_skeleton.h"
