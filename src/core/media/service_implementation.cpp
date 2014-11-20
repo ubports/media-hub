@@ -66,21 +66,6 @@ struct media::ServiceImplementation::Private
             bus->run();
         }));
 
-        // We use Pulse to detect when the user has unplugged speakers from the headphone jack
-        // or disconnected an A2DP bluetooth device
-        //pulse_mainloop = pa_threaded_mainloop_new();
-        //if (pulse_mainloop == nullptr)
-        //    std::cerr << "Unable to create pulseaudio mainloop, audio output detection will not function" << std::endl;
-
-        //if (pa_threaded_mainloop_start(pulse_mainloop) != 0)
-        //{
-        //    std::cerr << "Unable to start pulseaudio mainloop, audio output detection will not function" << std::endl;
-        //    pa_threaded_mainloop_free(pulse_mainloop);
-        //    pulse_mainloop = nullptr;
-        //}
-        //else
-        //{
-        
         // Spawn pulse watchdog
         pulse_mainloop = nullptr;
         pulse_worker = std::move(std::thread([this]()
