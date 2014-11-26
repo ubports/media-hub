@@ -125,7 +125,6 @@ struct media::ServiceImplementation::Private
                 });
         }));
         
-        recorder_observer = media::make_platform_default_recorder_observer();
         recorder_observer->recording_state().changed().connect([this](media::RecordingState state)
         {
             media_recording_state_changed(state);
