@@ -240,6 +240,23 @@ struct media::PlayerSkeleton::Private
         });
     }
 
+    void handle_open_uri_extended(const core::dbus::Message::Ptr& in)
+    {
+        dbus_stub.get_connection_app_armor_security_async(in->sender(), [this, in](const std::string& profile)
+        {
+            Track::UriType uri;
+            Player::HeadersType headers;
+
+            in->reader() >> uri >> headers;
+
+            bool have_access = does_client_have_access(profile, uri);
+            auto reply = dbus::Message::make_method_return(in);
+            reply->writer() << (have_access ? impl->open_uri(uri, headers) : false);
+
+            bus->send(reply);
+        });
+    }
+
     template<typename Property>
     void on_property_value_changed(
             const typename Property::ValueType& value,
@@ -353,6 +370,11 @@ media::PlayerSkeleton::PlayerSkeleton(const media::PlayerSkeleton::Configuration
         std::bind(&Private::handle_key,
                   d,
                   std::placeholders::_1));
+
+    d->object->install_method_handler<mpris::Player::OpenUriExtended>(
+        std::bind(&Private::handle_open_uri_extended,
+                  d,
+                  std::placeholders::_1));
 }
 
 media::PlayerSkeleton::~PlayerSkeleton()
@@ -370,6 +392,7 @@ media::PlayerSkeleton::~PlayerSkeleton()
    d->object->uninstall_method_handler<mpris::Player::OpenUri>();
    d->object->uninstall_method_handler<mpris::Player::CreateVideoSink>();
    d->object->uninstall_method_handler<mpris::Player::Key>();
+   d->object->uninstall_method_handler<mpris::Player::OpenUriExtended>();
 }
 
 const core::Property<bool>& media::PlayerSkeleton::can_play() const
@@ -457,6 +480,11 @@ const core::Property<media::Player::Orientation>& media::PlayerSkeleton::orienta
     return *d->skeleton.properties.orientation;
 }
 
+const core::Property<media::Player::Lifetime>& media::PlayerSkeleton::lifetime() const
+{
+    return *d->skeleton.properties.lifetime;
+}
+
 const core::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::minimum_playback_rate() const
 {
     return *d->skeleton.properties.minimum_playback_rate;
@@ -505,6 +533,11 @@ core::Property<media::Player::AudioStreamRole>& media::PlayerSkeleton::audio_str
 core::Property<media::Player::Orientation>& media::PlayerSkeleton::orientation()
 {
     return *d->skeleton.properties.orientation;
+}
+
+core::Property<media::Player::Lifetime>& media::PlayerSkeleton::lifetime()
+{
+    return *d->skeleton.properties.lifetime;
 }
 
 core::Property<media::Player::PlaybackStatus>& media::PlayerSkeleton::playback_status()

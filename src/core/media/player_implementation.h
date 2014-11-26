@@ -47,6 +47,7 @@ public:
     virtual PlayerKey key() const;
 
     virtual bool open_uri(const Track::UriType& uri);
+    virtual bool open_uri(const Track::UriType& uri, const Player::HeadersType& headers);
     virtual void create_video_sink(uint32_t texture_id);
     virtual GLConsumerWrapperHybris gl_consumer() const;
     virtual void next();

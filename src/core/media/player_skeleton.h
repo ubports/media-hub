@@ -63,12 +63,14 @@ class PlayerSkeleton : public core::ubuntu::media::Player
     virtual const core::Property<int64_t>& duration() const;
     virtual const core::Property<AudioStreamRole>& audio_stream_role() const;
     virtual const core::Property<Orientation>& orientation() const;
+    virtual const core::Property<Lifetime>& lifetime() const;
 
     virtual core::Property<LoopStatus>& loop_status();
     virtual core::Property<PlaybackRate>& playback_rate();
     virtual core::Property<bool>& is_shuffle();
     virtual core::Property<Volume>& volume();
     virtual core::Property<AudioStreamRole>& audio_stream_role();
+    virtual core::Property<Lifetime>& lifetime();
 
     virtual const core::Signal<int64_t>& seeked_to() const;
     virtual const core::Signal<void>& end_of_stream() const;

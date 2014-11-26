@@ -70,6 +70,16 @@ struct Playbin
         thiz->signals.about_to_finish();
     }
 
+    static void source_setup(GstElement*,
+                             GstElement *source,
+                             gpointer user_data)
+    {
+        if (user_data == nullptr)
+            return;
+
+        static_cast<Playbin*>(user_data)->setup_source(source);
+    }
+
     Playbin()
         : pipeline(gst_element_factory_make("playbin", pipeline_name().c_str())),
           bus{gst_element_get_bus(pipeline)},
@@ -83,7 +93,8 @@ struct Playbin
                       &Playbin::on_new_message,
                       this,
                       std::placeholders::_1))),
-          is_seeking(false)
+          is_seeking(false),
+          player_lifetime(media::Player::Lifetime::normal)
     {
         if (!pipeline)
             throw std::runtime_error("Could not create pipeline for playbin.");
@@ -98,6 +109,14 @@ struct Playbin
                     G_CALLBACK(about_to_finish),
                     this
                     );
+
+        g_signal_connect(
+                    pipeline,
+                    "source-setup",
+                    G_CALLBACK(source_setup),
+                    this
+                    );
+
     }
 
     ~Playbin()
@@ -112,7 +131,12 @@ struct Playbin
         // When the client dies, tear down the current pipeline and get it
         // in a state that is ready for the next client that connects to the
         // service
-        reset_pipeline();
+
+        // Don't reset the pipeline if we want to resume
+        if (player_lifetime != media::Player::Lifetime::resumable) {
+            reset_pipeline();
+        }
+
         // Signal to the Player class that the client side has disconnected
         signals.client_disconnected();
     }
@@ -307,6 +331,11 @@ struct Playbin
         gst_structure_free (props);
     }
 
+    void set_lifetime(media::Player::Lifetime lifetime)
+    {
+        player_lifetime = lifetime;
+    }
+
     uint64_t position() const
     {
         int64_t pos = 0;
@@ -325,13 +354,40 @@ struct Playbin
         return static_cast<uint64_t>(dur);
     }
 
-    void set_uri(const std::string& uri)
+    void set_uri(const std::string& uri,
+                  const core::ubuntu::media::Player::HeadersType& headers = core::ubuntu::media::Player::HeadersType())
     {
+       reset_pipeline();
+
         g_object_set(pipeline, "uri", uri.c_str(), NULL);
         if (is_video_file(uri))
             file_type = MEDIA_FILE_TYPE_VIDEO;
         else if (is_audio_file(uri))
             file_type = MEDIA_FILE_TYPE_AUDIO;
+
+        request_headers = headers;
+    }
+
+    void setup_source(GstElement *source)
+    {
+        if (source == NULL || request_headers.empty())
+          return;
+
+        if (request_headers.find("Cookie") != request_headers.end()) {
+            if (g_object_class_find_property(G_OBJECT_GET_CLASS(source),
+                                             "cookies") != NULL) {
+                gchar ** cookies = g_strsplit(request_headers["Cookie"].c_str(), ";", 0);
+                g_object_set(source, "cookies", cookies, NULL);
+                g_strfreev(cookies);
+            }
+        }
+
+        if (request_headers.find("User-Agent") != request_headers.end()) {
+            if (g_object_class_find_property(G_OBJECT_GET_CLASS(source),
+                                             "user-agent") != NULL) {
+                g_object_set(source, "user-agent", request_headers["User-Agent"].c_str(), NULL);
+            }
+        }
     }
 
     std::string uri() const
@@ -503,6 +559,8 @@ struct Playbin
     uint32_t video_width;
     core::Connection on_new_message_connection;
     bool is_seeking;
+    core::ubuntu::media::Player::HeadersType request_headers;
+    media::Player::Lifetime player_lifetime;
     struct
     {
         core::Signal<void> about_to_finish;

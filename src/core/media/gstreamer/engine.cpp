@@ -79,6 +79,11 @@ struct gstreamer::Engine::Private
         orientation.set(o);
     }
 
+    void on_lifetime_changed(const media::Player::Lifetime& lifetime)
+    {
+        playbin.set_lifetime(lifetime);
+    }
+
     void on_about_to_finish()
     {
         state = Engine::State::ready;
@@ -146,6 +151,12 @@ struct gstreamer::Engine::Private
                       &Private::on_orientation_changed,
                       this,
                       std::placeholders::_1))),
+          on_lifetime_changed_connection(
+              lifetime.changed().connect(
+                  std::bind(
+                      &Private::on_lifetime_changed,
+                      this,
+                      std::placeholders::_1))),
           on_seeked_to_connection(
               playbin.signals.on_seeked_to.connect(
                   std::bind(
@@ -184,6 +195,7 @@ struct gstreamer::Engine::Private
     core::Property<media::Engine::Volume> volume;
     core::Property<media::Player::AudioStreamRole> audio_role;
     core::Property<media::Player::Orientation> orientation;
+    core::Property<media::Player::Lifetime> lifetime;
     core::Property<bool> is_video_source;
     core::Property<bool> is_audio_source;
 
@@ -193,6 +205,7 @@ struct gstreamer::Engine::Private
     core::ScopedConnection on_volume_changed_connection;
     core::ScopedConnection on_audio_stream_role_changed_connection;
     core::ScopedConnection on_orientation_changed_connection;
+    core::ScopedConnection on_lifetime_changed_connection;
     core::ScopedConnection on_seeked_to_connection;
     core::ScopedConnection client_disconnected_connection;
     core::ScopedConnection on_end_of_stream_connection;
@@ -230,6 +243,12 @@ const core::Property<media::Engine::State>& gstreamer::Engine::state() const
 bool gstreamer::Engine::open_resource_for_uri(const media::Track::UriType& uri)
 {
     d->playbin.set_uri(uri);
+    return true;
+}
+
+bool gstreamer::Engine::open_resource_for_uri(const media::Track::UriType& uri, const core::ubuntu::media::Player::HeadersType& headers)
+{
+    d->playbin.set_uri(uri, headers);
     return true;
 }
 
@@ -338,6 +357,11 @@ const core::Property<core::ubuntu::media::Player::AudioStreamRole>& gstreamer::E
     return d->audio_role;
 }
 
+const core::Property<core::ubuntu::media::Player::Lifetime>& gstreamer::Engine::lifetime() const
+{
+    return d->lifetime;
+}
+
 core::Property<core::ubuntu::media::Player::AudioStreamRole>& gstreamer::Engine::audio_stream_role()
 {
     return d->audio_role;
@@ -346,6 +370,11 @@ core::Property<core::ubuntu::media::Player::AudioStreamRole>& gstreamer::Engine:
 const core::Property<core::ubuntu::media::Player::Orientation>& gstreamer::Engine::orientation() const
 {
     return d->orientation;
+}
+
+core::Property<core::ubuntu::media::Player::Lifetime>& gstreamer::Engine::lifetime()
+{
+    return d->lifetime;
 }
 
 const core::Property<std::tuple<media::Track::UriType, media::Track::MetaData>>&

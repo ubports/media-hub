@@ -42,6 +42,7 @@ class Player : public std::enable_shared_from_this<Player>
     typedef double Volume;
     typedef uint32_t PlayerKey;
     typedef void* GLConsumerWrapperHybris;
+    typedef std::map<std::string, std::string> HeadersType;
 
     /** Used to set a callback function to be called when a frame is ready to be rendered **/
     typedef void (*FrameAvailableCbHybris)(GLConsumerWrapperHybris wrapper, void *context);
@@ -94,6 +95,12 @@ class Player : public std::enable_shared_from_this<Player>
         rotate270
     };
 
+    enum Lifetime
+    {
+        normal,
+        resumable,
+    };
+
     Player(const Player&) = delete;
     virtual ~Player();
 
@@ -104,6 +111,7 @@ class Player : public std::enable_shared_from_this<Player>
     virtual PlayerKey key() const = 0;
 
     virtual bool open_uri(const Track::UriType& uri) = 0;
+    virtual bool open_uri(const Track::UriType& uri, const HeadersType&) = 0;
     virtual void create_video_sink(uint32_t texture_id) = 0;
     virtual GLConsumerWrapperHybris gl_consumer() const = 0;
     virtual void next() = 0;
@@ -136,12 +144,14 @@ class Player : public std::enable_shared_from_this<Player>
     virtual const core::Property<int64_t>& duration() const = 0;
     virtual const core::Property<AudioStreamRole>& audio_stream_role() const = 0;
     virtual const core::Property<Orientation>& orientation() const = 0;
+    virtual const core::Property<Lifetime>& lifetime() const = 0;
 
     virtual core::Property<LoopStatus>& loop_status() = 0;
     virtual core::Property<PlaybackRate>& playback_rate() = 0;
     virtual core::Property<bool>& is_shuffle() = 0;
     virtual core::Property<Volume>& volume() = 0;
     virtual core::Property<AudioStreamRole>& audio_stream_role() = 0;
+    virtual core::Property<Lifetime>& lifetime() = 0;
 
     virtual const core::Signal<int64_t>& seeked_to() const = 0;
     virtual const core::Signal<void>& end_of_stream() const = 0;

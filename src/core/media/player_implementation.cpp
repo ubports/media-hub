@@ -331,6 +331,8 @@ media::PlayerImplementation::PlayerImplementation(
     audio_stream_role().set(Player::AudioStreamRole::multimedia);
     d->engine->audio_stream_role().set(Player::AudioStreamRole::multimedia);
     orientation().set(Player::Orientation::rotate0);
+    lifetime().set(Player::Lifetime::normal);
+    d->engine->lifetime().set(Player::Lifetime::normal);
 
     // Make sure that the Position property gets updated from the Engine
     // every time the client requests position
@@ -372,6 +374,11 @@ media::PlayerImplementation::PlayerImplementation(
     d->engine->orientation().changed().connect([this](const Player::Orientation& o)
     {
         orientation().set(o);
+    });
+
+    lifetime().changed().connect([this](media::Player::Lifetime lifetime)
+    {
+        d->engine->lifetime().set(lifetime);
     });
 
     d->engine->about_to_finish_signal().connect([this]()
@@ -461,6 +468,11 @@ media::Player::PlayerKey media::PlayerImplementation::key() const
 bool media::PlayerImplementation::open_uri(const Track::UriType& uri)
 {
     return d->engine->open_resource_for_uri(uri);
+}
+
+bool media::PlayerImplementation::open_uri(const Track::UriType& uri, const Player::HeadersType& headers)
+{
+    return d->engine->open_resource_for_uri(uri, headers);
 }
 
 void media::PlayerImplementation::create_video_sink(uint32_t texture_id)

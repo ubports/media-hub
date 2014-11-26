@@ -34,6 +34,7 @@ public:
     const core::Property<State>& state() const;
 
     bool open_resource_for_uri(const core::ubuntu::media::Track::UriType& uri);
+    bool open_resource_for_uri(const core::ubuntu::media::Track::UriType& uri, const core::ubuntu::media::Player::HeadersType& headers);
     void create_video_sink(uint32_t texture_id);
 
     bool play();
@@ -54,6 +55,9 @@ public:
     core::Property<core::ubuntu::media::Player::AudioStreamRole>& audio_stream_role();
 
     const core::Property<core::ubuntu::media::Player::Orientation>& orientation() const;
+
+    const core::Property<core::ubuntu::media::Player::Lifetime>& lifetime() const;
+    core::Property<core::ubuntu::media::Player::Lifetime>& lifetime();
 
     const core::Property<std::tuple<core::ubuntu::media::Track::UriType, core::ubuntu::media::Track::MetaData>>& track_meta_data() const;
 
