@@ -29,8 +29,12 @@
 #include <list>
 #include <mutex>
 
+namespace media = core::ubuntu::media;
 
-namespace {
+namespace
+{
+namespace impl
+{
 class TelepathyCallMonitor : public QObject
 {
     Q_OBJECT
@@ -73,7 +77,7 @@ public:
         }
     }
 
-    void on_change(const std::function<void(CallMonitor::State)>& func) {
+    void on_change(const std::function<void(media::telephony::CallMonitor::State)>& func) {
         std::lock_guard<std::mutex> l(cb_lock);
         cb = func;
     }
@@ -128,19 +132,19 @@ private Q_SLOTS:
     {
         std::lock_guard<std::mutex> l(cb_lock);
         if (cb)
-            cb(CallMonitor::OffHook);
+            cb(media::telephony::CallMonitor::State::OffHook);
     }
 
     void onHook()
     {
         std::lock_guard<std::mutex> l(cb_lock);
         if (cb)
-            cb(CallMonitor::OnHook);
+            cb(media::telephony::CallMonitor::State::OnHook);
     }
 
 private:
     std::mutex cb_lock;
-    std::function<void (CallMonitor::State)>   cb;
+    std::function<void (media::telephony::CallMonitor::State)>   cb;
     Tp::AccountManagerPtr mAccountManager;
     std::list<TelepathyCallMonitor*> mCallMonitors;
 
@@ -157,12 +161,11 @@ private:
         }
     }
 };
-}
 
-class CallMonitorPrivate
+struct CallMonitor : public media::telephony::CallMonitor
 {
-public:
-    CallMonitorPrivate() {
+    CallMonitor()
+    {
         try {
             std::thread([this]() {
                 qt::core::world::build_and_run(0, nullptr, [this]() {
@@ -176,30 +179,32 @@ public:
         } catch(...) {
             std::cerr << "exception(...) in CallMonitor thread start" << std::endl;
         }
+
+        mBridge->on_change([this](CallMonitor::State state)
+        {
+            call_state_changed(state);
+        });
     }
 
-    ~CallMonitorPrivate() {
-        qt::core::world::destroy();
+    ~CallMonitor()
+    {
+        delete mBridge;
+    }
+
+    const core::Signal<media::telephony::CallMonitor::State>& on_call_state_changed() const
+    {
+        return call_state_changed;
     }
 
     TelepathyBridge *mBridge;
+    core::Signal<media::telephony::CallMonitor::State> call_state_changed;
 };
-
-
-CallMonitor::CallMonitor():
-    d(new CallMonitorPrivate)
-{
+}
 }
 
-CallMonitor::~CallMonitor()
+media::telephony::CallMonitor::Ptr media::telephony::make_platform_default_call_monitor()
 {
-    delete d->mBridge;
-    delete d;
-}
-
-void CallMonitor::on_change(const std::function<void(CallMonitor::State)>& func)
-{
-    d->mBridge->on_change(func);
+    return std::make_shared<impl::CallMonitor>();
 }
 
 #include "call_monitor.moc"

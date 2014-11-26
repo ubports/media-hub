@@ -24,12 +24,12 @@
 
 #include "audio/output_observer.h"
 #include "client_death_observer.h"
-#include "call-monitor/call_monitor.h"
 #include "player_configuration.h"
 #include "player_implementation.h"
 #include "power/battery_observer.h"
 #include "power/state_controller.h"
 #include "recorder_observer.h"
+#include "telephony/call_monitor.h"
 
 #include <boost/asio.hpp>
 
@@ -59,7 +59,7 @@ struct media::ServiceImplementation::Private
           client_death_observer(media::platform_default_client_death_observer()),
           recorder_observer(media::make_platform_default_recorder_observer()),
           audio_output_observer(media::audio::make_platform_default_output_observer()),
-          call_monitor(new CallMonitor)
+          call_monitor(media::telephony::make_platform_default_call_monitor())
     {
     }
 
@@ -82,7 +82,7 @@ struct media::ServiceImplementation::Private
     media::RecorderObserver::Ptr recorder_observer;
     media::audio::OutputObserver::Ptr audio_output_observer;
 
-    std::unique_ptr<CallMonitor> call_monitor;
+    media::telephony::CallMonitor::Ptr call_monitor;
     std::list<media::Player::PlayerKey> paused_sessions;
 };
 
@@ -123,12 +123,13 @@ media::ServiceImplementation::ServiceImplementation(const Configuration& configu
         }
     });
 
-    d->call_monitor->on_change([this](CallMonitor::State state) {
+    d->call_monitor->on_call_state_changed().connect([this](media::telephony::CallMonitor::State state)
+    {
         switch (state) {
-        case CallMonitor::OffHook:
+        case media::telephony::CallMonitor::State::OffHook:
             pause_all_multimedia_sessions();
             break;
-        case CallMonitor::OnHook:
+        case media::telephony::CallMonitor::State::OnHook:
             resume_paused_multimedia_sessions();
             break;
         }

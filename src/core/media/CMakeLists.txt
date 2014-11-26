@@ -11,7 +11,7 @@ file(GLOB MPRIS_HEADERS mpris/*.h)
 
 message(STATUS ${MEDIA_HUB_HEADERS})
 
-add_subdirectory(call-monitor)
+add_subdirectory(telephony)
 
 add_library(
   media-hub-common SHARED
