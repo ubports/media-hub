@@ -130,7 +130,6 @@ struct media::ServiceImplementation::Private
         power_level = indicator_power_session->get_property<core::IndicatorPower::PowerLevel>();
         is_warning = indicator_power_session->get_property<core::IndicatorPower::IsWarning>();
 
-        recorder_observer = media::make_platform_default_recorder_observer();
         recorder_observer->recording_state().changed().connect([this](media::RecordingState state)
         {
             media_recording_state_changed(state);
