@@ -93,6 +93,7 @@ add_library(
     recorder_observer.cpp
     hybris_recorder_observer.cpp
     gstreamer/engine.cpp
+    gstreamer/playbin.cpp
 
     player_skeleton.cpp
     player_implementation.cpp
@@ -105,6 +106,7 @@ add_library(
 target_link_libraries(
   media-hub-service
 
+  media-hub-client
   media-hub-common
   call-monitor
   ${DBUS_LIBRARIES}
