@@ -100,9 +100,9 @@ struct gstreamer::Engine::Private
         end_of_stream();
     }
 
-    void on_video_dimension_changed(uint32_t height, uint32_t width)
+    void on_video_dimension_changed(const media::video::Dimensions& dimensions)
     {
-        video_dimension_changed(height, width);
+        video_dimension_changed(dimensions);
     }
 
     Private()
@@ -163,12 +163,11 @@ struct gstreamer::Engine::Private
                       &Private::on_end_of_stream,
                       this))),
           on_video_dimension_changed_connection(
-              playbin.signals.on_add_frame_dimension.connect(
+              playbin.signals.on_video_dimensions_changed.connect(
                   std::bind(
                       &Private::on_video_dimension_changed,
                       this,
-                      std::placeholders::_1,
-                      std::placeholders::_2)))
+                      std::placeholders::_1)))
     {
     }
 
@@ -203,7 +202,7 @@ struct gstreamer::Engine::Private
     core::Signal<void> client_disconnected;
     core::Signal<void> end_of_stream;
     core::Signal<media::Player::PlaybackStatus> playback_status_changed;
-    core::Signal<uint32_t, uint32_t> video_dimension_changed;
+    core::Signal<core::ubuntu::media::video::Dimensions> video_dimension_changed;
 };
 
 gstreamer::Engine::Engine() : d(new Private{})
@@ -379,7 +378,7 @@ const core::Signal<media::Player::PlaybackStatus>& gstreamer::Engine::playback_s
     return d->playback_status_changed;
 }
 
-const core::Signal<uint32_t, uint32_t>& gstreamer::Engine::video_dimension_changed_signal() const
+const core::Signal<core::ubuntu::media::video::Dimensions>& gstreamer::Engine::video_dimension_changed_signal() const
 {
     return d->video_dimension_changed;
 }

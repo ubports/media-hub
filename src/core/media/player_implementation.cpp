@@ -408,12 +408,9 @@ media::PlayerImplementation::PlayerImplementation(
         playback_status_changed()(status);
     });
 
-    d->engine->video_dimension_changed_signal().connect([this](uint32_t height, uint32_t width)
+    d->engine->video_dimension_changed_signal().connect([this](const media::video::Dimensions& dimensions)
     {
-        uint64_t mask = 0;
-        // Left most 32 bits are for height, right most 32 bits are for width
-        mask = (static_cast<uint64_t>(height) << 32) | static_cast<uint64_t>(width);
-        video_dimension_changed()(mask);
+        video_dimension_changed()(dimensions);
     });
 }
 

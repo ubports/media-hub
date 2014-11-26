@@ -20,6 +20,8 @@
 #define CORE_UBUNTU_MEDIA_PLAYER_H_
 
 #include <core/media/track.h>
+
+#include <core/media/video/dimensions.h>
 #include <core/media/video/sink.h>
 
 #include <core/property.h>
@@ -148,11 +150,7 @@ class Player : public std::enable_shared_from_this<Player>
     virtual const core::Signal<int64_t>& seeked_to() const = 0;
     virtual const core::Signal<void>& end_of_stream() const = 0;
     virtual core::Signal<PlaybackStatus>& playback_status_changed() = 0;
-    /**
-     * Called when the video height/width change. Passes height and width as a bitmask with
-     * height in the upper 32 bits and width in the lower 32 bits (both unsigned values)
-     */
-    virtual const core::Signal<uint64_t>& video_dimension_changed() const = 0;
+    virtual const core::Signal<video::Dimensions>& video_dimension_changed() const = 0;
   protected:
     Player();
 

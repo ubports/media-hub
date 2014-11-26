@@ -230,6 +230,46 @@ struct Codec<core::ubuntu::media::Player::Orientation>
     }
 };
 
+namespace helper
+{
+template<core::ubuntu::media::video::detail::DimensionTag tag, typename IntegerType>
+struct TypeMapper<core::ubuntu::media::video::detail::IntWrapper<tag, IntegerType>>
+{
+    constexpr static ArgumentType type_value()
+    {
+        return core::dbus::ArgumentType::uint32;
+    }
+    constexpr static bool is_basic_type()
+    {
+        return true;
+    }
+    constexpr static bool requires_signature()
+    {
+        return false;
+    }
+
+    static std::string signature()
+    {
+        static const std::string s = TypeMapper<std::uint32_t>::signature();
+        return s;
+    }
+};
+}
+
+template<core::ubuntu::media::video::detail::DimensionTag tag, typename IntegerType>
+struct Codec<core::ubuntu::media::video::detail::IntWrapper<tag, IntegerType>>
+{
+    static void encode_argument(core::dbus::Message::Writer& out, const core::ubuntu::media::video::detail::IntWrapper<tag, IntegerType>& in)
+    {
+        out.push_uint32(in.template as<std::uint32_t>());
+    }
+
+    static void decode_argument(core::dbus::Message::Reader& out, core::ubuntu::media::video::detail::IntWrapper<tag, IntegerType>& in)
+    {
+        in = core::ubuntu::media::video::detail::IntWrapper<tag, IntegerType>{out.pop_uint32()};
+    }
+};
+
 }
 }
 
