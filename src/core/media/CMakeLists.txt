@@ -91,6 +91,9 @@ add_library(
     cover_art_resolver.cpp
     engine.cpp
 
+    audio/pulse_audio_output_observer.cpp
+    audio/output_observer.cpp
+
     power/battery_observer.cpp
     power/state_controller.cpp
 

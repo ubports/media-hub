@@ -22,6 +22,7 @@
 
 #include "service_implementation.h"
 
+#include "audio/output_observer.h"
 #include "client_death_observer.h"
 #include "call-monitor/call_monitor.h"
 #include "player_configuration.h"
@@ -57,93 +58,9 @@ struct media::ServiceImplementation::Private
           display_state_lock(power_state_controller->display_state_lock()),
           client_death_observer(media::platform_default_client_death_observer()),
           recorder_observer(media::make_platform_default_recorder_observer()),
-          pulse_mainloop_api(nullptr),
-          pulse_context(nullptr),
-          headphones_connected(false),
-          a2dp_connected(false),
-          primary_idx(-1),
+          audio_output_observer(media::audio::make_platform_default_output_observer()),
           call_monitor(new CallMonitor)
     {
-        // Spawn pulse watchdog
-        pulse_mainloop = nullptr;
-        pulse_worker = std::move(std::thread([this]()
-        {
-            std::unique_lock<std::mutex> lk(pulse_mutex);
-            pcv.wait(lk,
-                [this]{
-                    if (pulse_mainloop != nullptr || pulse_context != nullptr)
-                    {
-                        // We come from instance death, destroy and create.
-                        if (pulse_context != nullptr)
-                        {
-                            pa_threaded_mainloop_lock(pulse_mainloop);
-                            pa_operation *o;
-                            o = pa_context_drain(pulse_context,
-                                [](pa_context *context, void *userdata)
-                                {
-                                    (void) context;
-
-                                    Private *p = reinterpret_cast<Private*>(userdata);
-                                    pa_threaded_mainloop_signal(p->mainloop(), 0);
-                                }, this);
-                            
-                            if (o)
-                            {
-                                while (pa_operation_get_state(o) == PA_OPERATION_RUNNING)
-                                    pa_threaded_mainloop_wait(pulse_mainloop);
-
-                                pa_operation_unref(o);
-                            }
-
-                            pa_context_set_state_callback(pulse_context, NULL, NULL);
-                            pa_context_set_subscribe_callback(pulse_context, NULL, NULL);
-                            pa_context_disconnect(pulse_context);
-                            pa_context_unref(pulse_context);
-                            pulse_context = nullptr;
-                            pa_threaded_mainloop_unlock(pulse_mainloop);
-                        }
-                    }
-        
-                    if (pulse_mainloop == nullptr)
-                    {
-                        pulse_mainloop = pa_threaded_mainloop_new();
-
-                        if (pa_threaded_mainloop_start(pulse_mainloop) != 0)
-                        {
-                            std::cerr << "Unable to start pulseaudio mainloop, audio output detection will not function" << std::endl;
-                            pa_threaded_mainloop_free(pulse_mainloop);
-                            pulse_mainloop = nullptr;
-                        }
-                    }
-                  
-                    do {
-                        create_pulse_context();
-                    } while (pulse_context == nullptr);
-                    
-                    // Wait for next instance death.
-                    return false;
-                });
-        }));
-        
-        recorder_observer->recording_state().changed().connect([this](media::RecordingState state)
-        {
-            media_recording_state_changed(state);
-        });
-    }
-
-    ~Private()
-    {
-        release_pulse_context();
-
-        if (pulse_mainloop != nullptr)
-        {
-            pa_threaded_mainloop_stop(pulse_mainloop);
-            pa_threaded_mainloop_free(pulse_mainloop);
-            pulse_mainloop = nullptr;
-        }
-
-        if (pulse_worker.joinable())
-            pulse_worker.join();
     }
 
     void media_recording_state_changed(media::RecordingState state)
@@ -152,249 +69,6 @@ struct media::ServiceImplementation::Private
             display_state_lock->request_acquire(media::power::DisplayState::on);
         else if (state == media::RecordingState::stopped)
             display_state_lock->request_release(media::power::DisplayState::off);
-    }
-
-    pa_threaded_mainloop *mainloop()
-    {
-        return pulse_mainloop;
-    }
-
-    bool is_port_available(pa_card_port_info **ports, uint32_t n_ports, const char *name)
-    {
-        bool ret = false;
-
-        if (ports != nullptr && n_ports > 0 && name != nullptr)
-        {
-            for (uint32_t i=0; i<n_ports; i++)
-            {
-                if (strstr(ports[i]->name, name) != nullptr && ports[i]->available != PA_PORT_AVAILABLE_NO)
-                {
-                    ret = true;
-                    break;
-                }
-            }
-        }
-
-        return ret;
-    }
-
-    void update_wired_output()
-    {
-        const pa_operation *o = pa_context_get_card_info_by_index(pulse_context, primary_idx,
-                [](pa_context *context, const pa_card_info *info, int eol, void *userdata)
-                {
-                    (void) context;
-                    (void) eol;
-
-                    if (info == nullptr || userdata == nullptr)
-                        return;
-
-                    Private *p = reinterpret_cast<Private*>(userdata);
-                    if (p->is_port_available(info->ports, info->n_ports, "output-wired"))
-                    {
-                        if (!p->headphones_connected)
-                            std::cout << "Wired headphones connected" << std::endl;
-                        p->headphones_connected = true;
-                    }
-                    else if (p->headphones_connected == true)
-                    {
-                        std::cout << "Wired headphones disconnected" << std::endl;
-                        p->headphones_connected = false;
-                        p->pause_playback_if_necessary(std::get<0>(p->active_sink));
-                    }
-                }, this);
-        (void) o;
-    }
-
-    void pause_playback_if_necessary(int index)
-    {
-        // Catch uninitialized case (active index == -1)
-        if (std::get<0>(active_sink) == -1)
-            return;
-
-        if (headphones_connected)
-            return;
-
-        // No headphones/fallback on primary sink? Pause.
-        if (index == primary_idx)
-            pause_playback();
-    }
-
-    void set_active_sink(const char *name)
-    {
-        const pa_operation *o = pa_context_get_sink_info_by_name(pulse_context, name,
-                [](pa_context *context, const pa_sink_info *i, int eol, void *userdata)
-                {
-                    (void) context;
-
-                    if (eol)
-                        return;
-
-                    Private *p = reinterpret_cast<Private*>(userdata); 
-                    std::tuple<uint32_t, uint32_t, std::string> new_sink(std::make_tuple(i->index, i->card, i->name));
-
-                    printf("pulsesink: active_sink=('%s',%d,%d) -> ('%s',%d,%d)\n",
-                        std::get<2>(p->active_sink).c_str(), std::get<0>(p->active_sink),
-                        std::get<1>(p->active_sink), i->name, i->index, i->card);
-
-                    p->pause_playback_if_necessary(i->index);
-                    p->active_sink = new_sink;
-                }, this);
-     
-        (void) o;
-    }
-
-    void update_active_sink()
-    {
-        const pa_operation *o = pa_context_get_server_info(pulse_context,
-                [](pa_context *context, const pa_server_info *i, void *userdata)
-                {
-                    (void) context;
-
-                    Private *p = reinterpret_cast<Private*>(userdata);
-                    if (i->default_sink_name != std::get<2>(p->active_sink))
-                        p->set_active_sink(i->default_sink_name);
-                    p->update_wired_output();
-                }, this);
-
-        (void) o;
-    }
-
-    void create_pulse_context()
-    {
-        if (pulse_context != nullptr)
-            return;
-        
-        active_sink = std::make_tuple(-1, -1, "");
-
-        bool keep_going = true, ok = true;
-
-        pulse_mainloop_api = pa_threaded_mainloop_get_api(pulse_mainloop);
-        pa_threaded_mainloop_lock(pulse_mainloop);
-
-        pulse_context = pa_context_new(pulse_mainloop_api, "MediaHubPulseContext");
-        pa_context_set_state_callback(pulse_context,
-                [](pa_context *context, void *userdata)
-                {
-                    (void) context;
-                    Private *p = reinterpret_cast<Private*>(userdata);
-                    // Signals the pa_threaded_mainloop_wait below to proceed
-                    pa_threaded_mainloop_signal(p->mainloop(), 0);
-                }, this);
-
-        if (pulse_context == nullptr)
-        {
-            std::cerr << "Unable to create new pulseaudio context" << std::endl;
-            pa_threaded_mainloop_unlock(pulse_mainloop);
-            return;
-        }
-
-        pa_context_connect(pulse_context, nullptr, pa_context_flags_t((int) PA_CONTEXT_NOAUTOSPAWN | (int) PA_CONTEXT_NOFAIL), nullptr); 
-        pa_threaded_mainloop_wait(pulse_mainloop);
-
-        while (keep_going)
-        {
-            switch (pa_context_get_state(pulse_context))
-            {
-                case PA_CONTEXT_CONNECTING: // Wait for service to be available
-                case PA_CONTEXT_AUTHORIZING:
-                case PA_CONTEXT_SETTING_NAME:
-                    break;
-
-                case PA_CONTEXT_READY:
-                    std::cout << "Pulseaudio connection established." << std::endl;
-                    keep_going = false;
-                    break;
-
-                case PA_CONTEXT_FAILED:
-                case PA_CONTEXT_TERMINATED:
-                    keep_going = false;
-                    ok = false;
-                    break;
-
-                default:
-                    std::cerr << "Pulseaudio connection failure: " << pa_strerror(pa_context_errno(pulse_context));
-                    keep_going = false;
-                    ok = false;
-            }
-
-            if (keep_going)
-                pa_threaded_mainloop_wait(pulse_mainloop);
-        }
-
-        if (ok)
-        {
-            pa_context_set_state_callback(pulse_context,
-                    [](pa_context *context, void *userdata)
-                    {
-                        (void) context;
-                        (void) userdata;
-                        Private *p = reinterpret_cast<Private*>(userdata);
-                        std::unique_lock<std::mutex> lk(p->pulse_mutex);
-                        switch (pa_context_get_state(context))
-                        {
-                            case PA_CONTEXT_FAILED:
-                            case PA_CONTEXT_TERMINATED:
-                                p->pcv.notify_all();
-                                break;
-                            default:
-                                break;
-                        }
-                    }, this);
-
-            //FIXME: Get index for "sink.primary", the default onboard card on Touch.
-            pa_context_get_sink_info_by_name(pulse_context, "sink.primary",
-                    [](pa_context *context, const pa_sink_info *i, int eol, void *userdata)
-                    {
-                        (void) context;
-
-                        if (eol)
-                            return;
-                        
-                        Private *p = reinterpret_cast<Private*>(userdata);
-                        p->primary_idx = i->index;
-                        p->update_wired_output();
-                    }, this);
-            
-            update_active_sink(); 
-
-            pa_context_set_subscribe_callback(pulse_context,
-                    [](pa_context *context, pa_subscription_event_type_t t, uint32_t idx, void *userdata)
-                    {
-                        (void) context;
-                        (void) idx;
-
-                        if (userdata == nullptr)
-                            return;
-
-                        Private *p = reinterpret_cast<Private*>(userdata);
-                        if ((t & PA_SUBSCRIPTION_EVENT_FACILITY_MASK) == PA_SUBSCRIPTION_EVENT_SINK)
-                        {
-                            p->update_active_sink(); 
-                        }
-                    }, this);
-            pa_context_subscribe(pulse_context, PA_SUBSCRIPTION_MASK_SINK, nullptr, this);
-        }
-        else
-        {
-            std::cerr << "Connection to pulseaudio failed or was dropped." << std::endl;
-            pa_context_unref(pulse_context);
-            pulse_context = nullptr;
-        }
-
-        pa_threaded_mainloop_unlock(pulse_mainloop);
-    }
-
-    void release_pulse_context()
-    {
-        if (pulse_context != nullptr)
-        {
-            pa_threaded_mainloop_lock(pulse_mainloop);
-            pa_context_disconnect(pulse_context);
-            pa_context_unref(pulse_context);
-            pa_threaded_mainloop_unlock(pulse_mainloop);
-            pulse_context = nullptr;
-        }
     }
 
     media::ServiceImplementation::Configuration configuration;
@@ -406,21 +80,8 @@ struct media::ServiceImplementation::Private
     media::power::StateController::Lock<media::power::DisplayState>::Ptr display_state_lock;
     media::ClientDeathObserver::Ptr client_death_observer;
     media::RecorderObserver::Ptr recorder_observer;
-    // Pulse-specific
-    pa_mainloop_api *pulse_mainloop_api;
-    pa_threaded_mainloop *pulse_mainloop;
-    pa_context *pulse_context;
-    std::thread pulse_worker;
-    std::mutex pulse_mutex;
-    std::condition_variable pcv;
-    bool headphones_connected;
-    bool a2dp_connected;
-    std::tuple<int, int, std::string> active_sink;
-    int primary_idx;
+    media::audio::OutputObserver::Ptr audio_output_observer;
 
-    // Gets signaled when both the headphone jack is removed or an A2DP device is
-    // disconnected and playback needs pausing
-    core::Signal<void> pause_playback;
     std::unique_ptr<CallMonitor> call_monitor;
     std::list<media::Player::PlayerKey> paused_sessions;
 };
@@ -450,10 +111,16 @@ media::ServiceImplementation::ServiceImplementation(const Configuration& configu
             resume_multimedia_session();
     });
 
-    d->pause_playback.connect([this]()
+    d->audio_output_observer->external_output_state().changed().connect([this](audio::OutputState state)
     {
-        std::cout << "Got pause_playback signal, pausing all multimedia sessions" << std::endl;
-        pause_all_multimedia_sessions();
+        switch (state)
+        {
+        case audio::OutputState::connected:
+            break;
+        case audio::OutputState::disconnected:
+            pause_all_multimedia_sessions();
+            break;
+        }
     });
 
     d->call_monitor->on_change([this](CallMonitor::State state) {
