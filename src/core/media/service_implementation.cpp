@@ -26,6 +26,7 @@
 #include "call-monitor/call_monitor.h"
 #include "player_configuration.h"
 #include "player_implementation.h"
+#include "recorder_observer.h"
 
 #include <boost/asio.hpp>
 
@@ -40,7 +41,6 @@
 
 #include "util/timeout.h"
 #include "unity_screen_service.h"
-#include <hybris/media/media_recorder_layer.h>
 
 namespace media = core::ubuntu::media;
 
@@ -141,8 +141,11 @@ struct media::ServiceImplementation::Private
         auto uscreen_stub_service = dbus::Service::use_service(bus, dbus::traits::Service<core::UScreen>::interface_name());
         uscreen_session = uscreen_stub_service->object_for_path(dbus::types::ObjectPath("/com/canonical/Unity/Screen"));
 
-        observer = android_media_recorder_observer_new();
-        android_media_recorder_observer_set_cb(observer, &Private::media_recording_started_callback, this);
+        recorder_observer = media::make_platform_default_recorder_observer();
+        recorder_observer->recording_state().changed().connect([this](media::RecordingState state)
+        {
+            media_recording_state_changed(state);
+        });
     }
 
     ~Private()
@@ -165,12 +168,12 @@ struct media::ServiceImplementation::Private
             pulse_worker.join();
     }
 
-    void media_recording_started(bool started)
+    void media_recording_state_changed(media::RecordingState state)
     {
         if (uscreen_session == nullptr)
             return;
 
-        if (started)
+        if (state == media::RecordingState::started)
         {
             if (disp_cookie > 0)
                 return;
@@ -180,7 +183,7 @@ struct media::ServiceImplementation::Private
                 throw std::runtime_error(result.error().print());
             disp_cookie = result.value();
         }
-        else
+        else if (state == media::RecordingState::stopped)
         {
             if (disp_cookie != -1)
             {
@@ -190,15 +193,6 @@ struct media::ServiceImplementation::Private
                 });
             }
         }
-    }
-
-    static void media_recording_started_callback(bool started, void *context)
-    {
-        if (context == nullptr)
-            return;
-
-        auto p = static_cast<Private*>(context);
-        p->media_recording_started(started);
     }
 
     pa_threaded_mainloop *mainloop()
@@ -456,8 +450,7 @@ struct media::ServiceImplementation::Private
     std::shared_ptr<core::dbus::Property<core::IndicatorPower::IsWarning>> is_warning;
     int disp_cookie;
     std::shared_ptr<dbus::Object> uscreen_session;
-    MediaRecorderObserver *observer;
-
+    media::RecorderObserver::Ptr recorder_observer;
     // Pulse-specific
     pa_mainloop_api *pulse_mainloop_api;
     pa_threaded_mainloop *pulse_mainloop;
