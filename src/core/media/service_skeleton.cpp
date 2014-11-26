@@ -19,8 +19,6 @@
 
 #include "service_skeleton.h"
 
-#include "apparmor.h"
-
 #include "mpris/media_player2.h"
 #include "mpris/metadata.h"
 #include "mpris/player.h"
@@ -55,7 +53,6 @@ struct media::ServiceSkeleton::Private
         : impl(impl),
           object(impl->access_service()->add_object_for_path(
                      dbus::traits::Service<media::Service>::object_path())),
-          dbus_stub(impl->access_bus()),
           exported(impl->access_bus(), resolver)
     {
         object->install_method_handler<mpris::Service::CreateSession>(
@@ -80,40 +77,36 @@ struct media::ServiceSkeleton::Private
         dbus::types::ObjectPath op{ss.str()};
         media::Player::PlayerKey key{session_counter};
 
-        dbus_stub.get_connection_app_armor_security_async(msg->sender(), [this, msg, op, key](const std::string& profile)
+        media::Player::Configuration config
         {
-            media::Player::Configuration config
-            {
-                profile,
-                key,
-                impl->access_bus(),
-                impl->access_service()->add_object_for_path(op)
-            };
+            key,
+            impl->access_bus(),
+            impl->access_service()->add_object_for_path(op)
+        };
 
-            try
-            {
-                auto session = impl->create_session(config);
+        try
+        {
+            auto session = impl->create_session(config);
 
-                bool inserted = false;
-                std::tie(std::ignore, inserted)
-                        = session_store.insert(std::make_pair(key, session));
+            bool inserted = false;
+            std::tie(std::ignore, inserted)
+                    = session_store.insert(std::make_pair(key, session));
 
-                if (!inserted)
-                    throw std::runtime_error("Problem persisting session in session store.");
+            if (!inserted)
+                throw std::runtime_error("Problem persisting session in session store.");
 
-                auto reply = dbus::Message::make_method_return(msg);
-                reply->writer() << op;
+            auto reply = dbus::Message::make_method_return(msg);
+            reply->writer() << op;
 
-                impl->access_bus()->send(reply);
-            } catch(const std::runtime_error& e)
-            {
-                auto reply = dbus::Message::make_error(
-                            msg,
-                            mpris::Service::Errors::CreatingSession::name(),
-                            e.what());
-                impl->access_bus()->send(reply);
-            }
-        });
+            impl->access_bus()->send(reply);
+        } catch(const std::runtime_error& e)
+        {
+            auto reply = dbus::Message::make_error(
+                        msg,
+                        mpris::Service::Errors::CreatingSession::name(),
+                        e.what());
+            impl->access_bus()->send(reply);
+        }
     }
 
     void handle_pause_other_sessions(const core::dbus::Message::Ptr& msg)
@@ -130,8 +123,6 @@ struct media::ServiceSkeleton::Private
     media::ServiceSkeleton* impl;
     dbus::Object::Ptr object;
 
-    // We query the apparmor profile to obtain an identity for players.
-    org::freedesktop::dbus::DBus::Stub dbus_stub;
     // We track all running player instances.
     std::map<media::Player::PlayerKey, std::shared_ptr<media::Player>> session_store;
     // We expose the entire service as an MPRIS player.

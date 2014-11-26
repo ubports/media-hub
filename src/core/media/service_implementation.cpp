@@ -22,6 +22,7 @@
 
 #include "service_implementation.h"
 
+#include "apparmor/ubuntu.h"
 #include "audio/output_observer.h"
 #include "client_death_observer.h"
 #include "player_configuration.h"
@@ -59,6 +60,8 @@ struct media::ServiceImplementation::Private
           client_death_observer(media::platform_default_client_death_observer()),
           recorder_observer(media::make_platform_default_recorder_observer()),
           audio_output_observer(media::audio::make_platform_default_output_observer()),
+          request_context_resolver(media::apparmor::ubuntu::make_platform_default_request_context_resolver(configuration.external_services)),
+          request_authenticator(media::apparmor::ubuntu::make_platform_default_request_authenticator()),
           call_monitor(media::telephony::make_platform_default_call_monitor())
     {
     }
@@ -81,12 +84,14 @@ struct media::ServiceImplementation::Private
     media::ClientDeathObserver::Ptr client_death_observer;
     media::RecorderObserver::Ptr recorder_observer;
     media::audio::OutputObserver::Ptr audio_output_observer;
-
+    media::apparmor::ubuntu::RequestContextResolver::Ptr request_context_resolver;
+    media::apparmor::ubuntu::RequestAuthenticator::Ptr request_authenticator;
     media::telephony::CallMonitor::Ptr call_monitor;
     std::list<media::Player::PlayerKey> paused_sessions;
 };
 
-media::ServiceImplementation::ServiceImplementation(const Configuration& configuration) : d(new Private(configuration))
+media::ServiceImplementation::ServiceImplementation(const Configuration& configuration)
+    : d(new Private(configuration))
 {
     d->battery_observer->level().changed().connect([this](const media::power::Level& level)
     {
@@ -145,11 +150,12 @@ std::shared_ptr<media::Player> media::ServiceImplementation::create_session(
 {
     auto player = std::make_shared<media::PlayerImplementation>(media::PlayerImplementation::Configuration
     {
-        conf.identity,
         conf.bus,
         conf.session,
         shared_from_this(),
         conf.key,
+        d->request_context_resolver,
+        d->request_authenticator,
         d->client_death_observer,
         d->power_state_controller
     });

@@ -260,7 +260,8 @@ media::PlayerImplementation::PlayerImplementation(const media::PlayerImplementat
           {
               config.bus,
               config.session,
-              config.identity
+              config.request_context_resolver,
+              config.request_authenticator
           }
       },
       d{std::make_shared<Private>(this, config)}

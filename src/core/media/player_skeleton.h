@@ -24,6 +24,7 @@
 
 #include "player_traits.h"
 
+#include "apparmor/ubuntu.h"
 #include "mpris/player.h"
 
 #include <core/dbus/skeleton.h>
@@ -37,6 +38,11 @@ namespace ubuntu
 {
 namespace media
 {
+namespace helper
+{
+struct ExternalServices;
+}
+
 class Service;
 
 class PlayerSkeleton : public core::ubuntu::media::Player
@@ -83,9 +89,9 @@ protected:
         std::shared_ptr<core::dbus::Bus> bus;
         // The session object that we want to expose the skeleton upon.
         std::shared_ptr<core::dbus::Object> session;
-        // Our identity, an identifier we pass out to other parts of the system.
-        // Defaults to the short app id (${PKG_NAME}_${APP}).
-        std::string identity;
+        // Our functional dependencies.
+        apparmor::ubuntu::RequestContextResolver::Ptr request_context_resolver;
+        apparmor::ubuntu::RequestAuthenticator::Ptr request_authenticator;
     };
 
     PlayerSkeleton(const Configuration& configuration);

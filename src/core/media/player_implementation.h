@@ -21,6 +21,7 @@
 
 #include "player_skeleton.h"
 
+#include "apparmor/ubuntu.h"
 #include "client_death_observer.h"
 #include "power/state_controller.h"
 
@@ -41,13 +42,14 @@ public:
     // All creation time arguments go here
     struct Configuration
     {
-        std::string identity;
         std::shared_ptr<core::dbus::Bus> bus;
         std::shared_ptr<core::dbus::Object> session;
         std::shared_ptr<Service> service;
         PlayerKey key;
 
         // Functional dependencies
+        apparmor::ubuntu::RequestContextResolver::Ptr request_context_resolver;
+        apparmor::ubuntu::RequestAuthenticator::Ptr request_authenticator;
         ClientDeathObserver::Ptr client_death_observer;
         power::StateController::Ptr power_state_controller;
     };

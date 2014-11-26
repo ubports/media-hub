@@ -1,5 +1,5 @@
 /*
- * Copyright © 2013 Canonical Ltd.
+ * Copyright © 2014 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -16,33 +16,19 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#include <core/media/player.h>
+#include <core/media/apparmor/context.h>
 
-#include "player_configuration.h"
+namespace apparmor = core::ubuntu::media::apparmor;
 
-namespace media = core::ubuntu::media;
-
-media::Player::Error::OutOfProcessBufferStreamingNotSupported::OutOfProcessBufferStreamingNotSupported()
-    : std::runtime_error{"Implementation does not support out-of-process buffer streaming"}
+apparmor::Context::Context(const std::string& name) : name{name}
 {
-}
-
-const media::Player::Configuration& media::Player::Client::default_configuration()
-{
-    static const media::Player::Configuration config
+    if (name.empty()) throw std::runtime_error
     {
-        0,
-        nullptr,
-        nullptr
+        "apparmor::Context cannot be created for empty name."
     };
-    return config;
 }
 
-media::Player::Player()
+const std::string& apparmor::Context::str() const
 {
+    return name;
 }
-
-media::Player::~Player()
-{
-}
-

@@ -16,9 +16,10 @@
  * Author: Jim Hodapp <jim.hodapp@canonical.com>
  */
 
-#ifndef APPARMOR_DBUS_H_
-#define APPARMOR_DBUS_H_
+#ifndef CORE_UBUNTU_MEDIA_APPARMOR_DBUS_H_
+#define CORE_UBUNTU_MEDIA_APPARMOR_DBUS_H_
 
+#include <core/dbus/bus.h>
 #include <core/dbus/macros.h>
 #include <core/dbus/object.h>
 #include <core/dbus/service.h>
@@ -90,4 +91,4 @@ struct DBus
 }
 }
 
-#endif // APPARMOR_DBUS_H_
+#endif // CORE_UBUNTU_MEDIA_APPARMOR_DBUS_H_

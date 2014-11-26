@@ -17,15 +17,16 @@
  *              Jim Hodapp <jim.hodapp@canonical.com>
  */
 
-#include "apparmor.h"
 #include "codec.h"
 #include "engine.h"
+#include "external_services.h"
 #include "player_skeleton.h"
 #include "player_traits.h"
 #include "property_stub.h"
 #include "the_session_bus.h"
 #include "xesam.h"
 
+#include "apparmor/ubuntu.h"
 #include "mpris/media_player2.h"
 #include "mpris/metadata.h"
 #include "mpris/player.h"
@@ -44,15 +45,15 @@ namespace media = core::ubuntu::media;
 struct media::PlayerSkeleton::Private
 {
     Private(media::PlayerSkeleton* player,
-            const std::string& identity,
             const std::shared_ptr<core::dbus::Bus>& bus,
-            const std::shared_ptr<core::dbus::Object>& session)
+            const std::shared_ptr<core::dbus::Object>& session,
+            const apparmor::ubuntu::RequestContextResolver::Ptr& request_context_resolver,
+            const apparmor::ubuntu::RequestAuthenticator::Ptr& request_authenticator)
         : impl(player),
-          identity(identity),
           bus(bus),
           object(session),
-          apparmor_session(nullptr),
-          dbus_stub{bus},
+          request_context_resolver{request_context_resolver},
+          request_authenticator{request_authenticator},
           skeleton{mpris::Player::Skeleton::Configuration{bus, session, mpris::Player::Skeleton::Configuration::Defaults{}}},
           signals
           {
@@ -162,82 +163,6 @@ struct media::PlayerSkeleton::Private
         bus->send(reply);
     }
 
-    bool does_client_have_access(const std::string& context, const std::string& uri)
-    {
-        if (context.empty() || uri.empty())
-        {
-            std::cout << "Client denied access since context or uri are empty" << std::endl;
-            return false;
-        }
-
-        if (context == "unconfined")
-        {
-            std::cout << "Client allowed access since it's unconfined" << std::endl;
-            return true;
-        }
-
-        size_t pos = context.find_first_of('_');
-        if (pos == std::string::npos)
-        {
-            std::cout << "Client denied access since it's an invalid apparmor security context" << std::endl;
-            return false;
-        }
-
-        const std::string pkgname = context.substr(0, pos);
-        std::cout << "client pkgname: " << pkgname << std::endl;
-        std::cout << "uri: " << uri << std::endl;
-
-        // All confined apps can access their own files
-        if (uri.find(std::string(".local/share/" + pkgname + "/")) != std::string::npos
-                || uri.find(std::string(".cache/" + pkgname + "/")) != std::string::npos)
-        {
-            std::cout << "Client can access content in ~/.local/share/" << pkgname << " or ~/.cache/" << pkgname << std::endl;
-            return true;
-        }
-        else if (uri.find(std::string("opt/click.ubuntu.com/")) != std::string::npos
-                && uri.find(pkgname) != std::string::npos)
-        {
-            std::cout << "Client can access content in own opt directory" << std::endl;
-            return true;
-        }
-        else if ((uri.find(std::string("/system/media/audio/ui/")) != std::string::npos
-                || uri.find(std::string("/android/system/media/audio/ui/")) != std::string::npos)
-                && pkgname == "com.ubuntu.camera")
-        {
-            std::cout << "Camera app can access ui sounds" << std::endl;
-            return true;
-        }
-        // TODO: Check if the trust store previously allowed direct access to uri
-
-        // Check in ~/Music and ~/Videos
-        // TODO: when the trust store lands, check it to see if this app can access the dirs and
-        // then remove the explicit whitelist of the music-app, and gallery-app
-        else if ((pkgname == "com.ubuntu.music" || pkgname == "com.ubuntu.gallery") &&
-                (uri.find(std::string("Music/")) != std::string::npos
-                || uri.find(std::string("Videos/")) != std::string::npos
-                || uri.find(std::string("/media")) != std::string::npos))
-        {
-            std::cout << "Client can access content in ~/Music or ~/Videos" << std::endl;
-            return true;
-        }
-        else if (uri.find(std::string("/usr/share/sounds")) != std::string::npos)
-        {
-            std::cout << "Client can access content in /usr/share/sounds" << std::endl;
-            return true;
-        }
-        else if (uri.find(std::string("http://")) != std::string::npos
-                || uri.find(std::string("rtsp://")) != std::string::npos)
-        {
-            std::cout << "Client can access streaming content" << std::endl;
-            return true;
-        }
-        else
-        {
-            std::cout << "Client denied access to open_uri()" << std::endl;
-            return false;
-        }
-    }
-
     void handle_key(const core::dbus::Message::Ptr& in)
     {
         auto reply = dbus::Message::make_method_return(in);
@@ -247,15 +172,15 @@ struct media::PlayerSkeleton::Private
 
     void handle_open_uri(const core::dbus::Message::Ptr& in)
     {
-        dbus_stub.get_connection_app_armor_security_async(in->sender(), [this, in](const std::string& profile)
+        request_context_resolver->resolve_context_for_dbus_name_async(in->sender(), [this, in](const media::apparmor::ubuntu::Context& context)
         {
             Track::UriType uri;
             in->reader() >> uri;
 
-            bool have_access = does_client_have_access(profile, uri);
+            auto result = request_authenticator->authenticate_open_uri_request(context, uri);
 
             auto reply = dbus::Message::make_method_return(in);
-            reply->writer() << (have_access ? impl->open_uri(uri) : false);
+            reply->writer() << (std::get<0>(result) ? impl->open_uri(uri) : false);
 
             bus->send(reply);
         });
@@ -283,12 +208,10 @@ struct media::PlayerSkeleton::Private
     }
 
     media::PlayerSkeleton* impl;
-    std::string identity;
     dbus::Bus::Ptr bus;
     dbus::Object::Ptr object;
-    dbus::Object::Ptr apparmor_session;
-
-    org::freedesktop::dbus::DBus::Stub dbus_stub;
+    media::apparmor::ubuntu::RequestContextResolver::Ptr request_context_resolver;
+    media::apparmor::ubuntu::RequestAuthenticator::Ptr request_authenticator;
 
     mpris::Player::Skeleton skeleton;
 
@@ -334,7 +257,7 @@ struct media::PlayerSkeleton::Private
 };
 
 media::PlayerSkeleton::PlayerSkeleton(const media::PlayerSkeleton::Configuration& config)
-        : d(new Private{this, config.identity, config.bus, config.session})
+        : d(new Private{this, config.bus, config.session, config.request_context_resolver, config.request_authenticator})
 {
     // Setup method handlers for mpris::Player methods.
     auto next = std::bind(&Private::handle_next, d, std::placeholders::_1);
