@@ -135,9 +135,29 @@ struct media::PlayerSkeleton::Private
     {
         uint32_t texture_id;
         in->reader() >> texture_id;
-        impl->create_video_sink(texture_id);
 
-        auto reply = dbus::Message::make_method_return(in);
+        core::dbus::Message::Ptr reply;
+
+        try
+        {
+            impl->create_gl_texture_video_sink(texture_id);
+            reply = dbus::Message::make_method_return(in);
+        }
+        catch (const media::Player::Error::OutOfProcessBufferStreamingNotSupported& e)
+        {
+            reply = dbus::Message::make_error(
+                        in,
+                        mpris::Player::Error::OutOfProcessBufferStreamingNotSupported::name,
+                        e.what());
+        }
+        catch (...)
+        {
+            reply = dbus::Message::make_error(
+                        in,
+                        mpris::Player::Error::OutOfProcessBufferStreamingNotSupported::name,
+                        std::string{});
+        }
+
         bus->send(reply);
     }
 

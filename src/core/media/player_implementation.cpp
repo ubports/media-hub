@@ -458,20 +458,15 @@ media::Player::PlayerKey media::PlayerImplementation::key() const
     return d->key;
 }
 
+media::video::Sink::Ptr media::PlayerImplementation::create_gl_texture_video_sink(std::uint32_t texture_id)
+{
+    d->engine->create_video_sink(texture_id);
+    return media::video::Sink::Ptr{};
+}
+
 bool media::PlayerImplementation::open_uri(const Track::UriType& uri)
 {
     return d->engine->open_resource_for_uri(uri);
-}
-
-void media::PlayerImplementation::create_video_sink(uint32_t texture_id)
-{
-    d->engine->create_video_sink(texture_id);
-}
-
-media::Player::GLConsumerWrapperHybris media::PlayerImplementation::gl_consumer() const
-{
-    // This method is client-side only and is simply a no-op for the service side
-    return NULL;
 }
 
 void media::PlayerImplementation::next()
@@ -496,18 +491,6 @@ void media::PlayerImplementation::stop()
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
     d->engine->stop();
-}
-
-void media::PlayerImplementation::set_frame_available_callback(
-    UNUSED FrameAvailableCb cb, UNUSED void *context)
-{
-    // This method is client-side only and is simply a no-op for the service side
-}
-
-void media::PlayerImplementation::set_playback_complete_callback(
-    UNUSED PlaybackCompleteCb cb, UNUSED void *context)
-{
-    // This method is client-side only and is simply a no-op for the service side
 }
 
 void media::PlayerImplementation::seek_to(const std::chrono::microseconds& ms)

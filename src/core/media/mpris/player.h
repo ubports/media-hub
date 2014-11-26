@@ -103,6 +103,17 @@ struct Player
         static constexpr const char* stopped{"Stopped"};
     };
 
+    struct Error
+    {
+        struct OutOfProcessBufferStreamingNotSupported
+        {
+            static constexpr const char* name
+            {
+                "mpris.Player.Error.OutOfProcessBufferStreamingNotSupported"
+            };
+        };
+    };
+
     typedef std::map<std::string, core::dbus::types::Variant> Dictionary;
 
     DBUS_CPP_METHOD_DEF(Next, Player)

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2013 Canonical Ltd.
+ * Copyright © 2014 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -15,35 +15,27 @@
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
+#ifndef CORE_UBUNTU_MEDIA_VIDEO_PLATFORM_DEFAULT_SINK_H_
+#define CORE_UBUNTU_MEDIA_VIDEO_PLATFORM_DEFAULT_SINK_H_
+
+#include <core/media/video/sink.h>
 
 #include <core/media/player.h>
 
-#include "player_configuration.h"
-
-namespace media = core::ubuntu::media;
-
-media::Player::Error::OutOfProcessBufferStreamingNotSupported::OutOfProcessBufferStreamingNotSupported()
-    : std::runtime_error{"Implementation does not support out-of-process buffer streaming"}
+namespace core
 {
+namespace ubuntu
+{
+namespace media
+{
+namespace video
+{
+// Returns the platform default video sink for the given parameters. Never returns null, but
+// throws in case of issues.
+Sink::Ptr make_platform_default_sink(std::uint32_t gl_texture, const Player::PlayerKey& key);
+}
+}
+}
 }
 
-const media::Player::Configuration& media::Player::Client::default_configuration()
-{
-    static const media::Player::Configuration config
-    {
-        std::string{""},
-        0,
-        nullptr,
-        nullptr
-    };
-    return config;
-}
-
-media::Player::Player()
-{
-}
-
-media::Player::~Player()
-{
-}
-
+#endif // CORE_UBUNTU_MEDIA_VIDEO_PLATFORM_DEFAULT_SINK_H_

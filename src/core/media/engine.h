@@ -76,6 +76,8 @@ public:
     virtual const core::Property<State>& state() const = 0;
 
     virtual bool open_resource_for_uri(const Track::UriType& uri) = 0;
+    // Throws core::ubuntu::media::Player::Error::OutOfProcessBufferStreamingNotSupported if the implementation does not
+    // support this feature.
     virtual void create_video_sink(uint32_t texture_id) = 0;
 
     virtual bool play() = 0;
