@@ -86,6 +86,8 @@ add_library(
     ${MEDIA_HUB_HEADERS}
     ${MPRIS_HEADERS}
 
+    client_death_observer.cpp
+    hybris_client_death_observer.cpp
     cover_art_resolver.cpp
     engine.cpp
     gstreamer/engine.cpp

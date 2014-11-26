@@ -33,10 +33,6 @@
 #include <core/dbus/property.h>
 #include <core/dbus/types/object_path.h>
 
-// Hybris
-#include <hybris/media/media_codec_layer.h>
-#include <hybris/media/surface_texture_client_hybris.h>
-
 #include <limits>
 
 #define UNUSED __attribute__((unused))
@@ -83,7 +79,6 @@ struct media::PlayerStub::Private
                     object->get_signal<mpris::Player::Signals::VideoDimensionChanged>()
                 }
     {
-        decoding_session = decoding_service_create_session(key);
     }
 
     ~Private()
@@ -92,8 +87,6 @@ struct media::PlayerStub::Private
 
     std::shared_ptr<Service> parent;
     std::shared_ptr<TrackList> track_list;
-
-    DSSessionWrapperHybris decoding_session;
 
     dbus::Object::Ptr object;
     media::Player::PlayerKey key;

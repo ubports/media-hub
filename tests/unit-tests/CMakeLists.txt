@@ -8,15 +8,6 @@ add_executable(
     test-gstreamer-engine
 
     libmedia-mock.cpp
-    ${CMAKE_SOURCE_DIR}/src/core/media/cover_art_resolver.cpp
-    ${CMAKE_SOURCE_DIR}/src/core/media/engine.cpp
-    ${CMAKE_SOURCE_DIR}/src/core/media/gstreamer/engine.cpp
-    ${CMAKE_SOURCE_DIR}/src/core/media/player_skeleton.cpp
-    ${CMAKE_SOURCE_DIR}/src/core/media/player_implementation.cpp
-    ${CMAKE_SOURCE_DIR}/src/core/media/service_skeleton.cpp
-    ${CMAKE_SOURCE_DIR}/src/core/media/service_implementation.cpp
-    ${CMAKE_SOURCE_DIR}/src/core/media/track_list_skeleton.cpp
-    ${CMAKE_SOURCE_DIR}/src/core/media/track_list_implementation.cpp
     test-gstreamer-engine.cpp
 )
 
@@ -25,6 +16,7 @@ target_link_libraries(
 
     media-hub-common
     media-hub-client
+    media-hub-service
     call-monitor
     media-hub-test-framework
 
