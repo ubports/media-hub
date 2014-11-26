@@ -20,6 +20,7 @@
 #define CORE_UBUNTU_MEDIA_SERVICE_IMPLEMENTATION_H_
 
 #include "service_skeleton.h"
+#include "external_services.h"
 
 namespace core
 {
@@ -27,13 +28,18 @@ namespace ubuntu
 {
 namespace media
 {
-
 class Player;
 
 class ServiceImplementation : public ServiceSkeleton
 {
 public:
-    ServiceImplementation ();
+    // All creation time arguments go here.
+    struct Configuration
+    {
+        helper::ExternalServices& external_services;
+    };
+
+    ServiceImplementation (const Configuration& configuration);
     ~ServiceImplementation ();
 
     std::shared_ptr<Player> create_session(const Player::Configuration&);

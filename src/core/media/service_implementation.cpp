@@ -22,6 +22,7 @@
 
 #include "service_implementation.h"
 
+#include "client_death_observer.h"
 #include "indicator_power_service.h"
 #include "call-monitor/call_monitor.h"
 #include "player_configuration.h"
@@ -40,7 +41,6 @@
 #include <pulse/pulseaudio.h>
 
 #include "util/timeout.h"
-#include "unity_screen_service.h"
 
 namespace media = core::ubuntu::media;
 
@@ -48,10 +48,13 @@ using namespace std;
 
 struct media::ServiceImplementation::Private
 {
-    Private()
-        : resume_key(std::numeric_limits<std::uint32_t>::max()),
-          keep_alive(io_service),
-          disp_cookie(0),
+    Private(const ServiceImplementation::Configuration& configuration)
+        : configuration(configuration),
+          resume_key(std::numeric_limits<std::uint32_t>::max()),
+          power_state_controller(media::power::make_platform_default_state_controller(configuration.external_services)),
+          display_state_lock(power_state_controller->display_state_lock()),
+          client_death_observer(media::platform_default_client_death_observer()),
+          recorder_observer(media::make_platform_default_recorder_observer()),
           pulse_mainloop_api(nullptr),
           pulse_context(nullptr),
           headphones_connected(false),
@@ -59,13 +62,6 @@ struct media::ServiceImplementation::Private
           primary_idx(-1),
           call_monitor(new CallMonitor)
     {
-        bus = std::shared_ptr<dbus::Bus>(new dbus::Bus(core::dbus::WellKnownBus::session));
-        bus->install_executor(dbus::asio::make_executor(bus, io_service));
-        worker = std::move(std::thread([this]()
-        {
-            bus->run();
-        }));
-
         // Spawn pulse watchdog
         pulse_mainloop = nullptr;
         pulse_worker = std::move(std::thread([this]()
@@ -129,17 +125,10 @@ struct media::ServiceImplementation::Private
         
         // Connect the property change signal that will allow media-hub to take appropriate action
         // when the battery level reaches critical
-        auto stub_service = dbus::Service::use_service(bus, "com.canonical.indicator.power");
+        auto stub_service = dbus::Service::use_service(configuration.external_services.session, "com.canonical.indicator.power");
         indicator_power_session = stub_service->object_for_path(dbus::types::ObjectPath("/com/canonical/indicator/power/Battery"));
         power_level = indicator_power_session->get_property<core::IndicatorPower::PowerLevel>();
         is_warning = indicator_power_session->get_property<core::IndicatorPower::IsWarning>();
-
-        // Obtain session with Unity.Screen so that we request state when doing recording
-        auto bus = std::shared_ptr<dbus::Bus>(new dbus::Bus(core::dbus::WellKnownBus::system));
-        bus->install_executor(dbus::asio::make_executor(bus));
-
-        auto uscreen_stub_service = dbus::Service::use_service(bus, dbus::traits::Service<core::UScreen>::interface_name());
-        uscreen_session = uscreen_stub_service->object_for_path(dbus::types::ObjectPath("/com/canonical/Unity/Screen"));
 
         recorder_observer = media::make_platform_default_recorder_observer();
         recorder_observer->recording_state().changed().connect([this](media::RecordingState state)
@@ -159,40 +148,16 @@ struct media::ServiceImplementation::Private
             pulse_mainloop = nullptr;
         }
 
-        bus->stop();
-
-        if (worker.joinable())
-            worker.join();
-
         if (pulse_worker.joinable())
             pulse_worker.join();
     }
 
     void media_recording_state_changed(media::RecordingState state)
     {
-        if (uscreen_session == nullptr)
-            return;
-
         if (state == media::RecordingState::started)
-        {
-            if (disp_cookie > 0)
-                return;
-
-            auto result = uscreen_session->invoke_method_synchronously<core::UScreen::keepDisplayOn, int>();
-            if (result.is_error())
-                throw std::runtime_error(result.error().print());
-            disp_cookie = result.value();
-        }
+            display_state_lock->request_acquire(media::power::DisplayState::on);
         else if (state == media::RecordingState::stopped)
-        {
-            if (disp_cookie != -1)
-            {
-                timeout(4000, true, [this](){
-                    this->uscreen_session->invoke_method_synchronously<core::UScreen::removeDisplayOnRequest, void>(this->disp_cookie);
-                    this->disp_cookie = -1;
-                });
-            }
-        }
+            display_state_lock->request_release(media::power::DisplayState::off);
     }
 
     pa_threaded_mainloop *mainloop()
@@ -438,18 +403,16 @@ struct media::ServiceImplementation::Private
         }
     }
 
+    media::ServiceImplementation::Configuration configuration;
     // This holds the key of the multimedia role Player instance that was paused
     // when the battery level reached 10% or 5%
-    media::Player::PlayerKey resume_key;
-    std::thread worker;
-    dbus::Bus::Ptr bus;
-    boost::asio::io_service io_service;
-    boost::asio::io_service::work keep_alive;
+    media::Player::PlayerKey resume_key;    
     std::shared_ptr<dbus::Object> indicator_power_session;
     std::shared_ptr<core::dbus::Property<core::IndicatorPower::PowerLevel>> power_level;
     std::shared_ptr<core::dbus::Property<core::IndicatorPower::IsWarning>> is_warning;
-    int disp_cookie;
-    std::shared_ptr<dbus::Object> uscreen_session;
+    media::power::StateController::Ptr power_state_controller;
+    media::power::StateController::Lock<media::power::DisplayState>::Ptr display_state_lock;
+    media::ClientDeathObserver::Ptr client_death_observer;
     media::RecorderObserver::Ptr recorder_observer;
     // Pulse-specific
     pa_mainloop_api *pulse_mainloop_api;
@@ -470,7 +433,7 @@ struct media::ServiceImplementation::Private
     std::list<media::Player::PlayerKey> paused_sessions;
 };
 
-media::ServiceImplementation::ServiceImplementation() : d(new Private())
+media::ServiceImplementation::ServiceImplementation(const Configuration& configuration) : d(new Private(configuration))
 {
     d->power_level->changed().connect([this](const core::IndicatorPower::PowerLevel::ValueType &level)
     {
@@ -513,8 +476,16 @@ media::ServiceImplementation::~ServiceImplementation()
 std::shared_ptr<media::Player> media::ServiceImplementation::create_session(
         const media::Player::Configuration& conf)
 {
-    auto player = std::make_shared<media::PlayerImplementation>(
-            conf.identity, conf.bus, conf.session, shared_from_this(), conf.key);
+    auto player = std::make_shared<media::PlayerImplementation>(media::PlayerImplementation::Configuration
+    {
+        conf.identity,
+        conf.bus,
+        conf.session,
+        shared_from_this(),
+        conf.key,
+        d->client_death_observer,
+        d->power_state_controller
+    });
 
     auto key = conf.key;
     player->on_client_disconnected().connect([this, key]()
@@ -524,7 +495,7 @@ std::shared_ptr<media::Player> media::ServiceImplementation::create_session(
         // remove_player_for_key can destroy the player instance which in turn
         // destroys the "on_client_disconnected" signal whose destructor will wait
         // until all dispatches are done
-        d->io_service.post([this, key]()
+        d->configuration.external_services.io_service.post([this, key]()
         {
             remove_player_for_key(key);
         });

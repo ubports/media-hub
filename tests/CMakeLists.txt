@@ -50,5 +50,5 @@ set(
     "COM_UBUNTU_MEDIA_SERVICE_AUDIO_SINK_NAME=fakesink"
 )
 
-add_subdirectory(acceptance-tests)
+# add_subdirectory(acceptance-tests)
 add_subdirectory(unit-tests)
