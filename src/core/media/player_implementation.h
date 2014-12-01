@@ -19,7 +19,7 @@
 #ifndef CORE_UBUNTU_MEDIA_PLAYER_IMPLEMENTATION_H_
 #define CORE_UBUNTU_MEDIA_PLAYER_IMPLEMENTATION_H_
 
-#include "player_skeleton.h"
+#include <core/media/player.h>
 
 #include "apparmor/ubuntu.h"
 #include "client_death_observer.h"
@@ -36,20 +36,18 @@ namespace media
 class Engine;
 class Service;
 
-class PlayerImplementation : public PlayerSkeleton
+template<typename Parent>
+class PlayerImplementation : public Parent
 {
 public:
     // All creation time arguments go here
     struct Configuration
     {
-        std::shared_ptr<core::dbus::Bus> bus;
-        std::shared_ptr<core::dbus::Object> session;
-        std::shared_ptr<Service> service;
-        PlayerKey key;
-
+        // All creation time configuration options of the Parent class.
+        typename Parent::Configuration parent;
+        // The unique key identifying the player instance.
+        Player::PlayerKey key;
         // Functional dependencies
-        apparmor::ubuntu::RequestContextResolver::Ptr request_context_resolver;
-        apparmor::ubuntu::RequestAuthenticator::Ptr request_authenticator;
         ClientDeathObserver::Ptr client_death_observer;
         power::StateController::Ptr power_state_controller;
     };
@@ -58,7 +56,7 @@ public:
     ~PlayerImplementation();
 
     virtual std::shared_ptr<TrackList> track_list();
-    virtual PlayerKey key() const;
+    virtual Player::PlayerKey key() const;
 
     virtual video::Sink::Ptr create_gl_texture_video_sink(std::uint32_t texture_id);
 

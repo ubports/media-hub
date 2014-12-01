@@ -26,6 +26,7 @@
 #include "audio/output_observer.h"
 #include "client_death_observer.h"
 #include "player_configuration.h"
+#include "player_skeleton.h"
 #include "player_implementation.h"
 #include "power/battery_observer.h"
 #include "power/state_controller.h"
@@ -148,14 +149,16 @@ media::ServiceImplementation::~ServiceImplementation()
 std::shared_ptr<media::Player> media::ServiceImplementation::create_session(
         const media::Player::Configuration& conf)
 {
-    auto player = std::make_shared<media::PlayerImplementation>(media::PlayerImplementation::Configuration
+    auto player = std::make_shared<media::PlayerImplementation<media::PlayerSkeleton>>(media::PlayerImplementation<media::PlayerSkeleton>::Configuration
     {
-        conf.bus,
-        conf.session,
-        shared_from_this(),
+        media::PlayerSkeleton::Configuration
+        {
+            conf.bus,
+            conf.session,
+            d->request_context_resolver,
+            d->request_authenticator
+        },
         conf.key,
-        d->request_context_resolver,
-        d->request_authenticator,
         d->client_death_observer,
         d->power_state_controller
     });
