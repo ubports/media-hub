@@ -87,7 +87,8 @@ add_library(
     ${MPRIS_HEADERS}
 
     client_death_observer.cpp
-    hybris_client_death_observer.cpp
+    hashed_keyed_player_store.cpp
+    hybris_client_death_observer.cpp    
     cover_art_resolver.cpp
     engine.cpp
 

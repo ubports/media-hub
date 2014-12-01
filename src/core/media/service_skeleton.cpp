@@ -49,11 +49,12 @@ core::Signal<void> the_empty_signal;
 
 struct media::ServiceSkeleton::Private
 {
-    Private(media::ServiceSkeleton* impl, const media::CoverArtResolver& resolver)
+    Private(media::ServiceSkeleton* impl, const ServiceSkeleton::Configuration& config)
         : impl(impl),
           object(impl->access_service()->add_object_for_path(
-                     dbus::traits::Service<media::Service>::object_path())),
-          exported(impl->access_bus(), resolver)
+                     dbus::traits::Service<media::Service>::object_path())),          
+          exported(impl->access_bus(), config.cover_art_resolver),
+          configuration(config)
     {
         object->install_method_handler<mpris::Service::CreateSession>(
                     std::bind(
@@ -86,15 +87,7 @@ struct media::ServiceSkeleton::Private
 
         try
         {
-            auto session = impl->create_session(config);
-
-            bool inserted = false;
-            std::tie(std::ignore, inserted)
-                    = session_store.insert(std::make_pair(key, session));
-
-            if (!inserted)
-                throw std::runtime_error("Problem persisting session in session store.");
-
+            configuration.player_store->add_player_for_key(key, impl->create_session(config));
             auto reply = dbus::Message::make_method_return(msg);
             reply->writer() << op;
 
@@ -123,8 +116,8 @@ struct media::ServiceSkeleton::Private
     media::ServiceSkeleton* impl;
     dbus::Object::Ptr object;
 
-    // We track all running player instances.
-    std::map<media::Player::PlayerKey, std::shared_ptr<media::Player>> session_store;
+    // We remember all our creation time arguments.
+    ServiceSkeleton::Configuration configuration;
     // We expose the entire service as an MPRIS player.
     struct Exported
     {
@@ -358,7 +351,7 @@ struct media::ServiceSkeleton::Private
         mpris::Player::Skeleton player;
         mpris::Playlists::Skeleton playlists;
 
-        // Helper to resolve (title, artist, album) tuples to cover art.
+        // The CoverArtResolver used by the exported player.
         media::CoverArtResolver cover_art_resolver;
         // The actual player instance.
         std::weak_ptr<media::Player> current_player;
@@ -393,9 +386,9 @@ struct media::ServiceSkeleton::Private
     } exported;
 };
 
-media::ServiceSkeleton::ServiceSkeleton(const media::CoverArtResolver& resolver)
+media::ServiceSkeleton::ServiceSkeleton(const Configuration& configuration)
     : dbus::Skeleton<media::Service>(the_session_bus()),
-      d(new Private(this, resolver))
+      d(new Private(this, configuration))
 {
 }
 
@@ -403,39 +396,14 @@ media::ServiceSkeleton::~ServiceSkeleton()
 {
 }
 
-bool media::ServiceSkeleton::has_player_for_key(const media::Player::PlayerKey& key) const
+std::shared_ptr<media::Player> media::ServiceSkeleton::create_session(const media::Player::Configuration& config)
 {
-    return d->session_store.count(key) > 0;
+    return d->configuration.impl->create_session(config);
 }
 
-std::shared_ptr<media::Player> media::ServiceSkeleton::player_for_key(const media::Player::PlayerKey& key) const
+void media::ServiceSkeleton::pause_other_sessions(media::Player::PlayerKey key)
 {
-    return d->session_store.at(key);
-}
-
-void media::ServiceSkeleton::enumerate_players(const media::ServiceSkeleton::PlayerEnumerator& enumerator) const
-{
-    for (const auto& pair : d->session_store)
-        enumerator(pair.first, pair.second);
-}
-
-void media::ServiceSkeleton::set_current_player_for_key(const media::Player::PlayerKey& key)
-{
-    if (not has_player_for_key(key))
-        return;
-
-    d->exported.set_current_player(player_for_key(key));
-}
-
-void media::ServiceSkeleton::remove_player_for_key(const media::Player::PlayerKey& key)
-{
-    if (not has_player_for_key(key))
-        return;
-
-    auto player = player_for_key(key);
-
-    d->session_store.erase(key);
-    d->exported.unset_if_current(player);
+    d->configuration.impl->pause_other_sessions(key);
 }
 
 void media::ServiceSkeleton::run()

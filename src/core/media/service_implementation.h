@@ -30,12 +30,13 @@ namespace media
 {
 class Player;
 
-class ServiceImplementation : public ServiceSkeleton
+class ServiceImplementation : public Service
 {
 public:
     // All creation time arguments go here.
     struct Configuration
     {
+        KeyedPlayerStore::Ptr player_store;
         helper::ExternalServices& external_services;
     };
 

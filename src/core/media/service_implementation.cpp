@@ -74,7 +74,7 @@ struct media::ServiceImplementation::Private
             display_state_lock->request_release(media::power::DisplayState::off);
     }
 
-    media::ServiceImplementation::Configuration configuration;
+    media::ServiceImplementation::Configuration configuration;    
     // This holds the key of the multimedia role Player instance that was paused
     // when the battery level reached 10% or 5%
     media::Player::PlayerKey resume_key;    
@@ -86,7 +86,7 @@ struct media::ServiceImplementation::Private
     media::audio::OutputObserver::Ptr audio_output_observer;
     media::apparmor::ubuntu::RequestContextResolver::Ptr request_context_resolver;
     media::apparmor::ubuntu::RequestAuthenticator::Ptr request_authenticator;
-    media::telephony::CallMonitor::Ptr call_monitor;
+    media::telephony::CallMonitor::Ptr call_monitor;    
     std::list<media::Player::PlayerKey> paused_sessions;
 };
 
@@ -170,7 +170,7 @@ std::shared_ptr<media::Player> media::ServiceImplementation::create_session(
         // until all dispatches are done
         d->configuration.external_services.io_service.post([this, key]()
         {
-            remove_player_for_key(key);
+            d->configuration.player_store->remove_player_for_key(key);
         });
     });
 
@@ -179,19 +179,19 @@ std::shared_ptr<media::Player> media::ServiceImplementation::create_session(
 
 void media::ServiceImplementation::pause_other_sessions(media::Player::PlayerKey key)
 {
-    if (not has_player_for_key(key))
+    if (not d->configuration.player_store->has_player_for_key(key))
     {
         cerr << "Could not find Player by key: " << key << endl;
         return;
     }
 
-    auto current_player = player_for_key(key);
+    auto current_player = d->configuration.player_store->player_for_key(key);
 
     // We immediately make the player known as new current player.
     if (current_player->audio_stream_role() == media::Player::multimedia)
-        set_current_player_for_key(key);
+        d->configuration.player_store->set_current_player_for_key(key);
 
-    enumerate_players([current_player, key](const media::Player::PlayerKey& other_key, const std::shared_ptr<media::Player>& other_player)
+    d->configuration.player_store->enumerate_players([current_player, key](const media::Player::PlayerKey& other_key, const std::shared_ptr<media::Player>& other_player)
     {
         // Only pause a Player if all of the following criteria are met:
         // 1) currently playing
@@ -211,7 +211,7 @@ void media::ServiceImplementation::pause_other_sessions(media::Player::PlayerKey
 
 void media::ServiceImplementation::pause_all_multimedia_sessions()
 {
-    enumerate_players([this](const media::Player::PlayerKey& key, const std::shared_ptr<media::Player>& player)
+    d->configuration.player_store->enumerate_players([this](const media::Player::PlayerKey& key, const std::shared_ptr<media::Player>& player)
                       {
                           if (player->playback_status() == Player::playing
                               && player->audio_stream_role() == media::Player::multimedia)
@@ -224,19 +224,20 @@ void media::ServiceImplementation::pause_all_multimedia_sessions()
 
 void media::ServiceImplementation::resume_paused_multimedia_sessions()
 {
-    std::for_each(d->paused_sessions.begin(), d->paused_sessions.end(), [this](const media::Player::PlayerKey& key) {
-            player_for_key(key)->play();
-        });
+    std::for_each(d->paused_sessions.begin(), d->paused_sessions.end(), [this](const media::Player::PlayerKey& key)
+    {
+        d->configuration.player_store->player_for_key(key)->play();
+    });
 
     d->paused_sessions.clear();
 }
 
 void media::ServiceImplementation::resume_multimedia_session()
 {
-    if (not has_player_for_key(d->resume_key))
+    if (not d->configuration.player_store->has_player_for_key(d->resume_key))
         return;
 
-    auto player = player_for_key(d->resume_key);
+    auto player = d->configuration.player_store->player_for_key(d->resume_key);
 
     if (player->playback_status() == Player::paused)
     {
