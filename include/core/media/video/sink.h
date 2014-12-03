@@ -54,7 +54,8 @@ struct Sink
 
     /**
      * @brief Queries the 4x4 transformation matrix for the current frame, placing the data into 'matrix'.
-     * @param matrix [out] The destination array representing the matrix, we expect 4*4 float elements in the array.
+     * @param matrix [out] The destination array representing the matrix in column-major format.
+     *                     We expect at least 4*4 float elements in the array.
      * @returns true iff the data has been set. Returns false and leaves 'matrix' unchanged in case of issues.
      */
     virtual bool transformation_matrix(float* matrix) const = 0;
