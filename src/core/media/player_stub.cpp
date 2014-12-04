@@ -72,6 +72,7 @@ struct media::PlayerStub::Private
                     object->get_property<mpris::Player::Properties::Duration>(),
                     object->get_property<mpris::Player::Properties::AudioStreamRole>(),
                     object->get_property<mpris::Player::Properties::Orientation>(),
+                    object->get_property<mpris::Player::Properties::Lifetime>(),
                     object->get_property<mpris::Player::Properties::MinimumRate>(),
                     object->get_property<mpris::Player::Properties::MaximumRate>()
                 },
@@ -118,6 +119,7 @@ struct media::PlayerStub::Private
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Duration>> duration;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::AudioStreamRole>> audio_role;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Orientation>> orientation;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Lifetime>> lifetime;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MinimumRate>> minimum_playback_rate;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::MaximumRate>> maximum_playback_rate;
     } properties;
@@ -215,6 +217,14 @@ media::Player::PlayerKey media::PlayerStub::key() const
 bool media::PlayerStub::open_uri(const media::Track::UriType& uri)
 {
     auto op = d->object->invoke_method_synchronously<mpris::Player::OpenUri, bool>(uri);
+
+    return op.value();
+}
+
+
+bool media::PlayerStub::open_uri(const Track::UriType& uri, const Player::HeadersType& headers)
+{
+    auto op = d->object->invoke_method_synchronously<mpris::Player::OpenUriExtended, bool>(uri, headers);
 
     return op.value();
 }
@@ -367,6 +377,11 @@ const core::Property<media::Player::Orientation>& media::PlayerStub::orientation
     return *d->properties.orientation;
 }
 
+const core::Property<media::Player::Lifetime>& media::PlayerStub::lifetime() const
+{
+    return *d->properties.lifetime;
+}
+
 const core::Property<media::Player::PlaybackRate>& media::PlayerStub::minimum_playback_rate() const
 {
     return *d->properties.minimum_playback_rate;
@@ -400,6 +415,11 @@ core::Property<media::Player::Volume>& media::PlayerStub::volume()
 core::Property<media::Player::AudioStreamRole>& media::PlayerStub::audio_stream_role()
 {
     return *d->properties.audio_role;
+}
+
+core::Property<media::Player::Lifetime>& media::PlayerStub::lifetime()
+{
+    return *d->properties.lifetime;
 }
 
 const core::Signal<int64_t>& media::PlayerStub::seeked_to() const
