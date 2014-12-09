@@ -131,6 +131,7 @@ struct Player
     DBUS_CPP_METHOD_DEF(CreateVideoSink, Player)
     DBUS_CPP_METHOD_DEF(Key, Player)
     DBUS_CPP_METHOD_DEF(OpenUri, Player)
+    DBUS_CPP_METHOD_DEF(OpenUriExtended, Player)
 
     struct Signals
     {
@@ -149,6 +150,7 @@ struct Player
         DBUS_CPP_WRITABLE_PROPERTY_DEF(TypedLoopStatus, Player, core::ubuntu::media::Player::LoopStatus)
         DBUS_CPP_WRITABLE_PROPERTY_DEF(AudioStreamRole, Player, core::ubuntu::media::Player::AudioStreamRole)
         DBUS_CPP_READABLE_PROPERTY_DEF(Orientation, Player, core::ubuntu::media::Player::Orientation)
+        DBUS_CPP_WRITABLE_PROPERTY_DEF(Lifetime, Player, core::ubuntu::media::Player::Lifetime)
         DBUS_CPP_WRITABLE_PROPERTY_DEF(PlaybackRate, Player, double)
         DBUS_CPP_WRITABLE_PROPERTY_DEF(Rate, Player, double)
         DBUS_CPP_WRITABLE_PROPERTY_DEF(Shuffle, Player, bool)
@@ -230,6 +232,7 @@ struct Player
                   configuration.object->template get_property<Properties::TypedLoopStatus>(),
                   configuration.object->template get_property<Properties::AudioStreamRole>(),
                   configuration.object->template get_property<Properties::Orientation>(),
+                  configuration.object->template get_property<Properties::Lifetime>(),
                   configuration.object->template get_property<Properties::PlaybackRate>(),
                   configuration.object->template get_property<Properties::Shuffle>(),
                   configuration.object->template get_property<Properties::TypedMetaData>(),
@@ -262,6 +265,7 @@ struct Player
             properties.typed_loop_status->set(configuration.defaults.typed_loop_status);
             properties.audio_stream_role->set(core::ubuntu::media::Player::AudioStreamRole::multimedia);
             properties.orientation->set(core::ubuntu::media::Player::Orientation::rotate0);
+            properties.lifetime->set(core::ubuntu::media::Player::Lifetime::normal);
             properties.playback_rate->set(configuration.defaults.playback_rate);
             properties.is_shuffle->set(configuration.defaults.shuffle);
             properties.position->set(configuration.defaults.position);
@@ -322,6 +326,7 @@ struct Player
             dict[Properties::TypedLoopStatus::name()] = dbus::types::Variant::encode(properties.typed_loop_status->get());
             dict[Properties::AudioStreamRole::name()] = dbus::types::Variant::encode(properties.audio_stream_role->get());
             dict[Properties::Orientation::name()] = dbus::types::Variant::encode(properties.orientation->get());
+            dict[Properties::Lifetime::name()] = dbus::types::Variant::encode(properties.lifetime->get());
             dict[Properties::PlaybackRate::name()] = dbus::types::Variant::encode(properties.playback_rate->get());
             dict[Properties::Shuffle::name()] = dbus::types::Variant::encode(properties.is_shuffle->get());
             dict[Properties::Duration::name()] = dbus::types::Variant::encode(properties.duration->get());
@@ -352,6 +357,7 @@ struct Player
             std::shared_ptr<core::dbus::Property<Properties::TypedLoopStatus>> typed_loop_status;
             std::shared_ptr<core::dbus::Property<Properties::AudioStreamRole>> audio_stream_role;
             std::shared_ptr<core::dbus::Property<Properties::Orientation>> orientation;
+            std::shared_ptr<core::dbus::Property<Properties::Lifetime>> lifetime;
             std::shared_ptr<core::dbus::Property<Properties::PlaybackRate>> playback_rate;
             std::shared_ptr<core::dbus::Property<Properties::Shuffle>> is_shuffle;
             std::shared_ptr<core::dbus::Property<Properties::TypedMetaData>> typed_meta_data_for_current_track;
