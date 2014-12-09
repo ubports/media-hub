@@ -533,11 +533,27 @@ std::shared_ptr<media::Player> media::ServiceImplementation::create_session(
         // until all dispatches are done
         d->io_service.post([this, key]()
         {
-            remove_player_for_key(key);
+            if (!has_player_for_key(key))
+                return;
+
+            if (player_for_key(key)->lifetime() == Player::Lifetime::normal)
+                remove_player_for_key(key);
         });
     });
 
     return player;
+}
+
+std::shared_ptr<media::Player> media::ServiceImplementation::create_fixed_session(const std::string&, const media::Player::Configuration&)
+{
+  // no impl
+  return std::shared_ptr<media::Player>();
+}
+
+std::shared_ptr<media::Player> media::ServiceImplementation::resume_session(media::Player::PlayerKey)
+{
+  // no impl
+  return std::shared_ptr<media::Player>();
 }
 
 void media::ServiceImplementation::pause_other_sessions(media::Player::PlayerKey key)
