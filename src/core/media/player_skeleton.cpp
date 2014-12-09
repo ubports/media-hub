@@ -336,9 +336,9 @@ struct media::PlayerSkeleton::Private
                 remote_playback_status_changed->emit(status);
             });
 
-            video_dimension_changed.connect([remote_video_dimension_changed](const media::video::Dimensions& mask)
+            video_dimension_changed.connect([remote_video_dimension_changed](const media::video::Dimensions& dimensions)
             {
-                remote_video_dimension_changed->emit(mask);
+                remote_video_dimension_changed->emit(dimensions);
             });
         }
 
