@@ -19,6 +19,8 @@
 #ifndef GSTREAMER_PLAYBIN_H_
 #define GSTREAMER_PLAYBIN_H_
 
+#include <core/media/player.h>
+
 #include "bus.h"
 #include "../mpris/player.h"
 
@@ -58,6 +60,10 @@ struct Playbin
 
     static void about_to_finish(GstElement*, gpointer user_data);
 
+    static void source_setup(GstElement*,
+                             GstElement *source,
+                             gpointer user_data);
+
     Playbin();
     ~Playbin();
 
@@ -74,6 +80,7 @@ struct Playbin
 
     void set_volume(double new_volume);
 
+    void set_lifetime(core::ubuntu::media::Player::Lifetime);
     core::ubuntu::media::Player::Orientation orientation_lut(const gchar *orientation);
 
     /** Sets the new audio stream role on the pulsesink in playbin */
@@ -82,8 +89,10 @@ struct Playbin
     uint64_t position() const;
     uint64_t duration() const;
 
-    void set_uri(const std::string& uri);
+    void set_uri(const std::string& uri, const core::ubuntu::media::Player::HeadersType& headers);
     std::string uri() const;
+
+    void setup_source(GstElement *source);
 
     bool set_state_and_wait(GstState new_state);
     bool seek(const std::chrono::microseconds& ms);
@@ -103,6 +112,8 @@ struct Playbin
     GstElement* video_sink;
     core::Connection on_new_message_connection;
     bool is_seeking;
+    core::ubuntu::media::Player::HeadersType request_headers;
+    core::ubuntu::media::Player::Lifetime player_lifetime;
     struct
     {
         core::Signal<void> about_to_finish;
