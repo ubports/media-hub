@@ -75,7 +75,8 @@ public:
 
     virtual const core::Property<State>& state() const = 0;
 
-    virtual bool open_resource_for_uri(const Track::UriType& uri) = 0;
+    virtual bool open_resource_for_uri(const core::ubuntu::media::Track::UriType& uri) = 0;
+    virtual bool open_resource_for_uri(const core::ubuntu::media::Track::UriType& uri, const Player::HeadersType&) = 0;
     // Throws core::ubuntu::media::Player::Error::OutOfProcessBufferStreamingNotSupported if the implementation does not
     // support this feature.
     virtual void create_video_sink(uint32_t texture_id) = 0;
@@ -98,6 +99,9 @@ public:
     virtual core::Property<core::ubuntu::media::Player::AudioStreamRole>& audio_stream_role() = 0;
 
     virtual const core::Property<core::ubuntu::media::Player::Orientation>& orientation() const = 0;
+
+    virtual const core::Property<core::ubuntu::media::Player::Lifetime>& lifetime() const = 0;
+    virtual core::Property<core::ubuntu::media::Player::Lifetime>& lifetime() = 0;
 
     virtual const core::Property<std::tuple<Track::UriType, Track::MetaData>>& track_meta_data() const = 0;
 

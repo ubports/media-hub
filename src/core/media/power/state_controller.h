@@ -56,7 +56,7 @@ enum class SystemState
 // Interface that enables observation of the system power state.
 struct StateController
 {
-    // To safe us some typing.
+    // To save us some typing.
     typedef std::shared_ptr<StateController> Ptr;
 
     // When acquired, ensures that the system stays active,
@@ -64,7 +64,7 @@ struct StateController
     template<typename State>
     struct Lock
     {
-        // To safe us some typing.
+        // To save us some typing.
         typedef std::shared_ptr<Lock> Ptr;
 
         Lock() = default;
