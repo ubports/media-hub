@@ -239,10 +239,12 @@ struct TypeMapper<core::ubuntu::media::video::detail::IntWrapper<tag, IntegerTyp
     {
         return core::dbus::ArgumentType::uint32;
     }
+
     constexpr static bool is_basic_type()
     {
         return true;
     }
+
     constexpr static bool requires_signature()
     {
         return false;
@@ -251,6 +253,31 @@ struct TypeMapper<core::ubuntu::media::video::detail::IntWrapper<tag, IntegerTyp
     static std::string signature()
     {
         static const std::string s = TypeMapper<std::uint32_t>::signature();
+        return s;
+    }
+};
+
+template<>
+struct TypeMapper<core::ubuntu::media::Player::Lifetime>
+{
+    constexpr static ArgumentType type_value()
+    {
+        return core::dbus::ArgumentType::int16;
+    }
+
+    constexpr static bool is_basic_type()
+    {
+        return true;
+    }
+
+    constexpr static bool requires_signature()
+    {
+        return false;
+    }
+
+    static std::string signature()
+    {
+        static const std::string s = TypeMapper<std::int16_t>::signature();
         return s;
     }
 };
@@ -267,6 +294,22 @@ struct Codec<core::ubuntu::media::video::detail::IntWrapper<tag, IntegerType>>
     static void decode_argument(core::dbus::Message::Reader& out, core::ubuntu::media::video::detail::IntWrapper<tag, IntegerType>& in)
     {
         in = core::ubuntu::media::video::detail::IntWrapper<tag, IntegerType>{out.pop_uint32()};
+    }
+};
+
+template<>
+struct Codec<core::ubuntu::media::Player::Lifetime>
+{
+
+    static void encode_argument(core::dbus::Message::Writer& out, const core::ubuntu::media::Player::Lifetime& in)
+    {
+        out.push_int16(static_cast<std::int16_t>(in));
+    }
+
+
+    static void decode_argument(core::dbus::Message::Reader& out, core::ubuntu::media::Player::Lifetime& in)
+    {
+        in = static_cast<core::ubuntu::media::Player::Lifetime>(out.pop_int16());
     }
 };
 
