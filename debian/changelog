@@ -4,6 +4,16 @@ media-hub (3.0.0) UNRELEASED; urgency=medium
 
  -- Thomas Voss <thomas.voss@canonical.com>  Tue, 11 Nov 2014 17:15:52 +0100
 
+media-hub (2.0.0+15.04.20141126.2-0ubuntu1) vivid; urgency=low
+
+  [ Jim Hodapp ]
+  * Resubmitting with prerequisite branch (LP: #1331041)
+
+  [ Justin McPherson ]
+  * Resubmitting with prerequisite branch (LP: #1331041)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Wed, 26 Nov 2014 14:46:09 +0000
+
 media-hub (2.0.0+15.04.20141120.1-0ubuntu1) vivid; urgency=low
 
   [ Jim Hodapp ]

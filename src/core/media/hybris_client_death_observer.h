@@ -30,6 +30,7 @@ namespace media
 // Models functionality to be notified whenever a client
 // of the service goes away, and thus allows us to clean
 // up in that case.
+// Specific implementation for a hybris-based platform.
 class HybrisClientDeathObserver : public ClientDeathObserver,
                                   public std::enable_shared_from_this<HybrisClientDeathObserver>
 {
@@ -47,7 +48,7 @@ public:
     // Registers the client with the given key for death notifications.
     void register_for_death_notifications_with_key(const Player::PlayerKey&) override;
 
-    // Emitted whenver a client dies, reporting the key under which the
+    // Emitted whenever a client dies, reporting the key under which the
     // respective client was known.
     const core::Signal<Player::PlayerKey>& on_client_with_key_died() const override;
 

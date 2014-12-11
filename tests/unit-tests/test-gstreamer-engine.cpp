@@ -20,11 +20,14 @@
 #include <core/media/player.h>
 #include <core/media/track_list.h>
 
+#include <core/posix/fork.h>
+
 #include "core/media/xesam.h"
 #include "core/media/gstreamer/engine.h"
 
 #include "../test_data.h"
 #include "../waitable_state_transition.h"
+#include "web_server.h"
 
 #include <gtest/gtest.h>
 
@@ -149,6 +152,67 @@ TEST(GStreamerEngine, DISABLED_setting_uri_and_starting_video_playback_works)
 
     EXPECT_TRUE(wst.wait_for_state_for(
                     core::ubuntu::media::Engine::State::ready,
+                    std::chrono::seconds{10}));
+}
+
+TEST(GStreamerEngine, setting_uri_and_audio_playback_with_http_headers_works)
+{
+    const std::string test_file{"/tmp/test.mp3"};
+    std::remove(test_file.c_str());
+    ASSERT_TRUE(test::copy_test_mp3_file_to(test_file));
+
+    const std::string test_audio_uri{"http://localhost:5000"};
+    const core::ubuntu::media::Player::HeadersType headers{{ "User-Agent", "MediaHub" }, { "Cookie", "A=B;X=Y" }};
+
+    // test server
+    core::testing::CrossProcessSync cps; // server - ready -> client
+
+    testing::web::server::Configuration configuration
+    {
+        5000,
+        [test_file](mg_connection* conn)
+        {
+            std::map<std::string, std::set<std::string>> headers;
+            for (int i = 0; i < conn->num_headers; ++i) {
+              headers[conn->http_headers[i].name].insert(conn->http_headers[i].value);
+            }
+
+            EXPECT_TRUE(headers.at("User-Agent").count("MediaHub") == 1);
+            EXPECT_TRUE(headers.at("Cookie").count("A=B") == 1);
+            EXPECT_TRUE(headers.at("Cookie").count("X=Y") == 1);
+
+            mg_send_file(conn, test_file.c_str(), 0);
+            return MG_MORE;
+        }
+    };
+
+    auto server = core::posix::fork(
+                std::bind(testing::a_web_server(configuration), cps),
+                core::posix::StandardStream::empty);
+    cps.wait_for_signal_ready_for(std::chrono::seconds{2});
+    std::this_thread::sleep_for(std::chrono::milliseconds{500});
+
+    // test
+    core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
+                core::ubuntu::media::Engine::State::ready);
+
+    gstreamer::Engine engine;
+
+    engine.state().changed().connect(
+                std::bind(
+                    &core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State>::trigger,
+                    std::ref(wst),
+                    std::placeholders::_1));
+
+    EXPECT_TRUE(engine.open_resource_for_uri(test_audio_uri, headers));
+    EXPECT_TRUE(engine.play());
+    EXPECT_TRUE(wst.wait_for_state_for(
+                    core::ubuntu::media::Engine::State::playing,
+                    std::chrono::seconds{10}));
+
+    EXPECT_TRUE(engine.stop());
+    EXPECT_TRUE(wst.wait_for_state_for(
+                    core::ubuntu::media::Engine::State::stopped,
                     std::chrono::seconds{10}));
 }
 
