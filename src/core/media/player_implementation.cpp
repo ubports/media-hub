@@ -151,12 +151,18 @@ struct media::PlayerImplementation::Private :
             if (parent->is_video_source())
             {
                 if (++display_wakelock_count == 1)
+                {
                     display_state_lock->request_acquire(media::power::DisplayState::on);
+                    std::cout << "Requested new display wakelock." << std::endl;
+                }
             }
             else
             {
                 if (++system_wakelock_count == 1)
+                {
                     system_state_lock->request_acquire(media::power::SystemState::active);
+                    std::cout << "Requested new system wakelock." << std::endl;
+                }
             }
         }
         catch(const std::exception& e)
@@ -178,12 +184,18 @@ struct media::PlayerImplementation::Private :
                 case wakelock_clear_t::WAKELOCK_CLEAR_SYSTEM:
                     // Only actually clear the system wakelock once the count reaches zero
                     if (--system_wakelock_count == 0)
-                        system_state_lock->request_release(media::power::SystemState::active);
+                    {
+                        std::cout << "Clearing system wakelock." << std::endl;
+                        system_state_lock->request_release(media::power::SystemState::active);                        
+                    }
                     break;
                 case wakelock_clear_t::WAKELOCK_CLEAR_DISPLAY:
                     // Only actually clear the display wakelock once the count reaches zero
                     if (--display_wakelock_count == 0)
+                    {
+                        std::cout << "Clearing display wakelock." << std::endl;
                         display_state_lock->request_release(media::power::DisplayState::on);
+                    }
                     break;
                 case wakelock_clear_t::WAKELOCK_CLEAR_INVALID:
                 default:
