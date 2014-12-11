@@ -107,6 +107,84 @@ TEST(MusicService, DISABLED_accessing_and_creating_a_session_works)
               core::testing::fork_and_run(service, client));
 }
 
+TEST(MusicService, DISABLED_accessing_and_creating_a_fixed_session_works)
+{
+    core::testing::CrossProcessSync sync_service_start;
+
+    auto service = [this, &sync_service_start]()
+    {
+        SigTermCatcher sc;
+
+        auto service = std::make_shared<media::ServiceImplementation>();
+        std::thread t([&service](){service->run();});
+
+        sync_service_start.try_signal_ready_for(std::chrono::milliseconds{500});
+
+        sc.wait_for_signal(); service->stop();
+
+        if (t.joinable())
+            t.join();
+
+        return ::testing::Test::HasFailure() ? core::posix::exit::Status::failure : core::posix::exit::Status::success;
+    };
+
+    auto client = [this, &sync_service_start]()
+    {
+        sync_service_start.wait_for_signal_ready_for(std::chrono::milliseconds{500});
+
+        auto service = media::Service::Client::instance();
+        auto session = service->create_fixed_session("com.ubuntu.test-session", media::Player::Client::default_configuration());
+
+        EXPECT_TRUE(session != nullptr);
+
+        return ::testing::Test::HasFailure() ? core::posix::exit::Status::failure : core::posix::exit::Status::success;
+    };
+
+    EXPECT_EQ(core::testing::ForkAndRunResult::empty,
+              core::testing::fork_and_run(service, client));
+}
+
+TEST(MusicService, DISABLED_resuming_a_session_works)
+{
+    core::testing::CrossProcessSync sync_service_start;
+
+    auto service = [this, &sync_service_start]()
+    {
+        SigTermCatcher sc;
+
+        auto service = std::make_shared<media::ServiceImplementation>();
+        std::thread t([&service](){service->run();});
+
+        sync_service_start.try_signal_ready_for(std::chrono::milliseconds{500});
+
+        sc.wait_for_signal(); service->stop();
+
+        if (t.joinable())
+            t.join();
+
+        return ::testing::Test::HasFailure() ? core::posix::exit::Status::failure : core::posix::exit::Status::success;
+    };
+
+    auto client = [this, &sync_service_start]()
+    {
+        sync_service_start.wait_for_signal_ready_for(std::chrono::milliseconds{500});
+
+        auto service = media::Service::Client::instance();
+        auto session = service->create_session(media::Player::Client::default_configuration());
+
+        EXPECT_TRUE(session != nullptr);
+
+        auto resumed_session = service->resume_session(session->key());
+
+        EXPECT_TRUE(resumed_session != nullptr);
+
+        return ::testing::Test::HasFailure() ? core::posix::exit::Status::failure : core::posix::exit::Status::success;
+    };
+
+    EXPECT_EQ(core::testing::ForkAndRunResult::empty,
+              core::testing::fork_and_run(service, client));
+}
+
 TEST(MusicService, DISABLED_remotely_querying_track_meta_data_works)
 {
     const std::string test_file{"/tmp/test.ogg"};

@@ -48,7 +48,7 @@ struct ClientDeathObserver
     // Registers the client with the given key for death notifications.
     virtual void register_for_death_notifications_with_key(const Player::PlayerKey&) = 0;
 
-    // Emitted whenver a client dies, reporting the key under which the
+    // Emitted whenever a client dies, reporting the key under which the
     // respective client was known.
     virtual const core::Signal<Player::PlayerKey>& on_client_with_key_died() const = 0;
 };
