@@ -36,8 +36,8 @@ class HashedKeyedPlayerStore : public KeyedPlayerStore
 public:
     HashedKeyedPlayerStore();
     // We keep track of the "current" player, that is, the one
-    // that has been created most recently and provide a getable/observable
-    // access to that designated instance.
+    // that has been created most recently, or has been explicitly foregrounded, or has been enabled for
+    // background playback. We provide a getable/observable access to that designated instance.
     const core::Property<std::shared_ptr<media::Player>>& current_player() const override;
 
     // We keep track of all known player sessions here and render them accessible via

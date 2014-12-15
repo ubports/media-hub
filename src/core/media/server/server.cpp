@@ -75,14 +75,21 @@ int main()
     // Our helper for connecting to external services.
     core::ubuntu::media::helper::ExternalServices external_services;
 
+    // We move communication with all external services to its own worker thread
+    // to keep the actual service thread free from such operations.
     std::thread external_services_worker
     {
+        // We keep on running until shutdown has been explicitly requested.
+        // All exceptions thrown on this thread are caught, and reported to
+        // the terminal for post-mortem debugging purposes.
         [&shutdown_requested, &external_services]()
         {
             while (not shutdown_requested)
             {
                 try
                 {
+                    // Blocking call to the underlying reactor implementation.
+                    // Only returns cleanly when explicitly stopped.
                     external_services.io_service.run();
                 }
                 catch (const std::exception& e)
@@ -142,20 +149,23 @@ int main()
     };
 
     // We block on waiting for signals telling us to gracefully shutdown.
+    // Incoming signals are handled in a lambda connected to signal_raised()
+    // which is setup at the beginning of main(...).
     trap->run();
 
     // Inform our workers that we should shutdown gracefully
     shutdown_requested = true;
 
     // And stop execution of helper and actual service.
-    external_services.stop();
     skeleton->stop();
-
-    if (external_services_worker.joinable())
-        external_services_worker.join();
 
     if (service_worker.joinable())
         service_worker.join();
+
+    external_services.stop();
+
+    if (external_services_worker.joinable())
+        external_services_worker.join();
 
     return 0;
 }

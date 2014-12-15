@@ -233,12 +233,18 @@ struct media::PlayerImplementation<Parent>::Private :
             if (parent->is_video_source())
             {
                 if (++display_wakelock_count == 1)
+                {
                     display_state_lock->request_acquire(media::power::DisplayState::on);
+                    std::cout << "Requested new display wakelock." << std::endl;
+                }
             }
             else
             {
                 if (++system_wakelock_count == 1)
+                {
                     system_state_lock->request_acquire(media::power::SystemState::active);
+                    std::cout << "Requested new system wakelock." << std::endl;
+                }
             }
         }
         catch(const std::exception& e)
@@ -260,12 +266,18 @@ struct media::PlayerImplementation<Parent>::Private :
                 case wakelock_clear_t::WAKELOCK_CLEAR_SYSTEM:
                     // Only actually clear the system wakelock once the count reaches zero
                     if (--system_wakelock_count == 0)
-                        system_state_lock->request_release(media::power::SystemState::active);
+                    {
+                        std::cout << "Clearing system wakelock." << std::endl;
+                        system_state_lock->request_release(media::power::SystemState::active);                        
+                    }
                     break;
                 case wakelock_clear_t::WAKELOCK_CLEAR_DISPLAY:
                     // Only actually clear the display wakelock once the count reaches zero
                     if (--display_wakelock_count == 0)
+                    {
+                        std::cout << "Clearing display wakelock." << std::endl;
                         display_state_lock->request_release(media::power::DisplayState::on);
+                    }
                     break;
                 case wakelock_clear_t::WAKELOCK_CLEAR_INVALID:
                 default:
@@ -357,6 +369,8 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
     Parent::audio_stream_role().set(Player::AudioStreamRole::multimedia);
     d->engine->audio_stream_role().set(Player::AudioStreamRole::multimedia);
     Parent::orientation().set(Player::Orientation::rotate0);
+    Parent::lifetime().set(Player::Lifetime::normal);
+    d->engine->lifetime().set(Player::Lifetime::normal);
 
     // Make sure that the Position property gets updated from the Engine
     // every time the client requests position
@@ -398,6 +412,11 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
     d->engine->orientation().changed().connect([this](const Player::Orientation& o)
     {
         Parent::orientation().set(o);
+    });
+
+    lifetime().changed().connect([this](media::Player::Lifetime lifetime)
+    {
+        d->engine->lifetime().set(lifetime);
     });
 
     d->engine->about_to_finish_signal().connect([this]()
@@ -495,6 +514,11 @@ template<typename Parent>
 bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri)
 {
     return d->engine->open_resource_for_uri(uri);
+}
+
+bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri, const Player::HeadersType& headers)
+{
+    return d->engine->open_resource_for_uri(uri, headers);
 }
 
 template<typename Parent>
