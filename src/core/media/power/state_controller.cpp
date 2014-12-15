@@ -211,8 +211,8 @@ struct SystemStateLock : public media::power::StateController::Lock<media::power
         if (state == media::power::SystemState::suspend)
             return;
 
-        std::lock_guard<std::mutex> lg{cookie_store_guard};
-        if (cookie_store.count(state) > 0)
+        std::lock_guard<std::mutex> lg{system_state_cookie_store_guard};
+        if (system_state_cookie_store.count(state) > 0)
             return;
 
         object->invoke_method_asynchronously_with_callback<com::canonical::powerd::Interface::requestSysState, std::string>([this, state](const core::dbus::Result<std::string>& result)
@@ -220,9 +220,9 @@ struct SystemStateLock : public media::power::StateController::Lock<media::power
             if (result.is_error()) // TODO(tvoss): We should log the error condition here.
                 return;
 
-            std::lock_guard<std::mutex> lg{cookie_store_guard};
+            std::lock_guard<std::mutex> lg{system_state_cookie_store_guard};
 
-            cookie_store[state] = result.value();
+            system_state_cookie_store[state] = result.value();
             signals.acquired(state);
         }, std::string{wake_lock_name}, static_cast<std::int32_t>(state));
     }
@@ -234,9 +234,9 @@ struct SystemStateLock : public media::power::StateController::Lock<media::power
         if (state == media::power::SystemState::suspend)
             return;
 
-        std::lock_guard<std::mutex> lg{cookie_store_guard};
+        std::lock_guard<std::mutex> lg{system_state_cookie_store_guard};
 
-        if (cookie_store.count(state) == 0)
+        if (system_state_cookie_store.count(state) == 0)
             return;
 
         object->invoke_method_asynchronously_with_callback<com::canonical::powerd::Interface::clearSysState, void>([this, state](const core::dbus::Result<void>& result)
@@ -244,11 +244,11 @@ struct SystemStateLock : public media::power::StateController::Lock<media::power
             if (result.is_error())
                 std::cerr << result.error().print() << std::endl;
 
-            std::lock_guard<std::mutex> lg{cookie_store_guard};
+            std::lock_guard<std::mutex> lg{system_state_cookie_store_guard};
 
-            cookie_store.erase(state);
+            system_state_cookie_store.erase(state);
             signals.released(state);
-        }, cookie_store.at(state));
+        }, system_state_cookie_store.at(state));
     }
 
     // Emitted whenever the acquire request completes.
