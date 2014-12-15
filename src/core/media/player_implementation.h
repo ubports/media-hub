@@ -63,6 +63,7 @@ public:
     virtual video::Sink::Ptr create_gl_texture_video_sink(std::uint32_t texture_id);
 
     virtual bool open_uri(const Track::UriType& uri);
+    virtual bool open_uri(const Track::UriType& uri, const Player::HeadersType& headers);
     virtual void next();
     virtual void previous();
     virtual void play();
