@@ -33,6 +33,7 @@ namespace dbus
 {
 class Bus;
 }
+
 namespace ubuntu
 {
 namespace media

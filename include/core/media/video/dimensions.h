@@ -34,6 +34,36 @@ namespace detail
 {
 enum class DimensionTag { width, height };
 
+/**
+ * @brief IntWrapper is a type-safe integer that allows for encoding/enforcing semantics by means of tags.
+ * @tparam Tag Hint for the compiler on the semantics of the underlying integer.
+ * @tparam IntegerType The underlying integer type.
+ *
+ * Handling dimensions like width and height with raw integer values is tedious and error prone
+ * as the compiler has no way of distinguishing a width from a height, or an x coordinate from a
+ * y coordinate. The problem is solvable with the tagged integer type presented here. Consider
+ * the following example:
+ *
+ * @code{.cpp}
+ * typedef IntWrapper<DimensionTag::width, std::uint32_t> Width;
+ * typedef IntWrapper<DimensionTag::height, std::uint32_t> Height;
+ *
+ * void an_unsafe_function_expecting_width_and_height(std::uint32_t width, std::uint32_t height);
+ * void a_safe_function_expecting_width_and_height(Width width, Height height);
+ *
+ * int main()
+ * {
+ *     std::uint unsafe_width{640}, unsafe_height{480};
+ *     Width width{640}; Height height{480};
+ *     // This will compile but is still wrong
+ *     an_unsafe_function_expecting_width_and_height(unsafe_height, unsafe_width);
+ *
+ *    // This will not compile
+ *    a_safe_function_expecting_width_and_height(height, width);
+ *
+ * }
+ * @endcode
+ */
 template<DimensionTag Tag, typename IntegerType>
 class IntWrapper
 {

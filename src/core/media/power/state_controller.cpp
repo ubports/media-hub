@@ -21,6 +21,8 @@
 #include <core/dbus/macros.h>
 #include <core/dbus/object.h>
 
+#include <iostream>
+
 namespace media = core::ubuntu::media;
 
 namespace com { namespace canonical {
@@ -101,17 +103,21 @@ struct DisplayStateLock : public media::power::StateController::Lock<media::powe
 
         std::weak_ptr<DisplayStateLock> wp{shared_from_this()};
 
-        object->invoke_method_asynchronously_with_callback<com::canonical::Unity::Screen::keepDisplayOn, std::int32_t>([wp, state](const core::dbus::Result<std::int32_t>& result)
-        {
-            if (result.is_error()) // We should at least log the error case here.
-                return;
+        object->invoke_method_asynchronously_with_callback<com::canonical::Unity::Screen::keepDisplayOn, std::int32_t>(
+                    [wp, state](const core::dbus::Result<std::int32_t>& result)
+                    {
+                        if (result.is_error())
+                        {
+                            std::cerr << result.error().print() << std::endl;
+                            return;
+                        }
 
-            if (auto sp = wp.lock())
-            {
-                sp->cookie = result.value();
-                sp->signals.acquired(state);
-            }
-        });
+                        if (auto sp = wp.lock())
+                        {
+                            sp->cookie = result.value();
+                            sp->signals.acquired(state);
+                        }
+                    });
     }
 
     void request_release(media::power::DisplayState state) override
@@ -129,28 +135,34 @@ struct DisplayStateLock : public media::power::StateController::Lock<media::powe
         timeout.expires_from_now(timeout_for_release());
         timeout.async_wait([wp, state, current_cookie](const boost::system::error_code& ec)
         {
-            if (not ec)
+            // We only return early from the timeout handler if the operation has been
+            // explicitly aborted before.
+            if (ec == boost::asio::error::operation_aborted)
+                return;
+
+            if (auto sp = wp.lock())
             {
-                if (auto sp = wp.lock())
-                {
-                    sp->object->invoke_method_asynchronously_with_callback<com::canonical::Unity::Screen::removeDisplayOnRequest, void>([wp, state, current_cookie](const core::dbus::Result<void>& result)
-                    {
-                        if (result.is_error()) // We should at least log the error case here.
-                            return;
+                sp->object->invoke_method_asynchronously_with_callback<com::canonical::Unity::Screen::removeDisplayOnRequest, void>(
+                            [wp, state, current_cookie](const core::dbus::Result<void>& result)
+                            {
+                                if (result.is_error())
+                                {
+                                    std::cerr << result.error().print() << std::endl;
+                                    return;
+                                }
 
-                        if (auto sp = wp.lock())
-                        {
-                            sp->signals.released(state);
+                                if (auto sp = wp.lock())
+                                {
+                                    sp->signals.released(state);
 
-                            // We might have issued a different request before and
-                            // only call the display state done if the original cookie
-                            // corresponds to the one we just gave up.
-                            if (sp->cookie == current_cookie)
-                                sp->cookie = the_invalid_cookie;
-                        }
+                                    // We might have issued a different request before and
+                                    // only call the display state done if the original cookie
+                                    // corresponds to the one we just gave up.
+                                    if (sp->cookie == current_cookie)
+                                        sp->cookie = the_invalid_cookie;
+                                }
 
-                    }, current_cookie);
-                }
+                            }, current_cookie);
             }
         });
     }
@@ -199,8 +211,8 @@ struct SystemStateLock : public media::power::StateController::Lock<media::power
         if (state == media::power::SystemState::suspend)
             return;
 
-        std::lock_guard<std::mutex> lg{cookie_store_guard};
-        if (cookie_store.count(state) > 0)
+        std::lock_guard<std::mutex> lg{system_state_cookie_store_guard};
+        if (system_state_cookie_store.count(state) > 0)
             return;
 
         object->invoke_method_asynchronously_with_callback<com::canonical::powerd::Interface::requestSysState, std::string>([this, state](const core::dbus::Result<std::string>& result)
@@ -208,9 +220,9 @@ struct SystemStateLock : public media::power::StateController::Lock<media::power
             if (result.is_error()) // TODO(tvoss): We should log the error condition here.
                 return;
 
-            std::lock_guard<std::mutex> lg{cookie_store_guard};
+            std::lock_guard<std::mutex> lg{system_state_cookie_store_guard};
 
-            cookie_store[state] = result.value();
+            system_state_cookie_store[state] = result.value();
             signals.acquired(state);
         }, std::string{wake_lock_name}, static_cast<std::int32_t>(state));
     }
@@ -222,20 +234,21 @@ struct SystemStateLock : public media::power::StateController::Lock<media::power
         if (state == media::power::SystemState::suspend)
             return;
 
-        std::lock_guard<std::mutex> lg{cookie_store_guard};
+        std::lock_guard<std::mutex> lg{system_state_cookie_store_guard};
 
-        if (cookie_store.count(state) == 0)
+        if (system_state_cookie_store.count(state) == 0)
             return;
 
         object->invoke_method_asynchronously_with_callback<com::canonical::powerd::Interface::clearSysState, void>([this, state](const core::dbus::Result<void>& result)
         {
-            if (result.is_error()) {/*TODO(tvoss): We should log the error condition here.*/}
+            if (result.is_error())
+                std::cerr << result.error().print() << std::endl;
 
-            std::lock_guard<std::mutex> lg{cookie_store_guard};
+            std::lock_guard<std::mutex> lg{system_state_cookie_store_guard};
 
-            cookie_store.erase(state);
+            system_state_cookie_store.erase(state);
             signals.released(state);
-        }, cookie_store.at(state));
+        }, system_state_cookie_store.at(state));
     }
 
     // Emitted whenever the acquire request completes.
@@ -250,8 +263,12 @@ struct SystemStateLock : public media::power::StateController::Lock<media::power
         return signals.released;
     }
 
-    std::mutex cookie_store_guard;
-    std::map<media::power::SystemState, std::string> cookie_store;
+    // Guards concurrent accesses to the cookie store.
+    std::mutex system_state_cookie_store_guard;
+    // Maps previously requested system states to the cookies returned
+    // by the remote end. Used for keeping track of acquired states and
+    // associated cookies to be able to release previously granted acquisitions.
+    std::map<media::power::SystemState, std::string> system_state_cookie_store;
     media::power::StateController::Ptr parent;
     core::dbus::Object::Ptr object;
     struct
