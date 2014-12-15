@@ -188,16 +188,16 @@ struct media::PlayerSkeleton::Private
 
     void handle_open_uri_extended(const core::dbus::Message::Ptr& in)
     {
-        dbus_stub.get_connection_app_armor_security_async(in->sender(), [this, in](const std::string& profile)
+        request_context_resolver->resolve_context_for_dbus_name_async(in->sender(), [this, in](const media::apparmor::ubuntu::Context& context)
         {
             Track::UriType uri;
             Player::HeadersType headers;
 
             in->reader() >> uri >> headers;
 
-            bool have_access = does_client_have_access(profile, uri);
+            auto result = request_authenticator->authenticate_open_uri_request(context, uri);
             auto reply = dbus::Message::make_method_return(in);
-            reply->writer() << (have_access ? impl->open_uri(uri, headers) : false);
+            reply->writer() << (std::get<0>(result) ? impl->open_uri(uri, headers) : false);
 
             bus->send(reply);
         });

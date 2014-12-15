@@ -144,10 +144,9 @@ struct media::ServiceSkeleton::Private
 
                 media::Player::Configuration config
                 {
-                    profile,
-                            key,
-                            impl->access_bus(),
-                            impl->access_service()->add_object_for_path(op)
+                    key,
+                    impl->access_bus(),
+                    impl->access_service()->add_object_for_path(op)
                 };
 
                 auto session = impl->create_session(config);
