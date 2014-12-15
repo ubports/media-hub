@@ -23,6 +23,7 @@
 
 #include "client_death_observer.h"
 #include "engine.h"
+#include "null_track_list.h"
 #include "track_list_implementation.h"
 
 #include "gstreamer/engine.h"
@@ -38,90 +39,6 @@ namespace media = core::ubuntu::media;
 namespace dbus = core::dbus;
 
 using namespace std;
-
-namespace
-{
-// A helper type to replace the playlist implementation below.
-// Please note that this type is only a temporary manner. Ideally,
-// the actual implementation should be injected as a dependency from the
-// outside.
-struct NullTrackList : public media::TrackList
-{
-    NullTrackList() = default;
-
-    bool has_next()
-    {
-        return false;
-    }
-
-    media::Track::Id next()
-    {
-        return media::Track::Id{};
-    }
-
-    media::Track::UriType query_uri_for_track(const media::Track::Id&)
-    {
-        return media::Track::UriType{};
-    }
-
-    const core::Property<bool>& can_edit_tracks() const override
-    {
-        return props_and_sigs.can_edit_tracks;
-    }
-
-    const core::Property<Container>& tracks() const override
-    {
-        return props_and_sigs.tracks;
-    }
-
-    virtual media::Track::MetaData query_meta_data_for_track(const media::Track::Id&) override
-    {
-        return media::Track::MetaData{};
-    }
-
-    void add_track_with_uri_at(const media::Track::UriType&, const media::Track::Id&, bool) override
-    {
-    }
-
-    void remove_track(const media::Track::Id&) override
-    {
-    }
-
-    void go_to(const media::Track::Id&) override
-    {
-    }
-
-    const core::Signal<void>& on_track_list_replaced() const override
-    {
-        return props_and_sigs.on_track_list_replaced;
-    }
-
-    const core::Signal<media::Track::Id>& on_track_added() const override
-    {
-        return props_and_sigs.on_track_added;
-    }
-
-    const core::Signal<media::Track::Id>& on_track_removed() const override
-    {
-        return props_and_sigs.on_track_removed;
-    }
-
-    const core::Signal<media::Track::Id>& on_track_changed() const override
-    {
-        return props_and_sigs.on_track_changed;
-    }
-
-    struct
-    {
-        core::Property<bool> can_edit_tracks;
-        core::Property<TrackList::Container> tracks;
-        core::Signal<void> on_track_list_replaced;
-        core::Signal<media::Track::Id> on_track_added;
-        core::Signal<media::Track::Id> on_track_removed;
-        core::Signal<media::Track::Id> on_track_changed;
-    } props_and_sigs;
-};
-}
 
 template<typename Parent>
 struct media::PlayerImplementation<Parent>::Private :
@@ -339,7 +256,7 @@ struct media::PlayerImplementation<Parent>::Private :
     media::power::StateController::Lock<media::power::SystemState>::Ptr system_state_lock;
 
     std::shared_ptr<Engine> engine;
-    std::shared_ptr<NullTrackList> track_list;
+    std::shared_ptr<media::NullTrackList> track_list;
     std::atomic<int> system_wakelock_count;
     std::atomic<int> display_wakelock_count;
     Engine::State previous_state;
@@ -414,7 +331,7 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         Parent::orientation().set(o);
     });
 
-    lifetime().changed().connect([this](media::Player::Lifetime lifetime)
+    Parent::lifetime().changed().connect([this](media::Player::Lifetime lifetime)
     {
         d->engine->lifetime().set(lifetime);
     });
@@ -516,6 +433,7 @@ bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri)
     return d->engine->open_resource_for_uri(uri);
 }
 
+template<typename Parent>
 bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri, const Player::HeadersType& headers)
 {
     return d->engine->open_resource_for_uri(uri, headers);
