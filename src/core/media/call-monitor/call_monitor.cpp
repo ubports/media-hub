@@ -163,11 +163,13 @@ class CallMonitorPrivate
 {
 public:
     CallMonitorPrivate() {
+        mBridge = nullptr;
         try {
             std::thread([this]() {
                 qt::core::world::build_and_run(0, nullptr, [this]() {
                     qt::core::world::enter_with_task([this]() {
                         mBridge = new TelepathyBridge();
+                        cv.notify_all();
                     });
                 });
             }).detach();
@@ -176,6 +178,9 @@ public:
         } catch(...) {
             std::cerr << "exception(...) in CallMonitor thread start" << std::endl;
         }
+        // Wait until telepathy bridge is set, so we can hook up the change signals
+        std::unique_lock<std::mutex> lck(mtx);
+        cv.wait_for(lck, std::chrono::seconds(3));
     }
 
     ~CallMonitorPrivate() {
@@ -183,6 +188,10 @@ public:
     }
 
     TelepathyBridge *mBridge;
+
+private:
+    std::mutex mtx;
+    std::condition_variable cv;
 };
 
 
@@ -199,7 +208,10 @@ CallMonitor::~CallMonitor()
 
 void CallMonitor::on_change(const std::function<void(CallMonitor::State)>& func)
 {
-    d->mBridge->on_change(func);
+    if (d->mBridge != nullptr)
+        d->mBridge->on_change(func);
+    else
+        std::cerr << "TelepathyBridge: Failed to hook on_change signal, bridge not yet set" << std::endl;
 }
 
 #include "call_monitor.moc"
