@@ -1,3 +1,14 @@
+media-hub (2.0.0+15.04.20150108-0ubuntu1) vivid; urgency=low
+
+  [ Jim Hodapp ]
+  * Pause playback when recording begins. (LP: #1398047)
+
+  [ Ricardo Salveti de Araujo ]
+  * call_monitor.cpp: waiting for bridge to be up, and also protecting
+    the on_change call (LP: #1408137)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 08 Jan 2015 12:58:01 +0000
+
 media-hub (2.0.0+15.04.20141126.2-0ubuntu1) vivid; urgency=low
 
   [ Jim Hodapp ]
