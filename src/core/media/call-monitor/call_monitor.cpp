@@ -80,7 +80,10 @@ public:
 
 private Q_SLOTS:
     void accountManagerSetup() {
-        mAccountManager = Tp::AccountManager::create();
+        mAccountManager = Tp::AccountManager::create(Tp::AccountFactory::create(QDBusConnection::sessionBus(),
+                                                                                Tp::Account::FeatureCore),
+                                                     Tp::ConnectionFactory::create(QDBusConnection::sessionBus(),
+                                                                                   Tp::Connection::FeatureCore));
         connect(mAccountManager->becomeReady(),
                 SIGNAL(finished(Tp::PendingOperation*)),
                 SLOT(accountManagerReady(Tp::PendingOperation*)));
