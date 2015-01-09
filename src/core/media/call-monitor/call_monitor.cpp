@@ -168,6 +168,7 @@ public:
             std::thread([this]() {
                 qt::core::world::build_and_run(0, nullptr, [this]() {
                     qt::core::world::enter_with_task([this]() {
+                        std::cout << "CallMonitor: Creating TelepathyBridge" << std::endl;
                         mBridge = new TelepathyBridge();
                         cv.notify_all();
                     });
@@ -208,9 +209,10 @@ CallMonitor::~CallMonitor()
 
 void CallMonitor::on_change(const std::function<void(CallMonitor::State)>& func)
 {
-    if (d->mBridge != nullptr)
+    if (d->mBridge != nullptr) {
+        std::cout << "CallMonitor: Setting up callback for TelepathyBridge on_change" << std::endl;
         d->mBridge->on_change(func);
-    else
+    } else
         std::cerr << "TelepathyBridge: Failed to hook on_change signal, bridge not yet set" << std::endl;
 }
 
