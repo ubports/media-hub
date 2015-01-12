@@ -1,3 +1,17 @@
+media-hub (2.0.0+15.04.20150112.2-0ubuntu1) vivid; urgency=low
+
+  [ Ubuntu daily release ]
+  * New rebuild forced
+
+  [ Ricardo Salveti de Araujo ]
+  * service_implementation: adding debug for call started/ended signals.
+    Make sure account and connection are available when setting up
+    account manager (patch from Gustavo Boiko). call_monitor: don't
+    check caps when hooking up on/off signals, until bug 1409125 is
+    fixed. Enable parallel building . (LP: #1409125)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Mon, 12 Jan 2015 21:38:39 +0000
+
 media-hub (2.0.0+15.04.20150108-0ubuntu1) vivid; urgency=low
 
   [ Jim Hodapp ]
