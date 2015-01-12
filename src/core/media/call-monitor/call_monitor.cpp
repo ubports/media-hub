@@ -152,7 +152,7 @@ private:
         Tp::ConnectionCapabilities caps = account->capabilities();
         // TODO: Later on we will need to filter for the right capabilities, and also allow dynamic account detection
         // Don't check caps for now as a workaround for https://bugs.launchpad.net/ubuntu/+source/media-hub/+bug/1409125
-        // at least until we are able to find out the root cause of it
+        // at least until we are able to find out the root cause of it (check rev 107 for the caps check)
         auto tcm = new TelepathyCallMonitor(account);
         connect(tcm, SIGNAL(offHook()), SLOT(offHook()));
         connect(tcm, SIGNAL(onHook()), SLOT(onHook()));
