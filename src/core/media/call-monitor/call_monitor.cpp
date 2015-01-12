@@ -150,7 +150,7 @@ private:
     void checkAndAddAccount(const Tp::AccountPtr& account)
     {
         Tp::ConnectionCapabilities caps = account->capabilities();
-        std::cout << "Call Monitor: telepathy account connection status: " << account->connection()->status() << std::endl;
+        std::cout << "CallMonitor: telepathy account connection status: " << account->connection()->status() << std::endl;
 
         // TODO: Later on we will need to filter for the right capabilities, and also allow dynamic account detection
         // Don't check caps for now as a workaround for https://bugs.launchpad.net/ubuntu/+source/media-hub/+bug/1409125
