@@ -508,9 +508,11 @@ media::ServiceImplementation::ServiceImplementation() : d(new Private())
     d->call_monitor->on_change([this](CallMonitor::State state) {
         switch (state) {
         case CallMonitor::OffHook:
+            std::cout << "Got call started signal, pausing all multimedia sessions" << std::endl;
             pause_all_multimedia_sessions();
             break;
         case CallMonitor::OnHook:
+            std::cout << "Got call ended signal, resuming paused multimedia sessions" << std::endl;
             resume_paused_multimedia_sessions();
             break;
         }
@@ -600,6 +602,7 @@ void media::ServiceImplementation::pause_all_multimedia_sessions()
                               && player->audio_stream_role() == media::Player::multimedia)
                           {
                               d->paused_sessions.push_back(key);
+                              std::cout << "Pausing Player with key: " << key << std::endl;
                               player->pause();
                           }
                       });
