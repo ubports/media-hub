@@ -55,6 +55,21 @@ struct gstreamer::Engine::Private
         (void) state_change;
     }
 
+    void on_playbin_error(const gstreamer::Bus::Message::Detail::ErrorWarningInfo& ewi)
+    {
+        std::cerr << "Got a playbin error: " << ewi.debug << " (GQuark str: '" << g_quark_to_string(ewi.error->domain) << "', GError code: " << ewi.error->code << ")" << std::endl;
+    }
+
+    void on_playbin_warning(const gstreamer::Bus::Message::Detail::ErrorWarningInfo& ewi)
+    {
+        std::cerr << "Got a playbin warning: " << ewi.debug << std::endl;
+    }
+
+    void on_playbin_info(const gstreamer::Bus::Message::Detail::ErrorWarningInfo& ewi)
+    {
+        std::cerr << "Got a playbin info: " << ewi.debug << std::endl;
+    }
+
     void on_tag_available(const gstreamer::Bus::Message::Detail::Tag& tag)
     {
         media::Track::MetaData md;
@@ -125,6 +140,24 @@ struct gstreamer::Engine::Private
               playbin.signals.on_state_changed.connect(
                   std::bind(
                       &Private::on_playbin_state_changed,
+                      this,
+                      std::placeholders::_1))),
+          on_error_connection(
+              playbin.signals.on_error.connect(
+                  std::bind(
+                      &Private::on_playbin_error,
+                      this,
+                      std::placeholders::_1))),
+          on_warning_connection(
+              playbin.signals.on_warning.connect(
+                  std::bind(
+                      &Private::on_playbin_warning,
+                      this,
+                      std::placeholders::_1))),
+          on_info_connection(
+              playbin.signals.on_info.connect(
+                  std::bind(
+                      &Private::on_playbin_info,
                       this,
                       std::placeholders::_1))),
           on_tag_available_connection(
@@ -201,6 +234,9 @@ struct gstreamer::Engine::Private
 
     core::ScopedConnection about_to_finish_connection;
     core::ScopedConnection on_state_changed_connection;
+    core::ScopedConnection on_error_connection;
+    core::ScopedConnection on_warning_connection;
+    core::ScopedConnection on_info_connection;
     core::ScopedConnection on_tag_available_connection;
     core::ScopedConnection on_volume_changed_connection;
     core::ScopedConnection on_audio_stream_role_changed_connection;
@@ -217,6 +253,7 @@ struct gstreamer::Engine::Private
     core::Signal<void> end_of_stream;
     core::Signal<media::Player::PlaybackStatus> playback_status_changed;
     core::Signal<uint32_t, uint32_t> video_dimension_changed;
+    core::Signal<media::Player::Error> error;
 };
 
 gstreamer::Engine::Engine() : d(new Private{})
@@ -411,6 +448,11 @@ const core::Signal<media::Player::PlaybackStatus>& gstreamer::Engine::playback_s
 const core::Signal<uint32_t, uint32_t>& gstreamer::Engine::video_dimension_changed_signal() const
 {
     return d->video_dimension_changed;
+}
+
+const core::Signal<core::ubuntu::media::Player::Error>& gstreamer::Engine::error_signal() const
+{
+    return d->error;
 }
 
 void gstreamer::Engine::reset()

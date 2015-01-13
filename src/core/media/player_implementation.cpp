@@ -422,6 +422,11 @@ media::PlayerImplementation::PlayerImplementation(
         mask = (static_cast<uint64_t>(height) << 32) | static_cast<uint64_t>(width);
         video_dimension_changed()(mask);
     });
+
+    d->engine->error_signal().connect([this](const Player::Error& e)
+    {
+        error()(e);
+    });
 }
 
 media::PlayerImplementation::~PlayerImplementation()
