@@ -513,7 +513,8 @@ media::ServiceImplementation::ServiceImplementation() : d(new Private())
             break;
         case CallMonitor::OnHook:
             std::cout << "Got call ended signal, resuming paused multimedia sessions" << std::endl;
-            resume_paused_multimedia_sessions();
+            // Don't auto-resume any paused video playback sessions
+            resume_paused_multimedia_sessions(false);
             break;
         }
     });
@@ -608,10 +609,15 @@ void media::ServiceImplementation::pause_all_multimedia_sessions()
                       });
 }
 
-void media::ServiceImplementation::resume_paused_multimedia_sessions()
+void media::ServiceImplementation::resume_paused_multimedia_sessions(bool resume_video_sessions)
 {
-    std::for_each(d->paused_sessions.begin(), d->paused_sessions.end(), [this](const media::Player::PlayerKey& key) {
-            player_for_key(key)->play();
+    std::for_each(d->paused_sessions.begin(), d->paused_sessions.end(), [this, resume_video_sessions](const media::Player::PlayerKey& key) {
+            auto player = player_for_key(key);
+            // Only resume video playback if explicitly desired
+            if (resume_video_sessions || player->is_audio_source())
+                player->play();
+            else
+                std::cout << "Not auto-resuming video playback session." << std::endl;
         });
 
     d->paused_sessions.clear();
