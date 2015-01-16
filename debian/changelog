@@ -1,3 +1,11 @@
+media-hub (2.0.0+15.04.20150116-0ubuntu1) vivid; urgency=low
+
+  [ Jim Hodapp ]
+  * Don't auto-resume playback of videos after a phone call ends. (LP:
+    #1411273)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 16 Jan 2015 18:17:56 +0000
+
 media-hub (2.0.0+15.04.20150112.2-0ubuntu1) vivid; urgency=low
 
   [ Ubuntu daily release ]
