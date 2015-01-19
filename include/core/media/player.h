@@ -171,6 +171,7 @@ class Player : public std::enable_shared_from_this<Player>
      * height in the upper 32 bits and width in the lower 32 bits (both unsigned values)
      */
     virtual const core::Signal<uint64_t>& video_dimension_changed() const = 0;
+    /** Signals all errors and warnings (typically from GStreamer and below) */
     virtual const core::Signal<Error>& error() const = 0;
 
   protected:
