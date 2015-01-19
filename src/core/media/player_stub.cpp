@@ -230,7 +230,7 @@ struct media::PlayerStub::Private
 
             dbus.error->connect([this](const media::Player::Error& e)
             {
-                std::cout << "Error signal arrived via the bus." << std::endl;
+                std::cout << "Error signal arrived via the bus (Error: " << e << ")" << std::endl;
                 error(e);
             });
         }
