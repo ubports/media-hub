@@ -1,5 +1,5 @@
 /*
- * Copyright © 2013 Canonical Ltd.
+ * Copyright © 2013-2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -92,6 +92,7 @@ class PlayerStub : public Player
     virtual const core::Signal<void>& end_of_stream() const;
     virtual core::Signal<PlaybackStatus>& playback_status_changed();
     virtual const core::Signal<uint64_t>& video_dimension_changed() const;
+    virtual const core::Signal<Error>& error() const;
 
   private:
     struct Private;

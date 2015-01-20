@@ -1,5 +1,5 @@
 /*
- * Copyright © 2013-2014 Canonical Ltd.
+ * Copyright © 2013-2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -85,7 +85,8 @@ struct media::PlayerStub::Private
                     object->get_signal<mpris::Player::Signals::Seeked>(),
                     object->get_signal<mpris::Player::Signals::EndOfStream>(),
                     object->get_signal<mpris::Player::Signals::PlaybackStatusChanged>(),
-                    object->get_signal<mpris::Player::Signals::VideoDimensionChanged>()
+                    object->get_signal<mpris::Player::Signals::VideoDimensionChanged>(),
+                    object->get_signal<mpris::Player::Signals::Error>()
                 }
     {
         auto op = object->invoke_method_synchronously<mpris::Player::Key, media::Player::PlayerKey>();
@@ -178,23 +179,27 @@ struct media::PlayerStub::Private
         typedef core::dbus::Signal<mpris::Player::Signals::EndOfStream, mpris::Player::Signals::EndOfStream::ArgumentType> DBusEndOfStreamSignal;
         typedef core::dbus::Signal<mpris::Player::Signals::PlaybackStatusChanged, mpris::Player::Signals::PlaybackStatusChanged::ArgumentType> DBusPlaybackStatusChangedSignal;
         typedef core::dbus::Signal<mpris::Player::Signals::VideoDimensionChanged, mpris::Player::Signals::VideoDimensionChanged::ArgumentType> DBusVideoDimensionChangedSignal;
+        typedef core::dbus::Signal<mpris::Player::Signals::Error, mpris::Player::Signals::Error::ArgumentType> DBusErrorSignal;
 
         Signals(const std::shared_ptr<DBusSeekedToSignal>& seeked,
                 const std::shared_ptr<DBusEndOfStreamSignal>& eos,
                 const std::shared_ptr<DBusPlaybackStatusChangedSignal>& status,
-                const std::shared_ptr<DBusVideoDimensionChangedSignal>& d)
+                const std::shared_ptr<DBusVideoDimensionChangedSignal>& d,
+                const std::shared_ptr<DBusErrorSignal>& e)
             : playback_complete_cb(nullptr),
               playback_complete_context(nullptr),
               seeked_to(),
               end_of_stream(),
               playback_status_changed(),
               video_dimension_changed(),
+              error(),
               dbus
               {
                   seeked,
                   eos,
                   status,
-                  d
+                  d,
+                  e
               }
         {
             dbus.seeked_to->connect([this](std::uint64_t value)
@@ -222,7 +227,13 @@ struct media::PlayerStub::Private
                 std::cout << "VideoDimensionChanged signal arrived via the bus." << std::endl;
                 video_dimension_changed(mask);
             });
-        }       
+
+            dbus.error->connect([this](const media::Player::Error& e)
+            {
+                std::cout << "Error signal arrived via the bus (Error: " << e << ")" << std::endl;
+                error(e);
+            });
+        }
 
         void set_playback_complete_cb(PlaybackCompleteCb cb, void *context)
         {
@@ -236,6 +247,7 @@ struct media::PlayerStub::Private
         core::Signal<void> end_of_stream;
         core::Signal<media::Player::PlaybackStatus> playback_status_changed;
         core::Signal<uint64_t> video_dimension_changed;
+        core::Signal<media::Player::Error> error;
 
         struct DBus
         {
@@ -243,6 +255,7 @@ struct media::PlayerStub::Private
             std::shared_ptr<DBusEndOfStreamSignal> end_of_stream;
             std::shared_ptr<DBusPlaybackStatusChangedSignal> playback_status_changed;
             std::shared_ptr<DBusVideoDimensionChangedSignal> video_dimension_changed;
+            std::shared_ptr<DBusErrorSignal> error;
         } dbus;
     } signals;
 };
@@ -511,4 +524,9 @@ core::Signal<media::Player::PlaybackStatus>& media::PlayerStub::playback_status_
 const core::Signal<uint64_t>& media::PlayerStub::video_dimension_changed() const
 {
     return d->signals.video_dimension_changed;
+}
+
+const core::Signal<media::Player::Error>& media::PlayerStub::error() const
+{
+    return d->signals.error;
 }
