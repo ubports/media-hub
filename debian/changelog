@@ -1,3 +1,14 @@
+media-hub (2.0.0+15.04.20150120-0ubuntu1) vivid; urgency=low
+
+  [ Jim Hodapp ]
+  * Error reporting all the way up to the app level from the playbin
+    pipeline.
+
+  [ Ubuntu daily release ]
+  * New rebuild forced
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Tue, 20 Jan 2015 01:21:47 +0000
+
 media-hub (2.0.0+15.04.20150116-0ubuntu1) vivid; urgency=low
 
   [ Jim Hodapp ]
