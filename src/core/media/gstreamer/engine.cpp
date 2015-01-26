@@ -55,6 +55,76 @@ struct gstreamer::Engine::Private
         (void) state_change;
     }
 
+    // Converts from a GStreamer GError to a media::Player:Error enum
+    media::Player::Error from_gst_errorwarning(const gstreamer::Bus::Message::Detail::ErrorWarningInfo& ewi)
+    {
+        if (g_strcmp0(g_quark_to_string(ewi.error->domain), "gst-core-error-quark") == 0)
+        {
+            switch (ewi.error->code)
+            {
+            case GST_CORE_ERROR_NEGOTIATION:
+                return media::Player::Error::resource_error;
+            case GST_CORE_ERROR_MISSING_PLUGIN:
+                return media::Player::Error::format_error;
+            default:
+                std::cerr << "Got an unhandled core error: '"
+                    << ewi.debug << "' (code: " << ewi.error->code << ")" << std::endl;
+                return media::Player::Error::no_error;
+            }
+        }
+        else if (g_strcmp0(g_quark_to_string(ewi.error->domain), "gst-resource-error-quark") == 0)
+        {
+            switch (ewi.error->code)
+            {
+            case GST_RESOURCE_ERROR_NOT_FOUND:
+            case GST_RESOURCE_ERROR_OPEN_READ:
+            case GST_RESOURCE_ERROR_OPEN_WRITE:
+            case GST_RESOURCE_ERROR_READ:
+            case GST_RESOURCE_ERROR_WRITE:
+                return media::Player::Error::resource_error;
+            case GST_RESOURCE_ERROR_NOT_AUTHORIZED:
+                return media::Player::Error::access_denied_error;
+            default:
+                std::cerr << "Got an unhandled resource error: '"
+                    << ewi.debug << "' (code: " << ewi.error->code << ")" << std::endl;
+                return media::Player::Error::no_error;
+            }
+        }
+        else if (g_strcmp0(g_quark_to_string(ewi.error->domain), "gst-stream-error-quark") == 0)
+        {
+            switch (ewi.error->code)
+            {
+            case GST_STREAM_ERROR_CODEC_NOT_FOUND:
+                return media::Player::Error::format_error;
+            default:
+                std::cerr << "Got an unhandled stream error: '"
+                    << ewi.debug << "' (code: " << ewi.error->code << ")" << std::endl;
+                return media::Player::Error::no_error;
+            }
+        }
+
+        return media::Player::Error::no_error;
+    }
+
+    void on_playbin_error(const gstreamer::Bus::Message::Detail::ErrorWarningInfo& ewi)
+    {
+        const media::Player::Error e = from_gst_errorwarning(ewi);
+        if (e != media::Player::Error::no_error)
+            error(e);
+    }
+
+    void on_playbin_warning(const gstreamer::Bus::Message::Detail::ErrorWarningInfo& ewi)
+    {
+        const media::Player::Error e = from_gst_errorwarning(ewi);
+        if (e != media::Player::Error::no_error)
+            error(e);
+    }
+
+    void on_playbin_info(const gstreamer::Bus::Message::Detail::ErrorWarningInfo& ewi)
+    {
+        std::cerr << "Got a playbin info message (no action taken): " << ewi.debug << std::endl;
+    }
+
     void on_tag_available(const gstreamer::Bus::Message::Detail::Tag& tag)
     {
         media::Track::MetaData md;
@@ -125,6 +195,24 @@ struct gstreamer::Engine::Private
               playbin.signals.on_state_changed.connect(
                   std::bind(
                       &Private::on_playbin_state_changed,
+                      this,
+                      std::placeholders::_1))),
+          on_error_connection(
+              playbin.signals.on_error.connect(
+                  std::bind(
+                      &Private::on_playbin_error,
+                      this,
+                      std::placeholders::_1))),
+          on_warning_connection(
+              playbin.signals.on_warning.connect(
+                  std::bind(
+                      &Private::on_playbin_warning,
+                      this,
+                      std::placeholders::_1))),
+          on_info_connection(
+              playbin.signals.on_info.connect(
+                  std::bind(
+                      &Private::on_playbin_info,
                       this,
                       std::placeholders::_1))),
           on_tag_available_connection(
@@ -200,6 +288,9 @@ struct gstreamer::Engine::Private
 
     core::ScopedConnection about_to_finish_connection;
     core::ScopedConnection on_state_changed_connection;
+    core::ScopedConnection on_error_connection;
+    core::ScopedConnection on_warning_connection;
+    core::ScopedConnection on_info_connection;
     core::ScopedConnection on_tag_available_connection;
     core::ScopedConnection on_volume_changed_connection;
     core::ScopedConnection on_audio_stream_role_changed_connection;
@@ -216,6 +307,7 @@ struct gstreamer::Engine::Private
     core::Signal<void> end_of_stream;
     core::Signal<media::Player::PlaybackStatus> playback_status_changed;
     core::Signal<core::ubuntu::media::video::Dimensions> video_dimension_changed;
+    core::Signal<media::Player::Error> error;
 };
 
 gstreamer::Engine::Engine() : d(new Private{})
@@ -410,6 +502,11 @@ const core::Signal<media::Player::PlaybackStatus>& gstreamer::Engine::playback_s
 const core::Signal<core::ubuntu::media::video::Dimensions>& gstreamer::Engine::video_dimension_changed_signal() const
 {
     return d->video_dimension_changed;
+}
+
+const core::Signal<core::ubuntu::media::Player::Error>& gstreamer::Engine::error_signal() const
+{
+    return d->error;
 }
 
 void gstreamer::Engine::reset()
