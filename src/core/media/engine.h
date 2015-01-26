@@ -111,6 +111,7 @@ public:
     virtual const core::Signal<void>& end_of_stream_signal() const = 0;
     virtual const core::Signal<core::ubuntu::media::Player::PlaybackStatus>& playback_status_changed_signal() const = 0;
     virtual const core::Signal<video::Dimensions>& video_dimension_changed_signal() const = 0;
+    virtual const core::Signal<core::ubuntu::media::Player::Error>& error_signal() const = 0;
 
     virtual void reset() = 0;
 };
