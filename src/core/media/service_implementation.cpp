@@ -84,7 +84,7 @@ struct media::ServiceImplementation::Private
                                     Private *p = reinterpret_cast<Private*>(userdata);
                                     pa_threaded_mainloop_signal(p->mainloop(), 0);
                                 }, this);
-                            
+
                             if (o)
                             {
                                 while (pa_operation_get_state(o) == PA_OPERATION_RUNNING)
@@ -101,7 +101,7 @@ struct media::ServiceImplementation::Private
                             pa_threaded_mainloop_unlock(pulse_mainloop);
                         }
                     }
-        
+
                     if (pulse_mainloop == nullptr)
                     {
                         pulse_mainloop = pa_threaded_mainloop_new();
@@ -113,16 +113,16 @@ struct media::ServiceImplementation::Private
                             pulse_mainloop = nullptr;
                         }
                     }
-                  
+
                     do {
                         create_pulse_context();
                     } while (pulse_context == nullptr);
-                    
+
                     // Wait for next instance death.
                     return false;
                 });
         }));
-        
+
         // Connect the property change signal that will allow media-hub to take appropriate action
         // when the battery level reaches critical
         auto stub_service = dbus::Service::use_service(configuration.external_services.session, "com.canonical.indicator.power");
@@ -154,9 +154,14 @@ struct media::ServiceImplementation::Private
     void media_recording_state_changed(media::RecordingState state)
     {
         if (state == media::RecordingState::started)
+        {
             display_state_lock->request_acquire(media::power::DisplayState::on);
+            pause_playback();
+        }
         else if (state == media::RecordingState::stopped)
+        {
             display_state_lock->request_release(media::power::DisplayState::off);
+        }
     }
 
     pa_threaded_mainloop *mainloop()
@@ -245,7 +250,7 @@ struct media::ServiceImplementation::Private
                     p->pause_playback_if_necessary(i->index);
                     p->active_sink = new_sink;
                 }, this);
-     
+
         (void) o;
     }
 
@@ -269,7 +274,7 @@ struct media::ServiceImplementation::Private
     {
         if (pulse_context != nullptr)
             return;
-        
+
         active_sink = std::make_tuple(-1, -1, "");
 
         bool keep_going = true, ok = true;
@@ -355,13 +360,13 @@ struct media::ServiceImplementation::Private
 
                         if (eol)
                             return;
-                        
+
                         Private *p = reinterpret_cast<Private*>(userdata);
                         p->primary_idx = i->index;
                         p->update_wired_output();
                     }, this);
-            
-            update_active_sink(); 
+
+            update_active_sink();
 
             pa_context_set_subscribe_callback(pulse_context,
                     [](pa_context *context, pa_subscription_event_type_t t, uint32_t idx, void *userdata)
@@ -426,7 +431,8 @@ struct media::ServiceImplementation::Private
     int primary_idx;
 
     // Gets signaled when both the headphone jack is removed or an A2DP device is
-    // disconnected and playback needs pausing
+    // disconnected and playback needs pausing. Also gets signaled when recording
+    // begins.
     core::Signal<void> pause_playback;
     std::unique_ptr<CallMonitor> call_monitor;
     std::list<media::Player::PlayerKey> paused_sessions;
@@ -459,10 +465,13 @@ media::ServiceImplementation::ServiceImplementation(const Configuration& configu
     d->call_monitor->on_change([this](CallMonitor::State state) {
         switch (state) {
         case CallMonitor::OffHook:
+            std::cout << "Got call started signal, pausing all multimedia sessions" << std::endl;
             pause_all_multimedia_sessions();
             break;
         case CallMonitor::OnHook:
-            resume_paused_multimedia_sessions();
+            std::cout << "Got call ended signal, resuming paused multimedia sessions" << std::endl;
+            // Don't auto-resume any paused video playback sessions
+            resume_paused_multimedia_sessions(false);
             break;
         }
     });
@@ -559,15 +568,21 @@ void media::ServiceImplementation::pause_all_multimedia_sessions()
                               && player->audio_stream_role() == media::Player::multimedia)
                           {
                               d->paused_sessions.push_back(key);
+                              std::cout << "Pausing Player with key: " << key << std::endl;
                               player->pause();
                           }
                       });
 }
 
-void media::ServiceImplementation::resume_paused_multimedia_sessions()
+void media::ServiceImplementation::resume_paused_multimedia_sessions(bool resume_video_sessions)
 {
-    std::for_each(d->paused_sessions.begin(), d->paused_sessions.end(), [this](const media::Player::PlayerKey& key) {
-            player_for_key(key)->play();
+    std::for_each(d->paused_sessions.begin(), d->paused_sessions.end(), [this, resume_video_sessions](const media::Player::PlayerKey& key) {
+            auto player = player_for_key(key);
+            // Only resume video playback if explicitly desired
+            if (resume_video_sessions || player->is_audio_source())
+                player->play();
+            else
+                std::cout << "Not auto-resuming video playback session." << std::endl;
         });
 
     d->paused_sessions.clear();

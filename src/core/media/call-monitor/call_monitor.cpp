@@ -80,7 +80,10 @@ public:
 
 private Q_SLOTS:
     void accountManagerSetup() {
-        mAccountManager = Tp::AccountManager::create();
+        mAccountManager = Tp::AccountManager::create(Tp::AccountFactory::create(QDBusConnection::sessionBus(),
+                                                                                Tp::Account::FeatureCore),
+                                                     Tp::ConnectionFactory::create(QDBusConnection::sessionBus(),
+                                                                                   Tp::Connection::FeatureCore));
         connect(mAccountManager->becomeReady(),
                 SIGNAL(finished(Tp::PendingOperation*)),
                 SLOT(accountManagerReady(Tp::PendingOperation*)));
@@ -147,14 +150,13 @@ private:
     void checkAndAddAccount(const Tp::AccountPtr& account)
     {
         Tp::ConnectionCapabilities caps = account->capabilities();
-
-        // anything call like, perhaps overkill?
-        if (caps.audioCalls() || caps.videoCalls() || caps.videoCallsWithAudio() || caps.streamedMediaCalls()) {
-            auto tcm = new TelepathyCallMonitor(account);
-            connect(tcm, SIGNAL(offHook()), SLOT(offHook()));
-            connect(tcm, SIGNAL(onHook()), SLOT(onHook()));
-            mCallMonitors.push_back(tcm);
-        }
+        // TODO: Later on we will need to filter for the right capabilities, and also allow dynamic account detection
+        // Don't check caps for now as a workaround for https://bugs.launchpad.net/ubuntu/+source/media-hub/+bug/1409125
+        // at least until we are able to find out the root cause of it (check rev 107 for the caps check)
+        auto tcm = new TelepathyCallMonitor(account);
+        connect(tcm, SIGNAL(offHook()), SLOT(offHook()));
+        connect(tcm, SIGNAL(onHook()), SLOT(onHook()));
+        mCallMonitors.push_back(tcm);
     }
 };
 }
@@ -163,11 +165,14 @@ class CallMonitorPrivate
 {
 public:
     CallMonitorPrivate() {
+        mBridge = nullptr;
         try {
             std::thread([this]() {
                 qt::core::world::build_and_run(0, nullptr, [this]() {
                     qt::core::world::enter_with_task([this]() {
+                        std::cout << "CallMonitor: Creating TelepathyBridge" << std::endl;
                         mBridge = new TelepathyBridge();
+                        cv.notify_all();
                     });
                 });
             }).detach();
@@ -176,6 +181,9 @@ public:
         } catch(...) {
             std::cerr << "exception(...) in CallMonitor thread start" << std::endl;
         }
+        // Wait until telepathy bridge is set, so we can hook up the change signals
+        std::unique_lock<std::mutex> lck(mtx);
+        cv.wait_for(lck, std::chrono::seconds(3));
     }
 
     ~CallMonitorPrivate() {
@@ -183,6 +191,10 @@ public:
     }
 
     TelepathyBridge *mBridge;
+
+private:
+    std::mutex mtx;
+    std::condition_variable cv;
 };
 
 
@@ -199,7 +211,11 @@ CallMonitor::~CallMonitor()
 
 void CallMonitor::on_change(const std::function<void(CallMonitor::State)>& func)
 {
-    d->mBridge->on_change(func);
+    if (d->mBridge != nullptr) {
+        std::cout << "CallMonitor: Setting up callback for TelepathyBridge on_change" << std::endl;
+        d->mBridge->on_change(func);
+    } else
+        std::cerr << "TelepathyBridge: Failed to hook on_change signal, bridge not yet set" << std::endl;
 }
 
 #include "call_monitor.moc"
