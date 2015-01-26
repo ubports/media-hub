@@ -374,6 +374,11 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
     {
         Parent::video_dimension_changed()(dimensions);
     });
+
+    d->engine->error_signal().connect([this](const Player::Error& e)
+    {        
+        Parent::error()(e);
+    });
 }
 
 template<typename Parent>

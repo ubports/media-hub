@@ -67,15 +67,7 @@ struct media::ServiceImplementation::Private
     {
     }
 
-    void media_recording_state_changed(media::RecordingState state)
-    {
-        if (state == media::RecordingState::started)
-            display_state_lock->request_acquire(media::power::DisplayState::on);
-        else if (state == media::RecordingState::stopped)
-            display_state_lock->request_release(media::power::DisplayState::off);
-    }
-
-    media::ServiceImplementation::Configuration configuration;    
+    media::ServiceImplementation::Configuration configuration;
     // This holds the key of the multimedia role Player instance that was paused
     // when the battery level reached 10% or 5%
     media::Player::PlayerKey resume_key;    
@@ -133,11 +125,26 @@ media::ServiceImplementation::ServiceImplementation(const Configuration& configu
     {
         switch (state) {
         case media::telephony::CallMonitor::State::OffHook:
+            std::cout << "Got call started signal, pausing all multimedia sessions" << std::endl;
             pause_all_multimedia_sessions();
             break;
         case media::telephony::CallMonitor::State::OnHook:
-            resume_paused_multimedia_sessions();
+            std::cout << "Got call ended signal, resuming paused multimedia sessions" << std::endl;
+            resume_paused_multimedia_sessions(false);
             break;
+        }
+    });
+
+    d->recorder_observer->recording_state().changed().connect([this](RecordingState state)
+    {
+        if (state == media::RecordingState::started)
+        {
+            d->display_state_lock->request_acquire(media::power::DisplayState::on);
+            pause_all_multimedia_sessions();
+        }
+        else if (state == media::RecordingState::stopped)
+        {
+            d->display_state_lock->request_release(media::power::DisplayState::off);
         }
     });
 }
@@ -236,17 +243,22 @@ void media::ServiceImplementation::pause_all_multimedia_sessions()
                               && player->audio_stream_role() == media::Player::multimedia)
                           {
                               d->paused_sessions.push_back(key);
+                              std::cout << "Pausing Player with key: " << key << std::endl;
                               player->pause();
                           }
                       });
 }
 
-void media::ServiceImplementation::resume_paused_multimedia_sessions()
+void media::ServiceImplementation::resume_paused_multimedia_sessions(bool resume_video_sessions)
 {
-    std::for_each(d->paused_sessions.begin(), d->paused_sessions.end(), [this](const media::Player::PlayerKey& key)
-    {
-        d->configuration.player_store->player_for_key(key)->play();
-    });
+    std::for_each(d->paused_sessions.begin(), d->paused_sessions.end(), [this, resume_video_sessions](const media::Player::PlayerKey& key) {
+            auto player = d->configuration.player_store->player_for_key(key);
+            // Only resume video playback if explicitly desired
+            if (resume_video_sessions || player->is_audio_source())
+                player->play();
+            else
+                std::cout << "Not auto-resuming video playback session." << std::endl;
+        });
 
     d->paused_sessions.clear();
 }
