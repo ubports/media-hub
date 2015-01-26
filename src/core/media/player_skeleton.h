@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2013-2014 Canonical Ltd
+ * Copyright (C) 2013-2015 Canonical Ltd
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -76,6 +76,7 @@ class PlayerSkeleton : public core::ubuntu::media::Player
     virtual const core::Signal<void>& end_of_stream() const;
     virtual core::Signal<PlaybackStatus>& playback_status_changed();
     virtual const core::Signal<video::Dimensions>& video_dimension_changed() const;
+    virtual const core::Signal<Error>& error() const;
 
 protected:
     // All creation time arguments go here.
@@ -112,6 +113,7 @@ protected:
     virtual core::Signal<int64_t>& seeked_to();
     virtual core::Signal<void>& end_of_stream();
     virtual core::Signal<video::Dimensions>& video_dimension_changed();
+    virtual core::Signal<Error>& error();
 
   private:
     struct Private;
