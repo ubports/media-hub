@@ -92,7 +92,7 @@ const core::Signal<void>& video::HybrisGlSink::frame_available() const
 bool video::HybrisGlSink::transformation_matrix(float* matrix) const
 {
     // TODO: The underlying API really should tell us if everything is ok.
-    gl_consumer_get_transformation_matrix(d->gl_texture_consumer, matrix.to_float());
+    gl_consumer_get_transformation_matrix(d->gl_texture_consumer, matrix);
     return true;
 }
 
