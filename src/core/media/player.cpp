@@ -22,7 +22,7 @@
 
 namespace media = core::ubuntu::media;
 
-media::Player::Error::OutOfProcessBufferStreamingNotSupported::OutOfProcessBufferStreamingNotSupported()
+media::Player::Errors::OutOfProcessBufferStreamingNotSupported::OutOfProcessBufferStreamingNotSupported()
     : std::runtime_error{"Implementation does not support out-of-process buffer streaming"}
 {
 }
