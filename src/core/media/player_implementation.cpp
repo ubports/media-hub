@@ -419,6 +419,11 @@ media::PlayerImplementation::PlayerImplementation(
     {
         video_dimension_changed()(dimensions);
     });
+
+    d->engine->error_signal().connect([this](const Player::Error& e)
+    {
+        error()(e);
+    });
 }
 
 media::PlayerImplementation::~PlayerImplementation()
