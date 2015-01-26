@@ -63,19 +63,6 @@ struct media::ServiceImplementation::Private
     {
     }
 
-    void media_recording_state_changed(media::RecordingState state)
-    {
-        if (state == media::RecordingState::started)
-        {
-            display_state_lock->request_acquire(media::power::DisplayState::on);
-            pause_playback();
-        }
-        else if (state == media::RecordingState::stopped)
-        {
-            display_state_lock->request_release(media::power::DisplayState::off);
-        }
-    }
-
     media::ServiceImplementation::Configuration configuration;
     // This holds the key of the multimedia role Player instance that was paused
     // when the battery level reached 10% or 5%
@@ -139,6 +126,19 @@ media::ServiceImplementation::ServiceImplementation(const Configuration& configu
             // Don't auto-resume any paused video playback sessions
             resume_paused_multimedia_sessions(false);
             break;
+        }
+    });
+
+    d->recorder_observer->recording_state().changed().connect([this](RecordingState state)
+    {
+        if (state == media::RecordingState::started)
+        {
+            d->display_state_lock->request_acquire(media::power::DisplayState::on);
+            pause_all_multimedia_sessions();
+        }
+        else if (state == media::RecordingState::stopped)
+        {
+            d->display_state_lock->request_release(media::power::DisplayState::off);
         }
     });
 }
