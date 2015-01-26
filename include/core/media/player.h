@@ -1,5 +1,5 @@
 /*
- * Copyright © 2013 Canonical Ltd.
+ * Copyright © 2013-2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -104,7 +104,17 @@ class Player : public std::enable_shared_from_this<Player>
     enum Lifetime
     {
         normal,
-        resumable,
+        resumable
+    };
+
+    enum Error
+    {
+        no_error,
+        resource_error,
+        format_error,
+        network_error,
+        access_denied_error,
+        service_missing_error
     };
 
     Player(const Player&) = delete;
@@ -163,6 +173,9 @@ class Player : public std::enable_shared_from_this<Player>
      * height in the upper 32 bits and width in the lower 32 bits (both unsigned values)
      */
     virtual const core::Signal<uint64_t>& video_dimension_changed() const = 0;
+    /** Signals all errors and warnings (typically from GStreamer and below) */
+    virtual const core::Signal<Error>& error() const = 0;
+
   protected:
     Player();
 

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2013-2014 Canonical Ltd.
+ * Copyright © 2013-2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -58,7 +58,8 @@ struct media::PlayerSkeleton::Private
               skeleton.signals.seeked_to,
               skeleton.signals.end_of_stream,
               skeleton.signals.playback_status_changed,
-              skeleton.signals.video_dimension_changed
+              skeleton.signals.video_dimension_changed,
+              skeleton.signals.error
           }
     {
     }
@@ -314,11 +315,13 @@ struct media::PlayerSkeleton::Private
         typedef core::dbus::Signal<mpris::Player::Signals::EndOfStream, mpris::Player::Signals::EndOfStream::ArgumentType> DBusEndOfStreamSignal;
         typedef core::dbus::Signal<mpris::Player::Signals::PlaybackStatusChanged, mpris::Player::Signals::PlaybackStatusChanged::ArgumentType> DBusPlaybackStatusChangedSignal;
         typedef core::dbus::Signal<mpris::Player::Signals::VideoDimensionChanged, mpris::Player::Signals::VideoDimensionChanged::ArgumentType> DBusVideoDimensionChangedSignal;
+        typedef core::dbus::Signal<mpris::Player::Signals::Error, mpris::Player::Signals::Error::ArgumentType> DBusErrorSignal;
 
         Signals(const std::shared_ptr<DBusSeekedToSignal>& remote_seeked,
                 const std::shared_ptr<DBusEndOfStreamSignal>& remote_eos,
                 const std::shared_ptr<DBusPlaybackStatusChangedSignal>& remote_playback_status_changed,
-                const std::shared_ptr<DBusVideoDimensionChangedSignal>& remote_video_dimension_changed)
+                const std::shared_ptr<DBusVideoDimensionChangedSignal>& remote_video_dimension_changed,
+                const std::shared_ptr<DBusErrorSignal>& remote_error)
         {
             seeked_to.connect([remote_seeked](std::uint64_t value)
             {
@@ -339,12 +342,18 @@ struct media::PlayerSkeleton::Private
             {
                 remote_video_dimension_changed->emit(mask);
             });
+
+            error.connect([remote_error](const media::Player::Error& e)
+            {
+                remote_error->emit(e);
+            });
         }
 
         core::Signal<int64_t> seeked_to;
         core::Signal<void> end_of_stream;
         core::Signal<media::Player::PlaybackStatus> playback_status_changed;
         core::Signal<uint64_t> video_dimension_changed;
+        core::Signal<media::Player::Error> error;
     } signals;
 
 };
@@ -648,4 +657,14 @@ const core::Signal<uint64_t>& media::PlayerSkeleton::video_dimension_changed() c
 core::Signal<uint64_t>& media::PlayerSkeleton::video_dimension_changed()
 {
     return d->signals.video_dimension_changed;
+}
+
+core::Signal<media::Player::Error>& media::PlayerSkeleton::error()
+{
+    return d->signals.error;
+}
+
+const core::Signal<media::Player::Error>& media::PlayerSkeleton::error() const
+{
+    return d->signals.error;
 }
