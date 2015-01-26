@@ -50,7 +50,7 @@ public:
 
 private:
     void pause_all_multimedia_sessions();
-    void resume_paused_multimedia_sessions();
+    void resume_paused_multimedia_sessions(bool resume_video_sessions = true);
     void resume_multimedia_session();
 
     struct Private;

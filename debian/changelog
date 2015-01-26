@@ -4,6 +4,50 @@ media-hub (3.0.0) UNRELEASED; urgency=medium
 
  -- Thomas Voss <thomas.voss@canonical.com>  Tue, 11 Nov 2014 17:15:52 +0100
 
+media-hub (2.0.0+15.04.20150120-0ubuntu1) vivid; urgency=low
+
+  [ Jim Hodapp ]
+  * Error reporting all the way up to the app level from the playbin
+    pipeline.
+
+  [ Ubuntu daily release ]
+  * New rebuild forced
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Tue, 20 Jan 2015 01:21:47 +0000
+
+media-hub (2.0.0+15.04.20150116-0ubuntu1) vivid; urgency=low
+
+  [ Jim Hodapp ]
+  * Don't auto-resume playback of videos after a phone call ends. (LP:
+    #1411273)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 16 Jan 2015 18:17:56 +0000
+
+media-hub (2.0.0+15.04.20150112.2-0ubuntu1) vivid; urgency=low
+
+  [ Ubuntu daily release ]
+  * New rebuild forced
+
+  [ Ricardo Salveti de Araujo ]
+  * service_implementation: adding debug for call started/ended signals.
+    Make sure account and connection are available when setting up
+    account manager (patch from Gustavo Boiko). call_monitor: don't
+    check caps when hooking up on/off signals, until bug 1409125 is
+    fixed. Enable parallel building . (LP: #1409125)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Mon, 12 Jan 2015 21:38:39 +0000
+
+media-hub (2.0.0+15.04.20150108-0ubuntu1) vivid; urgency=low
+
+  [ Jim Hodapp ]
+  * Pause playback when recording begins. (LP: #1398047)
+
+  [ Ricardo Salveti de Araujo ]
+  * call_monitor.cpp: waiting for bridge to be up, and also protecting
+    the on_change call (LP: #1408137)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 08 Jan 2015 12:58:01 +0000
+
 media-hub (2.0.0+15.04.20141126.2-0ubuntu1) vivid; urgency=low
 
   [ Jim Hodapp ]

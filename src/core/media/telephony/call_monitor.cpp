@@ -84,7 +84,10 @@ public:
 
 private Q_SLOTS:
     void accountManagerSetup() {
-        mAccountManager = Tp::AccountManager::create();
+        mAccountManager = Tp::AccountManager::create(Tp::AccountFactory::create(QDBusConnection::sessionBus(),
+                                                                                Tp::Account::FeatureCore),
+                                                     Tp::ConnectionFactory::create(QDBusConnection::sessionBus(),
+                                                                                   Tp::Connection::FeatureCore));
         connect(mAccountManager->becomeReady(),
                 SIGNAL(finished(Tp::PendingOperation*)),
                 SLOT(accountManagerReady(Tp::PendingOperation*)));
@@ -151,44 +154,67 @@ private:
     void checkAndAddAccount(const Tp::AccountPtr& account)
     {
         Tp::ConnectionCapabilities caps = account->capabilities();
-
-        // anything call like, perhaps overkill?
-        if (caps.audioCalls() || caps.videoCalls() || caps.videoCallsWithAudio() || caps.streamedMediaCalls()) {
-            auto tcm = new TelepathyCallMonitor(account);
-            connect(tcm, SIGNAL(offHook()), SLOT(offHook()));
-            connect(tcm, SIGNAL(onHook()), SLOT(onHook()));
-            mCallMonitors.push_back(tcm);
-        }
+        // TODO: Later on we will need to filter for the right capabilities, and also allow dynamic account detection
+        // Don't check caps for now as a workaround for https://bugs.launchpad.net/ubuntu/+source/media-hub/+bug/1409125
+        // at least until we are able to find out the root cause of it (check rev 107 for the caps check)
+        auto tcm = new TelepathyCallMonitor(account);
+        connect(tcm, SIGNAL(offHook()), SLOT(offHook()));
+        connect(tcm, SIGNAL(onHook()), SLOT(onHook()));
+        mCallMonitors.push_back(tcm);
     }
 };
 
 struct CallMonitor : public media::telephony::CallMonitor
 {
-    CallMonitor()
+    CallMonitor() : mBridge{nullptr}
     {
-        try {
-            std::thread([this]() {
-                qt::core::world::build_and_run(0, nullptr, [this]() {
-                    qt::core::world::enter_with_task([this]() {
+        try
+        {
+            qt_world = std::move(std::thread([this]()
+            {
+                qt::core::world::build_and_run(0, nullptr, [this]()
+                {
+                    qt::core::world::enter_with_task([this]()
+                    {
+                        std::cout << "CallMonitor: Creating TelepathyBridge" << std::endl;
                         mBridge = new TelepathyBridge();
+                        cv.notify_all();
                     });
                 });
-            }).detach();
+          }));
         } catch(const std::system_error& error) {
             std::cerr << "exception(std::system_error) in CallMonitor thread start" << error.what() << std::endl;
         } catch(...) {
             std::cerr << "exception(...) in CallMonitor thread start" << std::endl;
         }
 
-        mBridge->on_change([this](CallMonitor::State state)
+        // Wait until telepathy bridge is set, so we can hook up the change signals
+        std::unique_lock<std::mutex> lck(mtx);
+        cv.wait_for(lck, std::chrono::seconds(3));
+
+        if (mBridge)
         {
-            call_state_changed(state);
-        });
+            mBridge->on_change([this](CallMonitor::State state)
+            {
+                call_state_changed(state);
+            });
+        }
     }
 
     ~CallMonitor()
     {
-        delete mBridge;
+        // We first clean up the bridge instance.
+        qt::core::world::enter_with_task([this]()
+        {
+            delete mBridge;
+        }).get();
+
+        // We then request destruction of the qt world.
+        qt::core::world::destroy();
+
+        // Before we finally join the worker.
+        if (qt_world.joinable())
+            qt_world.join();
     }
 
     const core::Signal<media::telephony::CallMonitor::State>& on_call_state_changed() const
@@ -198,6 +224,10 @@ struct CallMonitor : public media::telephony::CallMonitor
 
     TelepathyBridge *mBridge;
     core::Signal<media::telephony::CallMonitor::State> call_state_changed;
+
+    std::thread qt_world;
+    std::mutex mtx;
+    std::condition_variable cv;
 };
 }
 }
