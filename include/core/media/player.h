@@ -45,9 +45,9 @@ class Player : public std::enable_shared_from_this<Player>
     typedef void* GLConsumerWrapperHybris;
     typedef std::map<std::string, std::string> HeadersType;
 
-    struct Error
+    struct Errors
     {
-        Error() = delete;
+        Errors() = delete;
 
         struct OutOfProcessBufferStreamingNotSupported : public std::runtime_error
         {

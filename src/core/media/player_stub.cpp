@@ -249,7 +249,7 @@ media::video::Sink::Ptr media::PlayerStub::create_gl_texture_video_sink(std::uin
     if (op.is_error())
     {
         if (op.error().name() == mpris::Player::Error::OutOfProcessBufferStreamingNotSupported::name)
-            throw media::Player::Error::OutOfProcessBufferStreamingNotSupported{};
+            throw media::Player::Errors::OutOfProcessBufferStreamingNotSupported{};
         else
             throw std::runtime_error{op.error().print()};
     }

@@ -144,7 +144,7 @@ struct media::PlayerSkeleton::Private
             impl->create_gl_texture_video_sink(texture_id);
             reply = dbus::Message::make_method_return(in);
         }
-        catch (const media::Player::Error::OutOfProcessBufferStreamingNotSupported& e)
+        catch (const media::Player::Errors::OutOfProcessBufferStreamingNotSupported& e)
         {
             reply = dbus::Message::make_error(
                         in,
