@@ -14,7 +14,7 @@ export CC=$(DEB_HOST_GNU_TYPE)-gcc-4.9
 export CXX=$(DEB_HOST_GNU_TYPE)-g++-4.9
 
 %:
-	dh $@ --fail-missing -- -B build 
+	dh $@ --fail-missing --parallel -- -B build 
 
 override_dh_auto_configure:
 	dh_auto_configure -- -DCMAKE_C_COMPILER=$(CC) -DCMAKE_CXX_COMPILER=$(CXX)
