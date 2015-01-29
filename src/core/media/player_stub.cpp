@@ -47,6 +47,7 @@ struct media::PlayerStub::Private
             ) : parent(parent),
                 object(object),
                 key(object->invoke_method_synchronously<mpris::Player::Key, media::Player::PlayerKey>().value()),
+                sink_factory(media::video::make_platform_default_sink_factory(key)),
                 properties
                 {
                     // Link the properties from the server side to the client side over the bus
@@ -89,9 +90,9 @@ struct media::PlayerStub::Private
 
     std::shared_ptr<Service> parent;
     std::shared_ptr<TrackList> track_list;
-
     dbus::Object::Ptr object;
     media::Player::PlayerKey key;
+    media::video::SinkFactory sink_factory;
     struct
     {
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanPlay>> can_play;
@@ -247,7 +248,7 @@ media::video::Sink::Ptr media::PlayerStub::create_gl_texture_video_sink(std::uin
             throw std::runtime_error{op.error().print()};
     }
 
-    return media::video::make_platform_default_sink(texture_id, d->key);
+    return d->sink_factory(texture_id);
 }
 
 void media::PlayerStub::next()
