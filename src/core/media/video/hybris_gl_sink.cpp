@@ -38,18 +38,11 @@ struct video::HybrisGlSink::Private
         thiz->frame_available();
     }
 
-    Private(std::uint32_t gl_texture, const media::Player::PlayerKey& player_key)
+    Private(std::uint32_t gl_texture)
         : gl_texture{gl_texture},
-          player_key{player_key},
-          decoding_service_session{decoding_service_create_session(player_key)},
           graphics_buffer_consumer{decoding_service_get_igraphicbufferconsumer()},
           gl_texture_consumer{gl_consumer_create_by_id_with_igbc(gl_texture, graphics_buffer_consumer)}
     {
-        if (not decoding_service_session) throw std::runtime_error
-        {
-            "video::HybrisGlSink: Could not connect to the remote decoding service and establish a session."
-        };
-
         if (not graphics_buffer_consumer) throw std::runtime_error
         {
             "video::HybrisGlSink: Could not connect to remote buffer queue."
@@ -69,14 +62,32 @@ struct video::HybrisGlSink::Private
     }
 
     std::uint32_t gl_texture;
-    media::Player::PlayerKey player_key;
     core::Signal<void> frame_available;
-    DSSessionWrapperHybris decoding_service_session;
     IGBCWrapperHybris graphics_buffer_consumer;
     GLConsumerWrapperHybris gl_texture_consumer;
 };
 
-video::HybrisGlSink::HybrisGlSink(std::uint32_t gl_texture, const media::Player::PlayerKey& key) : d{new Private{gl_texture, key}}
+std::function<video::Sink::Ptr(std::uint32_t)> video::HybrisGlSink::factory_for_key(const media::Player::PlayerKey& key)
+{
+    // It's okay-ish to use static map here. Point being that we currently have no way
+    // of terminating the session with the decoding service anyway.
+    static std::map<media::Player::PlayerKey, DSSessionWrapperHybris> lut;
+    static std::mutex lut_guard;
+
+    // Scoping access to the lut to ensure that the lock is kept for as short as possible.
+    {
+        std::lock_guard<std::mutex> lg{lut_guard};
+        if (lut.count(key) == 0)
+            lut[key] = decoding_service_create_session(key);
+    }
+
+    return [](std::uint32_t texture)
+    {
+        return video::Sink::Ptr{new video::HybrisGlSink{texture}};
+    };
+}
+
+video::HybrisGlSink::HybrisGlSink(std::uint32_t gl_texture) : d{new Private{gl_texture}}
 {
 }
 
