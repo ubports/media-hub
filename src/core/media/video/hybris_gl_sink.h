@@ -22,6 +22,8 @@
 
 #include <core/media/player.h>
 
+#include <functional>
+
 namespace core
 {
 namespace ubuntu
@@ -32,10 +34,9 @@ namespace video
 {
 class HybrisGlSink : public video::Sink
 {
-public:
-    // Creates a new instance for the given gl texture, connecting to the remote part known
-    // under the given key or throw in case of issues.
-    HybrisGlSink(std::uint32_t gl_texture, const media::Player::PlayerKey& key);
+public:    
+    // Returns a factory functor that allows for creating actual sink instances.
+    static std::function<video::Sink::Ptr(std::uint32_t)> factory_for_key(const media::Player::PlayerKey&);
 
     // Need this to avoid std::unique_ptr complaining about forward-declared Private.
     ~HybrisGlSink();
@@ -56,6 +57,10 @@ public:
     bool swap_buffers() const override;
 
 private:
+    // Creates a new instance for the given gl texture, connecting to the remote part known
+    // under the given key or throw in case of issues.
+    HybrisGlSink(std::uint32_t gl_texture);
+
     struct Private;
     std::unique_ptr<Private> d;
 };
