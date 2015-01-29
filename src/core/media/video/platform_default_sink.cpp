@@ -56,13 +56,13 @@ struct NullSink : public video::Sink
 #if defined(MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER)
 #include <core/media/video/hybris_gl_sink.h>
 
-video::Sink::Ptr video::make_platform_default_sink(std::uint32_t gl_texture, const media::Player::PlayerKey& key)
+video::SinkFactory video::make_platform_default_sink_factory(const media::Player::PlayerKey& key)
 {
-    return std::make_shared<video::HybrisGlSink>(gl_texture, key);
+    return video::HybrisGlSink::factory_for_key(key);
 }
 #else  // MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER
-video::Sink::Ptr video::make_platform_default_sink(std::uint32_t, const media::Player::PlayerKey&)
+video::SinkFactory video::make_platform_default_sink_factory(const media::Player::PlayerKey&)
 {
-    return std::make_shared<NullSink>();
+    return [](std::uint32_t) { return video::Sink::Ptr{}; };
 }
 #endif // MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER
