@@ -55,7 +55,7 @@ struct ExternalServices
           }
     {
         session->install_executor(core::dbus::asio::make_executor(session, io_service));
-        system->install_executor(core::dbus::asio::make_executor(session, io_service));
+        system->install_executor(core::dbus::asio::make_executor(system, io_service));
     }
 
 
