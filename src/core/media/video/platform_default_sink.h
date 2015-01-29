@@ -22,6 +22,8 @@
 
 #include <core/media/player.h>
 
+#include <functional>
+
 namespace core
 {
 namespace ubuntu
@@ -30,9 +32,10 @@ namespace media
 {
 namespace video
 {
-// Returns the platform default video sink for the given parameters. Never returns null, but
-// throws in case of issues.
-Sink::Ptr make_platform_default_sink(std::uint32_t gl_texture, const Player::PlayerKey& key);
+// A functor that allows for creating actual sinks given a texture id.
+typedef std::function<Sink::Ptr(std::uint32_t)> SinkFactory;
+// Returns the platform default sink factory for the player instance identified by the given key.
+SinkFactory make_platform_default_sink_factory(const Player::PlayerKey& key);
 }
 }
 }
