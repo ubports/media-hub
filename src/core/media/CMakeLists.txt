@@ -92,6 +92,7 @@ add_library(
     engine.cpp
 
     audio/pulse_audio_output_observer.cpp
+    audio/ostream_reporter.cpp
     audio/output_observer.cpp
 
     power/battery_observer.cpp

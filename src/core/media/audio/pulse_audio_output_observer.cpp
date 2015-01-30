@@ -237,6 +237,8 @@ struct audio::PulseAudioOutputObserver::Private
     // to pulseaudio now.
     void on_context_ready()
     {
+        config.reporter->connected_to_pulse_audio();
+
         pa::subscribe_to_events(context, main_loop, PA_SUBSCRIPTION_MASK_SINK);
 
         if (config.sink == "query.from.server")
@@ -260,6 +262,8 @@ struct audio::PulseAudioOutputObserver::Private
     // Something changed on the sink with index idx.
     void on_sink_event_with_index(std::int32_t index)
     {
+        config.reporter->sink_event_with_index(index);
+
         if (index != sink_index)
             return;
 
@@ -282,6 +286,8 @@ struct audio::PulseAudioOutputObserver::Private
         properties.known_ports = known_ports;
 
         sink_index = info->index;
+
+        config.reporter->query_for_sink_info_finished(info->name, info->index, known_ports);
     }
 
     void on_query_for_server_info_finished(const pa_server_info* info)
@@ -289,7 +295,12 @@ struct audio::PulseAudioOutputObserver::Private
         // We bail out if we could not determine the default sink name.
         // In this case, we are not able to carry out audio output observation.
         if (not info->default_sink_name)
+        {
+            config.reporter->query_for_default_sink_failed();
             return;
+        }
+
+        config.reporter->query_for_default_sink_finished(info->default_sink_name);
 
         properties.sink = config.sink = info->default_sink_name;
         pa::get_index_of_sink_by_name_async(context, main_loop, config.sink, Private::query_for_primary_sink_finished, this);
@@ -309,10 +320,38 @@ struct audio::PulseAudioOutputObserver::Private
     } properties;
 };
 
+audio::PulseAudioOutputObserver::Reporter::~Reporter()
+{
+}
+
+void audio::PulseAudioOutputObserver::Reporter::connected_to_pulse_audio()
+{
+}
+
+void audio::PulseAudioOutputObserver::Reporter::query_for_default_sink_failed()
+{
+}
+
+void audio::PulseAudioOutputObserver::Reporter::query_for_default_sink_finished(const std::string&)
+{
+}
+
+void audio::PulseAudioOutputObserver::Reporter::query_for_sink_info_finished(const std::string&, std::uint32_t, const std::set<std::string>&)
+{
+}
+
+void audio::PulseAudioOutputObserver::Reporter::sink_event_with_index(std::uint32_t)
+{
+}
+
 // Constructs a new instance, or throws std::runtime_error
 // if connection to pulseaudio fails.
 audio::PulseAudioOutputObserver::PulseAudioOutputObserver(const Configuration& config) : d{new Private{config}}
 {
+    if (not d->config.reporter) throw std::runtime_error
+    {
+        "PulseAudioOutputObserver: Cannot construct for invalid reporter instance."
+    };
 }
 
 // We provide the name of the sink we are connecting to as a
