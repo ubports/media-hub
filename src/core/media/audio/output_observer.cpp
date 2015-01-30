@@ -42,5 +42,5 @@ audio::OutputObserver::Ptr audio::make_platform_default_output_observer()
 {
     audio::PulseAudioOutputObserver::Configuration config;
     config.reporter = std::make_shared<audio::OStreamReporter>();
-    return std::make_shared<audio::PulseAudioOutputObserver>(audio::PulseAudioOutputObserver::Configuration{});
+    return std::make_shared<audio::PulseAudioOutputObserver>(config);
 }
