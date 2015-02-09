@@ -317,3 +317,33 @@ media::power::StateController::Ptr media::power::make_platform_default_state_con
 {
     return std::make_shared<impl::StateController>(external_services);
 }
+
+// operator<< pretty prints the given display state to the given output stream.
+std::ostream& media::power::operator<<(std::ostream& out, media::power::DisplayState state)
+{
+    switch (state)
+    {
+    case media::power::DisplayState::off:
+        return out << "DisplayState::off";
+    case media::power::DisplayState::on:
+        return out << "DisplayState::on";
+    }
+
+    return out;
+}
+
+// operator<< pretty prints the given system state to the given output stream.
+std::ostream& media::power::operator<<(std::ostream& out, media::power::SystemState state)
+{
+    switch (state)
+    {
+    case media::power::SystemState::active:
+        return out << "SystemState::active";
+    case media::power::SystemState::blank_on_proximity:
+        return out << "SystemState::blank_on_proximity";
+    case media::power::SystemState::suspend:
+        return out << "SystemState::suspend";
+    }
+
+    return out;
+}
