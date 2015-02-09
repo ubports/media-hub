@@ -41,6 +41,7 @@ std::ostream& audio::operator<<(std::ostream& out, audio::OutputState state)
 audio::OutputObserver::Ptr audio::make_platform_default_output_observer()
 {
     audio::PulseAudioOutputObserver::Configuration config;
+    config.output_port_patterns = {std::regex{"output-wired_head.*"}};
     config.reporter = std::make_shared<audio::OStreamReporter>();
     return std::make_shared<audio::PulseAudioOutputObserver>(config);
 }
