@@ -41,7 +41,7 @@ public:
     void connected_to_pulse_audio() override;
     void query_for_default_sink_failed() override;
     void query_for_default_sink_finished(const std::string& sink_name) override;
-    void query_for_sink_info_finished(const std::string& name, std::uint32_t index, const std::set<std::string>& known_ports) override;
+    void query_for_sink_info_finished(const std::string& name, std::uint32_t index, const std::set<std::tuple<bool, std::string>>& known_ports) override;
     void sink_event_with_index(std::uint32_t index) override;
 
 private:

@@ -59,7 +59,7 @@ public:
         virtual void query_for_default_sink_finished(const std::string& sink_name);
         // query_for_sink_info_finished is called when a query for information about a specific sink
         // has finished, reporting the name, index of the sink as well as the set of ports known to the sink.
-        virtual void query_for_sink_info_finished(const std::string& name, std::uint32_t index, const std::set<std::string>& known_ports);
+        virtual void query_for_sink_info_finished(const std::string& name, std::uint32_t index, const std::set<std::tuple<bool, std::string>>& known_ports);
         // sink_event_with_index is called when something happened on a sink, reporing the index of the
         // sink.
         virtual void sink_event_with_index(std::uint32_t index);
@@ -98,7 +98,7 @@ public:
     const core::Property<std::string>& sink() const;
     // The set of ports that have been identified on the configured sink.
     // Specifically meant for consumption by test code.
-    const core::Property<std::set<std::string>>& known_ports() const;
+    const core::Property<std::set<std::tuple<bool, std::string>>>& known_ports() const;
     // Getable/observable property holding the state of external outputs.
     const core::Property<OutputState>& external_output_state() const override;
 

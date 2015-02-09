@@ -39,11 +39,11 @@ void audio::OStreamReporter::query_for_default_sink_finished(const std::string& 
     out << "Default PulseAudio sync has been identified: " << sink_name << std::endl;
 }
 
-void audio::OStreamReporter::query_for_sink_info_finished(const std::string& name, std::uint32_t index, const std::set<std::string>& known_ports)
+void audio::OStreamReporter::query_for_sink_info_finished(const std::string& name, std::uint32_t index, const std::set<std::tuple<bool, std::string>>& known_ports)
 {
     out << "PulseAudio sink details for " << name << " with index " << index << " is available:" << std::endl;
     for (const auto& port : known_ports)
-        out << "  Port: " << port << std::endl;
+        out << "  Port: " << std::get<1>(port) << (std::get<0>(port) ? " [monitored]" : "") << std::endl;
 }
 void audio::OStreamReporter::sink_event_with_index(std::uint32_t index)
 {

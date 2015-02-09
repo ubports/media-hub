@@ -280,9 +280,17 @@ struct audio::PulseAudioOutputObserver::Private
                     : media::audio::OutputState::disconnected;
         }
 
-        std::set<std::string> known_ports;
+        std::set<std::tuple<bool, std::string>> known_ports;
         for (std::uint32_t i = 0; i < info->n_ports; i++)
-            known_ports.insert(info->ports[i]->name);
+        {
+            bool is_monitored = false;
+
+            for (auto& element : outputs)
+                is_monitored = std::regex_match(info->ports[i]->name, std::get<0>(element));
+
+            known_ports.insert(std::make_tuple(is_monitored, std::string{info->ports[i]->name}));
+        }
+
         properties.known_ports = known_ports;
 
         sink_index = info->index;
@@ -315,7 +323,7 @@ struct audio::PulseAudioOutputObserver::Private
     struct
     {
         core::Property<std::string> sink;
-        core::Property<std::set<std::string>> known_ports;
+        core::Property<std::set<std::tuple<bool, std::string>>> known_ports;
         core::Property<audio::OutputState> external_output_state{audio::OutputState::disconnected};
     } properties;
 };
@@ -336,7 +344,7 @@ void audio::PulseAudioOutputObserver::Reporter::query_for_default_sink_finished(
 {
 }
 
-void audio::PulseAudioOutputObserver::Reporter::query_for_sink_info_finished(const std::string&, std::uint32_t, const std::set<std::string>&)
+void audio::PulseAudioOutputObserver::Reporter::query_for_sink_info_finished(const std::string&, std::uint32_t, const std::set<std::tuple<bool, std::string>>&)
 {
 }
 
@@ -364,7 +372,7 @@ const core::Property<std::string>& audio::PulseAudioOutputObserver::sink() const
 
 // The set of ports that have been identified on the configured sink.
 // Specifically meant for consumption by test code.
-const core::Property<std::set<std::string>>& audio::PulseAudioOutputObserver::known_ports() const
+const core::Property<std::set<std::tuple<bool, std::string>>>& audio::PulseAudioOutputObserver::known_ports() const
 {
     return d->properties.known_ports;
 }
