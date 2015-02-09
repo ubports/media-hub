@@ -130,7 +130,8 @@ bool is_port_available_on_sink(const pa_sink_info* info, const std::regex& port_
 
     for (std::uint32_t i = 0; i < info->n_ports; i++)
     {
-        if (info->ports[i]->available == PA_PORT_AVAILABLE_NO)
+        if (info->ports[i]->available == PA_PORT_AVAILABLE_NO ||
+            info->ports[i]->available == PA_PORT_AVAILABLE_UNKNOWN)
             continue;
 
         if (std::regex_match(std::string{info->ports[i]->name}, port_pattern))
