@@ -287,7 +287,7 @@ struct audio::PulseAudioOutputObserver::Private
             bool is_monitored = false;
 
             for (auto& element : outputs)
-                is_monitored = std::regex_match(info->ports[i]->name, std::get<0>(element));
+                is_monitored |= std::regex_match(info->ports[i]->name, std::get<0>(element));
 
             known_ports.insert(std::make_tuple(is_monitored, std::string{info->ports[i]->name}));
         }
