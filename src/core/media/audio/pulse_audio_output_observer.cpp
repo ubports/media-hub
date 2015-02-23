@@ -280,6 +280,7 @@ struct audio::PulseAudioOutputObserver::Private
     {
         for (auto& element : outputs)
         {
+            std::cout << "Checking if port is available: " << " -> " << std::boolalpha << pa::is_port_available_on_sink(info, std::get<0>(element)) << std::endl;
             std::get<1>(element) = pa::is_port_available_on_sink(info, std::get<0>(element))
                     ? media::audio::OutputState::connected
                     : media::audio::OutputState::disconnected;
