@@ -225,6 +225,10 @@ struct audio::PulseAudioOutputObserver::Private
         {
             outputs.emplace_back(pattern, core::Property<media::audio::OutputState>{media::audio::OutputState::disconnected});
             std::get<1>(outputs.back()) | properties.external_output_state;
+            std::get<1>(outputs.back()).changed().connect([](media::audio::OutputState state)
+            {
+                std::cout << "Connection state for port changed to: " << state << std::endl;
+            });
         }
 
         pa::set_state_callback(context, Private::context_notification_cb, this);
