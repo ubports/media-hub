@@ -281,7 +281,7 @@ struct audio::PulseAudioOutputObserver::Private
                     : media::audio::OutputState::disconnected;
         }
 
-        std::set<std::tuple<bool, std::string>> known_ports;
+        std::set<Reporter::Port> known_ports;
         for (std::uint32_t i = 0; i < info->n_ports; i++)
         {
             bool is_monitored = false;
@@ -289,7 +289,14 @@ struct audio::PulseAudioOutputObserver::Private
             for (auto& element : outputs)
                 is_monitored |= std::regex_match(info->ports[i]->name, std::get<0>(element));
 
-            known_ports.insert(std::make_tuple(is_monitored, std::string{info->ports[i]->name}));
+
+            known_ports.insert(Reporter::Port
+            {
+                info->ports[i]->name,
+                info->ports[i]->description,
+                info->ports[i]->available == PA_PORT_AVAILABLE_YES,
+                is_monitored
+            });
         }
 
         properties.known_ports = known_ports;
@@ -324,10 +331,20 @@ struct audio::PulseAudioOutputObserver::Private
     struct
     {
         core::Property<std::string> sink;
-        core::Property<std::set<std::tuple<bool, std::string>>> known_ports;
+        core::Property<std::set<audio::PulseAudioOutputObserver::Reporter::Port>> known_ports;
         core::Property<audio::OutputState> external_output_state{audio::OutputState::disconnected};
     } properties;
 };
+
+bool audio::PulseAudioOutputObserver::Reporter::Port::operator==(const audio::PulseAudioOutputObserver::Reporter::Port& rhs) const
+{
+    return name == rhs.name;
+}
+
+bool audio::PulseAudioOutputObserver::Reporter::Port::operator<(const audio::PulseAudioOutputObserver::Reporter::Port& rhs) const
+{
+    return name < rhs.name;
+}
 
 audio::PulseAudioOutputObserver::Reporter::~Reporter()
 {
@@ -345,7 +362,7 @@ void audio::PulseAudioOutputObserver::Reporter::query_for_default_sink_finished(
 {
 }
 
-void audio::PulseAudioOutputObserver::Reporter::query_for_sink_info_finished(const std::string&, std::uint32_t, const std::set<std::tuple<bool, std::string>>&)
+void audio::PulseAudioOutputObserver::Reporter::query_for_sink_info_finished(const std::string&, std::uint32_t, const std::set<Port>&)
 {
 }
 
@@ -373,7 +390,7 @@ const core::Property<std::string>& audio::PulseAudioOutputObserver::sink() const
 
 // The set of ports that have been identified on the configured sink.
 // Specifically meant for consumption by test code.
-const core::Property<std::set<std::tuple<bool, std::string>>>& audio::PulseAudioOutputObserver::known_ports() const
+const core::Property<std::set<audio::PulseAudioOutputObserver::Reporter::Port>>& audio::PulseAudioOutputObserver::known_ports() const
 {
     return d->properties.known_ports;
 }
