@@ -191,7 +191,8 @@ struct DisplayStateLock : public media::power::StateController::Lock<media::powe
     } signals;
 };
 
-struct SystemStateLock : public media::power::StateController::Lock<media::power::SystemState>
+struct SystemStateLock : public media::power::StateController::Lock<media::power::SystemState>,
+                         public std::enable_shared_from_this<SystemStateLock>
 {
     static constexpr const char* wake_lock_name
     {
@@ -215,15 +216,20 @@ struct SystemStateLock : public media::power::StateController::Lock<media::power
         if (system_state_cookie_store.count(state) > 0)
             return;
 
-        object->invoke_method_asynchronously_with_callback<com::canonical::powerd::Interface::requestSysState, std::string>([this, state](const core::dbus::Result<std::string>& result)
+        std::weak_ptr<SystemStateLock> wp{shared_from_this()};
+
+        object->invoke_method_asynchronously_with_callback<com::canonical::powerd::Interface::requestSysState, std::string>([wp, state](const core::dbus::Result<std::string>& result)
         {
             if (result.is_error()) // TODO(tvoss): We should log the error condition here.
                 return;
 
-            std::lock_guard<std::mutex> lg{system_state_cookie_store_guard};
+            if (auto sp = wp.lock())
+            {
+                std::lock_guard<std::mutex> lg{sp->system_state_cookie_store_guard};
 
-            system_state_cookie_store[state] = result.value();
-            signals.acquired(state);
+                sp->system_state_cookie_store[state] = result.value();
+                sp->signals.acquired(state);
+            }
         }, std::string{wake_lock_name}, static_cast<std::int32_t>(state));
     }
 
@@ -239,15 +245,20 @@ struct SystemStateLock : public media::power::StateController::Lock<media::power
         if (system_state_cookie_store.count(state) == 0)
             return;
 
-        object->invoke_method_asynchronously_with_callback<com::canonical::powerd::Interface::clearSysState, void>([this, state](const core::dbus::Result<void>& result)
+        std::weak_ptr<SystemStateLock> wp{shared_from_this()};
+
+        object->invoke_method_asynchronously_with_callback<com::canonical::powerd::Interface::clearSysState, void>([wp, state](const core::dbus::Result<void>& result)
         {
             if (result.is_error())
                 std::cerr << result.error().print() << std::endl;
 
-            std::lock_guard<std::mutex> lg{system_state_cookie_store_guard};
+            if (auto sp = wp.lock())
+            {
+                std::lock_guard<std::mutex> lg{sp->system_state_cookie_store_guard};
 
-            system_state_cookie_store.erase(state);
-            signals.released(state);
+                sp->system_state_cookie_store.erase(state);
+                sp->signals.released(state);
+            }
         }, system_state_cookie_store.at(state));
     }
 
