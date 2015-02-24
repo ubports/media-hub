@@ -42,6 +42,43 @@ public:
     // Save us some typing.
     typedef std::shared_ptr<PulseAudioOutputObserver> Ptr;
 
+    // Reporter is responsible for surfacing events from the implementation
+    // that help in resolving/tracking down issues. Default implementation is empty.
+    struct Reporter
+    {
+        // To save us some typing.
+        typedef std::shared_ptr<Reporter> Ptr;
+
+        // Simple type to help in reporting.
+        struct Port
+        {
+            // Returns true iff the name of both ports are equal.
+            bool operator==(const Port& rhs) const;
+            // Returns true iff the name of the ports differ.
+            bool operator<(const Port& rhs) const;
+
+            std::string name; // The name of the port.
+            std::string description; // Human-readable description of the port.
+            bool is_available; // True if the port is available.
+            bool is_monitored; // True if the port is monitored by the observer.
+        };
+
+        virtual ~Reporter();
+        // connected_to_pulse_audio is called when a connection with pulse has been established.
+        virtual void connected_to_pulse_audio();
+        // query_for_default_sink_failed is called when no default sink was returned.
+        virtual void query_for_default_sink_failed();
+        // query_for_default_sink_finished is called when the default sink query against pulse
+        // has finished, reporting the name of the sink to observers.
+        virtual void query_for_default_sink_finished(const std::string& sink_name);
+        // query_for_sink_info_finished is called when a query for information about a specific sink
+        // has finished, reporting the name, index of the sink as well as the set of ports known to the sink.
+        virtual void query_for_sink_info_finished(const std::string& name, std::uint32_t index, const std::set<Port>& known_ports);
+        // sink_event_with_index is called when something happened on a sink, reporing the index of the
+        // sink.
+        virtual void sink_event_with_index(std::uint32_t index);
+    };
+
     // Construction time arguments go here
     struct Configuration
     {
@@ -59,10 +96,14 @@ public:
             // Any port is considered with this special value.
             std::regex{".+"}
         };
+        // The Reporter instance that the implementation reports
+        // events to. Must not be null.
+        Reporter::Ptr reporter{std::make_shared<Reporter>()};
     };
 
-    // Constructs a new instance, or throws std::runtime_error
-    // if connection to pulseaudio fails.
+    // Constructs a new instance, throws:
+    //   * std::runtime_error if connection to pulseaudio fails.
+    //   * std::runtime_error if reporter instance is null.
     PulseAudioOutputObserver(const Configuration&);
 
     // We provide the name of the sink we are connecting to as a
@@ -71,7 +112,7 @@ public:
     const core::Property<std::string>& sink() const;
     // The set of ports that have been identified on the configured sink.
     // Specifically meant for consumption by test code.
-    const core::Property<std::set<std::string>>& known_ports() const;
+    const core::Property<std::set<Reporter::Port>>& known_ports() const;
     // Getable/observable property holding the state of external outputs.
     const core::Property<OutputState>& external_output_state() const override;
 
