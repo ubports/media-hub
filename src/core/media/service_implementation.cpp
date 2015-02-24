@@ -108,8 +108,10 @@ media::ServiceImplementation::ServiceImplementation(const Configuration& configu
         switch (state)
         {
         case audio::OutputState::connected:
+            std::cout << "AudioOutputObserver reports that an output has been connected." << std::endl;
             break;
         case audio::OutputState::disconnected:
+            std::cout << "AudioOutputObserver reports that an output has been disconnected." << std::endl;
             pause_all_multimedia_sessions();
             break;
         }

@@ -130,7 +130,8 @@ bool is_port_available_on_sink(const pa_sink_info* info, const std::regex& port_
 
     for (std::uint32_t i = 0; i < info->n_ports; i++)
     {
-        if (info->ports[i]->available == PA_PORT_AVAILABLE_NO)
+        if (info->ports[i]->available == PA_PORT_AVAILABLE_NO ||
+            info->ports[i]->available == PA_PORT_AVAILABLE_UNKNOWN)
             continue;
 
         if (std::regex_match(std::string{info->ports[i]->name}, port_pattern))
@@ -224,6 +225,10 @@ struct audio::PulseAudioOutputObserver::Private
         {
             outputs.emplace_back(pattern, core::Property<media::audio::OutputState>{media::audio::OutputState::disconnected});
             std::get<1>(outputs.back()) | properties.external_output_state;
+            std::get<1>(outputs.back()).changed().connect([](media::audio::OutputState state)
+            {
+                std::cout << "Connection state for port changed to: " << state << std::endl;
+            });
         }
 
         pa::set_state_callback(context, Private::context_notification_cb, this);
@@ -237,6 +242,8 @@ struct audio::PulseAudioOutputObserver::Private
     // to pulseaudio now.
     void on_context_ready()
     {
+        config.reporter->connected_to_pulse_audio();
+
         pa::subscribe_to_events(context, main_loop, PA_SUBSCRIPTION_MASK_SINK);
 
         if (config.sink == "query.from.server")
@@ -260,6 +267,8 @@ struct audio::PulseAudioOutputObserver::Private
     // Something changed on the sink with index idx.
     void on_sink_event_with_index(std::int32_t index)
     {
+        config.reporter->sink_event_with_index(index);
+
         if (index != sink_index)
             return;
 
@@ -271,17 +280,35 @@ struct audio::PulseAudioOutputObserver::Private
     {
         for (auto& element : outputs)
         {
+            std::cout << "Checking if port is available " << " -> " << std::boolalpha << pa::is_port_available_on_sink(info, std::get<0>(element)) << std::endl;
             std::get<1>(element) = pa::is_port_available_on_sink(info, std::get<0>(element))
                     ? media::audio::OutputState::connected
                     : media::audio::OutputState::disconnected;
         }
 
-        std::set<std::string> known_ports;
+        std::set<Reporter::Port> known_ports;
         for (std::uint32_t i = 0; i < info->n_ports; i++)
-            known_ports.insert(info->ports[i]->name);
+        {
+            bool is_monitored = false;
+
+            for (auto& element : outputs)
+                is_monitored |= std::regex_match(info->ports[i]->name, std::get<0>(element));
+
+
+            known_ports.insert(Reporter::Port
+            {
+                info->ports[i]->name,
+                info->ports[i]->description,
+                info->ports[i]->available == PA_PORT_AVAILABLE_YES,
+                is_monitored
+            });
+        }
+
         properties.known_ports = known_ports;
 
         sink_index = info->index;
+
+        config.reporter->query_for_sink_info_finished(info->name, info->index, known_ports);
     }
 
     void on_query_for_server_info_finished(const pa_server_info* info)
@@ -289,7 +316,12 @@ struct audio::PulseAudioOutputObserver::Private
         // We bail out if we could not determine the default sink name.
         // In this case, we are not able to carry out audio output observation.
         if (not info->default_sink_name)
+        {
+            config.reporter->query_for_default_sink_failed();
             return;
+        }
+
+        config.reporter->query_for_default_sink_finished(info->default_sink_name);
 
         properties.sink = config.sink = info->default_sink_name;
         pa::get_index_of_sink_by_name_async(context, main_loop, config.sink, Private::query_for_primary_sink_finished, this);
@@ -304,15 +336,53 @@ struct audio::PulseAudioOutputObserver::Private
     struct
     {
         core::Property<std::string> sink;
-        core::Property<std::set<std::string>> known_ports;
+        core::Property<std::set<audio::PulseAudioOutputObserver::Reporter::Port>> known_ports;
         core::Property<audio::OutputState> external_output_state{audio::OutputState::disconnected};
     } properties;
 };
+
+bool audio::PulseAudioOutputObserver::Reporter::Port::operator==(const audio::PulseAudioOutputObserver::Reporter::Port& rhs) const
+{
+    return name == rhs.name;
+}
+
+bool audio::PulseAudioOutputObserver::Reporter::Port::operator<(const audio::PulseAudioOutputObserver::Reporter::Port& rhs) const
+{
+    return name < rhs.name;
+}
+
+audio::PulseAudioOutputObserver::Reporter::~Reporter()
+{
+}
+
+void audio::PulseAudioOutputObserver::Reporter::connected_to_pulse_audio()
+{
+}
+
+void audio::PulseAudioOutputObserver::Reporter::query_for_default_sink_failed()
+{
+}
+
+void audio::PulseAudioOutputObserver::Reporter::query_for_default_sink_finished(const std::string&)
+{
+}
+
+void audio::PulseAudioOutputObserver::Reporter::query_for_sink_info_finished(const std::string&, std::uint32_t, const std::set<Port>&)
+{
+}
+
+void audio::PulseAudioOutputObserver::Reporter::sink_event_with_index(std::uint32_t)
+{
+}
 
 // Constructs a new instance, or throws std::runtime_error
 // if connection to pulseaudio fails.
 audio::PulseAudioOutputObserver::PulseAudioOutputObserver(const Configuration& config) : d{new Private{config}}
 {
+    if (not d->config.reporter) throw std::runtime_error
+    {
+        "PulseAudioOutputObserver: Cannot construct for invalid reporter instance."
+    };
 }
 
 // We provide the name of the sink we are connecting to as a
@@ -325,7 +395,7 @@ const core::Property<std::string>& audio::PulseAudioOutputObserver::sink() const
 
 // The set of ports that have been identified on the configured sink.
 // Specifically meant for consumption by test code.
-const core::Property<std::set<std::string>>& audio::PulseAudioOutputObserver::known_ports() const
+const core::Property<std::set<audio::PulseAudioOutputObserver::Reporter::Port>>& audio::PulseAudioOutputObserver::known_ports() const
 {
     return d->properties.known_ports;
 }
