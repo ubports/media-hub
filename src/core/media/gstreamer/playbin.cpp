@@ -406,6 +406,9 @@ bool gstreamer::Playbin::set_state_and_wait(GstState new_state)
     };
 
     auto ret = gst_element_set_state(pipeline, new_state);
+
+    std::cout << __PRETTY_FUNCTION__ << ": requested state change." << std::endl;
+
     bool result = false; GstState current, pending;
     switch(ret)
     {
@@ -419,7 +422,7 @@ bool gstreamer::Playbin::set_state_and_wait(GstState new_state)
                     pipeline,
                     &current,
                     &pending,
-                    state_change_timeout.count());    
+                    state_change_timeout.count());
         break;
     }
 
