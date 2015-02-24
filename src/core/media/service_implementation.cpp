@@ -155,7 +155,7 @@ struct media::ServiceImplementation::Private
         }
         else if (state == media::RecordingState::stopped)
         {
-            display_state_lock->request_release(media::power::DisplayState::off);
+            display_state_lock->request_release(media::power::DisplayState::on);
         }
     }
 

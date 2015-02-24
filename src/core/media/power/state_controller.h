@@ -22,6 +22,7 @@
 
 #include <core/property.h>
 
+#include <iosfwd>
 #include <memory>
 
 namespace core
@@ -95,6 +96,11 @@ struct StateController
 // Creates a StateController instance that connects to the platform default
 // services to control system and display power states.
 StateController::Ptr make_platform_default_state_controller(core::ubuntu::media::helper::ExternalServices&);
+
+// operator<< pretty prints the given display state to the given output stream.
+std::ostream& operator<<(std::ostream& out, DisplayState state);
+// operator<< pretty prints the given system state to the given output stream.
+std::ostream& operator<<(std::ostream& out, SystemState state);
 }
 }
 }
