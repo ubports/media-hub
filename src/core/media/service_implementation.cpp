@@ -140,7 +140,7 @@ media::ServiceImplementation::ServiceImplementation(const Configuration& configu
         }
         else if (state == media::RecordingState::stopped)
         {
-            d->display_state_lock->request_release(media::power::DisplayState::off);
+            d->display_state_lock->request_release(media::power::DisplayState::on);
         }
     });
 }
