@@ -128,42 +128,38 @@ struct DisplayStateLock : public media::power::StateController::Lock<media::powe
         if (cookie == the_invalid_cookie)
             return;
 
-        std::weak_ptr<DisplayStateLock> wp{shared_from_this()};
+        // We make sure that we keep ourselves alive to make sure
+        // that release requests are always correctly issued.
+        auto sp = shared_from_this();
 
         auto current_cookie(cookie);
 
         timeout.expires_from_now(timeout_for_release());
-        timeout.async_wait([wp, state, current_cookie](const boost::system::error_code& ec)
+        timeout.async_wait([sp, state, current_cookie](const boost::system::error_code& ec)
         {
             // We only return early from the timeout handler if the operation has been
             // explicitly aborted before.
             if (ec == boost::asio::error::operation_aborted)
                 return;
 
-            if (auto sp = wp.lock())
-            {
-                sp->object->invoke_method_asynchronously_with_callback<com::canonical::Unity::Screen::removeDisplayOnRequest, void>(
-                            [wp, state, current_cookie](const core::dbus::Result<void>& result)
+            sp->object->invoke_method_asynchronously_with_callback<com::canonical::Unity::Screen::removeDisplayOnRequest, void>(
+                        [sp, state, current_cookie](const core::dbus::Result<void>& result)
+                        {
+                            if (result.is_error())
                             {
-                                if (result.is_error())
-                                {
-                                    std::cerr << result.error().print() << std::endl;
-                                    return;
-                                }
+                                std::cerr << result.error().print() << std::endl;
+                                return;
+                            }
 
-                                if (auto sp = wp.lock())
-                                {
-                                    sp->signals.released(state);
+                            sp->signals.released(state);
 
-                                    // We might have issued a different request before and
-                                    // only call the display state done if the original cookie
-                                    // corresponds to the one we just gave up.
-                                    if (sp->cookie == current_cookie)
-                                        sp->cookie = the_invalid_cookie;
-                                }
+                            // We might have issued a different request before and
+                            // only call the display state done if the original cookie
+                            // corresponds to the one we just gave up.
+                            if (sp->cookie == current_cookie)
+                                sp->cookie = the_invalid_cookie;
 
-                            }, current_cookie);
-            }
+                        }, current_cookie);
         });
     }
 
