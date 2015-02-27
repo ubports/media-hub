@@ -72,6 +72,27 @@ struct media::PlayerImplementation<Parent>::Private :
 
             on_client_died();
         });
+
+        // Poor man's logging of release/acquire events.
+        display_state_lock->acquired().connect([](media::power::DisplayState state)
+        {
+            std::cout << "Acquired new display state: " << state << std::endl;
+        });
+
+        display_state_lock->released().connect([](media::power::DisplayState state)
+        {
+            std::cout << "Released display state: " << state << std::endl;
+        });
+
+        system_state_lock->acquired().connect([](media::power::SystemState state)
+        {
+            std::cout << "Acquired new system state: "  << state << std::endl;
+        });
+
+        system_state_lock->released().connect([](media::power::SystemState state)
+        {
+            std::cout << "Released system state: "  << state << std::endl;
+        });
     }
 
     ~Private()

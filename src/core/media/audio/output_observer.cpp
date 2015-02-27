@@ -19,6 +19,7 @@
 #include <core/media/audio/output_observer.h>
 
 #include <core/media/audio/pulse_audio_output_observer.h>
+#include <core/media/audio/ostream_reporter.h>
 
 #include <iostream>
 
@@ -39,5 +40,8 @@ std::ostream& audio::operator<<(std::ostream& out, audio::OutputState state)
 
 audio::OutputObserver::Ptr audio::make_platform_default_output_observer()
 {
-    return std::make_shared<audio::PulseAudioOutputObserver>(audio::PulseAudioOutputObserver::Configuration{});
+    audio::PulseAudioOutputObserver::Configuration config;
+    config.output_port_patterns = {std::regex{"output-wired_head.*|output-a2dp_headphones"}};
+    config.reporter = std::make_shared<audio::OStreamReporter>();
+    return std::make_shared<audio::PulseAudioOutputObserver>(config);
 }
