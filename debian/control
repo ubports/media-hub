@@ -10,7 +10,6 @@ Build-Depends: cmake,
                google-mock,
                graphviz,
                gstreamer1.0-plugins-good,
-               gstreamer1.0-fluendo-mp3,
 # We rely on C++11 features, and to prevent from ABI breaks
 # in libstdc++ causing us issues, we explicitly select a G++
 # version.
@@ -25,7 +24,6 @@ Build-Depends: cmake,
                libhybris-dev (>=0.1.0+git20131207+e452e83-0ubuntu30),
                libprocess-cpp-dev,
                libproperties-cpp-dev,
-               gstreamer1.0-libav,
                libgstreamer1.0-dev,
                pkg-config,
                libpulse-dev,
