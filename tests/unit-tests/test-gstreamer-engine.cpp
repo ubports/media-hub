@@ -70,10 +70,10 @@ TEST(GStreamerEngine, construction_and_deconstruction_works)
 
 TEST(GStreamerEngine, DISABLED_setting_uri_and_starting_audio_only_playback_works)
 {
-    const std::string test_file{"/tmp/test.ogg"};
-    const std::string test_file_uri{"file:///tmp/test.ogg"};
+    const std::string test_file{"/tmp/test-audio.ogg"};
+    const std::string test_file_uri{"file:///tmp/test-audio.ogg"};
     std::remove(test_file.c_str());
-    ASSERT_TRUE(test::copy_test_mp3_file_to(test_file));
+    ASSERT_TRUE(test::copy_test_media_file_to("test-audio.ogg", test_file));
 
     core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
                 core::ubuntu::media::Engine::State::ready);
@@ -115,10 +115,10 @@ TEST(GStreamerEngine, DISABLED_setting_uri_and_starting_audio_only_playback_work
 
 TEST(GStreamerEngine, DISABLED_setting_uri_and_starting_video_playback_works)
 {
-    const std::string test_file{"/tmp/h264.avi"};
-    const std::string test_file_uri{"file:///tmp/h264.avi"};
+    const std::string test_file{"/tmp/test-video.ogg"};
+    const std::string test_file_uri{"file:///tmp/test-video.ogg"};
     std::remove(test_file.c_str());
-    ASSERT_TRUE(test::copy_test_avi_file_to(test_file));
+    ASSERT_TRUE(test::copy_test_media_file_to("test-video.ogg", test_file));
     // Make sure a video sink is added to the pipeline
     const EnsureFakeVideoSinkEnvVarIsSet efs;
 
@@ -157,9 +157,9 @@ TEST(GStreamerEngine, DISABLED_setting_uri_and_starting_video_playback_works)
 
 TEST(GStreamerEngine, setting_uri_and_audio_playback_with_http_headers_works)
 {
-    const std::string test_file{"/tmp/test.mp3"};
+    const std::string test_file{"/tmp/test-audio-1.ogg"};
     std::remove(test_file.c_str());
-    ASSERT_TRUE(test::copy_test_mp3_file_to(test_file));
+    ASSERT_TRUE(test::copy_test_media_file_to("test-audio-1.ogg", test_file));
 
     const std::string test_audio_uri{"http://localhost:5000"};
     const core::ubuntu::media::Player::HeadersType headers{{ "User-Agent", "MediaHub" }, { "Cookie", "A=B;X=Y" }};
@@ -218,10 +218,10 @@ TEST(GStreamerEngine, setting_uri_and_audio_playback_with_http_headers_works)
 
 TEST(GStreamerEngine, DISABLED_stop_pause_play_seek_audio_only_works)
 {
-    const std::string test_file{"/tmp/test.ogg"};
-    const std::string test_file_uri{"file:///tmp/test.ogg"};
+    const std::string test_file{"/tmp/test-audio.ogg"};
+    const std::string test_file_uri{"file:///tmp/test-audio.ogg"};
     std::remove(test_file.c_str());
-    ASSERT_TRUE(test::copy_test_mp3_file_to(test_file));
+    ASSERT_TRUE(test::copy_test_media_file_to("test-audio.ogg", test_file));
 
     core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
                 core::ubuntu::media::Engine::State::ready);
@@ -264,10 +264,10 @@ TEST(GStreamerEngine, DISABLED_stop_pause_play_seek_audio_only_works)
 
 TEST(GStreamerEngine, DISABLED_stop_pause_play_seek_video_works)
 {
-    const std::string test_file{"/tmp/h264.avi"};
-    const std::string test_file_uri{"file:///tmp/h264.avi"};
+    const std::string test_file{"/tmp/test-video.ogg"};
+    const std::string test_file_uri{"file:///tmp/test-video.ogg"};
     std::remove(test_file.c_str());
-    ASSERT_TRUE(test::copy_test_avi_file_to(test_file));
+    ASSERT_TRUE(test::copy_test_media_file_to("test-video.ogg", test_file));
     // Make sure a video sink is added to the pipeline
     const EnsureFakeVideoSinkEnvVarIsSet efs;
 
@@ -312,10 +312,10 @@ TEST(GStreamerEngine, DISABLED_stop_pause_play_seek_video_works)
 
 TEST(GStreamerEngine, get_position_duration_work)
 {
-    const std::string test_file{"/tmp/h264.avi"};
-    const std::string test_file_uri{"file:///tmp/h264.avi"};
+    const std::string test_file{"/tmp/test-video.ogg"};
+    const std::string test_file_uri{"file:///tmp/test-video.ogg"};
     std::remove(test_file.c_str());
-    ASSERT_TRUE(test::copy_test_avi_file_to(test_file));
+    ASSERT_TRUE(test::copy_test_media_file_to("test-video.ogg", test_file));
 
     core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
                 core::ubuntu::media::Engine::State::ready);
@@ -343,16 +343,16 @@ TEST(GStreamerEngine, get_position_duration_work)
     std::cout << "position: " << engine.position() << std::endl;
     std::cout << "duration: " << engine.duration() << std::endl;
 
-    EXPECT_TRUE(engine.position() > 10e9);
-    EXPECT_TRUE(engine.duration() > 10e9);
+    EXPECT_TRUE(engine.position() > 9e9);
+    EXPECT_TRUE(engine.duration() > 9e9);
 }
 
 TEST(GStreamerEngine, adjusting_volume_works)
 {
-    const std::string test_file{"/tmp/test.mp3"};
-    const std::string test_file_uri{"file:///tmp/test.mp3"};
+    const std::string test_file{"/tmp/test-audio-1.ogg"};
+    const std::string test_file_uri{"file:///tmp/test-audio-1.ogg"};
     std::remove(test_file.c_str());
-    ASSERT_TRUE(test::copy_test_mp3_file_to(test_file));
+    ASSERT_TRUE(test::copy_test_media_file_to("test-audio-1.ogg", test_file));
 
     core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
                 core::ubuntu::media::Engine::State::ready);
@@ -399,10 +399,10 @@ TEST(GStreamerEngine, provides_non_null_meta_data_extractor)
 
 TEST(GStreamerEngine, meta_data_extractor_provides_correct_tags)
 {
-    const std::string test_file{"/tmp/test.ogg"};
-    const std::string test_file_uri{"file:///tmp/test.ogg"};
+    const std::string test_file{"/tmp/test.mp3"};
+    const std::string test_file_uri{"file:///tmp/test.mp3"};
     std::remove(test_file.c_str());
-    ASSERT_TRUE(test::copy_test_ogg_file_to(test_file));
+    ASSERT_TRUE(test::copy_test_media_file_to("test.mp3", test_file));
 
     gstreamer::Engine engine;
     auto md = engine.meta_data_extractor()->meta_data_for_track_with_uri(test_file_uri);
@@ -412,9 +412,9 @@ TEST(GStreamerEngine, meta_data_extractor_provides_correct_tags)
     if (0 < md.count(xesam::AlbumArtist::name))
         EXPECT_EQ("Test", md.get(xesam::AlbumArtist::name));
     if (0 < md.count(xesam::Artist::name))
-        EXPECT_EQ("Test", md.get(xesam::Artist::name));
+        EXPECT_EQ("Ezwa", md.get(xesam::Artist::name));
     if (0 < md.count(xesam::DiscNumber::name))
-        EXPECT_EQ("42", md.get(xesam::DiscNumber::name));
+        EXPECT_EQ("1", md.get(xesam::DiscNumber::name));
     if (0 < md.count(xesam::Genre::name))
         EXPECT_EQ("Test", md.get(xesam::Genre::name));
     if (0 < md.count(xesam::TrackNumber::name))
