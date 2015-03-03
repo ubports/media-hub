@@ -107,11 +107,11 @@ media::ServiceImplementation::ServiceImplementation(const Configuration& configu
     {
         switch (state)
         {
-        case audio::OutputState::connected:
-            std::cout << "AudioOutputObserver reports that an output has been connected." << std::endl;
+        case audio::OutputState::Private:
+            std::cout << "AudioOutputObserver reports that output is not Private." << std::endl;
             break;
-        case audio::OutputState::disconnected:
-            std::cout << "AudioOutputObserver reports that an output has been disconnected." << std::endl;
+        case audio::OutputState::Public:
+            std::cout << "AudioOutputObserver reports that output is now Public." << std::endl;
             pause_all_multimedia_sessions();
             break;
         }
