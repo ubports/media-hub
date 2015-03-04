@@ -74,7 +74,7 @@ struct media::ServiceImplementation::Private
     media::ClientDeathObserver::Ptr client_death_observer;
     media::RecorderObserver::Ptr recorder_observer;
     media::audio::OutputObserver::Ptr audio_output_observer;
-    media::audio::OutputObserver audio_output_state;
+    media::audio::OutputState audio_output_state;
 
     std::unique_ptr<CallMonitor> call_monitor;
     std::list<media::Player::PlayerKey> paused_sessions;
