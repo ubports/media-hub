@@ -59,6 +59,7 @@ struct media::ServiceImplementation::Private
           client_death_observer(media::platform_default_client_death_observer()),
           recorder_observer(media::make_platform_default_recorder_observer()),
           audio_output_observer(media::audio::make_platform_default_output_observer()),
+          audio_output_state(media::audio::OutputState::Speaker),
           call_monitor(new CallMonitor)
     {
     }
@@ -73,6 +74,7 @@ struct media::ServiceImplementation::Private
     media::ClientDeathObserver::Ptr client_death_observer;
     media::RecorderObserver::Ptr recorder_observer;
     media::audio::OutputObserver::Ptr audio_output_observer;
+    media::audio::OutputObserver audio_output_state;
 
     std::unique_ptr<CallMonitor> call_monitor;
     std::list<media::Player::PlayerKey> paused_sessions;
@@ -107,14 +109,20 @@ media::ServiceImplementation::ServiceImplementation(const Configuration& configu
     {
         switch (state)
         {
-        case audio::OutputState::Private:
-            std::cout << "AudioOutputObserver reports that output is not Private." << std::endl;
+        case audio::OutputState::Earpiece:
+            std::cout << "AudioOutputObserver reports that output is now Headphones/Headset." << std::endl;
             break;
-        case audio::OutputState::Public:
-            std::cout << "AudioOutputObserver reports that output is now Public." << std::endl;
+        case audio::OutputState::Speaker:
+            std::cout << "AudioOutputObserver reports that output is now Speaker." << std::endl;
             pause_all_multimedia_sessions();
             break;
+        case audio::OutputState::External:
+            std::cout << "AudioOutputObserver reports that output is now External." << std::endl;
+            if (d->audio_output_state == audio::OutputState::Earpiece)
+                pause_all_multimedia_sessions();
+            break;
         }
+        d->audio_output_state = state;
     });
 
     d->call_monitor->on_change([this](CallMonitor::State state) {

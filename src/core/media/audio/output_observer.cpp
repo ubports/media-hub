@@ -29,10 +29,12 @@ std::ostream& audio::operator<<(std::ostream& out, audio::OutputState state)
 {
     switch (state)
     {
-    case audio::OutputState::Private:
-        return out << "OutputState::Private";
-    case audio::OutputState::Public:
-        return out << "OutputState::Public";
+    case audio::OutputState::Earpiece:
+        return out << "OutputState::Earpiece";
+    case audio::OutputState::Speaker:
+        return out << "OutputState::Speaker";
+    case audio::OutputState::External:
+        return out << "OutputState::External";
     }
 
     return out;

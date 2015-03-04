@@ -239,7 +239,7 @@ struct audio::PulseAudioOutputObserver::Private
     {
         for (const auto& pattern : config.output_port_patterns)
         {
-            outputs.emplace_back(pattern, core::Property<media::audio::OutputState>{media::audio::OutputState::Public});
+            outputs.emplace_back(pattern, core::Property<media::audio::OutputState>{media::audio::OutputState::Speaker});
             std::get<1>(outputs.back()) | properties.external_output_state;
             std::get<1>(outputs.back()).changed().connect([](media::audio::OutputState state)
             {
@@ -302,7 +302,7 @@ struct audio::PulseAudioOutputObserver::Private
             std::get<1>(active_sink) = info->name;
             if (info->index != static_cast<std::uint32_t>(primary_sink_index))
                 for (auto& element : outputs)
-                    std::get<1>(element) = audio::OutputState::Public;
+                    std::get<1>(element) = audio::OutputState::External;
         }
     }
 
@@ -311,17 +311,26 @@ struct audio::PulseAudioOutputObserver::Private
     {
         for (auto& element : outputs)
         {
-            std::cout << "Checking if port is available " << " -> " << std::boolalpha << pa::is_port_available_on_sink(info, std::get<0>(element)) << std::endl;
-            audio::OutputState state = pa::is_port_available_on_sink(info, std::get<0>(element))
-                    ? media::audio::OutputState::Private
-                    : media::audio::OutputState::Public;
-
             // Only issue state change if the change happened on the active index.
             if (std::get<0>(active_sink) != info->index)
                 continue;
 
-            std::get<1>(element) = state;
+            std::cout << "Checking if port is available " << " -> " << std::boolalpha << pa::is_port_available_on_sink(info, std::get<0>(element)) << std::endl;
+            bool available = pa::is_port_available_on_sink(info, std::get<0>(element));
 
+            if (available)
+            {
+                std::get<1>(element) = audio::OutputState::Earpiece;
+                continue;
+            }
+    
+            audio::OutputState state;
+            if (info->index == primary_sink_index)
+                state = audio::OutputState::Speaker;
+            else
+                state = audio::OutputState::External;
+
+            std::get<1>(element) = state;
         }
 
         std::set<Reporter::Port> known_ports;
@@ -331,7 +340,6 @@ struct audio::PulseAudioOutputObserver::Private
 
             for (auto& element : outputs)
                 is_monitored |= std::regex_match(info->ports[i]->name, std::get<0>(element));
-
 
             known_ports.insert(Reporter::Port
             {
@@ -387,7 +395,7 @@ struct audio::PulseAudioOutputObserver::Private
     {
         core::Property<std::string> sink;
         core::Property<std::set<audio::PulseAudioOutputObserver::Reporter::Port>> known_ports;
-        core::Property<audio::OutputState> external_output_state{audio::OutputState::Public};
+        core::Property<audio::OutputState> external_output_state{audio::OutputState::Speaker};
     } properties;
 };
 
