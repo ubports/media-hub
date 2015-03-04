@@ -29,10 +29,12 @@ std::ostream& audio::operator<<(std::ostream& out, audio::OutputState state)
 {
     switch (state)
     {
-    case audio::OutputState::connected:
-        return out << "OutputState::connected";
-    case audio::OutputState::disconnected:
-        return out << "OutputState::disconnected";
+    case audio::OutputState::Earpiece:
+        return out << "OutputState::Earpiece";
+    case audio::OutputState::Speaker:
+        return out << "OutputState::Speaker";
+    case audio::OutputState::External:
+        return out << "OutputState::External";
     }
 
     return out;
@@ -41,6 +43,7 @@ std::ostream& audio::operator<<(std::ostream& out, audio::OutputState state)
 audio::OutputObserver::Ptr audio::make_platform_default_output_observer()
 {
     audio::PulseAudioOutputObserver::Configuration config;
+    config.sink = "sink.primary";
     config.output_port_patterns = {std::regex{"output-wired_head.*|output-a2dp_headphones"}};
     config.reporter = std::make_shared<audio::OStreamReporter>();
     return std::make_shared<audio::PulseAudioOutputObserver>(config);
