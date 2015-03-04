@@ -34,10 +34,12 @@ namespace audio
 // All known states of an audio output.
 enum class OutputState
 {
-    // The output is connected.
-    connected,
-    // The output is disconnected.
-    disconnected,
+    // The output is via a private earpiece (i.e. headphones, headset)
+    Earpiece,
+    // The output is via the internal speaker.
+    Speaker,
+    // The output is via an external device (a2dp, etc)
+    External,
 };
 
 // Models observation of audio outputs of a device.
