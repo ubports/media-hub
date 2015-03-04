@@ -43,9 +43,10 @@ void audio::OStreamReporter::query_for_sink_info_finished(const std::string& nam
 {
     out << "PulseAudio sink details for " << name << " with index " << index << " is available:" << std::endl;
     for (const auto& port : known_ports)
-        out << "  Port: " << port.name << "\t" << (port.is_monitored ? "[monitored]" : "") << "\n"
-            << "    " << port.description << "\n"
-            << "    " << std::boolalpha << port.is_available << "\n";
+    {
+        if (port.is_monitored)
+            out << "  " << port.description << ": " << std::boolalpha << port.is_available << "\n";
+    }
 }
 void audio::OStreamReporter::sink_event_with_index(std::uint32_t index)
 {

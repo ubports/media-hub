@@ -62,6 +62,7 @@ struct media::ServiceImplementation::Private
           audio_output_observer(media::audio::make_platform_default_output_observer()),
           request_context_resolver(media::apparmor::ubuntu::make_platform_default_request_context_resolver(configuration.external_services)),
           request_authenticator(media::apparmor::ubuntu::make_platform_default_request_authenticator()),
+          audio_output_state(media::audio::OutputState::Speaker),
           call_monitor(media::telephony::make_platform_default_call_monitor())
     {
     }
@@ -78,6 +79,8 @@ struct media::ServiceImplementation::Private
     media::audio::OutputObserver::Ptr audio_output_observer;
     media::apparmor::ubuntu::RequestContextResolver::Ptr request_context_resolver;
     media::apparmor::ubuntu::RequestAuthenticator::Ptr request_authenticator;
+    media::audio::OutputObserver audio_output_state;
+
     media::telephony::CallMonitor::Ptr call_monitor;
     std::list<media::Player::PlayerKey> paused_sessions;
 };
@@ -112,14 +115,20 @@ media::ServiceImplementation::ServiceImplementation(const Configuration& configu
     {
         switch (state)
         {
-        case audio::OutputState::connected:
-            std::cout << "AudioOutputObserver reports that an output has been connected." << std::endl;
+        case audio::OutputState::Earpiece:
+            std::cout << "AudioOutputObserver reports that output is now Headphones/Headset." << std::endl;
             break;
-        case audio::OutputState::disconnected:
-            std::cout << "AudioOutputObserver reports that an output has been disconnected." << std::endl;
+        case audio::OutputState::Speaker:
+            std::cout << "AudioOutputObserver reports that output is now Speaker." << std::endl;
             pause_all_multimedia_sessions();
             break;
+        case audio::OutputState::External:
+            std::cout << "AudioOutputObserver reports that output is now External." << std::endl;
+            if (d->audio_output_state == audio::OutputState::Earpiece)
+                pause_all_multimedia_sessions();
+            break;
         }
+        d->audio_output_state = state;
     });
 
     d->call_monitor->on_call_state_changed().connect([this](media::telephony::CallMonitor::State state)
@@ -145,7 +154,7 @@ media::ServiceImplementation::ServiceImplementation(const Configuration& configu
         }
         else if (state == media::RecordingState::stopped)
         {
-            d->display_state_lock->request_release(media::power::DisplayState::off);
+            d->display_state_lock->request_release(media::power::DisplayState::on);
         }
     });
 }
