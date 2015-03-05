@@ -64,15 +64,6 @@ struct media::PlayerImplementation<Parent>::Private :
           previous_state(Engine::State::stopped),
           engine_state_change_connection(engine->state().changed().connect(make_state_change_handler()))
     {
-        config.client_death_observer->register_for_death_notifications_with_key(config.key);
-        config.client_death_observer->on_client_with_key_died().connect([this](const media::Player::PlayerKey& died)
-        {
-            if (died != this->config.key)
-                return;
-
-            on_client_died();
-        });
-
         // Poor man's logging of release/acquire events.
         display_state_lock->acquired().connect([](media::power::DisplayState state)
         {
@@ -399,6 +390,26 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
     d->engine->error_signal().connect([this](const Player::Error& e)
     {        
         Parent::error()(e);
+    });
+
+    // Everything is setup, we now subscribe to death notifications.
+    std::weak_ptr<Private> wp{d};
+
+    d->config.client_death_observer->register_for_death_notifications_with_key(config.key);
+    d->config.client_death_observer->on_client_with_key_died().connect([wp](const media::Player::PlayerKey& died)
+    {
+        if (auto sp = wp.lock())
+        {
+            if (died != sp->config.key)
+                return;
+
+            static const std::chrono::milliseconds timeout{1000};
+            media::timeout(timeout.count(), true, [wp]()
+            {
+                if (auto sp = wp.lock())
+                    sp->on_client_died();
+            });
+        }
     });
 }
 

@@ -80,7 +80,7 @@ struct media::ServiceImplementation::Private
     media::audio::OutputObserver::Ptr audio_output_observer;
     media::apparmor::ubuntu::RequestContextResolver::Ptr request_context_resolver;
     media::apparmor::ubuntu::RequestAuthenticator::Ptr request_authenticator;
-    media::audio::OutputObserver audio_output_state;
+    media::audio::OutputState audio_output_state;
 
     media::telephony::CallMonitor::Ptr call_monitor;
     std::list<media::Player::PlayerKey> paused_sessions;
