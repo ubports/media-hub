@@ -4,6 +4,24 @@ media-hub (3.0.0) UNRELEASED; urgency=medium
 
  -- Thomas Voss <thomas.voss@canonical.com>  Tue, 11 Nov 2014 17:15:52 +0100
 
+media-hub (2.0.0+15.04.20150303-0ubuntu2) vivid; urgency=medium
+
+  * debian/control:
+    - Removing pre-depends that are not required
+    - Bumping standards-version to 3.9.6
+
+ -- Ricardo Salveti de Araujo <ricardo.salveti@canonical.com>  Thu, 12 Mar 2015 00:05:27 -0300
+
+media-hub (2.0.0+15.04.20150303-0ubuntu1) vivid; urgency=medium
+
+  [ Ricardo Salveti de Araujo ]
+  * Migrating tests to use ogg instead of mp3/avi removed:
+    tests/h264.avi tests/test.mp3 added: tests/test-audio-1.ogg
+    tests/test-video.ogg tests/test.mp3 renamed: tests/test.ogg =>
+    tests/test-audio.ogg
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Tue, 03 Mar 2015 22:56:52 +0000
+
 media-hub (2.0.0+15.04.20150120-0ubuntu1) vivid; urgency=low
 
   [ Jim Hodapp ]
