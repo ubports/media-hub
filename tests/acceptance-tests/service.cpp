@@ -187,10 +187,10 @@ TEST(MusicService, DISABLED_resuming_a_session_works)
 
 TEST(MusicService, DISABLED_remotely_querying_track_meta_data_works)
 {
-    const std::string test_file{"/tmp/test.ogg"};
-    const std::string test_file_uri{"file:///tmp/test.ogg"};
+    const std::string test_file{"/tmp/test-audio.ogg"};
+    const std::string test_file_uri{"file:///tmp/test-audio.ogg"};
     std::remove(test_file.c_str());
-    ASSERT_TRUE(test::copy_test_ogg_file_to(test_file));
+    ASSERT_TRUE(test::copy_test_media_file_to("test-audio.ogg", test_file));
 
     core::testing::CrossProcessSync sync_service_start;
 
@@ -215,7 +215,7 @@ TEST(MusicService, DISABLED_remotely_querying_track_meta_data_works)
     {
         sync_service_start.wait_for_signal_ready_for(std::chrono::milliseconds{500});
 
-        static const media::Track::UriType uri{"file:///tmp/test.ogg"};
+        static const media::Track::UriType uri{"file:///tmp/test-audio.ogg"};
 
         auto service = media::Service::Client::instance();
         auto session = service->create_session(media::Player::Client::default_configuration());
@@ -241,9 +241,9 @@ TEST(MusicService, DISABLED_remotely_querying_track_meta_data_works)
 
 TEST(MusicService, DISABLED_play_pause_seek_after_open_uri_works)
 {
-    const std::string test_file{"/tmp/test.mp3"};
+    const std::string test_file{"/tmp/test-audio-1.ogg"};
     std::remove(test_file.c_str());
-    ASSERT_TRUE(test::copy_test_mp3_file_to(test_file));
+    ASSERT_TRUE(test::copy_test_media_file_to("test-audio-1.ogg", test_file));
 
     core::testing::CrossProcessSync sync_service_start;
 
@@ -268,7 +268,7 @@ TEST(MusicService, DISABLED_play_pause_seek_after_open_uri_works)
     {
         sync_service_start.wait_for_signal_ready_for(std::chrono::milliseconds{500});
 
-        static const media::Track::UriType uri{"file:///tmp/test.mp3"};
+        static const media::Track::UriType uri{"file:///tmp/test-audio-1.ogg"};
 
         auto service = media::Service::Client::instance();
         auto session = service->create_session(media::Player::Client::default_configuration());
@@ -320,9 +320,9 @@ TEST(MusicService, DISABLED_play_pause_seek_after_open_uri_works)
 
 TEST(MusicService, DISABLED_get_position_duration_work)
 {
-    const std::string test_file{"/tmp/test.mp3"};
+    const std::string test_file{"/tmp/test-audio-1.ogg"};
     std::remove(test_file.c_str());
-    ASSERT_TRUE(test::copy_test_mp3_file_to(test_file));
+    ASSERT_TRUE(test::copy_test_media_file_to("test-audio-1.ogg", test_file));
 
     core::testing::CrossProcessSync sync_service_start;
 
@@ -347,7 +347,7 @@ TEST(MusicService, DISABLED_get_position_duration_work)
     {
         sync_service_start.wait_for_signal_ready_for(std::chrono::milliseconds{500});
 
-        static const media::Track::UriType uri{"file:///tmp/test.mp3"};
+        static const media::Track::UriType uri{"file:///tmp/test-audio-1.ogg"};
 
         auto service = media::Service::Client::instance();
         auto session = service->create_session(media::Player::Client::default_configuration());
@@ -379,9 +379,9 @@ TEST(MusicService, DISABLED_get_position_duration_work)
 
 TEST(MusicService, DISABLED_starting_playback_on_non_empty_playqueue_works)
 {
-    const std::string test_file{"/tmp/test.mp3"};
+    const std::string test_file{"/tmp/test-audio-1.ogg"};
     std::remove(test_file.c_str());
-    ASSERT_TRUE(test::copy_test_mp3_file_to(test_file));
+    ASSERT_TRUE(test::copy_test_media_file_to("test-audio-1.ogg", test_file));
 
     core::testing::CrossProcessSync sync_service_start;
 
@@ -406,7 +406,7 @@ TEST(MusicService, DISABLED_starting_playback_on_non_empty_playqueue_works)
     {
         sync_service_start.wait_for_signal_ready_for(std::chrono::milliseconds{500});
 
-        static const media::Track::UriType uri{"file:///tmp/test.mp3"};
+        static const media::Track::UriType uri{"file:///tmp/test-audio-1.ogg"};
         static const bool dont_make_current{false};
 
         auto service = media::Service::Client::instance();
