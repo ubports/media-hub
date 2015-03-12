@@ -29,7 +29,7 @@ Build-Depends: cmake,
                libpulse-dev,
                qtbase5-dev,
                libtelepathy-qt5-dev,
-Standards-Version: 3.9.5
+Standards-Version: 3.9.6
 Homepage: https://launchpad.net/media-hub
 # If you aren't a member of ~phablet-team but need to upload packaging changes,
 # just go ahead.  ~phablet-team will notice and sync up the code again.
@@ -39,7 +39,6 @@ Package: libmedia-hub-dev
 Section: libdevel
 Architecture: any
 Multi-Arch: same
-Pre-Depends: dpkg (>= 1.15.6~)
 Depends: libmedia-hub-common2 (= ${binary:Version}),
          libmedia-hub-client2 (= ${binary:Version}),
          ${misc:Depends},
@@ -53,7 +52,6 @@ Description: Simple and lightweight media playback service - development files
 
 Package: media-hub
 Architecture: any
-Pre-Depends: dpkg (>= 1.15.6~)
 Depends: ${misc:Depends},
          ${shlibs:Depends},
 Suggests: apparmor (>= 2.8.95~2430-0ubuntu4~)
@@ -66,7 +64,6 @@ Description: Simple and lightweight media playback service
 Package: libmedia-hub-common2
 Architecture: any
 Multi-Arch: same
-Pre-Depends: dpkg (>= 1.15.6~)
 Depends: ${misc:Depends},
          ${shlibs:Depends},
 Description: Simple and lightweight media playback service
@@ -78,7 +75,6 @@ Description: Simple and lightweight media playback service
 Package: libmedia-hub-client2
 Architecture: any
 Multi-Arch: same
-Pre-Depends: dpkg (>= 1.15.6~)
 Depends: ${misc:Depends},
          ${shlibs:Depends},
 Description: Simple and lightweight media playback service
