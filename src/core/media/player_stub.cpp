@@ -33,10 +33,6 @@
 #include <core/dbus/property.h>
 #include <core/dbus/types/object_path.h>
 
-// Hybris
-#include <hybris/media/media_codec_layer.h>
-#include <hybris/media/surface_texture_client_hybris.h>
-
 #include <limits>
 
 #define UNUSED __attribute__((unused))

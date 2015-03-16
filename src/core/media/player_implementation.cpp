@@ -21,10 +21,10 @@
 
 #include <unistd.h>
 
+#include "client_death_observer.h"
 #include "engine.h"
 #include "track_list_implementation.h"
 
-#include <hybris/media/media_codec_layer.h>
 #include "powerd_service.h"
 #include "unity_screen_service.h"
 #include "gstreamer/engine.h"
@@ -81,7 +81,16 @@ struct media::PlayerImplementation::Private :
         auto uscreen_stub_service = dbus::Service::use_service(bus, dbus::traits::Service<core::UScreen>::interface_name());
         uscreen_session = uscreen_stub_service->object_for_path(dbus::types::ObjectPath("/com/canonical/Unity/Screen"));
 
-        decoding_service_set_client_death_cb(&Private::on_client_died_cb, key, static_cast<void*>(this));
+        auto client_death_observer = media::platform_default_client_death_observer();
+
+        client_death_observer->register_for_death_notifications_with_key(key);
+        client_death_observer->on_client_with_key_died().connect([this](const media::Player::PlayerKey& died)
+        {
+            if (died != this->key)
+                return;
+
+            on_client_died();
+        });
     }
 
     ~Private()
@@ -259,15 +268,6 @@ struct media::PlayerImplementation::Private :
             if (auto self = weak_self.lock())
                 self->clear_wakelock(wakelock_type);
         };
-    }
-
-    static void on_client_died_cb(void *context)
-    {
-        if (context)
-        {
-            Private *p = static_cast<Private*>(context);
-            p->on_client_died();
-        }
     }
 
     void on_client_died()
