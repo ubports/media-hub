@@ -19,8 +19,6 @@
 
 #include "service_skeleton.h"
 
-#include "apparmor.h"
-
 #include "mpris/media_player2.h"
 #include "mpris/metadata.h"
 #include "mpris/player.h"
@@ -55,7 +53,6 @@ struct media::ServiceSkeleton::Private
         : impl(impl),
           object(impl->access_service()->add_object_for_path(
                      dbus::traits::Service<media::Service>::object_path())),
-          dbus_stub(impl->access_bus()),
           exported(impl->access_bus(), resolver)
     {
         object->install_method_handler<mpris::Service::CreateSession>(
@@ -99,19 +96,61 @@ struct media::ServiceSkeleton::Private
         dbus::types::ObjectPath op{session_info.first};
         media::Player::PlayerKey key{session_info.second};
 
-        dbus_stub.get_connection_app_armor_security_async(msg->sender(), [this, msg, op, key](const std::string& profile)
+        media::Player::Configuration config
         {
-            media::Player::Configuration config
-            {
-                profile,
-                key,
-                impl->access_bus(),
-                impl->access_service()->add_object_for_path(op)
-            };
+            key,
+            impl->access_bus(),
+            impl->access_service()->add_object_for_path(op)
+        };
 
-            try
-            {
+        try
+        {
+            auto session = impl->create_session(config);
+
+            bool inserted = false;
+            std::tie(std::ignore, inserted)
+                    = session_store.insert(std::make_pair(key, session));
+
+            if (!inserted)
+                throw std::runtime_error("Problem persisting session in session store.");
+
+            auto reply = dbus::Message::make_method_return(msg);
+            reply->writer() << op;
+
+            impl->access_bus()->send(reply);
+        } catch(const std::runtime_error& e)
+        {
+            auto reply = dbus::Message::make_error(
+                        msg,
+                        mpris::Service::Errors::CreatingSession::name(),
+                        e.what());
+            impl->access_bus()->send(reply);
+        }
+    }
+
+    void handle_create_fixed_session(const core::dbus::Message::Ptr& msg)
+    {
+        try
+        {
+            std::string name;
+            msg->reader() >> name;
+
+            if (fixed_session_store.count(name) == 0) {
+                // Create new session
+                auto  session_info = create_session_info();
+
+                dbus::types::ObjectPath op{session_info.first};
+                media::Player::PlayerKey key{session_info.second};
+
+                media::Player::Configuration config
+                {
+                    key,
+                    impl->access_bus(),
+                    impl->access_service()->add_object_for_path(op)
+                };
+
                 auto session = impl->create_session(config);
+                session->lifetime().set(media::Player::Lifetime::resumable);
 
                 bool inserted = false;
                 std::tie(std::ignore, inserted)
@@ -120,108 +159,20 @@ struct media::ServiceSkeleton::Private
                 if (!inserted)
                     throw std::runtime_error("Problem persisting session in session store.");
 
+                fixed_session_store.insert(std::make_pair(name, key));
 
                 auto reply = dbus::Message::make_method_return(msg);
                 reply->writer() << op;
 
                 impl->access_bus()->send(reply);
-            } catch(const std::runtime_error& e)
-            {
-                auto reply = dbus::Message::make_error(
-                            msg,
-                            mpris::Service::Errors::CreatingSession::name(),
-                            e.what());
-                impl->access_bus()->send(reply);
             }
-        });
-    }
-
-    void handle_create_fixed_session(const core::dbus::Message::Ptr& msg)
-    {
-        dbus_stub.get_connection_app_armor_security_async(msg->sender(), [this, msg](const std::string& profile)
-        {
-            try
-            {
-                std::string name;
-                msg->reader() >> name;
-
-                if (fixed_session_store.count(name) == 0) {
-                    // Create new session
-                    auto  session_info = create_session_info();
-
-                    dbus::types::ObjectPath op{session_info.first};
-                    media::Player::PlayerKey key{session_info.second};
-
-                    media::Player::Configuration config
-                    {
-                        profile,
-                        key,
-                        impl->access_bus(),
-                        impl->access_service()->add_object_for_path(op)
-                    };
-
-                    auto session = impl->create_session(config);
-                    session->lifetime().set(media::Player::Lifetime::resumable);
-
-                    bool inserted = false;
-                    std::tie(std::ignore, inserted)
-                            = session_store.insert(std::make_pair(key, session));
-
-                    if (!inserted)
-                        throw std::runtime_error("Problem persisting session in session store.");
-
-                    fixed_session_store.insert(std::make_pair(name, key));
-
-                    auto reply = dbus::Message::make_method_return(msg);
-                    reply->writer() << op;
-
-                    impl->access_bus()->send(reply);
-                }
-                else {
-                    // Resume previous session
-                    auto key = fixed_session_store[name];
-                    if (session_store.count(key) == 0) {
-                        auto reply = dbus::Message::make_error(
-                                    msg,
-                                    mpris::Service::Errors::CreatingFixedSession::name(),
-                                    "Unable to locate player session");
-                        impl->access_bus()->send(reply);
-                        return;
-                    }
-
-                    std::stringstream ss;
-                    ss << "/core/ubuntu/media/Service/sessions/" << key;
-                    dbus::types::ObjectPath op{ss.str()};
-
-                    auto reply = dbus::Message::make_method_return(msg);
-                    reply->writer() << op;
-
-                    impl->access_bus()->send(reply);
-                }
-            } catch(const std::runtime_error& e)
-            {
-                auto reply = dbus::Message::make_error(
-                            msg,
-                            mpris::Service::Errors::CreatingSession::name(),
-                            e.what());
-                impl->access_bus()->send(reply);
-            }
-        });
-    }
-
-    void handle_resume_session(const core::dbus::Message::Ptr& msg)
-    {
-        dbus_stub.get_connection_app_armor_security_async(msg->sender(), [this, msg](const std::string&)
-        {
-            try
-            {
-                Player::PlayerKey key;
-                msg->reader() >> key;
-
+            else {
+                // Resume previous session
+                auto key = fixed_session_store[name];
                 if (session_store.count(key) == 0) {
                     auto reply = dbus::Message::make_error(
                                 msg,
-                                mpris::Service::Errors::ResumingSession::name(),
+                                mpris::Service::Errors::CreatingFixedSession::name(),
                                 "Unable to locate player session");
                     impl->access_bus()->send(reply);
                     return;
@@ -235,15 +186,49 @@ struct media::ServiceSkeleton::Private
                 reply->writer() << op;
 
                 impl->access_bus()->send(reply);
-            } catch(const std::runtime_error& e)
-            {
+            }
+        } catch(const std::runtime_error& e)
+        {
+            auto reply = dbus::Message::make_error(
+                        msg,
+                        mpris::Service::Errors::CreatingSession::name(),
+                        e.what());
+            impl->access_bus()->send(reply);
+        }
+    }
+
+    void handle_resume_session(const core::dbus::Message::Ptr& msg)
+    {
+        try
+        {
+            Player::PlayerKey key;
+            msg->reader() >> key;
+
+            if (session_store.count(key) == 0) {
                 auto reply = dbus::Message::make_error(
                             msg,
-                            mpris::Service::Errors::CreatingSession::name(),
-                            e.what());
+                            mpris::Service::Errors::ResumingSession::name(),
+                            "Unable to locate player session");
                 impl->access_bus()->send(reply);
+                return;
             }
-        });
+
+            std::stringstream ss;
+            ss << "/core/ubuntu/media/Service/sessions/" << key;
+            dbus::types::ObjectPath op{ss.str()};
+
+            auto reply = dbus::Message::make_method_return(msg);
+            reply->writer() << op;
+
+            impl->access_bus()->send(reply);
+        } catch(const std::runtime_error& e)
+        {
+            auto reply = dbus::Message::make_error(
+                        msg,
+                        mpris::Service::Errors::CreatingSession::name(),
+                        e.what());
+            impl->access_bus()->send(reply);
+        }
     }
 
     void handle_pause_other_sessions(const core::dbus::Message::Ptr& msg)
@@ -260,8 +245,6 @@ struct media::ServiceSkeleton::Private
     media::ServiceSkeleton* impl;
     dbus::Object::Ptr object;
 
-    // We query the apparmor profile to obtain an identity for players.
-    org::freedesktop::dbus::DBus::Stub dbus_stub;
     // We track all running player instances.
     std::map<media::Player::PlayerKey, std::shared_ptr<media::Player>> session_store;
     std::map<std::string, media::Player::PlayerKey> fixed_session_store;
