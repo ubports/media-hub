@@ -39,8 +39,8 @@ Package: libmedia-hub-dev
 Section: libdevel
 Architecture: any
 Multi-Arch: same
-Depends: libmedia-hub-common2 (= ${binary:Version}),
-         libmedia-hub-client2 (= ${binary:Version}),
+Depends: libmedia-hub-common3 (= ${binary:Version}),
+         libmedia-hub-client3 (= ${binary:Version}),
          ${misc:Depends},
          libproperties-cpp-dev,
 Suggests: libmedia-hub-doc
@@ -61,7 +61,7 @@ Description: Simple and lightweight media playback service
  .
  This package contains the runtime.
 
-Package: libmedia-hub-common2
+Package: libmedia-hub-common3
 Architecture: any
 Multi-Arch: same
 Depends: ${misc:Depends},
@@ -72,7 +72,7 @@ Description: Simple and lightweight media playback service
  .
  This package contains the common libraries.
 
-Package: libmedia-hub-client2
+Package: libmedia-hub-client3
 Architecture: any
 Multi-Arch: same
 Depends: ${misc:Depends},

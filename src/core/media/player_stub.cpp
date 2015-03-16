@@ -19,6 +19,7 @@
 
 #include <core/media/service.h>
 #include <core/media/track_list.h>
+#include <core/media/video/platform_default_sink.h>
 
 #include "codec.h"
 #include "player_stub.h"
@@ -48,13 +49,9 @@ struct media::PlayerStub::Private
     Private(const std::shared_ptr<Service>& parent,
             const std::shared_ptr<core::dbus::Object>& object
             ) : parent(parent),
-                texture_id(0),
-                igbc_wrapper(nullptr),
-                glc_wrapper(nullptr),
-                decoding_session(nullptr),
-                frame_available_cb(nullptr),
-                frame_available_context(nullptr),
                 object(object),
+                key(object->invoke_method_synchronously<mpris::Player::Key, media::Player::PlayerKey>().value()),
+                sink_factory(media::video::make_platform_default_sink_factory(key)),
                 properties
                 {
                     // Link the properties from the server side to the client side over the bus
@@ -89,64 +86,17 @@ struct media::PlayerStub::Private
                     object->get_signal<mpris::Player::Signals::Error>()
                 }
     {
-        auto op = object->invoke_method_synchronously<mpris::Player::Key, media::Player::PlayerKey>();
-        decoding_session = decoding_service_create_session(op.value());
     }
 
     ~Private()
     {
     }
 
-    static void on_frame_available_cb(UNUSED GLConsumerWrapperHybris wrapper, void *context)
-    {
-        if (context != nullptr) {
-            Private *p = static_cast<Private*>(context);
-            p->on_frame_available();
-        }
-        else
-            std::cerr << "context is nullptr, can't call on_frame_available()" << std::endl;
-    }
-
-    void on_frame_available()
-    {
-        if (frame_available_cb != nullptr) {
-            frame_available_cb(frame_available_context);
-        }
-        else
-            std::cerr << "frame_available_cb is nullptr, can't call frame_available_cb()" << std::endl;
-    }
-
-    void set_frame_available_cb(FrameAvailableCb cb, void *context)
-    {
-        frame_available_cb = cb;
-        frame_available_context = context;
-
-        gl_consumer_set_frame_available_cb(glc_wrapper, &Private::on_frame_available_cb, static_cast<void*>(this));
-    }
-
-    /** We need a GLConsumerHybris instance for doing texture streaming over the
-     * process boundary **/
-    void get_gl_consumer()
-    {
-        igbc_wrapper = decoding_service_get_igraphicbufferconsumer();
-        glc_wrapper = gl_consumer_create_by_id_with_igbc(texture_id, igbc_wrapper);
-
-    }
-
     std::shared_ptr<Service> parent;
     std::shared_ptr<TrackList> track_list;
-
-    uint32_t texture_id;
-    IGBCWrapperHybris igbc_wrapper;
-    GLConsumerWrapperHybris glc_wrapper;
-
-    DSSessionWrapperHybris decoding_session;
-
-    FrameAvailableCb frame_available_cb;
-    void *frame_available_context;
-
     dbus::Object::Ptr object;
-
+    media::Player::PlayerKey key;
+    media::video::SinkFactory sink_factory;
     struct
     {
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::CanPlay>> can_play;
@@ -186,9 +136,7 @@ struct media::PlayerStub::Private
                 const std::shared_ptr<DBusPlaybackStatusChangedSignal>& status,
                 const std::shared_ptr<DBusVideoDimensionChangedSignal>& d,
                 const std::shared_ptr<DBusErrorSignal>& e)
-            : playback_complete_cb(nullptr),
-              playback_complete_context(nullptr),
-              seeked_to(),
+            : seeked_to(),
               end_of_stream(),
               playback_status_changed(),
               video_dimension_changed(),
@@ -211,8 +159,6 @@ struct media::PlayerStub::Private
             dbus.end_of_stream->connect([this]()
             {
                 std::cout << "EndOfStream signal arrived via the bus." << std::endl;
-                if (playback_complete_cb)
-                    playback_complete_cb(playback_complete_context);
                 end_of_stream();
             });
 
@@ -235,14 +181,6 @@ struct media::PlayerStub::Private
             });
         }
 
-        void set_playback_complete_cb(PlaybackCompleteCb cb, void *context)
-        {
-            playback_complete_cb = cb;
-            playback_complete_context = context;
-        }
-
-        PlaybackCompleteCb playback_complete_cb;
-        void *playback_complete_context;
         core::Signal<int64_t> seeked_to;
         core::Signal<void> end_of_stream;
         core::Signal<media::Player::PlaybackStatus> playback_status_changed;
@@ -284,9 +222,7 @@ std::shared_ptr<media::TrackList> media::PlayerStub::track_list()
 
 media::Player::PlayerKey media::PlayerStub::key() const
 {
-    auto op = d->object->invoke_method_synchronously<mpris::Player::Key, media::Player::PlayerKey>();
-
-    return op.value();
+    return d->key;
 }
 
 bool media::PlayerStub::open_uri(const media::Track::UriType& uri)
@@ -296,6 +232,7 @@ bool media::PlayerStub::open_uri(const media::Track::UriType& uri)
     return op.value();
 }
 
+
 bool media::PlayerStub::open_uri(const Track::UriType& uri, const Player::HeadersType& headers)
 {
     auto op = d->object->invoke_method_synchronously<mpris::Player::OpenUriExtended, bool>(uri, headers);
@@ -303,19 +240,19 @@ bool media::PlayerStub::open_uri(const Track::UriType& uri, const Player::Header
     return op.value();
 }
 
-void media::PlayerStub::create_video_sink(uint32_t texture_id)
+media::video::Sink::Ptr media::PlayerStub::create_gl_texture_video_sink(std::uint32_t texture_id)
 {
     auto op = d->object->invoke_method_synchronously<mpris::Player::CreateVideoSink, void>(texture_id);
-    d->texture_id = texture_id;
-    d->get_gl_consumer();
 
     if (op.is_error())
-        throw std::runtime_error("Problem creating new video sink instance on remote object");
-}
+    {
+        if (op.error().name() == mpris::Player::Error::OutOfProcessBufferStreamingNotSupported::name)
+            throw media::Player::Errors::OutOfProcessBufferStreamingNotSupported{};
+        else
+            throw std::runtime_error{op.error().print()};
+    }
 
-GLConsumerWrapperHybris media::PlayerStub::gl_consumer() const
-{
-    return d->glc_wrapper;
+    return d->sink_factory(texture_id);
 }
 
 void media::PlayerStub::next()
@@ -364,16 +301,6 @@ void media::PlayerStub::stop()
 
     if (op.is_error())
         throw std::runtime_error("Problem stopping playback on remote object");
-}
-
-void media::PlayerStub::set_frame_available_callback(FrameAvailableCb cb, void *context)
-{
-    d->set_frame_available_cb(cb, context);
-}
-
-void media::PlayerStub::set_playback_complete_callback(PlaybackCompleteCb cb, void *context)
-{
-    d->signals.set_playback_complete_cb(cb, context);
 }
 
 const core::Property<bool>& media::PlayerStub::can_play() const

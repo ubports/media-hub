@@ -6,7 +6,10 @@ include_directories(${PC_GSTREAMER_1_0_INCLUDE_DIRS} ${HYBRIS_MEDIA_CFLAGS} ${PC
 # out all symbols that are not in core::ubuntu::media*
 set(symbol_map "${CMAKE_SOURCE_DIR}/symbols.map")
 
-file(GLOB MPRIS_HEADERS mpris/ *.h)
+file(GLOB_RECURSE MEDIA_HUB_HEADERS ${CMAKE_SOURCE_DIR}/include/*.h)
+file(GLOB MPRIS_HEADERS mpris/*.h)
+
+message(STATUS ${MEDIA_HUB_HEADERS})
 
 add_subdirectory(call-monitor)
 
@@ -36,6 +39,8 @@ set_target_properties(
 add_library(
   media-hub-client SHARED
 
+  ${MEDIA_HUB_HEADERS}
+
   player.cpp
   service.cpp
   track.cpp
@@ -44,6 +49,9 @@ add_library(
   player_stub.cpp
   service_stub.cpp
   track_list_stub.cpp
+
+  video/hybris_gl_sink.cpp
+  video/platform_default_sink.cpp
 )
 
 set_target_properties(
@@ -75,6 +83,7 @@ install(
 add_library(
     media-hub-service
 
+    ${MEDIA_HUB_HEADERS}
     ${MPRIS_HEADERS}
 
     cover_art_resolver.cpp
