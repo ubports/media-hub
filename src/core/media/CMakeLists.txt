@@ -91,6 +91,7 @@ add_library(
     cover_art_resolver.cpp
     engine.cpp
 
+    power/battery_observer.cpp
     power/state_controller.cpp
 
     recorder_observer.cpp
