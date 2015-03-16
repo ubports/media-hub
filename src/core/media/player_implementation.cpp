@@ -23,6 +23,7 @@
 
 #include "client_death_observer.h"
 #include "engine.h"
+#include "null_track_list.h"
 #include "track_list_implementation.h"
 
 #include "gstreamer/engine.h"
@@ -39,7 +40,8 @@ namespace dbus = core::dbus;
 
 using namespace std;
 
-struct media::PlayerImplementation::Private :
+template<typename Parent>
+struct media::PlayerImplementation<Parent>::Private :
         public std::enable_shared_from_this<Private>
 {
     enum class wakelock_clear_t
@@ -50,30 +52,18 @@ struct media::PlayerImplementation::Private :
         WAKELOCK_CLEAR_INVALID
     };
 
-    Private(PlayerImplementation* parent, const media::PlayerImplementation::Configuration& config)
+    Private(PlayerImplementation* parent, const media::PlayerImplementation<Parent>::Configuration& config)
         : parent(parent),
           config(config),
           display_state_lock(config.power_state_controller->display_state_lock()),
           system_state_lock(config.power_state_controller->system_state_lock()),
           engine(std::make_shared<gstreamer::Engine>()),
-          track_list(
-              new media::TrackListImplementation(
-                  config.session->path().as_string() + "/TrackList",
-                  engine->meta_data_extractor())),
+          track_list(std::make_shared<NullTrackList>()),
           system_wakelock_count(0),
           display_wakelock_count(0),
           previous_state(Engine::State::stopped),
           engine_state_change_connection(engine->state().changed().connect(make_state_change_handler()))
     {
-        config.client_death_observer->register_for_death_notifications_with_key(config.key);
-        config.client_death_observer->on_client_with_key_died().connect([this](const media::Player::PlayerKey& died)
-        {
-            if (died != this->config.key)
-                return;
-
-            on_client_died();
-        });
-
         // Poor man's logging of release/acquire events.
         display_state_lock->acquired().connect([](media::power::DisplayState state)
         {
@@ -257,7 +247,7 @@ struct media::PlayerImplementation::Private :
         // the execution of the functor may surpass the lifetime of this Private
         // object instance. By keeping a weak_ptr to the private object instance
         // we can check if the object is dead before calling methods on it
-        std::weak_ptr<Private> weak_self{shared_from_this()};
+        std::weak_ptr<Private> weak_self{this->shared_from_this()};
         auto wakelock_type = current_wakelock_type();
         return [weak_self, wakelock_type] {
             if (auto self = weak_self.lock())
@@ -271,14 +261,14 @@ struct media::PlayerImplementation::Private :
     }
 
     // Our link back to our parent.
-    media::PlayerImplementation* parent;
+    media::PlayerImplementation<Parent>* parent;
     // We just store the parameters passed on construction.
-    media::PlayerImplementation::Configuration config;
+    media::PlayerImplementation<Parent>::Configuration config;
     media::power::StateController::Lock<media::power::DisplayState>::Ptr display_state_lock;
     media::power::StateController::Lock<media::power::SystemState>::Ptr system_state_lock;
 
     std::shared_ptr<Engine> engine;
-    std::shared_ptr<TrackListImplementation> track_list;
+    std::shared_ptr<media::NullTrackList> track_list;
     std::atomic<int> system_wakelock_count;
     std::atomic<int> display_wakelock_count;
     Engine::State previous_state;
@@ -286,37 +276,29 @@ struct media::PlayerImplementation::Private :
     core::Connection engine_state_change_connection;
 };
 
-media::PlayerImplementation::PlayerImplementation(const media::PlayerImplementation::Configuration& config)
-    : media::PlayerSkeleton
-      {
-          media::PlayerSkeleton::Configuration
-          {
-              config.bus,
-              config.session,
-              config.request_context_resolver,
-              config.request_authenticator
-          }
-      },
+template<typename Parent>
+media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImplementation<Parent>::Configuration& config)
+    : Parent{config.parent},
       d{std::make_shared<Private>(this, config)}
 {
     // Initialize default values for Player interface properties
-    can_play().set(true);
-    can_pause().set(true);
-    can_seek().set(true);
-    can_go_previous().set(true);
-    can_go_next().set(true);
-    is_video_source().set(false);
-    is_audio_source().set(false);
-    is_shuffle().set(true);
-    playback_rate().set(1.f);
-    playback_status().set(Player::PlaybackStatus::null);
-    loop_status().set(Player::LoopStatus::none);
-    position().set(0);
-    duration().set(0);
-    audio_stream_role().set(Player::AudioStreamRole::multimedia);
+    Parent::can_play().set(true);
+    Parent::can_pause().set(true);
+    Parent::can_seek().set(true);
+    Parent::can_go_previous().set(true);
+    Parent::can_go_next().set(true);
+    Parent::is_video_source().set(false);
+    Parent::is_audio_source().set(false);
+    Parent::is_shuffle().set(true);
+    Parent::playback_rate().set(1.f);
+    Parent::playback_status().set(Player::PlaybackStatus::null);
+    Parent::loop_status().set(Player::LoopStatus::none);
+    Parent::position().set(0);
+    Parent::duration().set(0);
+    Parent::audio_stream_role().set(Player::AudioStreamRole::multimedia);
     d->engine->audio_stream_role().set(Player::AudioStreamRole::multimedia);
-    orientation().set(Player::Orientation::rotate0);
-    lifetime().set(Player::Lifetime::normal);
+    Parent::orientation().set(Player::Orientation::rotate0);
+    Parent::lifetime().set(Player::Lifetime::normal);
     d->engine->lifetime().set(Player::Lifetime::normal);
 
     // Make sure that the Position property gets updated from the Engine
@@ -325,7 +307,7 @@ media::PlayerImplementation::PlayerImplementation(const media::PlayerImplementat
     {
         return d->engine->position().get();
     };
-    position().install(position_getter);
+    Parent::position().install(position_getter);
 
     // Make sure that the Duration property gets updated from the Engine
     // every time the client requests duration
@@ -333,23 +315,23 @@ media::PlayerImplementation::PlayerImplementation(const media::PlayerImplementat
     {
         return d->engine->duration().get();
     };
-    duration().install(duration_getter);
+    Parent::duration().install(duration_getter);
 
     std::function<bool()> video_type_getter = [this]()
     {
         return d->engine->is_video_source().get();
     };
-    is_video_source().install(video_type_getter);
+    Parent::is_video_source().install(video_type_getter);
 
     std::function<bool()> audio_type_getter = [this]()
     {
         return d->engine->is_audio_source().get();
     };
-    is_audio_source().install(audio_type_getter);
+    Parent::is_audio_source().install(audio_type_getter);
 
     // Make sure that the audio_stream_role property gets updated on the Engine side
     // whenever the client side sets the role
-    audio_stream_role().changed().connect([this](media::Player::AudioStreamRole new_role)
+    Parent::audio_stream_role().changed().connect([this](media::Player::AudioStreamRole new_role)
     {
         d->engine->audio_stream_role().set(new_role);
     });
@@ -358,10 +340,10 @@ media::PlayerImplementation::PlayerImplementation(const media::PlayerImplementat
     // update the Player's cached value
     d->engine->orientation().changed().connect([this](const Player::Orientation& o)
     {
-        orientation().set(o);
+        Parent::orientation().set(o);
     });
 
-    lifetime().changed().connect([this](media::Player::Lifetime lifetime)
+    Parent::lifetime().changed().connect([this](media::Player::Lifetime lifetime)
     {
         d->engine->lifetime().set(lifetime);
     });
@@ -387,31 +369,52 @@ media::PlayerImplementation::PlayerImplementation(const media::PlayerImplementat
 
     d->engine->seeked_to_signal().connect([this](uint64_t value)
     {
-        seeked_to()(value);
+        Parent::seeked_to()(value);
     });
 
     d->engine->end_of_stream_signal().connect([this]()
     {
-        end_of_stream()();
+        Parent::end_of_stream()();
     });
 
     d->engine->playback_status_changed_signal().connect([this](const Player::PlaybackStatus& status)
     {
-        playback_status_changed()(status);
+        Parent::playback_status_changed()(status);
     });
 
     d->engine->video_dimension_changed_signal().connect([this](const media::video::Dimensions& dimensions)
     {
-        video_dimension_changed()(dimensions);
+        Parent::video_dimension_changed()(dimensions);
     });
 
     d->engine->error_signal().connect([this](const Player::Error& e)
+    {        
+        Parent::error()(e);
+    });
+
+    // Everything is setup, we now subscribe to death notifications.
+    std::weak_ptr<Private> wp{d};
+
+    d->config.client_death_observer->register_for_death_notifications_with_key(config.key);
+    d->config.client_death_observer->on_client_with_key_died().connect([wp](const media::Player::PlayerKey& died)
     {
-        error()(e);
+        if (auto sp = wp.lock())
+        {
+            if (died != sp->config.key)
+                return;
+
+            static const std::chrono::milliseconds timeout{1000};
+            media::timeout(timeout.count(), true, [wp]()
+            {
+                if (auto sp = wp.lock())
+                    sp->on_client_died();
+            });
+        }
     });
 }
 
-media::PlayerImplementation::~PlayerImplementation()
+template<typename Parent>
+media::PlayerImplementation<Parent>::~PlayerImplementation()
 {
     // Install null getters as these properties may be destroyed
     // after the engine has been destroyed since they are owned by the
@@ -420,84 +423,101 @@ media::PlayerImplementation::~PlayerImplementation()
     {
         return static_cast<uint64_t>(0);
     };
-    position().install(position_getter);
+    Parent::position().install(position_getter);
 
     std::function<uint64_t()> duration_getter = [this]()
     {
         return static_cast<uint64_t>(0);
     };
-    duration().install(duration_getter);
+    Parent::duration().install(duration_getter);
 
     std::function<bool()> video_type_getter = [this]()
     {
         return false;
     };
-    is_video_source().install(video_type_getter);
+    Parent::is_video_source().install(video_type_getter);
 
     std::function<bool()> audio_type_getter = [this]()
     {
         return false;
     };
-    is_audio_source().install(audio_type_getter);
+    Parent::is_audio_source().install(audio_type_getter);
 }
 
-std::shared_ptr<media::TrackList> media::PlayerImplementation::track_list()
+template<typename Parent>
+std::shared_ptr<media::TrackList> media::PlayerImplementation<Parent>::track_list()
 {
     return d->track_list;
 }
 
 // TODO: Convert this to be a property instead of sync call
-media::Player::PlayerKey media::PlayerImplementation::key() const
+template<typename Parent>
+media::Player::PlayerKey media::PlayerImplementation<Parent>::key() const
 {
     return d->config.key;
 }
 
-media::video::Sink::Ptr media::PlayerImplementation::create_gl_texture_video_sink(std::uint32_t texture_id)
+template<typename Parent>
+media::video::Sink::Ptr media::PlayerImplementation<Parent>::create_gl_texture_video_sink(std::uint32_t texture_id)
 {
     d->engine->create_video_sink(texture_id);
     return media::video::Sink::Ptr{};
 }
 
-bool media::PlayerImplementation::open_uri(const Track::UriType& uri)
+template<typename Parent>
+bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri)
 {
     return d->engine->open_resource_for_uri(uri);
 }
 
-bool media::PlayerImplementation::open_uri(const Track::UriType& uri, const Player::HeadersType& headers)
+template<typename Parent>
+bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri, const Player::HeadersType& headers)
 {
     return d->engine->open_resource_for_uri(uri, headers);
 }
 
-void media::PlayerImplementation::next()
+template<typename Parent>
+void media::PlayerImplementation<Parent>::next()
 {
 }
 
-void media::PlayerImplementation::previous()
+template<typename Parent>
+void media::PlayerImplementation<Parent>::previous()
 {
 }
 
-void media::PlayerImplementation::play()
+template<typename Parent>
+void media::PlayerImplementation<Parent>::play()
 {
     d->engine->play();
 }
 
-void media::PlayerImplementation::pause()
+template<typename Parent>
+void media::PlayerImplementation<Parent>::pause()
 {
     d->engine->pause();
 }
 
-void media::PlayerImplementation::stop()
+template<typename Parent>
+void media::PlayerImplementation<Parent>::stop()
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
     d->engine->stop();
 }
 
-void media::PlayerImplementation::seek_to(const std::chrono::microseconds& ms)
+template<typename Parent>
+void media::PlayerImplementation<Parent>::seek_to(const std::chrono::microseconds& ms)
 {
     d->engine->seek_to(ms);
 }
 
-const core::Signal<>& media::PlayerImplementation::on_client_disconnected() const
+template<typename Parent>
+const core::Signal<>& media::PlayerImplementation<Parent>::on_client_disconnected() const
 {
     return d->on_client_disconnected;
 }
+
+#include <core/media/player_skeleton.h>
+
+// For linking purposes, we have to make sure that we have all symbols included within the dso.
+template class media::PlayerImplementation<media::PlayerSkeleton>;
