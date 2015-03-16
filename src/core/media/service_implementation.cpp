@@ -186,11 +186,11 @@ std::shared_ptr<media::Player> media::ServiceImplementation::create_session(
         // until all dispatches are done
         d->configuration.external_services.io_service.post([this, key]()
         {
-            if (!has_player_for_key(key))
+            if (!d->configuration.player_store->has_player_for_key(key))
                 return;
 
-            if (player_for_key(key)->lifetime() == Player::Lifetime::normal)
-                remove_player_for_key(key);
+            if (d->configuration.player_store->player_for_key(key)->lifetime() == Player::Lifetime::normal)
+                d->configuration.player_store->remove_player_for_key(key);
         });
     });
 
@@ -211,19 +211,19 @@ std::shared_ptr<media::Player> media::ServiceImplementation::resume_session(medi
 
 void media::ServiceImplementation::pause_other_sessions(media::Player::PlayerKey key)
 {
-    if (not has_player_for_key(key))
+    if (not d->configuration.player_store->has_player_for_key(key))
     {
         cerr << "Could not find Player by key: " << key << endl;
         return;
     }
 
-    auto current_player = player_for_key(key);
+    auto current_player = d->configuration.player_store->player_for_key(key);
 
     // We immediately make the player known as new current player.
     if (current_player->audio_stream_role() == media::Player::multimedia)
-        set_current_player_for_key(key);
+        d->configuration.player_store->set_current_player_for_key(key);
 
-    enumerate_players([current_player, key](const media::Player::PlayerKey& other_key, const std::shared_ptr<media::Player>& other_player)
+    d->configuration.player_store->enumerate_players([current_player, key](const media::Player::PlayerKey& other_key, const std::shared_ptr<media::Player>& other_player)
     {
         // Only pause a Player if all of the following criteria are met:
         // 1) currently playing
@@ -243,7 +243,7 @@ void media::ServiceImplementation::pause_other_sessions(media::Player::PlayerKey
 
 void media::ServiceImplementation::pause_all_multimedia_sessions()
 {
-    enumerate_players([this](const media::Player::PlayerKey& key, const std::shared_ptr<media::Player>& player)
+    d->configuration.player_store->enumerate_players([this](const media::Player::PlayerKey& key, const std::shared_ptr<media::Player>& player)
                       {
                           if (player->playback_status() == Player::playing
                               && player->audio_stream_role() == media::Player::multimedia)
@@ -258,7 +258,7 @@ void media::ServiceImplementation::pause_all_multimedia_sessions()
 void media::ServiceImplementation::resume_paused_multimedia_sessions(bool resume_video_sessions)
 {
     std::for_each(d->paused_sessions.begin(), d->paused_sessions.end(), [this, resume_video_sessions](const media::Player::PlayerKey& key) {
-            auto player = player_for_key(key);
+            auto player = d->configuration.player_store->player_for_key(key);
             // Only resume video playback if explicitly desired
             if (resume_video_sessions || player->is_audio_source())
                 player->play();
@@ -271,10 +271,10 @@ void media::ServiceImplementation::resume_paused_multimedia_sessions(bool resume
 
 void media::ServiceImplementation::resume_multimedia_session()
 {
-    if (not has_player_for_key(d->resume_key))
+    if (not d->configuration.player_store->has_player_for_key(d->resume_key))
         return;
 
-    auto player = player_for_key(d->resume_key);
+    auto player = d->configuration.player_store->player_for_key(d->resume_key);
 
     if (player->playback_status() == Player::paused)
     {
