@@ -125,8 +125,6 @@ media::ServiceImplementation::ServiceImplementation(const Configuration& configu
             break;
         case audio::OutputState::External:
             std::cout << "AudioOutputObserver reports that output is now External." << std::endl;
-            if (d->audio_output_state == audio::OutputState::Earpiece)
-                pause_all_multimedia_sessions();
             break;
         }
         d->audio_output_state = state;
