@@ -112,8 +112,10 @@ struct Playbin
     GstElement* video_sink;
     core::Connection on_new_message_connection;
     bool is_seeking;
+    mutable uint64_t previous_position;
     core::ubuntu::media::Player::HeadersType request_headers;
     core::ubuntu::media::Player::Lifetime player_lifetime;
+    bool is_eos;
     struct
     {
         core::Signal<void> about_to_finish;

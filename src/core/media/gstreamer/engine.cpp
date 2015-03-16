@@ -355,7 +355,7 @@ bool gstreamer::Engine::play()
     if (result)
     {
         d->state = media::Engine::State::playing;
-        cout << "play" << endl;
+        cout << __PRETTY_FUNCTION__ << endl;
         d->playback_status_changed(media::Player::PlaybackStatus::playing);
     }
 
@@ -373,7 +373,7 @@ bool gstreamer::Engine::stop()
     if (result)
     {
         d->state = media::Engine::State::stopped;
-        cout << "stop" << endl;
+        cout << __PRETTY_FUNCTION__ << endl;
         d->playback_status_changed(media::Player::PlaybackStatus::stopped);
     }
 
@@ -387,7 +387,7 @@ bool gstreamer::Engine::pause()
     if (result)
     {
         d->state = media::Engine::State::paused;
-        cout << "pause" << endl;
+        cout << __PRETTY_FUNCTION__ << endl;
         d->playback_status_changed(media::Player::PlaybackStatus::paused);
     }
 
