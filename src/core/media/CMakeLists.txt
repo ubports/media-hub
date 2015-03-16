@@ -90,6 +90,8 @@ add_library(
     hybris_client_death_observer.cpp
     cover_art_resolver.cpp
     engine.cpp
+    recorder_observer.cpp
+    hybris_recorder_observer.cpp
     gstreamer/engine.cpp
 
     player_skeleton.cpp
