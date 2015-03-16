@@ -19,6 +19,7 @@
 
 #include "apparmor.h"
 #include "codec.h"
+#include "engine.h"
 #include "player_skeleton.h"
 #include "player_traits.h"
 #include "property_stub.h"
@@ -338,9 +339,9 @@ struct media::PlayerSkeleton::Private
                 remote_playback_status_changed->emit(status);
             });
 
-            video_dimension_changed.connect([remote_video_dimension_changed](uint64_t mask)
+            video_dimension_changed.connect([remote_video_dimension_changed](const media::video::Dimensions& dimensions)
             {
-                remote_video_dimension_changed->emit(mask);
+                remote_video_dimension_changed->emit(dimensions);
             });
 
             error.connect([remote_error](const media::Player::Error& e)
@@ -352,7 +353,7 @@ struct media::PlayerSkeleton::Private
         core::Signal<int64_t> seeked_to;
         core::Signal<void> end_of_stream;
         core::Signal<media::Player::PlaybackStatus> playback_status_changed;
-        core::Signal<uint64_t> video_dimension_changed;
+        core::Signal<media::video::Dimensions> video_dimension_changed;
         core::Signal<media::Player::Error> error;
     } signals;
 
@@ -649,12 +650,12 @@ core::Signal<media::Player::PlaybackStatus>& media::PlayerSkeleton::playback_sta
     return d->signals.playback_status_changed;
 }
 
-const core::Signal<uint64_t>& media::PlayerSkeleton::video_dimension_changed() const
+const core::Signal<media::video::Dimensions>& media::PlayerSkeleton::video_dimension_changed() const
 {
     return d->signals.video_dimension_changed;
 }
 
-core::Signal<uint64_t>& media::PlayerSkeleton::video_dimension_changed()
+core::Signal<media::video::Dimensions>& media::PlayerSkeleton::video_dimension_changed()
 {
     return d->signals.video_dimension_changed;
 }
