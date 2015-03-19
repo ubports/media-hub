@@ -208,9 +208,13 @@ struct SystemStateLock : public media::power::StateController::Lock<media::power
         if (state == media::power::SystemState::suspend)
             return;
 
-        std::lock_guard<std::mutex> lg{system_state_cookie_store_guard};
-        if (system_state_cookie_store.count(state) > 0)
-            return;
+        // Keep scope of this lock tight as to avoid
+        // deadlocks on PlayerImplementation destruction
+        {
+            std::lock_guard<std::mutex> lg{system_state_cookie_store_guard};
+            if (system_state_cookie_store.count(state) > 0)
+                return;
+        }
 
         std::weak_ptr<SystemStateLock> wp{shared_from_this()};
 
