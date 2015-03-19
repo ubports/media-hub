@@ -235,7 +235,9 @@ struct audio::PulseAudioOutputObserver::Private
     Private(const audio::PulseAudioOutputObserver::Configuration& config)
         : config(config),
           main_loop{pa::make_threaded_main_loop()},
-          context{pa::make_context(main_loop)}
+          context{pa::make_context(main_loop)},
+          primary_sink_index(-1),
+          active_sink(std::make_tuple(-1, ""))
     {
         for (const auto& pattern : config.output_port_patterns)
         {
