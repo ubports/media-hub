@@ -70,6 +70,10 @@ public:
     virtual void seek_to(const std::chrono::microseconds& offset);
 
     const core::Signal<>& on_client_disconnected() const;
+
+protected:
+    void emit_playback_status_changed(const Player::PlaybackStatus &status);
+
 private:
     struct Private;
     std::shared_ptr<Private> d;

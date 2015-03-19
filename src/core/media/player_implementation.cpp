@@ -62,8 +62,10 @@ struct media::PlayerImplementation<Parent>::Private :
           system_wakelock_count(0),
           display_wakelock_count(0),
           previous_state(Engine::State::stopped),
-          engine_state_change_connection(engine->state().changed().connect(make_state_change_handler()))
+          engine_state_change_connection(engine->state().changed().connect(make_state_change_handler())),
+          engine_playback_status_change_connection(engine->playback_status_changed_signal().connect(make_playback_status_change_handler()))
     {
+        std::cout << "Private parent instance: " << parent << std::endl;
         // Poor man's logging of release/acquire events.
         display_state_lock->acquired().connect([](media::power::DisplayState state)
         {
@@ -96,6 +98,12 @@ struct media::PlayerImplementation<Parent>::Private :
         // trigger the state change handler. Ensure the handler is not called
         // by disconnecting the state change signal
         engine_state_change_connection.disconnect();
+
+        std::cout << "** Disconnecting playback_status_changed_signal connection";
+        // The engine destructor can lead to a playback status change which will
+        // trigger the playback status change handler. Ensure the handler is not called
+        // by disconnecting the playback status change signal
+        engine_playback_status_change_connection.disconnect();
     }
 
     std::function<void(const Engine::State& state)> make_state_change_handler()
@@ -107,6 +115,7 @@ struct media::PlayerImplementation<Parent>::Private :
          */
         return [this](const Engine::State& state)
         {
+            std::cout << "Setting state for parent: " << parent << std::endl;
             switch(state)
             {
             case Engine::State::ready:
@@ -125,6 +134,7 @@ struct media::PlayerImplementation<Parent>::Private :
                 parent->meta_data_for_current_track().set(std::get<1>(engine->track_meta_data().get()));
                 // And update our playback status.
                 parent->playback_status().set(media::Player::playing);
+                std::cout << "Requesting power state" << std::endl;
                 request_power_state();
                 break;
             }
@@ -155,14 +165,25 @@ struct media::PlayerImplementation<Parent>::Private :
         };
     }
 
+    std::function<void(const media::Player::PlaybackStatus& status)> make_playback_status_change_handler()
+    {
+        return [this](const media::Player::PlaybackStatus& status)
+        {
+            std::cout << "Emiting playback_status_changed for parent: " << parent << std::endl;
+            parent->emit_playback_status_changed(status);
+        };
+    }
+
     void request_power_state()
     {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
         try
         {
             if (parent->is_video_source())
             {
                 if (++display_wakelock_count == 1)
                 {
+                    std::cout << "Requesting new display wakelock." << std::endl;
                     display_state_lock->request_acquire(media::power::DisplayState::on);
                     std::cout << "Requested new display wakelock." << std::endl;
                 }
@@ -171,6 +192,7 @@ struct media::PlayerImplementation<Parent>::Private :
             {
                 if (++system_wakelock_count == 1)
                 {
+                    std::cout << "Requesting new system wakelock." << std::endl;
                     system_state_lock->request_acquire(media::power::SystemState::active);
                     std::cout << "Requested new system wakelock." << std::endl;
                 }
@@ -274,6 +296,7 @@ struct media::PlayerImplementation<Parent>::Private :
     Engine::State previous_state;
     core::Signal<> on_client_disconnected;
     core::Connection engine_state_change_connection;
+    core::Connection engine_playback_status_change_connection;
 };
 
 template<typename Parent>
@@ -377,11 +400,6 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
     d->engine->end_of_stream_signal().connect([this]()
     {
         Parent::end_of_stream()();
-    });
-
-    d->engine->playback_status_changed_signal().connect([this](const Player::PlaybackStatus& status)
-    {
-        Parent::playback_status_changed()(status);
     });
 
     d->engine->video_dimension_changed_signal().connect([this](const media::video::Dimensions& dimensions)
@@ -517,6 +535,12 @@ template<typename Parent>
 const core::Signal<>& media::PlayerImplementation<Parent>::on_client_disconnected() const
 {
     return d->on_client_disconnected;
+}
+
+template<typename Parent>
+void media::PlayerImplementation<Parent>::emit_playback_status_changed(const media::Player::PlaybackStatus &status)
+{
+    Parent::playback_status_changed()(status);
 }
 
 #include <core/media/player_skeleton.h>
