@@ -58,6 +58,7 @@ struct media::PlayerSkeleton::Private
           signals
           {
               skeleton.signals.seeked_to,
+              skeleton.signals.about_to_finish,
               skeleton.signals.end_of_stream,
               skeleton.signals.playback_status_changed,
               skeleton.signals.video_dimension_changed,
@@ -237,11 +238,13 @@ struct media::PlayerSkeleton::Private
     {
         typedef core::dbus::Signal<mpris::Player::Signals::Seeked, mpris::Player::Signals::Seeked::ArgumentType> DBusSeekedToSignal;
         typedef core::dbus::Signal<mpris::Player::Signals::EndOfStream, mpris::Player::Signals::EndOfStream::ArgumentType> DBusEndOfStreamSignal;
+        typedef core::dbus::Signal<mpris::Player::Signals::AboutToFinish, mpris::Player::Signals::AboutToFinish::ArgumentType> DBusAboutToFinishSignal;
         typedef core::dbus::Signal<mpris::Player::Signals::PlaybackStatusChanged, mpris::Player::Signals::PlaybackStatusChanged::ArgumentType> DBusPlaybackStatusChangedSignal;
         typedef core::dbus::Signal<mpris::Player::Signals::VideoDimensionChanged, mpris::Player::Signals::VideoDimensionChanged::ArgumentType> DBusVideoDimensionChangedSignal;
         typedef core::dbus::Signal<mpris::Player::Signals::Error, mpris::Player::Signals::Error::ArgumentType> DBusErrorSignal;
 
         Signals(const std::shared_ptr<DBusSeekedToSignal>& remote_seeked,
+                const std::shared_ptr<DBusAboutToFinishSignal>& remote_atf,
                 const std::shared_ptr<DBusEndOfStreamSignal>& remote_eos,
                 const std::shared_ptr<DBusPlaybackStatusChangedSignal>& remote_playback_status_changed,
                 const std::shared_ptr<DBusVideoDimensionChangedSignal>& remote_video_dimension_changed,
@@ -250,6 +253,11 @@ struct media::PlayerSkeleton::Private
             seeked_to.connect([remote_seeked](std::uint64_t value)
             {
                 remote_seeked->emit(value);
+            });
+
+            about_to_finish.connect([remote_atf]()
+            {
+                remote_atf->emit();
             });
 
             end_of_stream.connect([remote_eos]()
@@ -274,6 +282,7 @@ struct media::PlayerSkeleton::Private
         }
 
         core::Signal<int64_t> seeked_to;
+        core::Signal<void> about_to_finish;
         core::Signal<void> end_of_stream;
         core::Signal<media::Player::PlaybackStatus> playback_status_changed;
         core::Signal<media::video::Dimensions> video_dimension_changed;
@@ -556,6 +565,16 @@ const core::Signal<int64_t>& media::PlayerSkeleton::seeked_to() const
 core::Signal<int64_t>& media::PlayerSkeleton::seeked_to()
 {
     return d->signals.seeked_to;
+}
+
+const core::Signal<void>& media::PlayerSkeleton::about_to_finish() const
+{
+    return d->signals.about_to_finish;
+}
+
+core::Signal<void>& media::PlayerSkeleton::about_to_finish()
+{
+    return d->signals.about_to_finish;
 }
 
 const core::Signal<void>& media::PlayerSkeleton::end_of_stream() const

@@ -97,10 +97,14 @@ gstreamer::Playbin::Playbin()
                   this,
                   std::placeholders::_1))),
       is_seeking(false),
-      player_lifetime(media::Player::Lifetime::normal)
+      previous_position(0),
+      player_lifetime(media::Player::Lifetime::normal),
+      is_eos(false)
 {
     if (!pipeline)
         throw std::runtime_error("Could not create pipeline for playbin.");
+
+    is_eos = false;
 
     // Add audio and/or video sink elements depending on environment variables
     // being set or not set
@@ -199,6 +203,7 @@ void gstreamer::Playbin::on_new_message(const Bus::Message& message)
         }
         break;
     case GST_MESSAGE_EOS:
+        is_eos = true;
         signals.on_end_of_stream();
     default:
         break;
@@ -334,6 +339,17 @@ uint64_t gstreamer::Playbin::position() const
     int64_t pos = 0;
     gst_element_query_position (pipeline, GST_FORMAT_TIME, &pos);
 
+    // This prevents a 0 position from being reported to the app which happens while seeking.
+    // This is covering over a GStreamer issue
+    if ((static_cast<uint64_t>(pos) < duration()) && is_seeking && pos == 0)
+    {
+        return previous_position;
+    }
+
+    // Save the current position to use just in case it's needed the next time position is
+    // requested
+    previous_position = static_cast<uint64_t>(pos);
+
     // FIXME: this should be int64_t, but dbus-cpp doesn't seem to handle it correctly
     return static_cast<uint64_t>(pos);
 }
@@ -358,7 +374,7 @@ void gstreamer::Playbin::set_uri(
         file_type = MEDIA_FILE_TYPE_VIDEO;
     else if (is_audio_file(uri))
         file_type = MEDIA_FILE_TYPE_AUDIO;
-    
+
     request_headers = headers;
 }
 
@@ -366,7 +382,7 @@ void gstreamer::Playbin::setup_source(GstElement *source)
 {
     if (source == NULL || request_headers.empty())
         return;
-    
+
     if (request_headers.find("Cookie") != request_headers.end()) {
         if (g_object_class_find_property(G_OBJECT_GET_CLASS(source),
                                          "cookies") != NULL) {
@@ -375,7 +391,7 @@ void gstreamer::Playbin::setup_source(GstElement *source)
             g_strfreev(cookies);
         }
     }
-    
+
     if (request_headers.find("User-Agent") != request_headers.end()) {
         if (g_object_class_find_property(G_OBJECT_GET_CLASS(source),
                                          "user-agent") != NULL) {
@@ -427,8 +443,9 @@ bool gstreamer::Playbin::set_state_and_wait(GstState new_state)
     }
 
     // We only should query the pipeline if we actually succeeded in
-    // setting the requested state.
-    if (result && new_state == GST_STATE_PLAYING)
+    // setting the requested state. Also don't send on_video_dimensions_changed
+    // signal during EOS.
+    if (result && new_state == GST_STATE_PLAYING && !is_eos)
     {
         // Get the video height/width from the video sink
         try
