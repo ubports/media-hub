@@ -29,8 +29,12 @@
 #include <list>
 #include <mutex>
 
+namespace media = core::ubuntu::media;
 
-namespace {
+namespace
+{
+namespace impl
+{
 class TelepathyCallMonitor : public QObject
 {
     Q_OBJECT
@@ -73,7 +77,7 @@ public:
         }
     }
 
-    void on_change(const std::function<void(CallMonitor::State)>& func) {
+    void on_change(const std::function<void(media::telephony::CallMonitor::State)>& func) {
         std::lock_guard<std::mutex> l(cb_lock);
         cb = func;
     }
@@ -131,19 +135,19 @@ private Q_SLOTS:
     {
         std::lock_guard<std::mutex> l(cb_lock);
         if (cb)
-            cb(CallMonitor::OffHook);
+            cb(media::telephony::CallMonitor::State::OffHook);
     }
 
     void onHook()
     {
         std::lock_guard<std::mutex> l(cb_lock);
         if (cb)
-            cb(CallMonitor::OnHook);
+            cb(media::telephony::CallMonitor::State::OnHook);
     }
 
 private:
     std::mutex cb_lock;
-    std::function<void (CallMonitor::State)>   cb;
+    std::function<void (media::telephony::CallMonitor::State)>   cb;
     Tp::AccountManagerPtr mAccountManager;
     std::list<TelepathyCallMonitor*> mCallMonitors;
 
@@ -159,63 +163,78 @@ private:
         mCallMonitors.push_back(tcm);
     }
 };
-}
 
-class CallMonitorPrivate
+struct CallMonitor : public media::telephony::CallMonitor
 {
-public:
-    CallMonitorPrivate() {
-        mBridge = nullptr;
-        try {
-            std::thread([this]() {
-                qt::core::world::build_and_run(0, nullptr, [this]() {
-                    qt::core::world::enter_with_task([this]() {
+    CallMonitor() : mBridge{nullptr}
+    {
+        try
+        {
+            qt_world = std::move(std::thread([this]()
+            {
+                qt::core::world::build_and_run(0, nullptr, [this]()
+                {
+                    qt::core::world::enter_with_task([this]()
+                    {
                         std::cout << "CallMonitor: Creating TelepathyBridge" << std::endl;
                         mBridge = new TelepathyBridge();
                         cv.notify_all();
                     });
                 });
-            }).detach();
+          }));
         } catch(const std::system_error& error) {
             std::cerr << "exception(std::system_error) in CallMonitor thread start" << error.what() << std::endl;
         } catch(...) {
             std::cerr << "exception(...) in CallMonitor thread start" << std::endl;
         }
+
         // Wait until telepathy bridge is set, so we can hook up the change signals
         std::unique_lock<std::mutex> lck(mtx);
         cv.wait_for(lck, std::chrono::seconds(3));
+
+        if (mBridge)
+        {
+            mBridge->on_change([this](CallMonitor::State state)
+            {
+                call_state_changed(state);
+            });
+        }
     }
 
-    ~CallMonitorPrivate() {
+    ~CallMonitor()
+    {
+        // We first clean up the bridge instance.
+        qt::core::world::enter_with_task([this]()
+        {
+            delete mBridge;
+        }).get();
+
+        // We then request destruction of the qt world.
         qt::core::world::destroy();
+
+        // Before we finally join the worker.
+        if (qt_world.joinable())
+            qt_world.join();
+    }
+
+    const core::Signal<media::telephony::CallMonitor::State>& on_call_state_changed() const
+    {
+        return call_state_changed;
     }
 
     TelepathyBridge *mBridge;
+    core::Signal<media::telephony::CallMonitor::State> call_state_changed;
 
-private:
+    std::thread qt_world;
     std::mutex mtx;
     std::condition_variable cv;
 };
-
-
-CallMonitor::CallMonitor():
-    d(new CallMonitorPrivate)
-{
+}
 }
 
-CallMonitor::~CallMonitor()
+media::telephony::CallMonitor::Ptr media::telephony::make_platform_default_call_monitor()
 {
-    delete d->mBridge;
-    delete d;
-}
-
-void CallMonitor::on_change(const std::function<void(CallMonitor::State)>& func)
-{
-    if (d->mBridge != nullptr) {
-        std::cout << "CallMonitor: Setting up callback for TelepathyBridge on_change" << std::endl;
-        d->mBridge->on_change(func);
-    } else
-        std::cerr << "TelepathyBridge: Failed to hook on_change signal, bridge not yet set" << std::endl;
+    return std::make_shared<impl::CallMonitor>();
 }
 
 #include "call_monitor.moc"
