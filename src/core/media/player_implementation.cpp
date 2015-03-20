@@ -25,8 +25,6 @@
 #include "engine.h"
 #include "track_list_implementation.h"
 
-#include "powerd_service.h"
-#include "unity_screen_service.h"
 #include "gstreamer/engine.h"
 
 #include <memory>
@@ -52,44 +50,49 @@ struct media::PlayerImplementation::Private :
         WAKELOCK_CLEAR_INVALID
     };
 
-    Private(PlayerImplementation* parent,
-            const dbus::types::ObjectPath& session_path,
-            const std::shared_ptr<media::Service>& service,
-            PlayerImplementation::PlayerKey key)
+    Private(PlayerImplementation* parent, const media::PlayerImplementation::Configuration& config)
         : parent(parent),
-          service(service),
+          config(config),
+          display_state_lock(config.power_state_controller->display_state_lock()),
+          system_state_lock(config.power_state_controller->system_state_lock()),
           engine(std::make_shared<gstreamer::Engine>()),
-          session_path(session_path),
           track_list(
               new media::TrackListImplementation(
-                  session_path.as_string() + "/TrackList",
+                  config.session->path().as_string() + "/TrackList",
                   engine->meta_data_extractor())),
-          sys_lock_name("media-hub-music-playback"),
-          disp_cookie(-1),
           system_wakelock_count(0),
           display_wakelock_count(0),
           previous_state(Engine::State::stopped),
-          key(key),
           engine_state_change_connection(engine->state().changed().connect(make_state_change_handler()))
     {
-        auto bus = std::shared_ptr<dbus::Bus>(new dbus::Bus(core::dbus::WellKnownBus::system));
-        bus->install_executor(dbus::asio::make_executor(bus));
-
-        auto stub_service = dbus::Service::use_service(bus, dbus::traits::Service<core::Powerd>::interface_name());
-        powerd_session = stub_service->object_for_path(dbus::types::ObjectPath("/com/canonical/powerd"));
-
-        auto uscreen_stub_service = dbus::Service::use_service(bus, dbus::traits::Service<core::UScreen>::interface_name());
-        uscreen_session = uscreen_stub_service->object_for_path(dbus::types::ObjectPath("/com/canonical/Unity/Screen"));
-
-        auto client_death_observer = media::platform_default_client_death_observer();
-
-        client_death_observer->register_for_death_notifications_with_key(key);
-        client_death_observer->on_client_with_key_died().connect([this](const media::Player::PlayerKey& died)
+        config.client_death_observer->register_for_death_notifications_with_key(config.key);
+        config.client_death_observer->on_client_with_key_died().connect([this](const media::Player::PlayerKey& died)
         {
-            if (died != this->key)
+            if (died != this->config.key)
                 return;
 
             on_client_died();
+        });
+
+        // Poor man's logging of release/acquire events.
+        display_state_lock->acquired().connect([](media::power::DisplayState state)
+        {
+            std::cout << "Acquired new display state: " << state << std::endl;
+        });
+
+        display_state_lock->released().connect([](media::power::DisplayState state)
+        {
+            std::cout << "Released display state: " << state << std::endl;
+        });
+
+        system_state_lock->acquired().connect([](media::power::SystemState state)
+        {
+            std::cout << "Acquired new system state: "  << state << std::endl;
+        });
+
+        system_state_lock->released().connect([](media::power::SystemState state)
+        {
+            std::cout << "Released system state: "  << state << std::endl;
         });
     }
 
@@ -170,22 +173,16 @@ struct media::PlayerImplementation::Private :
             {
                 if (++display_wakelock_count == 1)
                 {
-                    auto result = uscreen_session->invoke_method_synchronously<core::UScreen::keepDisplayOn, int>();
-                    if (result.is_error())
-                        throw std::runtime_error(result.error().print());
-                    disp_cookie = result.value();
-                    cout << "Requested new display wakelock" << endl;
+                    display_state_lock->request_acquire(media::power::DisplayState::on);
+                    std::cout << "Requested new display wakelock." << std::endl;
                 }
             }
             else
             {
                 if (++system_wakelock_count == 1)
                 {
-                    auto result = powerd_session->invoke_method_synchronously<core::Powerd::requestSysState, std::string>(sys_lock_name, static_cast<int>(1));
-                    if (result.is_error())
-                        throw std::runtime_error(result.error().print());
-                    sys_cookie = result.value();
-                    cout << "Requested new system wakelock" << endl;
+                    system_state_lock->request_acquire(media::power::SystemState::active);
+                    std::cout << "Requested new system wakelock." << std::endl;
                 }
             }
         }
@@ -209,18 +206,16 @@ struct media::PlayerImplementation::Private :
                     // Only actually clear the system wakelock once the count reaches zero
                     if (--system_wakelock_count == 0)
                     {
-                        cout << "Clearing system wakelock" << endl;
-                        powerd_session->invoke_method_synchronously<core::Powerd::clearSysState, void>(sys_cookie);
-                        sys_cookie.clear();
+                        std::cout << "Clearing system wakelock." << std::endl;
+                        system_state_lock->request_release(media::power::SystemState::active);                        
                     }
                     break;
                 case wakelock_clear_t::WAKELOCK_CLEAR_DISPLAY:
                     // Only actually clear the display wakelock once the count reaches zero
                     if (--display_wakelock_count == 0)
                     {
-                        cout << "Clearing display wakelock" << endl;
-                        uscreen_session->invoke_method_synchronously<core::UScreen::removeDisplayOnRequest, void>(disp_cookie);
-                        disp_cookie = -1;
+                        std::cout << "Clearing display wakelock." << std::endl;
+                        display_state_lock->request_release(media::power::DisplayState::on);
                     }
                     break;
                 case wakelock_clear_t::WAKELOCK_CLEAR_INVALID:
@@ -275,44 +270,33 @@ struct media::PlayerImplementation::Private :
         engine->reset();
     }
 
-    PlayerImplementation* parent;
-    std::shared_ptr<Service> service;
+    // Our link back to our parent.
+    media::PlayerImplementation* parent;
+    // We just store the parameters passed on construction.
+    media::PlayerImplementation::Configuration config;
+    media::power::StateController::Lock<media::power::DisplayState>::Ptr display_state_lock;
+    media::power::StateController::Lock<media::power::SystemState>::Ptr system_state_lock;
+
     std::shared_ptr<Engine> engine;
-    dbus::types::ObjectPath session_path;
     std::shared_ptr<TrackListImplementation> track_list;
-    std::shared_ptr<dbus::Object> powerd_session;
-    std::shared_ptr<dbus::Object> uscreen_session;
-    std::string sys_lock_name;
-    int disp_cookie;
-    std::string sys_cookie;
     std::atomic<int> system_wakelock_count;
     std::atomic<int> display_wakelock_count;
     Engine::State previous_state;
-    PlayerImplementation::PlayerKey key;
     core::Signal<> on_client_disconnected;
     core::Connection engine_state_change_connection;
 };
 
-media::PlayerImplementation::PlayerImplementation(
-        const std::string& identity,
-        const std::shared_ptr<core::dbus::Bus>& bus,
-        const std::shared_ptr<core::dbus::Object>& session,
-        const std::shared_ptr<Service>& service,
-        PlayerKey key)
+media::PlayerImplementation::PlayerImplementation(const media::PlayerImplementation::Configuration& config)
     : media::PlayerSkeleton
       {
           media::PlayerSkeleton::Configuration
           {
-              bus,
-              session,
-              identity
+              config.bus,
+              config.session,
+              config.identity
           }
       },
-      d(make_shared<Private>(
-            this,
-            session->path(),
-            service,
-            key))
+      d{std::make_shared<Private>(this, config)}
 {
     // Initialize default values for Player interface properties
     can_play().set(true);
@@ -464,7 +448,7 @@ std::shared_ptr<media::TrackList> media::PlayerImplementation::track_list()
 // TODO: Convert this to be a property instead of sync call
 media::Player::PlayerKey media::PlayerImplementation::key() const
 {
-    return d->key;
+    return d->config.key;
 }
 
 media::video::Sink::Ptr media::PlayerImplementation::create_gl_texture_video_sink(std::uint32_t texture_id)
