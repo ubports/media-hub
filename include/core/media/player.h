@@ -20,6 +20,7 @@
 #define CORE_UBUNTU_MEDIA_PLAYER_H_
 
 #include <core/media/track.h>
+#include <core/media/video/sink.h>
 
 #include <core/property.h>
 
@@ -44,10 +45,15 @@ class Player : public std::enable_shared_from_this<Player>
     typedef void* GLConsumerWrapperHybris;
     typedef std::map<std::string, std::string> HeadersType;
 
-    /** Used to set a callback function to be called when a frame is ready to be rendered **/
-    typedef void (*FrameAvailableCbHybris)(GLConsumerWrapperHybris wrapper, void *context);
-    typedef void (*FrameAvailableCb)(void *context);
-    typedef void (*PlaybackCompleteCb)(void *context);
+    struct Errors
+    {
+        Errors() = delete;
+
+        struct OutOfProcessBufferStreamingNotSupported : public std::runtime_error
+        {
+            OutOfProcessBufferStreamingNotSupported();
+        };
+    };
 
     struct Configuration;
 
@@ -120,20 +126,16 @@ class Player : public std::enable_shared_from_this<Player>
     virtual std::shared_ptr<TrackList> track_list() = 0;
     virtual PlayerKey key() const = 0;
 
+    virtual video::Sink::Ptr create_gl_texture_video_sink(std::uint32_t texture_id) = 0;
+
     virtual bool open_uri(const Track::UriType& uri) = 0;
     virtual bool open_uri(const Track::UriType& uri, const HeadersType&) = 0;
-    virtual void create_video_sink(uint32_t texture_id) = 0;
-    virtual GLConsumerWrapperHybris gl_consumer() const = 0;
     virtual void next() = 0;
     virtual void previous() = 0;
     virtual void play() = 0;
     virtual void pause() = 0;
     virtual void stop() = 0;
     virtual void seek_to(const std::chrono::microseconds& offset) = 0;
-
-    // TODO: Convert this to be a signal
-    virtual void set_frame_available_callback(FrameAvailableCb cb, void *context) = 0;
-    virtual void set_playback_complete_callback(PlaybackCompleteCb cb, void *context) = 0;
 
     virtual const core::Property<bool>& can_play() const = 0;
     virtual const core::Property<bool>& can_pause() const = 0;

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 
 project(ubuntu-media-hub)
 
-set(UBUNTU_MEDIA_HUB_VERSION_MAJOR 2)
+set(UBUNTU_MEDIA_HUB_VERSION_MAJOR 3)
 set(UBUNTU_MEDIA_HUB_VERSION_MINOR 0)
 set(UBUNTU_MEDIA_HUB_VERSION_PATCH 0)
 
@@ -29,6 +29,8 @@ pkg_check_modules(PROPERTIES_CPP properties-cpp REQUIRED)
 pkg_check_modules(PROCESS_CPP process-cpp REQUIRED)
 pkg_check_modules(GIO gio-2.0 REQUIRED)
 pkg_check_modules(HYBRIS_MEDIA libmedia REQUIRED)
+
+add_definitions(-DMEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER)
 
 #####################################################################
 # Enable code coverage calculation with gcov/gcovr/lcov

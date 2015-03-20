@@ -1,3 +1,9 @@
+media-hub (3.0.0) UNRELEASED; urgency=medium
+
+  * Refactor client-facing interfaces to pull out explicit dependency on hybris-based media layer.
+
+ -- Thomas Voss <thomas.voss@canonical.com>  Tue, 11 Nov 2014 17:15:52 +0100
+
 media-hub (2.0.0+15.04.20150303-0ubuntu2) vivid; urgency=medium
 
   * debian/control:
