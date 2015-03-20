@@ -23,10 +23,11 @@
 #include "service_implementation.h"
 
 #include "client_death_observer.h"
-#include "indicator_power_service.h"
 #include "call-monitor/call_monitor.h"
 #include "player_configuration.h"
 #include "player_implementation.h"
+#include "power/battery_observer.h"
+#include "power/state_controller.h"
 #include "recorder_observer.h"
 
 #include <boost/asio.hpp>
@@ -51,6 +52,7 @@ struct media::ServiceImplementation::Private
     Private(const ServiceImplementation::Configuration& configuration)
         : configuration(configuration),
           resume_key(std::numeric_limits<std::uint32_t>::max()),
+          battery_observer(media::power::make_platform_default_battery_observer(configuration.external_services)),
           power_state_controller(media::power::make_platform_default_state_controller(configuration.external_services)),
           display_state_lock(power_state_controller->display_state_lock()),
           client_death_observer(media::platform_default_client_death_observer()),
@@ -122,14 +124,7 @@ struct media::ServiceImplementation::Private
                     return false;
                 });
         }));
-
-        // Connect the property change signal that will allow media-hub to take appropriate action
-        // when the battery level reaches critical
-        auto stub_service = dbus::Service::use_service(configuration.external_services.session, "com.canonical.indicator.power");
-        indicator_power_session = stub_service->object_for_path(dbus::types::ObjectPath("/com/canonical/indicator/power/Battery"));
-        power_level = indicator_power_session->get_property<core::IndicatorPower::PowerLevel>();
-        is_warning = indicator_power_session->get_property<core::IndicatorPower::IsWarning>();
-
+        
         recorder_observer->recording_state().changed().connect([this](media::RecordingState state)
         {
             media_recording_state_changed(state);
@@ -411,9 +406,7 @@ struct media::ServiceImplementation::Private
     // This holds the key of the multimedia role Player instance that was paused
     // when the battery level reached 10% or 5%
     media::Player::PlayerKey resume_key;    
-    std::shared_ptr<dbus::Object> indicator_power_session;
-    std::shared_ptr<core::dbus::Property<core::IndicatorPower::PowerLevel>> power_level;
-    std::shared_ptr<core::dbus::Property<core::IndicatorPower::IsWarning>> is_warning;
+    media::power::BatteryObserver::Ptr battery_observer;
     media::power::StateController::Ptr power_state_controller;
     media::power::StateController::Lock<media::power::DisplayState>::Ptr display_state_lock;
     media::ClientDeathObserver::Ptr client_death_observer;
@@ -440,19 +433,26 @@ struct media::ServiceImplementation::Private
 
 media::ServiceImplementation::ServiceImplementation(const Configuration& configuration) : d(new Private(configuration))
 {
-    d->power_level->changed().connect([this](const core::IndicatorPower::PowerLevel::ValueType &level)
+    d->battery_observer->level().changed().connect([this](const media::power::Level& level)
     {
         // When the battery level hits 10% or 5%, pause all multimedia sessions.
         // Playback will resume when the user clears the presented notification.
-        if (level == "low" || level == "very_low")
+        switch (level)
+        {
+        case media::power::Level::low:
+        case media::power::Level::very_low:
             pause_all_multimedia_sessions();
+            break;
+        default:
+            break;
+        }
     });
 
-    d->is_warning->changed().connect([this](const core::IndicatorPower::IsWarning::ValueType &notifying)
+    d->battery_observer->is_warning_active().changed().connect([this](bool active)
     {
         // If the low battery level notification is no longer being displayed,
         // resume what the user was previously playing
-        if (!notifying)
+        if (!active)
             resume_multimedia_session();
     });
 
