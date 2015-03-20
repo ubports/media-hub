@@ -75,7 +75,7 @@ class PlayerSkeleton : public core::ubuntu::media::Player
     virtual const core::Signal<int64_t>& seeked_to() const;
     virtual const core::Signal<void>& end_of_stream() const;
     virtual core::Signal<PlaybackStatus>& playback_status_changed();
-    virtual const core::Signal<uint64_t>& video_dimension_changed() const;
+    virtual const core::Signal<video::Dimensions>& video_dimension_changed() const;
     virtual const core::Signal<Error>& error() const;
 
 protected:
@@ -112,7 +112,7 @@ protected:
 
     virtual core::Signal<int64_t>& seeked_to();
     virtual core::Signal<void>& end_of_stream();
-    virtual core::Signal<uint64_t>& video_dimension_changed();
+    virtual core::Signal<video::Dimensions>& video_dimension_changed();
     virtual core::Signal<Error>& error();
 
   private:
