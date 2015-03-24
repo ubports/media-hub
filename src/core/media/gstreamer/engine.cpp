@@ -333,7 +333,7 @@ const core::Property<media::Engine::State>& gstreamer::Engine::state() const
 
 bool gstreamer::Engine::open_resource_for_uri(const media::Track::UriType& uri)
 {
-    d->playbin.set_uri(uri);
+    d->playbin.set_uri(uri, core::ubuntu::media::Player::HeadersType{});
     return true;
 }
 
