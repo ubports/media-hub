@@ -168,10 +168,10 @@ struct media::PlayerStub::Private
                 playback_status_changed(status);
             });
 
-            dbus.video_dimension_changed->connect([this](uint64_t mask)
+            dbus.video_dimension_changed->connect([this](const media::video::Dimensions dimensions)
             {
                 std::cout << "VideoDimensionChanged signal arrived via the bus." << std::endl;
-                video_dimension_changed(mask);
+                video_dimension_changed(dimensions);
             });
 
             dbus.error->connect([this](const media::Player::Error& e)
@@ -184,7 +184,7 @@ struct media::PlayerStub::Private
         core::Signal<int64_t> seeked_to;
         core::Signal<void> end_of_stream;
         core::Signal<media::Player::PlaybackStatus> playback_status_changed;
-        core::Signal<uint64_t> video_dimension_changed;
+        core::Signal<media::video::Dimensions> video_dimension_changed;
         core::Signal<media::Player::Error> error;
 
         struct DBus
@@ -448,7 +448,7 @@ core::Signal<media::Player::PlaybackStatus>& media::PlayerStub::playback_status_
     return d->signals.playback_status_changed;
 }
 
-const core::Signal<uint64_t>& media::PlayerStub::video_dimension_changed() const
+const core::Signal<media::video::Dimensions>& media::PlayerStub::video_dimension_changed() const
 {
     return d->signals.video_dimension_changed;
 }

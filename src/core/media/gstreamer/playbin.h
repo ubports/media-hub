@@ -85,8 +85,6 @@ struct Playbin
           bus{gst_element_get_bus(pipeline)},
           file_type(MEDIA_FILE_TYPE_NONE),
           video_sink(nullptr),
-          video_height(0),
-          video_width(0),
           on_new_message_connection(
               bus.on_new_message.connect(
                   std::bind(
@@ -425,18 +423,21 @@ struct Playbin
                         pipeline,
                         &current,
                         &pending,
-                        state_change_timeout.count());
+                        state_change_timeout.count());        
+            break;
+        }
 
-        if (new_state == GST_STATE_PLAYING)
+        // The state change has to have been successful to make
+        // sure that we indeed reached the requested new state.
+        if (result && new_state == GST_STATE_PLAYING)
         {
             // Get the video height/width from the video sink
-            get_video_dimensions();
+            if (has_video_sink_with_height_and_width())
+                signals.on_video_dimensions_changed(get_video_dimensions());
 #ifdef DEBUG_GST_PIPELINE
             std::cout << "Dumping pipeline dot file" << std::endl;
             GST_DEBUG_BIN_TO_DOT_FILE((GstBin*)pipeline, GST_DEBUG_GRAPH_SHOW_ALL, "pipeline");
 #endif
-        }
-            break;
         }
 
         return result;
@@ -452,27 +453,26 @@ struct Playbin
                     ms.count() * 1000);
     }
 
-    void get_video_dimensions()
+    bool has_video_sink_with_height_and_width()
     {
-        if (video_sink != nullptr && g_strcmp0(::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME"), "mirsink") == 0)
+        return video_sink != nullptr && g_strcmp0(::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME"), "mirsink") == 0;
+    }
+
+    core::ubuntu::media::video::Dimensions get_video_dimensions()
+    {
+        if (not has_video_sink_with_height_and_width())
+            throw std::runtime_error{"Could not get the height/width of each video frame"};
+
+        uint32_t video_height = 0, video_width = 0;
+        g_object_get (video_sink, "height", &video_height, nullptr);
+        g_object_get (video_sink, "width", &video_width, nullptr);
+        std::cout << "video_height: " << video_height << ", video_width: " << video_width << std::endl;
+
+        return core::ubuntu::media::video::Dimensions
         {
-            g_object_get (video_sink, "height", &video_height, nullptr);
-            g_object_get (video_sink, "width", &video_width, nullptr);
-            std::cout << "video_height: " << video_height << ", video_width: " << video_width << std::endl;
-            signals.on_add_frame_dimension(video_height, video_width);
-        }
-        else
-            std::cerr << "Could not get the height/width of each video frame" << std::endl;
-    }
-
-    int get_video_height() const
-    {
-        return video_height;
-    }
-
-    int get_video_width() const
-    {
-        return video_width;
+            core::ubuntu::media::video::Height{video_height},
+            core::ubuntu::media::video::Width{video_width}
+        };
     }
 
     std::string get_file_content_type(const std::string& uri) const
@@ -555,8 +555,6 @@ struct Playbin
     MediaFileType file_type;
     SurfaceTextureClientHybris stc_hybris;
     GstElement* video_sink;
-    uint32_t video_height;
-    uint32_t video_width;
     core::Connection on_new_message_connection;
     bool is_seeking;
     core::ubuntu::media::Player::HeadersType request_headers;
@@ -571,9 +569,9 @@ struct Playbin
         core::Signal<Bus::Message::Detail::StateChanged> on_state_changed;
         core::Signal<uint64_t> on_seeked_to;
         core::Signal<void> on_end_of_stream;
-        core::Signal<media::Player::PlaybackStatus> on_playback_status_changed;
-        core::Signal<media::Player::Orientation> on_orientation_changed;
-        core::Signal<uint32_t, uint32_t> on_add_frame_dimension;
+        core::Signal<core::ubuntu::media::Player::PlaybackStatus> on_playback_status_changed;
+        core::Signal<core::ubuntu::media::Player::Orientation> on_orientation_changed;
+        core::Signal<core::ubuntu::media::video::Dimensions> on_video_dimensions_changed;
         core::Signal<void> client_disconnected;
     } signals;
 };

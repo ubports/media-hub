@@ -34,11 +34,15 @@
 #include <core/dbus/types/object_path.h>
 #include <core/dbus/types/variant.h>
 
+#include <core/dbus/types/stl/tuple.h>
+
 #include <boost/utility/identity_type.hpp>
 
 #include <string>
 #include <tuple>
 #include <vector>
+
+#include <cstdint>
 
 namespace dbus = core::dbus;
 
@@ -134,7 +138,7 @@ struct Player
         DBUS_CPP_SIGNAL_DEF(Seeked, Player, std::int64_t)
         DBUS_CPP_SIGNAL_DEF(EndOfStream, Player, void)
         DBUS_CPP_SIGNAL_DEF(PlaybackStatusChanged, Player, core::ubuntu::media::Player::PlaybackStatus)
-        DBUS_CPP_SIGNAL_DEF(VideoDimensionChanged, Player, std::uint64_t)
+        DBUS_CPP_SIGNAL_DEF(VideoDimensionChanged, Player, core::ubuntu::media::video::Dimensions)
         DBUS_CPP_SIGNAL_DEF(Error, Player, core::ubuntu::media::Player::Error)
     };
 
