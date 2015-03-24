@@ -49,11 +49,12 @@ core::Signal<void> the_empty_signal;
 
 struct media::ServiceSkeleton::Private
 {
-    Private(media::ServiceSkeleton* impl, const media::CoverArtResolver& resolver)
+    Private(media::ServiceSkeleton* impl, const ServiceSkeleton::Configuration& config)
         : impl(impl),
           object(impl->access_service()->add_object_for_path(
-                     dbus::traits::Service<media::Service>::object_path())),
-          exported(impl->access_bus(), resolver)
+                     dbus::traits::Service<media::Service>::object_path())),          
+          exported(impl->access_bus(), config.cover_art_resolver),
+          configuration(config)
     {
         object->install_method_handler<mpris::Service::CreateSession>(
                     std::bind(
@@ -105,15 +106,7 @@ struct media::ServiceSkeleton::Private
 
         try
         {
-            auto session = impl->create_session(config);
-
-            bool inserted = false;
-            std::tie(std::ignore, inserted)
-                    = session_store.insert(std::make_pair(key, session));
-
-            if (!inserted)
-                throw std::runtime_error("Problem persisting session in session store.");
-
+            configuration.player_store->add_player_for_key(key, impl->create_session(config));
             auto reply = dbus::Message::make_method_return(msg);
             reply->writer() << op;
 
@@ -135,7 +128,7 @@ struct media::ServiceSkeleton::Private
             std::string name;
             msg->reader() >> name;
 
-            if (fixed_session_store.count(name) == 0) {
+            if (named_player_map.count(name) == 0) {
                 // Create new session
                 auto  session_info = create_session_info();
 
@@ -152,14 +145,10 @@ struct media::ServiceSkeleton::Private
                 auto session = impl->create_session(config);
                 session->lifetime().set(media::Player::Lifetime::resumable);
 
-                bool inserted = false;
-                std::tie(std::ignore, inserted)
-                        = session_store.insert(std::make_pair(key, session));
+                configuration.player_store->add_player_for_key(key, session);
 
-                if (!inserted)
-                    throw std::runtime_error("Problem persisting session in session store.");
 
-                fixed_session_store.insert(std::make_pair(name, key));
+                named_player_map.insert(std::make_pair(name, key));
 
                 auto reply = dbus::Message::make_method_return(msg);
                 reply->writer() << op;
@@ -168,8 +157,8 @@ struct media::ServiceSkeleton::Private
             }
             else {
                 // Resume previous session
-                auto key = fixed_session_store[name];
-                if (session_store.count(key) == 0) {
+                auto key = named_player_map.at(name);
+                if (not configuration.player_store->has_player_for_key(key)) {
                     auto reply = dbus::Message::make_error(
                                 msg,
                                 mpris::Service::Errors::CreatingFixedSession::name(),
@@ -204,7 +193,7 @@ struct media::ServiceSkeleton::Private
             Player::PlayerKey key;
             msg->reader() >> key;
 
-            if (session_store.count(key) == 0) {
+            if (not configuration.player_store->has_player_for_key(key)) {
                 auto reply = dbus::Message::make_error(
                             msg,
                             mpris::Service::Errors::ResumingSession::name(),
@@ -245,9 +234,10 @@ struct media::ServiceSkeleton::Private
     media::ServiceSkeleton* impl;
     dbus::Object::Ptr object;
 
-    // We track all running player instances.
-    std::map<media::Player::PlayerKey, std::shared_ptr<media::Player>> session_store;
-    std::map<std::string, media::Player::PlayerKey> fixed_session_store;
+    // We remember all our creation time arguments.
+    ServiceSkeleton::Configuration configuration;
+    // We map named/fixed player instances to their respective keys.
+    std::map<std::string, media::Player::PlayerKey> named_player_map;
     // We expose the entire service as an MPRIS player.
     struct Exported
     {
@@ -481,7 +471,7 @@ struct media::ServiceSkeleton::Private
         mpris::Player::Skeleton player;
         mpris::Playlists::Skeleton playlists;
 
-        // Helper to resolve (title, artist, album) tuples to cover art.
+        // The CoverArtResolver used by the exported player.
         media::CoverArtResolver cover_art_resolver;
         // The actual player instance.
         std::weak_ptr<media::Player> current_player;
@@ -516,9 +506,9 @@ struct media::ServiceSkeleton::Private
     } exported;
 };
 
-media::ServiceSkeleton::ServiceSkeleton(const media::CoverArtResolver& resolver)
+media::ServiceSkeleton::ServiceSkeleton(const Configuration& configuration)
     : dbus::Skeleton<media::Service>(the_session_bus()),
-      d(new Private(this, resolver))
+      d(new Private(this, configuration))
 {
 }
 
@@ -526,46 +516,24 @@ media::ServiceSkeleton::~ServiceSkeleton()
 {
 }
 
-bool media::ServiceSkeleton::has_player_for_key(const media::Player::PlayerKey& key) const
+std::shared_ptr<media::Player> media::ServiceSkeleton::create_session(const media::Player::Configuration& config)
 {
-    return d->session_store.count(key) > 0;
+    return d->configuration.impl->create_session(config);
 }
 
-std::shared_ptr<media::Player> media::ServiceSkeleton::player_for_key(const media::Player::PlayerKey& key) const
+std::shared_ptr<media::Player> media::ServiceSkeleton::create_fixed_session(const std::string& name, const media::Player::Configuration&config)
 {
-    return d->session_store.at(key);
+    return d->configuration.impl->create_fixed_session(name, config);
 }
 
-void media::ServiceSkeleton::enumerate_players(const media::ServiceSkeleton::PlayerEnumerator& enumerator) const
+std::shared_ptr<media::Player> media::ServiceSkeleton::resume_session(media::Player::PlayerKey key)
 {
-    for (const auto& pair : d->session_store)
-        enumerator(pair.first, pair.second);
+    return d->configuration.impl->resume_session(key);
 }
 
-void media::ServiceSkeleton::set_current_player_for_key(const media::Player::PlayerKey& key)
+void media::ServiceSkeleton::pause_other_sessions(media::Player::PlayerKey key)
 {
-    if (not has_player_for_key(key))
-        return;
-
-    d->exported.set_current_player(player_for_key(key));
-}
-
-void media::ServiceSkeleton::remove_player_for_key(const media::Player::PlayerKey& key)
-{
-    if (not has_player_for_key(key))
-        return;
-
-    auto player = player_for_key(key);
-
-    d->session_store.erase(key);
-    d->exported.unset_if_current(player);
-    // All non-durable fixed sessions are also removed
-    for (auto it: d->fixed_session_store) {
-        if (it.second == key) {
-            d->fixed_session_store.erase(it.first);
-            break;
-        }
-    }
+    d->configuration.impl->pause_other_sessions(key);
 }
 
 void media::ServiceSkeleton::run()

@@ -20,6 +20,7 @@
 #include <core/media/player.h>
 #include <core/media/track_list.h>
 
+#include "core/media/hashed_keyed_player_store.h"
 #include "core/media/service_implementation.h"
 
 #include <core/posix/signal.h>
@@ -103,23 +104,37 @@ int main()
         }
     };
 
+    // Our common player store instance for tracking player instances.
+    auto player_store = std::make_shared<media::HashedKeyedPlayerStore>();
     // We assemble the configuration for executing the service now.
     media::ServiceImplementation::Configuration service_config
     {
+        std::make_shared<media::HashedKeyedPlayerStore>(),
         external_services
     };
 
-    auto service = std::make_shared<media::ServiceImplementation>(service_config);
+    auto impl = std::make_shared<media::ServiceImplementation>(media::ServiceImplementation::Configuration
+    {
+        player_store,
+        external_services
+    });
+
+    auto skeleton = std::make_shared<media::ServiceSkeleton>(media::ServiceSkeleton::Configuration
+    {
+        impl,
+        player_store,
+
+    });
 
     std::thread service_worker
     {
-        [&shutdown_requested, service]()
+        [&shutdown_requested, skeleton]()
         {
             while (not shutdown_requested)
             {
                 try
                 {
-                    service->run();
+                    skeleton->run();
                 }
                 catch (const std::exception& e)
                 {
@@ -142,7 +157,7 @@ int main()
     shutdown_requested = true;
 
     // And stop execution of helper and actual service.
-    service->stop();
+    skeleton->stop();
 
     if (service_worker.joinable())
         service_worker.join();
