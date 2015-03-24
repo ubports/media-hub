@@ -236,7 +236,7 @@ media::Player::PlayerKey media::PlayerStub::key() const
 
 bool media::PlayerStub::open_uri(const media::Track::UriType& uri)
 {
-    auto op = d->object->invoke_method_synchronously<mpris::Player::OpenUri, bool>(uri);
+    auto op = d->object->transact_method<mpris::Player::OpenUri, bool>(uri);
 
     return op.value();
 }
@@ -244,14 +244,14 @@ bool media::PlayerStub::open_uri(const media::Track::UriType& uri)
 
 bool media::PlayerStub::open_uri(const Track::UriType& uri, const Player::HeadersType& headers)
 {
-    auto op = d->object->invoke_method_synchronously<mpris::Player::OpenUriExtended, bool>(uri, headers);
+    auto op = d->object->transact_method<mpris::Player::OpenUriExtended, bool>(uri, headers);
 
     return op.value();
 }
 
 media::video::Sink::Ptr media::PlayerStub::create_gl_texture_video_sink(std::uint32_t texture_id)
 {
-    auto op = d->object->invoke_method_synchronously<mpris::Player::CreateVideoSink, void>(texture_id);
+    auto op = d->object->transact_method<mpris::Player::CreateVideoSink, void>(texture_id);
 
     if (op.is_error())
     {
@@ -266,7 +266,7 @@ media::video::Sink::Ptr media::PlayerStub::create_gl_texture_video_sink(std::uin
 
 void media::PlayerStub::next()
 {
-    auto op = d->object->invoke_method_synchronously<mpris::Player::Next, void>();
+    auto op = d->object->transact_method<mpris::Player::Next, void>();
 
     if (op.is_error())
         throw std::runtime_error("Problem switching to next track on remote object");
@@ -274,7 +274,7 @@ void media::PlayerStub::next()
 
 void media::PlayerStub::previous()
 {
-    auto op = d->object->invoke_method_synchronously<mpris::Player::Previous, void>();
+    auto op = d->object->transact_method<mpris::Player::Previous, void>();
 
     if (op.is_error())
         throw std::runtime_error("Problem switching to previous track on remote object");
@@ -282,7 +282,7 @@ void media::PlayerStub::previous()
 
 void media::PlayerStub::play()
 {
-    auto op = d->object->invoke_method_synchronously<mpris::Player::Play, void>();
+    auto op = d->object->transact_method<mpris::Player::Play, void>();
 
     if (op.is_error())
         throw std::runtime_error("Problem starting playback on remote object");
@@ -290,7 +290,7 @@ void media::PlayerStub::play()
 
 void media::PlayerStub::pause()
 {
-    auto op = d->object->invoke_method_synchronously<mpris::Player::Pause, void>();
+    auto op = d->object->transact_method<mpris::Player::Pause, void>();
 
     if (op.is_error())
         throw std::runtime_error("Problem pausing playback on remote object");
@@ -298,7 +298,7 @@ void media::PlayerStub::pause()
 
 void media::PlayerStub::seek_to(const std::chrono::microseconds& offset)
 {
-    auto op = d->object->invoke_method_synchronously<mpris::Player::Seek, void, uint64_t>(offset.count());
+    auto op = d->object->transact_method<mpris::Player::Seek, void, uint64_t>(offset.count());
 
     if (op.is_error())
         throw std::runtime_error("Problem seeking on remote object");
@@ -306,7 +306,7 @@ void media::PlayerStub::seek_to(const std::chrono::microseconds& offset)
 
 void media::PlayerStub::stop()
 {
-    auto op = d->object->invoke_method_synchronously<mpris::Player::Stop, void>();
+    auto op = d->object->transact_method<mpris::Player::Stop, void>();
 
     if (op.is_error())
         throw std::runtime_error("Problem stopping playback on remote object");
