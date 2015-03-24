@@ -86,6 +86,7 @@ class PlayerStub : public Player
     virtual core::Property<Lifetime>& lifetime();
 
     virtual const core::Signal<int64_t>& seeked_to() const;
+    virtual const core::Signal<void>& about_to_finish() const;
     virtual const core::Signal<void>& end_of_stream() const;
     virtual core::Signal<PlaybackStatus>& playback_status_changed();
     virtual const core::Signal<video::Dimensions>& video_dimension_changed() const;

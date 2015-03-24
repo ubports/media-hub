@@ -197,7 +197,7 @@ struct media::PlayerImplementation<Parent>::Private :
                     if (--system_wakelock_count == 0)
                     {
                         std::cout << "Clearing system wakelock." << std::endl;
-                        system_state_lock->request_release(media::power::SystemState::active);                        
+                        system_state_lock->request_release(media::power::SystemState::active);
                     }
                     break;
                 case wakelock_clear_t::WAKELOCK_CLEAR_DISPLAY:
@@ -350,6 +350,8 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
 
     d->engine->about_to_finish_signal().connect([this]()
     {
+        Parent::about_to_finish()();
+
         if (d->track_list->has_next())
         {
             Track::UriType uri = d->track_list->query_uri_for_track(d->track_list->next());
@@ -388,7 +390,7 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
     });
 
     d->engine->error_signal().connect([this](const Player::Error& e)
-    {        
+    {
         Parent::error()(e);
     });
 

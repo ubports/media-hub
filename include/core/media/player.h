@@ -168,6 +168,7 @@ class Player : public std::enable_shared_from_this<Player>
     virtual core::Property<Lifetime>& lifetime() = 0;
 
     virtual const core::Signal<int64_t>& seeked_to() const = 0;
+    virtual const core::Signal<void>& about_to_finish() const = 0;
     virtual const core::Signal<void>& end_of_stream() const = 0;
     virtual core::Signal<PlaybackStatus>& playback_status_changed() = 0;
     virtual const core::Signal<video::Dimensions>& video_dimension_changed() const = 0;
