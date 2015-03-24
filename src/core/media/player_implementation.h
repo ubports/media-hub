@@ -21,6 +21,9 @@
 
 #include "player_skeleton.h"
 
+#include "client_death_observer.h"
+#include "power/state_controller.h"
+
 #include <memory>
 
 namespace core
@@ -35,12 +38,21 @@ class Service;
 class PlayerImplementation : public PlayerSkeleton
 {
 public:
-    PlayerImplementation(
-            const std::string& identity,
-            const std::shared_ptr<core::dbus::Bus>& bus,
-            const std::shared_ptr<core::dbus::Object>& session,
-            const std::shared_ptr<Service>& service,
-            PlayerKey key);
+    // All creation time arguments go here
+    struct Configuration
+    {
+        std::string identity;
+        std::shared_ptr<core::dbus::Bus> bus;
+        std::shared_ptr<core::dbus::Object> session;
+        std::shared_ptr<Service> service;
+        PlayerKey key;
+
+        // Functional dependencies
+        ClientDeathObserver::Ptr client_death_observer;
+        power::StateController::Ptr power_state_controller;
+    };
+
+    PlayerImplementation(const Configuration& configuration);
     ~PlayerImplementation();
 
     virtual std::shared_ptr<TrackList> track_list();
