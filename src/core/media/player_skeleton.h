@@ -48,6 +48,19 @@ class Service;
 class PlayerSkeleton : public core::ubuntu::media::Player
 {
   public:
+    // All creation time arguments go here.
+    struct Configuration
+    {
+        // The bus connection we are associated with.
+        std::shared_ptr<core::dbus::Bus> bus;
+        // The session object that we want to expose the skeleton upon.
+        std::shared_ptr<core::dbus::Object> session;
+        // Our functional dependencies.
+        apparmor::ubuntu::RequestContextResolver::Ptr request_context_resolver;
+        apparmor::ubuntu::RequestAuthenticator::Ptr request_authenticator;
+    };
+
+    PlayerSkeleton(const Configuration& configuration);
     ~PlayerSkeleton();
 
     virtual const core::Property<bool>& can_play() const;
@@ -83,21 +96,6 @@ class PlayerSkeleton : public core::ubuntu::media::Player
     virtual core::Signal<PlaybackStatus>& playback_status_changed();
     virtual const core::Signal<video::Dimensions>& video_dimension_changed() const;
     virtual const core::Signal<Error>& error() const;
-
-protected:
-    // All creation time arguments go here.
-    struct Configuration
-    {
-        // The bus connection we are associated with.
-        std::shared_ptr<core::dbus::Bus> bus;
-        // The session object that we want to expose the skeleton upon.
-        std::shared_ptr<core::dbus::Object> session;
-        // Our functional dependencies.
-        apparmor::ubuntu::RequestContextResolver::Ptr request_context_resolver;
-        apparmor::ubuntu::RequestAuthenticator::Ptr request_authenticator;
-    };
-
-    PlayerSkeleton(const Configuration& configuration);
 
     // These properties are not exposed to the client, but still need to be
     // able to be settable from within the Player:
