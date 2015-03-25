@@ -20,6 +20,7 @@
 #define TEST_TRACK_LIST_H_
 
 #include <memory>
+#include <string>
 
 namespace core
 {
@@ -37,9 +38,12 @@ class TestTrackList
 public:
     TestTrackList();
 
+    void add_track(const std::string uri);
+
 private:
     std::shared_ptr<core::ubuntu::media::Service> m_hubService;
     std::shared_ptr<core::ubuntu::media::Player> m_hubPlayerSession;
+    std::shared_ptr<core::ubuntu::media::TrackList> m_hubTrackList;
 };
 
 } // media

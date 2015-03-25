@@ -153,7 +153,7 @@ const media::Track::Id& media::TrackListSkeleton::next()
         return *(d->current_track);
 
     if (d->tracks->get().size() && (d->current_track == d->empty_iterator))
-    {        
+    {
         d->current_track = d->tracks->get().begin();
         return *(d->current_track = std::next(d->current_track));
     }

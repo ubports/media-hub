@@ -21,6 +21,7 @@
 #include <core/media/service.h>
 #include <core/media/track_list.h>
 
+#include <cassert>
 #include <iostream>
 
 namespace media = core::ubuntu::media;
@@ -33,12 +34,42 @@ media::TestTrackList::TestTrackList()
         m_hubPlayerSession = m_hubService->create_session(media::Player::Client::default_configuration());
     }
     catch (std::runtime_error &e) {
-        cout << "FATAL: Failed to start a new media-hub player session: " << e.what() << endl;
+        cerr << "FATAL: Failed to start a new media-hub player session: " << e.what() << endl;
+    }
+
+    try {
+        m_hubTrackList = m_hubPlayerSession->track_list();
+    }
+    catch (std::runtime_error &e) {
+        cerr << "FATAL: Failed to retrieve the current player's TrackList: " << e.what() << endl;
+    }
+}
+
+void media::TestTrackList::add_track(const std::string uri)
+{
+    assert (m_hubTrackList.get() != nullptr);
+
+    cout << "Adding " << uri << " to the TrackList for playback." << endl;
+
+    try {
+        m_hubTrackList->add_track_with_uri_at(uri, media::TrackList::after_empty_track(), false);
+    }
+    catch (std::runtime_error &e) {
+        cerr << "ERROR: Failed to add track " << uri << " to tracklist: " << e.what() << endl;
     }
 }
 
 int main (int argc, char **argv)
 {
-    shared_ptr<media::TestTrackList> test_tl = make_shared<media::TestTrackList>();
+    shared_ptr<media::TestTrackList> tracklist = make_shared<media::TestTrackList>();
+
+    if (argc > 1)
+        tracklist->add_track(argv[1]);
+    else
+    {
+        cout << "Can't test TrackList, no track specified." << endl;
+        cout << argv[0] << " <track_uri>" << endl;
+    }
+
     return 0;
 }
