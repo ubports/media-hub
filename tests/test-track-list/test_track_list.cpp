@@ -52,6 +52,8 @@ void media::TestTrackList::add_track(const std::string uri)
     cout << "Adding " << uri << " to the TrackList for playback." << endl;
 
     try {
+        bool can_edit_tracks = m_hubTrackList->can_edit_tracks();
+        cout << "can_edit_tracks: " << (can_edit_tracks ? "yes" : "no") << std::endl;
         m_hubTrackList->add_track_with_uri_at(uri, media::TrackList::after_empty_track(), false);
     }
     catch (std::runtime_error &e) {
@@ -63,12 +65,17 @@ int main (int argc, char **argv)
 {
     shared_ptr<media::TestTrackList> tracklist = make_shared<media::TestTrackList>();
 
-    if (argc > 1)
+    if (argc == 2)
         tracklist->add_track(argv[1]);
+    else if (argc == 3)
+    {
+        tracklist->add_track(argv[1]);
+        tracklist->add_track(argv[2]);
+    }
     else
     {
-        cout << "Can't test TrackList, no track specified." << endl;
-        cout << argv[0] << " <track_uri>" << endl;
+        cout << "Can't test TrackList, no track(s) specified." << endl;
+        cout << argv[0] << " <track_uri_1> [<track_uri_2>]" << endl;
     }
 
     return 0;

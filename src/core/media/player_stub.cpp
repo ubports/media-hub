@@ -222,6 +222,7 @@ std::shared_ptr<media::TrackList> media::PlayerStub::track_list()
 {
     if (!d->track_list)
     {
+        std::cout << "object_path tracklist: " << d->object->path().as_string() + "/TrackList" << std::endl;
         d->track_list = std::make_shared<media::TrackListStub>(
                     shared_from_this(),
                     dbus::types::ObjectPath(d->object->path().as_string() + "/TrackList"));

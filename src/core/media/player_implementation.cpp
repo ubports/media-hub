@@ -23,7 +23,6 @@
 
 #include "client_death_observer.h"
 #include "engine.h"
-#include "null_track_list.h"
 #include "track_list_implementation.h"
 
 #include "gstreamer/engine.h"
@@ -58,14 +57,14 @@ struct media::PlayerImplementation<Parent>::Private :
           display_state_lock(config.power_state_controller->display_state_lock()),
           system_state_lock(config.power_state_controller->system_state_lock()),
           engine(std::make_shared<gstreamer::Engine>()),
-          track_list(std::make_shared<NullTrackList>()),
+          track_list(std::make_shared<TrackListImplementation>(dbus::types::ObjectPath(config.parent.session->path().as_string() + "/TrackList"), engine->meta_data_extractor())),
           system_wakelock_count(0),
           display_wakelock_count(0),
           previous_state(Engine::State::stopped),
           engine_state_change_connection(engine->state().changed().connect(make_state_change_handler())),
           engine_playback_status_change_connection(engine->playback_status_changed_signal().connect(make_playback_status_change_handler()))
     {
-        std::cout << "Private parent instance: " << parent << std::endl;
+        std::cout << "Creating new PlayerImplementation::Private" << std::endl;
         // Poor man's logging of release/acquire events.
         display_state_lock->acquired().connect([](media::power::DisplayState state)
         {
@@ -290,7 +289,7 @@ struct media::PlayerImplementation<Parent>::Private :
     media::power::StateController::Lock<media::power::SystemState>::Ptr system_state_lock;
 
     std::shared_ptr<Engine> engine;
-    std::shared_ptr<media::NullTrackList> track_list;
+    std::shared_ptr<media::TrackListImplementation> track_list;
     std::atomic<int> system_wakelock_count;
     std::atomic<int> display_wakelock_count;
     Engine::State previous_state;
@@ -304,6 +303,7 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
     : Parent{config.parent},
       d{std::make_shared<Private>(this, config)}
 {
+    std::cout << "Creating new PlayerImplementation::Private" << std::endl;
     // Initialize default values for Player interface properties
     Parent::can_play().set(true);
     Parent::can_pause().set(true);

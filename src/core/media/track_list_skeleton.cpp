@@ -35,6 +35,7 @@
 #include <core/dbus/types/stl/map.h>
 #include <core/dbus/types/stl/vector.h>
 
+#include <iostream>
 #include <limits>
 
 namespace dbus = core::dbus;
@@ -51,6 +52,7 @@ struct media::TrackListSkeleton::Private
           current_track(tracks->get().begin()),
           empty_iterator(tracks->get().begin())
     {
+        std::cout << "Creating new TrackListSkeleton::Private" << std::endl;
     }
 
     void handle_get_tracks_metadata(const core::dbus::Message::Ptr& msg)
@@ -117,6 +119,7 @@ media::TrackListSkeleton::TrackListSkeleton(
     : dbus::Skeleton<media::TrackList>(the_session_bus()),
       d(new Private(this, access_service()->add_object_for_path(op)))
 {
+    std::cout << "Creating new TrackListSkeleton" << std::endl;
     d->object->install_method_handler<mpris::TrackList::GetTracksMetadata>(
         std::bind(&Private::handle_get_tracks_metadata,
                   std::ref(d),

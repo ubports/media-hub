@@ -75,6 +75,8 @@ void media::TrackListImplementation::add_track_with_uri_at(
 {
     static size_t track_counter = 0;
 
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+
     std::stringstream ss; ss << d->path.as_string() << "/" << track_counter++;
     Track::Id id{ss.str()};
 

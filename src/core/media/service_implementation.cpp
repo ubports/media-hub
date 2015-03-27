@@ -52,6 +52,8 @@ using namespace std;
 
 struct media::ServiceImplementation::Private
 {
+    // Create all of the appropriate observers and helper class instances to be
+    // passed to the PlayerImplementation
     Private(const ServiceImplementation::Configuration& configuration)
         : configuration(configuration),
           resume_key(std::numeric_limits<std::uint32_t>::max()),
@@ -71,7 +73,7 @@ struct media::ServiceImplementation::Private
     media::ServiceImplementation::Configuration configuration;
     // This holds the key of the multimedia role Player instance that was paused
     // when the battery level reached 10% or 5%
-    media::Player::PlayerKey resume_key;    
+    media::Player::PlayerKey resume_key;
     media::power::BatteryObserver::Ptr battery_observer;
     media::power::StateController::Ptr power_state_controller;
     media::power::StateController::Lock<media::power::DisplayState>::Ptr display_state_lock;
