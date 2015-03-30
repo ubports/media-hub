@@ -38,7 +38,10 @@ class TestTrackList
 public:
     TestTrackList();
 
-    void add_track(const std::string uri);
+    void add_track(const std::string &uri, bool make_current = false);
+
+    // Takes in one or two files for playback, adds it/them to the TrackList, and plays
+    void test_basic_playback(const std::string &uri1, const std::string &uri2 = std::string{});
 
 private:
     std::shared_ptr<core::ubuntu::media::Service> m_hubService;

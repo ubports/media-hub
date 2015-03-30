@@ -45,7 +45,7 @@ media::TestTrackList::TestTrackList()
     }
 }
 
-void media::TestTrackList::add_track(const std::string uri)
+void media::TestTrackList::add_track(const string &uri, bool make_current)
 {
     assert (m_hubTrackList.get() != nullptr);
 
@@ -54,11 +54,23 @@ void media::TestTrackList::add_track(const std::string uri)
     try {
         bool can_edit_tracks = m_hubTrackList->can_edit_tracks();
         cout << "can_edit_tracks: " << (can_edit_tracks ? "yes" : "no") << std::endl;
-        m_hubTrackList->add_track_with_uri_at(uri, media::TrackList::after_empty_track(), false);
+        if (can_edit_tracks)
+            m_hubTrackList->add_track_with_uri_at(uri, media::TrackList::after_empty_track(), make_current);
+        else
+            cerr << "Can't add track to TrackList since can_edit_tracks is false" << endl;
     }
     catch (std::runtime_error &e) {
         cerr << "ERROR: Failed to add track " << uri << " to tracklist: " << e.what() << endl;
     }
+}
+
+void media::TestTrackList::test_basic_playback(const std::string &uri1, const std::string &uri2)
+{
+    m_hubPlayerSession->open_uri(uri1);
+    if (!uri2.empty())
+        add_track(uri2);
+
+    m_hubPlayerSession->play();
 }
 
 int main (int argc, char **argv)
@@ -66,11 +78,12 @@ int main (int argc, char **argv)
     shared_ptr<media::TestTrackList> tracklist = make_shared<media::TestTrackList>();
 
     if (argc == 2)
-        tracklist->add_track(argv[1]);
+    {
+        tracklist->test_basic_playback(argv[1]);
+    }
     else if (argc == 3)
     {
-        tracklist->add_track(argv[1]);
-        tracklist->add_track(argv[2]);
+        tracklist->test_basic_playback(argv[1], argv[2]);
     }
     else
     {

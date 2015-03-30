@@ -57,7 +57,9 @@ struct media::PlayerImplementation<Parent>::Private :
           display_state_lock(config.power_state_controller->display_state_lock()),
           system_state_lock(config.power_state_controller->system_state_lock()),
           engine(std::make_shared<gstreamer::Engine>()),
-          track_list(std::make_shared<TrackListImplementation>(dbus::types::ObjectPath(config.parent.session->path().as_string() + "/TrackList"), engine->meta_data_extractor())),
+          track_list(std::make_shared<TrackListImplementation>(
+                      dbus::types::ObjectPath(config.parent.session->path().as_string() + "/TrackList"),
+                      engine->meta_data_extractor())),
           system_wakelock_count(0),
           display_wakelock_count(0),
           previous_state(Engine::State::stopped),
@@ -487,6 +489,10 @@ media::video::Sink::Ptr media::PlayerImplementation<Parent>::create_gl_texture_v
 template<typename Parent>
 bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri)
 {
+    if (d->track_list != nullptr)
+        // Set new track as the current track to play
+        d->track_list->add_track_with_uri_at(uri, media::TrackList::after_empty_track(), true);
+
     return d->engine->open_resource_for_uri(uri);
 }
 
@@ -509,6 +515,14 @@ void media::PlayerImplementation<Parent>::previous()
 template<typename Parent>
 void media::PlayerImplementation<Parent>::play()
 {
+#if 0
+    if (!d->track_list->empty())
+    {
+        Track::UriType uri = d->track_list->query_uri_for_track(d->track_list->next());
+        if (!uri.empty())
+            d->parent->open_uri(uri);
+    }
+#endif
     d->engine->play();
 }
 
