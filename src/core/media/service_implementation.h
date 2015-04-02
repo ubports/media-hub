@@ -49,7 +49,7 @@ public:
     void pause_other_sessions(Player::PlayerKey key);
 
 private:
-    void pause_all_multimedia_sessions();
+    void pause_all_multimedia_sessions(bool resume_play_after_phonecall);
     void resume_paused_multimedia_sessions(bool resume_video_sessions = true);
     void resume_multimedia_session();
 

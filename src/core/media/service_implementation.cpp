@@ -41,6 +41,7 @@
 #include <map>
 #include <memory>
 #include <thread>
+#include <utility>
 
 #include <pulse/pulseaudio.h>
 
@@ -83,7 +84,9 @@ struct media::ServiceImplementation::Private
     media::audio::OutputState audio_output_state;
 
     media::telephony::CallMonitor::Ptr call_monitor;
-    std::list<media::Player::PlayerKey> paused_sessions;
+    // Holds a pair of a Player key denoting what player to resume playback, and a bool
+    // for if it should be resumed after a phone call is hung up
+    std::list<std::pair<media::Player::PlayerKey, bool>> paused_sessions;
 };
 
 media::ServiceImplementation::ServiceImplementation(const Configuration& configuration)
@@ -91,13 +94,16 @@ media::ServiceImplementation::ServiceImplementation(const Configuration& configu
 {
     d->battery_observer->level().changed().connect([this](const media::power::Level& level)
     {
+        const bool resume_play_after_phonecall = false;
         // When the battery level hits 10% or 5%, pause all multimedia sessions.
         // Playback will resume when the user clears the presented notification.
         switch (level)
         {
         case media::power::Level::low:
         case media::power::Level::very_low:
-            pause_all_multimedia_sessions();
+            // Whatever player session is currently playing, make sure it is NOT resumed after
+            // a phonecall is hung up
+            pause_all_multimedia_sessions(resume_play_after_phonecall);
             break;
         default:
             break;
@@ -114,6 +120,7 @@ media::ServiceImplementation::ServiceImplementation(const Configuration& configu
 
     d->audio_output_observer->external_output_state().changed().connect([this](audio::OutputState state)
     {
+        const bool resume_play_after_phonecall = false;
         switch (state)
         {
         case audio::OutputState::Earpiece:
@@ -121,7 +128,9 @@ media::ServiceImplementation::ServiceImplementation(const Configuration& configu
             break;
         case audio::OutputState::Speaker:
             std::cout << "AudioOutputObserver reports that output is now Speaker." << std::endl;
-            pause_all_multimedia_sessions();
+            // Whatever player session is currently playing, make sure it is NOT resumed after
+            // a phonecall is hung up
+            pause_all_multimedia_sessions(resume_play_after_phonecall);
             break;
         case audio::OutputState::External:
             std::cout << "AudioOutputObserver reports that output is now External." << std::endl;
@@ -132,10 +141,13 @@ media::ServiceImplementation::ServiceImplementation(const Configuration& configu
 
     d->call_monitor->on_call_state_changed().connect([this](media::telephony::CallMonitor::State state)
     {
+        const bool resume_play_after_phonecall = true;
         switch (state) {
         case media::telephony::CallMonitor::State::OffHook:
             std::cout << "Got call started signal, pausing all multimedia sessions" << std::endl;
-            pause_all_multimedia_sessions();
+            // Whatever player session is currently playing, make sure it gets resumed after
+            // a phonecall is hung up
+            pause_all_multimedia_sessions(resume_play_after_phonecall);
             break;
         case media::telephony::CallMonitor::State::OnHook:
             std::cout << "Got call ended signal, resuming paused multimedia sessions" << std::endl;
@@ -149,7 +161,10 @@ media::ServiceImplementation::ServiceImplementation(const Configuration& configu
         if (state == media::RecordingState::started)
         {
             d->display_state_lock->request_acquire(media::power::DisplayState::on);
-            pause_all_multimedia_sessions();
+            // Whatever player session is currently playing, make sure it is NOT resumed after
+            // a phonecall is hung up
+            const bool resume_play_after_phonecall = false;
+            pause_all_multimedia_sessions(resume_play_after_phonecall);
         }
         else if (state == media::RecordingState::stopped)
         {
@@ -244,15 +259,17 @@ void media::ServiceImplementation::pause_other_sessions(media::Player::PlayerKey
     });
 }
 
-void media::ServiceImplementation::pause_all_multimedia_sessions()
+void media::ServiceImplementation::pause_all_multimedia_sessions(bool resume_play_after_phonecall)
 {
-    d->configuration.player_store->enumerate_players([this](const media::Player::PlayerKey& key, const std::shared_ptr<media::Player>& player)
+    d->configuration.player_store->enumerate_players([this, resume_play_after_phonecall](const media::Player::PlayerKey& key, const std::shared_ptr<media::Player>& player)
                       {
                           if (player->playback_status() == Player::playing
                               && player->audio_stream_role() == media::Player::multimedia)
                           {
-                              d->paused_sessions.push_back(key);
-                              std::cout << "Pausing Player with key: " << key << std::endl;
+                              auto paused_player_pair = std::make_pair(key, resume_play_after_phonecall);
+                              d->paused_sessions.push_back(paused_player_pair);
+                              std::cout << "Pausing Player with key: " << key << ", resuming after phone call? "
+                                  << (resume_play_after_phonecall ? "yes" : "no") << std::endl;
                               player->pause();
                           }
                       });
@@ -260,13 +277,16 @@ void media::ServiceImplementation::pause_all_multimedia_sessions()
 
 void media::ServiceImplementation::resume_paused_multimedia_sessions(bool resume_video_sessions)
 {
-    std::for_each(d->paused_sessions.begin(), d->paused_sessions.end(), [this, resume_video_sessions](const media::Player::PlayerKey& key) {
+    std::for_each(d->paused_sessions.begin(), d->paused_sessions.end(),
+        [this, resume_video_sessions](const std::pair<media::Player::PlayerKey, bool> &paused_player_pair) {
+            const media::Player::PlayerKey key = paused_player_pair.first;
+            const bool resume_play_after_phonecall = paused_player_pair.second;
             auto player = d->configuration.player_store->player_for_key(key);
             // Only resume video playback if explicitly desired
-            if (resume_video_sessions || player->is_audio_source())
+            if ((resume_video_sessions || player->is_audio_source()) && resume_play_after_phonecall)
                 player->play();
             else
-                std::cout << "Not auto-resuming video playback session." << std::endl;
+                std::cout << "Not auto-resuming video player session or other type of player session." << std::endl;
         });
 
     d->paused_sessions.clear();
