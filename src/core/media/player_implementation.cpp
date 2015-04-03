@@ -1,4 +1,5 @@
 /*
+ * Copyright © 2013-2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -170,7 +171,7 @@ struct media::PlayerImplementation<Parent>::Private :
     {
         return [this](const media::Player::PlaybackStatus& status)
         {
-            std::cout << "Emiting playback_status_changed for parent: " << parent << std::endl;
+            std::cout << "Emiting playback_status_changed signal: " << status << std::endl;
             parent->emit_playback_status_changed(status);
         };
     }
@@ -354,6 +355,13 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
     };
     Parent::is_audio_source().install(audio_type_getter);
 
+    // When the client changes the loop status, make sure to update the TrackList
+    Parent::loop_status().changed().connect([this](media::Player::LoopStatus loop_status)
+    {
+        std::cout << "Player::LoopStatus value changed: " << loop_status << std::endl;
+        d->track_list->set_loop_status(loop_status);
+    });
+
     // Make sure that the audio_stream_role property gets updated on the Engine side
     // whenever the client side sets the role
     Parent::audio_stream_role().changed().connect([this](media::Player::AudioStreamRole new_role)
@@ -377,11 +385,14 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
     {
         Parent::about_to_finish()();
 
-        if (d->track_list->has_next())
+        // Make sure that the TrackList keeps advancing. The logic for what gets played next,
+        // if anything at all, occurs in TrackListSkeleton::next()
+        Track::UriType uri = d->track_list->query_uri_for_track(d->track_list->next());
+        if (!uri.empty())
         {
-            Track::UriType uri = d->track_list->query_uri_for_track(d->track_list->next());
-            if (!uri.empty())
-                d->parent->open_uri(uri);
+            std::cout << "Setting next track on playbin: " << uri << std::endl;
+            static const bool do_pipeline_reset = false;
+            d->engine->open_resource_for_uri(uri, do_pipeline_reset);
         }
     });
 
@@ -493,7 +504,8 @@ bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri)
         // Set new track as the current track to play
         d->track_list->add_track_with_uri_at(uri, media::TrackList::after_empty_track(), true);
 
-    return d->engine->open_resource_for_uri(uri);
+    static const bool do_pipeline_reset = true;
+    return d->engine->open_resource_for_uri(uri, do_pipeline_reset);
 }
 
 template<typename Parent>
@@ -515,14 +527,16 @@ void media::PlayerImplementation<Parent>::previous()
 template<typename Parent>
 void media::PlayerImplementation<Parent>::play()
 {
-#if 0
-    if (!d->track_list->empty())
+    if (d->track_list != nullptr && d->track_list->tracks()->size() > 0 && d->engine->state() == media::Engine::State::no_media)
     {
-        Track::UriType uri = d->track_list->query_uri_for_track(d->track_list->next());
-        if (!uri.empty())
-            d->parent->open_uri(uri);
+        // Using a TrackList for playback, added tracks via add_track(), but open_uri hasn't been called yet
+        // to load a media resource
+        std::cout << "No media loaded yet, calling open_uri on first track in track_list" << std::endl;
+        static const bool do_pipeline_reset = true;
+        d->engine->open_resource_for_uri(d->track_list->query_uri_for_track(d->track_list->current()), do_pipeline_reset);
+        std::cout << *d->track_list << endl;
     }
-#endif
+
     d->engine->play();
 }
 
@@ -555,6 +569,41 @@ template<typename Parent>
 void media::PlayerImplementation<Parent>::emit_playback_status_changed(const media::Player::PlaybackStatus &status)
 {
     Parent::playback_status_changed()(status);
+}
+
+// operator<< pretty prints the given playback status to the given output stream.
+std::ostream& media::operator<<(std::ostream& out, media::Player::PlaybackStatus status)
+{
+    switch (status)
+    {
+        case media::Player::PlaybackStatus::null:
+            return out << "PlaybackStatus::null";
+        case media::Player::PlaybackStatus::ready:
+            return out << "PlaybackStatus::ready";
+        case media::Player::PlaybackStatus::playing:
+            return out << "PlaybackStatus::playing";
+        case media::Player::PlaybackStatus::paused:
+            return out << "PlaybackStatus::paused";
+        case media::Player::PlaybackStatus::stopped:
+            return out << "PlaybackStatus::stopped";
+    }
+
+    return out;
+}
+
+std::ostream& media::operator<<(std::ostream& out, media::Player::LoopStatus loop_status)
+{
+    switch (loop_status)
+    {
+        case media::Player::LoopStatus::none:
+            return out << "LoopStatus::none";
+        case media::Player::LoopStatus::track:
+            return out << "LoopStatus::track";
+        case media::Player::LoopStatus::playlist:
+            return out << "LoopStatus::playlist";
+    }
+
+    return out;
 }
 
 #include <core/media/player_skeleton.h>

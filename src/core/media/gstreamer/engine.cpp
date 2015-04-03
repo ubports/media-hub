@@ -313,12 +313,13 @@ struct gstreamer::Engine::Private
 gstreamer::Engine::Engine() : d(new Private{})
 {
     cout << "Creating a new Engine instance in " << __PRETTY_FUNCTION__ << endl;
-    d->state = media::Engine::State::ready;
+    d->state = media::Engine::State::no_media;
 }
 
 gstreamer::Engine::~Engine()
 {
     stop();
+    d->state = media::Engine::State::no_media;
 }
 
 const std::shared_ptr<media::Engine::MetaDataExtractor>& gstreamer::Engine::meta_data_extractor() const
@@ -331,9 +332,9 @@ const core::Property<media::Engine::State>& gstreamer::Engine::state() const
     return d->state;
 }
 
-bool gstreamer::Engine::open_resource_for_uri(const media::Track::UriType& uri)
+bool gstreamer::Engine::open_resource_for_uri(const media::Track::UriType& uri, bool do_pipeline_reset)
 {
-    d->playbin.set_uri(uri, core::ubuntu::media::Player::HeadersType{});
+    d->playbin.set_uri(uri, core::ubuntu::media::Player::HeadersType{}, do_pipeline_reset);
     return true;
 }
 
@@ -356,6 +357,7 @@ bool gstreamer::Engine::play()
     {
         d->state = media::Engine::State::playing;
         cout << __PRETTY_FUNCTION__ << endl;
+        cout << "Engine: playing uri: " << d->playbin.uri() << endl;
         d->playback_status_changed(media::Player::PlaybackStatus::playing);
     }
 

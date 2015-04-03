@@ -68,7 +68,7 @@ struct TrackList
         (
             TrackAdded,
             TrackList,
-            BOOST_IDENTITY_TYPE((std::tuple<std::map<std::string, dbus::types::Variant>, dbus::types::ObjectPath>))
+            core::ubuntu::media::Track::Id
         )
 
         DBUS_CPP_SIGNAL_DEF
@@ -104,8 +104,6 @@ struct TrackList
         // Object instance creation time properties go here.
         struct Configuration
         {
-            // The bus connection that should be used
-            core::dbus::Bus::Ptr bus;
             // The dbus object that should implement org.mpris.MediaPlayer2
             core::dbus::Object::Ptr object;
             // Default values assigned to exported dbus interface properties on construction

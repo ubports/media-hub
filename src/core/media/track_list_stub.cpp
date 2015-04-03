@@ -144,6 +144,7 @@ const core::Signal<void>& media::TrackListStub::on_track_list_replaced() const
 
 const core::Signal<media::Track::Id>& media::TrackListStub::on_track_added() const
 {
+    std::cout << "Signal on_track_added arrived via the bus" << std::endl;
     return d->on_track_added;
 }
 

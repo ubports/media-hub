@@ -39,6 +39,7 @@ public:
 
     bool has_next() const;
     const Track::Id& next();
+    const Track::Id& current();
 
     const core::Property<bool>& can_edit_tracks() const;
     const core::Property<Container>& tracks() const;
@@ -49,6 +50,8 @@ public:
     const core::Signal<Track::Id>& on_track_changed() const;
 
     core::Property<Container>& tracks();
+    void set_loop_status(const core::ubuntu::media::Player::LoopStatus& loop_status);
+    core::ubuntu::media::Player::LoopStatus loop_status() const;
 
 protected:
     core::Property<bool>& can_edit_tracks();
@@ -62,6 +65,9 @@ private:
     struct Private;
     std::unique_ptr<Private> d;
 };
+
+// operator<< pretty prints the given TrackList status to the given output stream.
+std::ostream& operator<<(std::ostream& out, const core::ubuntu::media::TrackList& tracklist);
 }
 }
 }

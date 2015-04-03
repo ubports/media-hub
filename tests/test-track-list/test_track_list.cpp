@@ -17,12 +17,15 @@
  */
 
 #include "test_track_list.h"
+#include "../../src/core/media/util/timeout.h"
 
 #include <core/media/service.h>
 #include <core/media/track_list.h>
 
 #include <cassert>
+#include <future>
 #include <iostream>
+#include <thread>
 
 namespace media = core::ubuntu::media;
 using namespace std;
@@ -31,6 +34,19 @@ media::TestTrackList::TestTrackList()
 {
     try {
         m_hubService = media::Service::Client::instance();
+    }
+    catch (std::runtime_error &e) {
+        cerr << "FATAL: Failed to connect to media-hub service: " << e.what() << endl;
+    }
+}
+
+media::TestTrackList::~TestTrackList()
+{
+}
+
+void media::TestTrackList::create_new_player_session()
+{
+    try {
         m_hubPlayerSession = m_hubService->create_session(media::Player::Client::default_configuration());
     }
     catch (std::runtime_error &e) {
@@ -43,6 +59,12 @@ media::TestTrackList::TestTrackList()
     catch (std::runtime_error &e) {
         cerr << "FATAL: Failed to retrieve the current player's TrackList: " << e.what() << endl;
     }
+}
+
+void media::TestTrackList::destroy_player_session()
+{
+    // TODO: for Monday, explicitly add a destroy session to the Service class
+    m_hubPlayerSession.reset();
 }
 
 void media::TestTrackList::add_track(const string &uri, bool make_current)
@@ -64,13 +86,147 @@ void media::TestTrackList::add_track(const string &uri, bool make_current)
     }
 }
 
+#include <unistd.h>
 void media::TestTrackList::test_basic_playback(const std::string &uri1, const std::string &uri2)
 {
+#if 0
+    m_hubTrackList->on_track_added().connect([](const media::Track::Id &new_id)
+    {
+        cout << "Added track to TrackList with Id: " << new_id << endl;
+    });
+#endif
+    create_new_player_session();
+
     m_hubPlayerSession->open_uri(uri1);
     if (!uri2.empty())
         add_track(uri2);
 
+    //cout << "Waiting for track to be added to TrackList" << endl;
+    //media::Track::Id id = wait_for_on_track_added();
+
     m_hubPlayerSession->play();
+    m_hubPlayerSession->loop_status() = media::Player::LoopStatus::none;
+
+    if (m_hubPlayerSession->playback_status() == media::Player::PlaybackStatus::playing)
+        cout << "Basic playback was successful" << endl;
+
+    destroy_player_session();
+}
+
+void media::TestTrackList::test_has_next_track(const std::string &uri1, const std::string &uri2)
+{
+    create_new_player_session();
+
+    add_track(uri1);
+    add_track(uri2);
+
+    m_hubPlayerSession->play();
+    m_hubPlayerSession->loop_status() = media::Player::LoopStatus::none;
+
+    if (m_hubPlayerSession->playback_status() == media::Player::PlaybackStatus::playing)
+    {
+        cout << "Waiting for first track to finish playing..." << endl;
+        wait_for_about_to_finish();
+        cout << "Waiting for second track to finish playing..." << endl;
+        wait_for_about_to_finish();
+        cout << "Both tracks played successfully" << endl;
+    }
+    else
+        cerr << "Playback did not start successfully" << endl;
+
+    destroy_player_session();
+}
+
+template<class T>
+bool media::TestTrackList::verify_signal_is_emitted(const core::Signal<T> &signal, const std::chrono::milliseconds &timeout)
+{
+    bool signal_emitted = false;
+#if 0
+            static const std::chrono::milliseconds timeout{1000};
+            media::timeout(timeout.count(), true, [wp]()
+            {
+                if (auto sp = wp.lock())
+                    sp->on_client_died();
+            });
+    signal.connect([signal_emitted]()
+    {
+    });
+#endif
+
+    return false;
+}
+
+void media::TestTrackList::wait_for_about_to_finish()
+{
+    std::thread t1([this]
+    {
+        bool received_about_to_finish = false;
+        m_hubPlayerSession->about_to_finish().connect([&received_about_to_finish]()
+        {
+            cout << "AboutToFinish signaled" << endl;
+            received_about_to_finish = true;
+        });
+        while (!received_about_to_finish)
+            std::this_thread::yield();
+    });
+
+    t1.join();
+}
+
+void media::TestTrackList::wait_for_end_of_stream()
+{
+    std::thread t1([this]
+    {
+        bool reached_end_of_first_track = false;
+        m_hubPlayerSession->end_of_stream().connect([&reached_end_of_first_track]()
+        {
+            cout << "EndOfStream signaled" << endl;
+            reached_end_of_first_track = true;
+        });
+        while (!reached_end_of_first_track)
+            std::this_thread::yield();
+    });
+
+    t1.join();
+}
+
+void media::TestTrackList::wait_for_playback_status_changed(core::ubuntu::media::Player::PlaybackStatus status)
+{
+    std::thread t1([this, status]
+    {
+        bool received_playback_status_changed = false;
+        m_hubPlayerSession->playback_status().changed().connect([&received_playback_status_changed, &status](media::Player::PlaybackStatus new_status)
+        {
+            cout << "PlaybackStatusChanged signaled" << endl;
+            if (new_status == status)
+                received_playback_status_changed = true;
+        });
+        while (!received_playback_status_changed)
+            std::this_thread::yield();
+    });
+
+    t1.join();
+}
+
+core::ubuntu::media::Track::Id media::TestTrackList::wait_for_on_track_added()
+{
+    media::Track::Id id;
+    std::thread t1([this, &id]
+    {
+        bool received_on_track_added = false;
+        m_hubTrackList->on_track_added().connect([&received_on_track_added, &id](const media::Track::Id &new_id)
+        {
+            cout << "OnTrackAdded signaled" << endl;
+            id = new_id;
+            received_on_track_added = true;
+        });
+        while (!received_on_track_added)
+            std::this_thread::yield();
+    });
+
+    t1.join();
+
+    return id;
 }
 
 int main (int argc, char **argv)
@@ -84,6 +240,7 @@ int main (int argc, char **argv)
     else if (argc == 3)
     {
         tracklist->test_basic_playback(argv[1], argv[2]);
+        tracklist->test_has_next_track(argv[1], argv[2]);
     }
     else
     {

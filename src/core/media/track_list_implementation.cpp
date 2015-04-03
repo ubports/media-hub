@@ -102,6 +102,7 @@ void media::TrackListImplementation::add_track_with_uri_at(
         if (make_current)
             go_to(id);
 
+        // Signal to the client that a track was added to the TrackList
         on_track_added()(id);
     }
 }

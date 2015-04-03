@@ -78,8 +78,14 @@ private:
     struct Private;
     std::shared_ptr<Private> d;
 };
+
+// operator<< pretty prints the given playback status to the given output stream.
+std::ostream& operator<<(std::ostream& out, Player::PlaybackStatus status);
+
+// operator<< pretty prints the given loop status to the given output stream.
+std::ostream& operator<<(std::ostream& out, Player::LoopStatus loop_status);
+
 }
 }
 }
 #endif // CORE_UBUNTU_MEDIA_PLAYER_IMPLEMENTATION_H_
-

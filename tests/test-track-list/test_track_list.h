@@ -19,6 +19,12 @@
 #ifndef TEST_TRACK_LIST_H_
 #define TEST_TRACK_LIST_H_
 
+#include <core/media/player.h>
+#include <core/media/track.h>
+
+#include <core/dbus/signal.h>
+
+#include <chrono>
 #include <memory>
 #include <string>
 
@@ -37,11 +43,29 @@ class TestTrackList
 {
 public:
     TestTrackList();
+    ~TestTrackList();
+
+    void create_new_player_session();
+    void destroy_player_session();
 
     void add_track(const std::string &uri, bool make_current = false);
 
     // Takes in one or two files for playback, adds it/them to the TrackList, and plays
     void test_basic_playback(const std::string &uri1, const std::string &uri2 = std::string{});
+
+    // Takes in one or two files for playback, adds it/them to the TrackList, plays and makes sure
+    // that the Player advances the TrackList
+    void test_has_next_track(const std::string &uri1, const std::string &uri2);
+
+protected:
+    // Synchronously verify that a signal is emitted waiting up to timeout milliseconds
+    template<class T>
+    bool verify_signal_is_emitted(const core::Signal<T> &signal, const std::chrono::milliseconds &timeout);
+
+    void wait_for_about_to_finish();
+    void wait_for_end_of_stream();
+    void wait_for_playback_status_changed(core::ubuntu::media::Player::PlaybackStatus status);
+    core::ubuntu::media::Track::Id wait_for_on_track_added();
 
 private:
     std::shared_ptr<core::ubuntu::media::Service> m_hubService;

@@ -17,6 +17,7 @@
  */
 
 #include "track_list_skeleton.h"
+#include "track_list_implementation.h"
 
 #include <core/media/player.h>
 #include <core/media/track_list.h>
@@ -50,7 +51,13 @@ struct media::TrackListSkeleton::Private
           can_edit_tracks(object->get_property<mpris::TrackList::Properties::CanEditTracks>()),
           tracks(object->get_property<mpris::TrackList::Properties::Tracks>()),
           current_track(tracks->get().begin()),
-          empty_iterator(tracks->get().begin())
+          empty_iterator(tracks->get().begin()),
+          loop_status(media::Player::LoopStatus::none),
+          skeleton{mpris::TrackList::Skeleton::Configuration{object, mpris::TrackList::Skeleton::Configuration::Defaults{}}},
+          signals
+          {
+              skeleton.signals.track_added
+          }
     {
         std::cout << "Creating new TrackListSkeleton::Private" << std::endl;
     }
@@ -107,11 +114,29 @@ struct media::TrackListSkeleton::Private
     std::shared_ptr<core::dbus::Property<mpris::TrackList::Properties::Tracks>> tracks;
     TrackList::ConstIterator current_track;
     TrackList::ConstIterator empty_iterator;
+    media::Player::LoopStatus loop_status;
 
     core::Signal<void> on_track_list_replaced;
-    core::Signal<Track::Id> on_track_added;
     core::Signal<Track::Id> on_track_removed;
     core::Signal<Track::Id> on_track_changed;
+
+    mpris::TrackList::Skeleton skeleton;
+
+    struct Signals
+    {
+        typedef core::dbus::Signal<mpris::TrackList::Signals::TrackAdded, mpris::TrackList::Signals::TrackAdded::ArgumentType> DBusTrackAddedSignal;
+
+        Signals(const std::shared_ptr<DBusTrackAddedSignal>& remote_track_added)
+        {
+            on_track_added.connect([remote_track_added](const media::Track::Id &id)
+            {
+                std::cout << "Emitting remote_track_added()" << std::endl;
+                remote_track_added->emit(id);
+            });
+        }
+
+        core::Signal<Track::Id> on_track_added;
+    } signals;
 };
 
 media::TrackListSkeleton::TrackListSkeleton(
@@ -147,21 +172,52 @@ media::TrackListSkeleton::~TrackListSkeleton()
 
 bool media::TrackListSkeleton::has_next() const
 {
-    return d->current_track != d->tracks->get().end();
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    const auto next_track = std::next(d->current_track);
+    std::cout << "has_next track? " << (next_track != d->tracks->get().end() ? "yes" : "no") << std::endl;
+    return next_track != d->tracks->get().end();
 }
 
 const media::Track::Id& media::TrackListSkeleton::next()
 {
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
     if (d->tracks->get().empty())
         return *(d->current_track);
 
-    if (d->tracks->get().size() && (d->current_track == d->empty_iterator))
+    std::cout << "next() LoopStatus: " << d->loop_status << std::endl;
+
+    // Loop on the current track forever
+    if (d->loop_status == media::Player::LoopStatus::track)
     {
+        std::cout << "Looping on the current track..." << std::endl;
+        return *(d->current_track);
+    }
+    // Loop over the whole playlist and repeat
+    else if (d->loop_status == media::Player::LoopStatus::playlist && !has_next())
+    {
+        std::cout << "Looping on the entire TrackList..." << std::endl;
         d->current_track = d->tracks->get().begin();
-        return *(d->current_track = std::next(d->current_track));
+        return *(d->current_track);
+    }
+    else if (has_next())
+    {
+        // Keep returning the next track until the last track is reached
+        std::cout << "Current track id before next(): " << *d->current_track << std::endl;
+        d->current_track = std::next(d->current_track);
+        std::cout << "Current track id after next(): " << *d->current_track << std::endl;
+        std::cout << *this << std::endl;
     }
 
-    d->current_track = std::next(d->current_track);
+    return *(d->current_track);
+}
+
+const media::Track::Id& media::TrackListSkeleton::current()
+{
+    if (d->tracks->get().size() && (d->current_track == d->empty_iterator))
+    {
+        std::cout << "current_track id == the end()" << std::endl;
+        d->current_track = d->tracks->get().begin();
+    }
     return *(d->current_track);
 }
 
@@ -180,6 +236,16 @@ core::Property<media::TrackList::Container>& media::TrackListSkeleton::tracks()
     return *d->tracks;
 }
 
+void media::TrackListSkeleton::set_loop_status(const core::ubuntu::media::Player::LoopStatus& loop_status)
+{
+    d->loop_status = loop_status;
+}
+
+core::ubuntu::media::Player::LoopStatus media::TrackListSkeleton::loop_status() const
+{
+    return d->loop_status;
+}
+
 const core::Property<media::TrackList::Container>& media::TrackListSkeleton::tracks() const
 {
     return *d->tracks;
@@ -192,7 +258,7 @@ const core::Signal<void>& media::TrackListSkeleton::on_track_list_replaced() con
 
 const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_added() const
 {
-    return d->on_track_added;
+    return d->signals.on_track_added;
 }
 
 const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_removed() const
@@ -212,7 +278,7 @@ core::Signal<void>& media::TrackListSkeleton::on_track_list_replaced()
 
 core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_added()
 {
-    return d->on_track_added;
+    return d->signals.on_track_added;
 }
 
 core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_removed()
@@ -223,4 +289,22 @@ core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_removed()
 core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_changed()
 {
     return d->on_track_changed;
+}
+
+// operator<< pretty prints the given TrackList to the given output stream.
+std::ostream& media::operator<<(std::ostream& out, const media::TrackList& tracklist)
+{
+    auto non_const_tl = const_cast<media::TrackList*>(&tracklist);
+    out << "TrackList\n---------------" << std::endl;
+    for (const media::Track::Id &id : tracklist.tracks().get())
+    {
+        // '*' denotes the current track
+        out << "\t" << ((dynamic_cast<media::TrackListSkeleton*>(non_const_tl)->current() == id) ? "*" : "");
+        out << "Track Id: " << id << std::endl;
+        out << "\t\turi: " << dynamic_cast<media::TrackListImplementation*>(non_const_tl)->query_uri_for_track(id) << std::endl;
+        //out << "\t\thas_next: " << tracklist.has_next(
+    }
+
+    out << "---------------\nEnd TrackList" << std::endl;
+    return out;
 }
