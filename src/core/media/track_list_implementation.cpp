@@ -16,6 +16,7 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
+#include <algorithm>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -127,4 +128,21 @@ void media::TrackListImplementation::remove_track(const media::Track::Id& id)
 void media::TrackListImplementation::go_to(const media::Track::Id& track)
 {
     (void) track;
+}
+
+void media::TrackListImplementation::shuffle_tracks()
+{
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+
+    auto result = tracks().update([](TrackList::Container& container)
+    {
+        std::cout << "Shuffling the track container" << std::endl;
+        std::random_shuffle(container.begin(), container.end());
+        return true;
+    });
+
+    if (result)
+    {
+        on_track_list_replaced()();
+    }
 }

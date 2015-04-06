@@ -63,7 +63,8 @@ void media::TestTrackList::create_new_player_session()
 
 void media::TestTrackList::destroy_player_session()
 {
-    // TODO: for Monday, explicitly add a destroy session to the Service class
+    // TODO: explicitly add a destroy session to the Service class after ricmm lands his new creation_session
+    // that returns a session ID. This will allow me to clear the tracklist after each test.
     m_hubPlayerSession.reset();
 }
 
@@ -95,7 +96,7 @@ void media::TestTrackList::test_basic_playback(const std::string &uri1, const st
         cout << "Added track to TrackList with Id: " << new_id << endl;
     });
 #endif
-    create_new_player_session();
+    //create_new_player_session();
 
     m_hubPlayerSession->open_uri(uri1);
     if (!uri2.empty())
@@ -110,12 +111,12 @@ void media::TestTrackList::test_basic_playback(const std::string &uri1, const st
     if (m_hubPlayerSession->playback_status() == media::Player::PlaybackStatus::playing)
         cout << "Basic playback was successful" << endl;
 
-    destroy_player_session();
+    //destroy_player_session();
 }
 
 void media::TestTrackList::test_has_next_track(const std::string &uri1, const std::string &uri2)
 {
-    create_new_player_session();
+    //create_new_player_session();
 
     add_track(uri1);
     add_track(uri2);
@@ -134,7 +135,31 @@ void media::TestTrackList::test_has_next_track(const std::string &uri1, const st
     else
         cerr << "Playback did not start successfully" << endl;
 
-    destroy_player_session();
+    //destroy_player_session();
+}
+
+void media::TestTrackList::test_shuffle(const std::string &uri1, const std::string &uri2)
+{
+    add_track(uri1);
+    add_track(uri2);
+    add_track(uri1);
+    add_track(uri2);
+    add_track(uri1);
+    add_track(uri2);
+    add_track(uri1);
+    add_track(uri2);
+
+    m_hubPlayerSession->play();
+    m_hubPlayerSession->loop_status() = media::Player::LoopStatus::playlist;
+    m_hubPlayerSession->shuffle() = true;
+
+    if (m_hubPlayerSession->playback_status() == media::Player::PlaybackStatus::playing)
+    {
+        cout << "Waiting for first track to finish playing..." << endl;
+        wait_for_about_to_finish();
+    }
+    else
+        cerr << "Playback did not start successfully" << endl;
 }
 
 template<class T>
@@ -239,8 +264,10 @@ int main (int argc, char **argv)
     }
     else if (argc == 3)
     {
-        tracklist->test_basic_playback(argv[1], argv[2]);
-        tracklist->test_has_next_track(argv[1], argv[2]);
+        tracklist->create_new_player_session();
+        //tracklist->test_basic_playback(argv[1], argv[2]);
+        //tracklist->test_has_next_track(argv[1], argv[2]);
+        tracklist->test_shuffle(argv[1], argv[2]);
     }
     else
     {

@@ -315,7 +315,7 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
     Parent::can_go_next().set(true);
     Parent::is_video_source().set(false);
     Parent::is_audio_source().set(false);
-    Parent::is_shuffle().set(true);
+    Parent::shuffle().set(false);
     Parent::playback_rate().set(1.f);
     Parent::playback_status().set(Player::PlaybackStatus::null);
     Parent::loop_status().set(Player::LoopStatus::none);
@@ -359,7 +359,14 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
     Parent::loop_status().changed().connect([this](media::Player::LoopStatus loop_status)
     {
         std::cout << "Player::LoopStatus value changed: " << loop_status << std::endl;
-        d->track_list->set_loop_status(loop_status);
+        d->track_list->on_loop_status_changed(loop_status);
+    });
+
+    // When the client changes the shuffle setting, make sure to update the TrackList
+    Parent::shuffle().changed().connect([this](bool shuffle)
+    {
+        std::cout << "Player::Shuffle value changed: " << (shuffle ? "shuffling" : "not shuffling") << std::endl;
+        d->track_list->on_shuffle_changed(shuffle);
     });
 
     // Make sure that the audio_stream_role property gets updated on the Engine side

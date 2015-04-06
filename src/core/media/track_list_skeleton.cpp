@@ -236,14 +236,24 @@ core::Property<media::TrackList::Container>& media::TrackListSkeleton::tracks()
     return *d->tracks;
 }
 
-void media::TrackListSkeleton::set_loop_status(const core::ubuntu::media::Player::LoopStatus& loop_status)
+void media::TrackListSkeleton::on_loop_status_changed(const media::Player::LoopStatus& loop_status)
 {
     d->loop_status = loop_status;
 }
 
-core::ubuntu::media::Player::LoopStatus media::TrackListSkeleton::loop_status() const
+media::Player::LoopStatus media::TrackListSkeleton::loop_status() const
 {
     return d->loop_status;
+}
+
+void media::TrackListSkeleton::on_shuffle_changed(bool shuffle)
+{
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    if (shuffle)
+        // TODO: Store the original TrackList order
+        shuffle_tracks();
+    else
+        // TODO: Restore the original TrackList order
 }
 
 const core::Property<media::TrackList::Container>& media::TrackListSkeleton::tracks() const
@@ -253,6 +263,8 @@ const core::Property<media::TrackList::Container>& media::TrackListSkeleton::tra
 
 const core::Signal<void>& media::TrackListSkeleton::on_track_list_replaced() const
 {
+    // Print the TrackList instance
+    std::cout << *this << std::endl;
     return d->on_track_list_replaced;
 }
 
@@ -273,6 +285,8 @@ const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_changed
 
 core::Signal<void>& media::TrackListSkeleton::on_track_list_replaced()
 {
+    // Print the TrackList instance
+    std::cout << *this << std::endl;
     return d->on_track_list_replaced;
 }
 

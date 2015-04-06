@@ -137,6 +137,10 @@ void media::TrackListStub::go_to(const media::Track::Id& track)
         throw std::runtime_error("Problem adding track: " + op.error());
 }
 
+void media::TrackListStub::shuffle_tracks()
+{
+}
+
 const core::Signal<void>& media::TrackListStub::on_track_list_replaced() const
 {
     return d->on_track_list_replaced;

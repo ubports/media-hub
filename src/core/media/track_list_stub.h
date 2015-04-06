@@ -51,6 +51,8 @@ public:
 
     void go_to(const Track::Id& track);
 
+    void shuffle_tracks();
+
     const core::Signal<void>& on_track_list_replaced() const;
     const core::Signal<Track::Id>& on_track_added() const;
     const core::Signal<Track::Id>& on_track_removed() const;

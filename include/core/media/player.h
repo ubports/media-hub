@@ -149,7 +149,7 @@ class Player : public std::enable_shared_from_this<Player>
     virtual const core::Property<PlaybackStatus>& playback_status() const = 0;
     virtual const core::Property<LoopStatus>& loop_status() const = 0;
     virtual const core::Property<PlaybackRate>& playback_rate() const = 0;
-    virtual const core::Property<bool>& is_shuffle() const = 0;
+    virtual const core::Property<bool>& shuffle() const = 0;
     virtual const core::Property<Track::MetaData>& meta_data_for_current_track() const = 0;
     virtual const core::Property<Volume>& volume() const = 0;
     virtual const core::Property<PlaybackRate>& minimum_playback_rate() const = 0;
@@ -162,7 +162,7 @@ class Player : public std::enable_shared_from_this<Player>
 
     virtual core::Property<LoopStatus>& loop_status() = 0;
     virtual core::Property<PlaybackRate>& playback_rate() = 0;
-    virtual core::Property<bool>& is_shuffle() = 0;
+    virtual core::Property<bool>& shuffle() = 0;
     virtual core::Property<Volume>& volume() = 0;
     virtual core::Property<AudioStreamRole>& audio_stream_role() = 0;
     virtual core::Property<Lifetime>& lifetime() = 0;

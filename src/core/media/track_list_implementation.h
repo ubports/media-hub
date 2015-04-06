@@ -43,6 +43,7 @@ public:
     void remove_track(const Track::Id& id);
 
     void go_to(const Track::Id& track);
+    void shuffle_tracks();
 
 private:
     struct Private;

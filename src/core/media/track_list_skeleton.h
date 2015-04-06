@@ -50,8 +50,12 @@ public:
     const core::Signal<Track::Id>& on_track_changed() const;
 
     core::Property<Container>& tracks();
-    void set_loop_status(const core::ubuntu::media::Player::LoopStatus& loop_status);
+    void on_loop_status_changed(const core::ubuntu::media::Player::LoopStatus& loop_status);
     core::ubuntu::media::Player::LoopStatus loop_status() const;
+
+    /** Gets called when the shuffle property on the Player interface is changed
+     * by the client */
+    void on_shuffle_changed(bool shuffle);
 
 protected:
     core::Property<bool>& can_edit_tracks();
