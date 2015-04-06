@@ -252,8 +252,9 @@ void media::TrackListSkeleton::on_shuffle_changed(bool shuffle)
     if (shuffle)
         // TODO: Store the original TrackList order
         shuffle_tracks();
-    else
+    //else
         // TODO: Restore the original TrackList order
+
 }
 
 const core::Property<media::TrackList::Container>& media::TrackListSkeleton::tracks() const
