@@ -250,10 +250,9 @@ void media::TrackListSkeleton::on_shuffle_changed(bool shuffle)
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
     if (shuffle)
-        // TODO: Store the original TrackList order
         shuffle_tracks();
-    //else
-        // TODO: Restore the original TrackList order
+    else
+        unshuffle_tracks();
 
 }
 

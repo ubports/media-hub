@@ -34,13 +34,16 @@ struct media::TrackListImplementation::Private
     dbus::types::ObjectPath path;
     MetaDataCache meta_data_cache;
     std::shared_ptr<media::Engine::MetaDataExtractor> extractor;
+    // Used for caching the original tracklist order to be used to restore the order
+    // to the live TrackList after shuffle is turned off
+    media::TrackList::Container original_tracklist;
 };
 
 media::TrackListImplementation::TrackListImplementation(
         const dbus::types::ObjectPath& op,
         const std::shared_ptr<media::Engine::MetaDataExtractor>& extractor)
     : media::TrackListSkeleton(op),
-      d(new Private{op, Private::MetaDataCache{}, extractor})
+      d(new Private{op, Private::MetaDataCache{}, extractor, media::TrackList::Container{}})
 {
     can_edit_tracks().set(true);
 }
@@ -134,10 +137,30 @@ void media::TrackListImplementation::shuffle_tracks()
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
 
-    auto result = tracks().update([](TrackList::Container& container)
+    auto result = tracks().update([this](TrackList::Container& container)
     {
+        media::TrackList::Container test;
+        std::cout << "Storing original TrackList order" << std::endl;
+        d->original_tracklist.assign(container.begin(), container.end());
         std::cout << "Shuffling the track container" << std::endl;
         std::random_shuffle(container.begin(), container.end());
+        return true;
+    });
+
+    if (result)
+    {
+        on_track_list_replaced()();
+    }
+}
+
+void media::TrackListImplementation::unshuffle_tracks()
+{
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+
+    auto result = tracks().update([this](TrackList::Container& container)
+    {
+        std::cout << "Restoring original TrackList order" << std::endl;
+        container.assign(d->original_tracklist.begin(), d->original_tracklist.end());
         return true;
     });
 

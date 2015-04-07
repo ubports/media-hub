@@ -141,6 +141,10 @@ void media::TrackListStub::shuffle_tracks()
 {
 }
 
+void media::TrackListStub::unshuffle_tracks()
+{
+}
+
 const core::Signal<void>& media::TrackListStub::on_track_list_replaced() const
 {
     return d->on_track_list_replaced;

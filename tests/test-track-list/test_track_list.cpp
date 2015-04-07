@@ -157,6 +157,12 @@ void media::TestTrackList::test_shuffle(const std::string &uri1, const std::stri
     {
         cout << "Waiting for first track to finish playing..." << endl;
         wait_for_about_to_finish();
+
+        cout << "Turning off shuffle mode" << endl;
+        m_hubPlayerSession->shuffle() = false;
+
+        cout << "Waiting for second track to finish playing..." << endl;
+        wait_for_about_to_finish();
     }
     else
         cerr << "Playback did not start successfully" << endl;

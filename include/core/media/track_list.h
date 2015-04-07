@@ -61,6 +61,7 @@ class TrackList : public std::enable_shared_from_this<TrackList>
 
     /** Reorders the tracks such that they are in a random order and sets playback to the first track in the list */
     virtual void shuffle_tracks() = 0;
+    virtual void unshuffle_tracks() = 0;
 
     virtual const core::Signal<void>& on_track_list_replaced() const = 0;
     virtual const core::Signal<Track::Id>& on_track_added() const = 0;
