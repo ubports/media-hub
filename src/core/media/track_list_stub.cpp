@@ -63,6 +63,7 @@ struct media::TrackListStub::Private
     core::Signal<Track::Id> on_track_added;
     core::Signal<Track::Id> on_track_removed;
     core::Signal<Track::Id> on_track_changed;
+    core::Signal<Track::Id> on_go_to_track;
 };
 
 media::TrackListStub::TrackListStub(
@@ -164,4 +165,9 @@ const core::Signal<media::Track::Id>& media::TrackListStub::on_track_removed() c
 const core::Signal<media::Track::Id>& media::TrackListStub::on_track_changed() const
 {
     return d->on_track_changed;
+}
+
+const core::Signal<media::Track::Id>& media::TrackListStub::on_go_to_track() const
+{
+    return d->on_go_to_track;
 }

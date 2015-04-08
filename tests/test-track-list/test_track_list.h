@@ -57,7 +57,7 @@ public:
     // that the Player advances the TrackList
     void test_has_next_track(const std::string &uri1, const std::string &uri2);
 
-    void test_shuffle(const std::string &uri1, const std::string &uri2);
+    void test_shuffle(const std::string &uri1, const std::string &uri2, const std::string &uri3);
 
 protected:
     // Synchronously verify that a signal is emitted waiting up to timeout milliseconds

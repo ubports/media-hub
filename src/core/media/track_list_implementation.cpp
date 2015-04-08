@@ -130,7 +130,9 @@ void media::TrackListImplementation::remove_track(const media::Track::Id& id)
 
 void media::TrackListImplementation::go_to(const media::Track::Id& track)
 {
-    (void) track;
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    on_go_to_track()(track);
+    on_track_changed()(track);
 }
 
 void media::TrackListImplementation::shuffle_tracks()

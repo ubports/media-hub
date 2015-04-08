@@ -101,6 +101,8 @@ struct media::TrackListSkeleton::Private
         media::Track::Id track;
         msg->reader() >> track;
 
+        std::cout << "Setting Track::Id: " << track << " to current track" << std::endl;
+        current_track = std::find(tracks->get().begin(), tracks->get().end(), track);
         impl->go_to(track);
 
         auto reply = dbus::Message::make_method_return(msg);
@@ -119,6 +121,7 @@ struct media::TrackListSkeleton::Private
     core::Signal<void> on_track_list_replaced;
     core::Signal<Track::Id> on_track_removed;
     core::Signal<Track::Id> on_track_changed;
+    core::Signal<Track::Id> on_go_to_track;
 
     mpris::TrackList::Skeleton skeleton;
 
@@ -283,6 +286,11 @@ const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_changed
     return d->on_track_changed;
 }
 
+const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_go_to_track() const
+{
+    return d->on_go_to_track;
+}
+
 core::Signal<void>& media::TrackListSkeleton::on_track_list_replaced()
 {
     // Print the TrackList instance
@@ -303,6 +311,11 @@ core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_removed()
 core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_changed()
 {
     return d->on_track_changed;
+}
+
+core::Signal<media::Track::Id>& media::TrackListSkeleton::on_go_to_track()
+{
+    return d->on_go_to_track;
 }
 
 // operator<< pretty prints the given TrackList to the given output stream.

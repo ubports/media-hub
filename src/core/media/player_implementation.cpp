@@ -65,7 +65,8 @@ struct media::PlayerImplementation<Parent>::Private :
           display_wakelock_count(0),
           previous_state(Engine::State::stopped),
           engine_state_change_connection(engine->state().changed().connect(make_state_change_handler())),
-          engine_playback_status_change_connection(engine->playback_status_changed_signal().connect(make_playback_status_change_handler()))
+          engine_playback_status_change_connection(engine->playback_status_changed_signal().connect(make_playback_status_change_handler())),
+          doing_go_to_track(false)
     {
         std::cout << "Creating new PlayerImplementation::Private" << std::endl;
         // Poor man's logging of release/acquire events.
@@ -299,6 +300,8 @@ struct media::PlayerImplementation<Parent>::Private :
     core::Signal<> on_client_disconnected;
     core::Connection engine_state_change_connection;
     core::Connection engine_playback_status_change_connection;
+    // Prevent the TrackList from auto advancing to the next track
+    std::atomic<bool> doing_go_to_track;
 };
 
 template<typename Parent>
@@ -392,15 +395,20 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
     {
         Parent::about_to_finish()();
 
-        // Make sure that the TrackList keeps advancing. The logic for what gets played next,
-        // if anything at all, occurs in TrackListSkeleton::next()
-        Track::UriType uri = d->track_list->query_uri_for_track(d->track_list->next());
-        if (!uri.empty())
+        if (!d->doing_go_to_track)
         {
-            std::cout << "Setting next track on playbin: " << uri << std::endl;
-            static const bool do_pipeline_reset = false;
-            d->engine->open_resource_for_uri(uri, do_pipeline_reset);
+            // Make sure that the TrackList keeps advancing. The logic for what gets played next,
+            // if anything at all, occurs in TrackListSkeleton::next()
+            const Track::UriType uri = d->track_list->query_uri_for_track(d->track_list->next());
+            if (!uri.empty())
+            {
+                std::cout << "Setting next track on playbin: " << uri << std::endl;
+                static const bool do_pipeline_reset = false;
+                d->engine->open_resource_for_uri(uri, do_pipeline_reset);
+            }
         }
+        else
+            std::cout << "Not auto-advancing the TrackList since doing_go_to_track is true" << std::endl;
     });
 
     d->engine->client_disconnected_signal().connect([this]()
@@ -430,6 +438,29 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
     d->engine->error_signal().connect([this](const Player::Error& e)
     {
         Parent::error()(e);
+    });
+
+    d->track_list->on_go_to_track().connect([this](const media::Track::Id& id)
+    {
+        // This prevents the TrackList from auto advancing in other areas such as the about_to_finish signal
+        // handler.
+        d->doing_go_to_track = true;
+
+        std::cout << "** on_go_to_track was signaled in PlayerImplementation, stopping playback" << std::endl;
+        d->engine->stop();
+
+        const Track::UriType uri = d->track_list->query_uri_for_track(id);
+        if (!uri.empty())
+        {
+            std::cout << "Setting next track on playbin (on_go_to_track signal): " << uri << std::endl;
+            std::cout << "\twith a Track::Id: " << id << std::endl;
+            static const bool do_pipeline_reset = true;
+            d->engine->open_resource_for_uri(uri, do_pipeline_reset);
+        }
+
+        d->engine->play();
+
+        d->doing_go_to_track = false;
     });
 
     // Everything is setup, we now subscribe to death notifications.

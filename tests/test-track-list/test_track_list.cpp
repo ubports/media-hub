@@ -138,14 +138,14 @@ void media::TestTrackList::test_has_next_track(const std::string &uri1, const st
     //destroy_player_session();
 }
 
-void media::TestTrackList::test_shuffle(const std::string &uri1, const std::string &uri2)
+void media::TestTrackList::test_shuffle(const std::string &uri1, const std::string &uri2, const std::string &uri3)
 {
     add_track(uri1);
     add_track(uri2);
-    add_track(uri1);
+    add_track(uri3);
+    add_track(uri3);
     add_track(uri2);
     add_track(uri1);
-    add_track(uri2);
     add_track(uri1);
     add_track(uri2);
 
@@ -162,6 +162,12 @@ void media::TestTrackList::test_shuffle(const std::string &uri1, const std::stri
         m_hubPlayerSession->shuffle() = false;
 
         cout << "Waiting for second track to finish playing..." << endl;
+        wait_for_about_to_finish();
+
+        cout << "Going straight to the Track with Id of '/core/ubuntu/media/Service/sessions/0/TrackList/4'" << std::endl;
+        media::Track::Id id{"/core/ubuntu/media/Service/sessions/0/TrackList/4"};
+        m_hubTrackList->go_to(id);
+        cout << "Waiting for third track to finish playing..." << endl;
         wait_for_about_to_finish();
     }
     else
@@ -266,19 +272,24 @@ int main (int argc, char **argv)
 
     if (argc == 2)
     {
+        tracklist->create_new_player_session();
         tracklist->test_basic_playback(argv[1]);
     }
     else if (argc == 3)
     {
         tracklist->create_new_player_session();
-        //tracklist->test_basic_playback(argv[1], argv[2]);
-        //tracklist->test_has_next_track(argv[1], argv[2]);
-        tracklist->test_shuffle(argv[1], argv[2]);
+        tracklist->test_basic_playback(argv[1], argv[2]);
+        tracklist->test_has_next_track(argv[1], argv[2]);
+    }
+    else if (argc == 4)
+    {
+        tracklist->create_new_player_session();
+        tracklist->test_shuffle(argv[1], argv[2], argv[3]);
     }
     else
     {
         cout << "Can't test TrackList, no track(s) specified." << endl;
-        cout << argv[0] << " <track_uri_1> [<track_uri_2>]" << endl;
+        cout << argv[0] << " <track_uri_1> [<track_uri_2>] [<track_uri_3>]" << endl;
     }
 
     return 0;
