@@ -54,7 +54,7 @@ public:
     void shuffle_tracks();
     void unshuffle_tracks();
 
-    const core::Signal<void>& on_track_list_replaced() const;
+    const core::Signal<ContainerTrackIdTuple>& on_track_list_replaced() const;
     const core::Signal<Track::Id>& on_track_added() const;
     const core::Signal<Track::Id>& on_track_removed() const;
     const core::Signal<Track::Id>& on_track_changed() const;

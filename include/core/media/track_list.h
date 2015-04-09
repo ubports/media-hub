@@ -39,6 +39,7 @@ class TrackList : public std::enable_shared_from_this<TrackList>
 {
   public:
     typedef std::vector<Track::Id> Container;
+    typedef std::tuple<std::vector<Track::Id>, Track::Id> ContainerTrackIdTuple;
     typedef Container::iterator Iterator;
     typedef Container::const_iterator ConstIterator;
 
@@ -52,30 +53,39 @@ class TrackList : public std::enable_shared_from_this<TrackList>
 
     /** If set to false, calling add_track_with_uri_at or remove_track will have no effect. */
     virtual const core::Property<bool>& can_edit_tracks() const = 0;
+
     /** An array which contains the identifier of each track in the tracklist, in order. */
     virtual const core::Property<Container>& tracks() const = 0;
 
     /** Gets all the metadata available for a given Track. */
     virtual Track::MetaData query_meta_data_for_track(const Track::Id& id) = 0;
+
     /** Adds a URI in the TrackList. */
     virtual void add_track_with_uri_at(const Track::UriType& uri, const Track::Id& position, bool make_current) = 0;
+
     /** Removes a Track from the TrackList. */
     virtual void remove_track(const Track::Id& id) = 0;
 
     /** Skip to the specified TrackId. */
     virtual void go_to(const Track::Id& track) = 0;
 
+
     /** Reorders the tracks such that they are in a random order. */
     virtual void shuffle_tracks() = 0;
+
     /** Restores the original order of tracks before shuffle mode was turned on. */
     virtual void unshuffle_tracks() = 0;
 
+
     /** Indicates that the entire tracklist has been replaced. */
-    virtual const core::Signal<void>& on_track_list_replaced() const = 0;
+    virtual const core::Signal<ContainerTrackIdTuple>& on_track_list_replaced() const = 0;
+
     /** Indicates that a track has been added to the track list. */
     virtual const core::Signal<Track::Id>& on_track_added() const = 0;
+
     /** Indicates that a track has been removed from the track list. */
     virtual const core::Signal<Track::Id>& on_track_removed() const = 0;
+
     /** Indicates that the track list advanced from one track to another. */
     virtual const core::Signal<Track::Id>& on_track_changed() const = 0;
 

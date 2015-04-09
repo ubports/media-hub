@@ -56,7 +56,9 @@ struct media::TrackListSkeleton::Private
           skeleton{mpris::TrackList::Skeleton::Configuration{object, mpris::TrackList::Skeleton::Configuration::Defaults{}}},
           signals
           {
-              skeleton.signals.track_added
+              skeleton.signals.track_added,
+              skeleton.signals.track_removed,
+              skeleton.signals.tracklist_replaced
           }
     {
         std::cout << "Creating new TrackListSkeleton::Private" << std::endl;
@@ -118,27 +120,43 @@ struct media::TrackListSkeleton::Private
     TrackList::ConstIterator empty_iterator;
     media::Player::LoopStatus loop_status;
 
-    core::Signal<void> on_track_list_replaced;
-    core::Signal<Track::Id> on_track_removed;
-    core::Signal<Track::Id> on_track_changed;
-    core::Signal<Track::Id> on_go_to_track;
-
     mpris::TrackList::Skeleton skeleton;
 
     struct Signals
     {
         typedef core::dbus::Signal<mpris::TrackList::Signals::TrackAdded, mpris::TrackList::Signals::TrackAdded::ArgumentType> DBusTrackAddedSignal;
+        typedef core::dbus::Signal<mpris::TrackList::Signals::TrackRemoved, mpris::TrackList::Signals::TrackRemoved::ArgumentType> DBusTrackRemovedSignal;
+        typedef core::dbus::Signal<mpris::TrackList::Signals::TrackListReplaced, mpris::TrackList::Signals::TrackListReplaced::ArgumentType> DBusTrackListReplacedSignal;
 
-        Signals(const std::shared_ptr<DBusTrackAddedSignal>& remote_track_added)
+        Signals(const std::shared_ptr<DBusTrackAddedSignal>& remote_track_added,
+                const std::shared_ptr<DBusTrackRemovedSignal>& remote_track_removed,
+                const std::shared_ptr<DBusTrackListReplacedSignal>& remote_track_list_replaced)
         {
+            // Connect all of the MPRIS interface signals to be emitted over dbus
             on_track_added.connect([remote_track_added](const media::Track::Id &id)
             {
                 std::cout << "Emitting remote_track_added()" << std::endl;
                 remote_track_added->emit(id);
             });
+
+            on_track_removed.connect([remote_track_removed](const media::Track::Id &id)
+            {
+                std::cout << "Emitting remote_track_removed()" << std::endl;
+                remote_track_removed->emit(id);
+            });
+
+            on_track_list_replaced.connect([remote_track_list_replaced](const media::TrackList::ContainerTrackIdTuple &tltuple)
+            {
+                std::cout << "Emitting remote_track_list_replaced()" << std::endl;
+                remote_track_list_replaced->emit(tltuple);
+            });
         }
 
         core::Signal<Track::Id> on_track_added;
+        core::Signal<Track::Id> on_track_removed;
+        core::Signal<TrackList::ContainerTrackIdTuple> on_track_list_replaced;
+        core::Signal<Track::Id> on_track_changed;
+        core::Signal<Track::Id> on_go_to_track;
     } signals;
 };
 
@@ -264,11 +282,11 @@ const core::Property<media::TrackList::Container>& media::TrackListSkeleton::tra
     return *d->tracks;
 }
 
-const core::Signal<void>& media::TrackListSkeleton::on_track_list_replaced() const
+const core::Signal<media::TrackList::ContainerTrackIdTuple>& media::TrackListSkeleton::on_track_list_replaced() const
 {
     // Print the TrackList instance
     std::cout << *this << std::endl;
-    return d->on_track_list_replaced;
+    return d->signals.on_track_list_replaced;
 }
 
 const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_added() const
@@ -278,24 +296,24 @@ const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_added()
 
 const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_removed() const
 {
-    return d->on_track_removed;
+    return d->signals.on_track_removed;
 }
 
 const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_changed() const
 {
-    return d->on_track_changed;
+    return d->signals.on_track_changed;
 }
 
 const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_go_to_track() const
 {
-    return d->on_go_to_track;
+    return d->signals.on_go_to_track;
 }
 
-core::Signal<void>& media::TrackListSkeleton::on_track_list_replaced()
+core::Signal<media::TrackList::ContainerTrackIdTuple>& media::TrackListSkeleton::on_track_list_replaced()
 {
     // Print the TrackList instance
     std::cout << *this << std::endl;
-    return d->on_track_list_replaced;
+    return d->signals.on_track_list_replaced;
 }
 
 core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_added()
@@ -305,17 +323,17 @@ core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_added()
 
 core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_removed()
 {
-    return d->on_track_removed;
+    return d->signals.on_track_removed;
 }
 
 core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_changed()
 {
-    return d->on_track_changed;
+    return d->signals.on_track_changed;
 }
 
 core::Signal<media::Track::Id>& media::TrackListSkeleton::on_go_to_track()
 {
-    return d->on_go_to_track;
+    return d->signals.on_go_to_track;
 }
 
 // operator<< pretty prints the given TrackList to the given output stream.

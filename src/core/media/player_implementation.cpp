@@ -397,10 +397,11 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
 
         if (!d->doing_go_to_track)
         {
+            const media::Track::Id prev_track_id = d->track_list->current();
             // Make sure that the TrackList keeps advancing. The logic for what gets played next,
             // if anything at all, occurs in TrackListSkeleton::next()
             const Track::UriType uri = d->track_list->query_uri_for_track(d->track_list->next());
-            if (!uri.empty())
+            if (prev_track_id != d->track_list->current() && !uri.empty())
             {
                 std::cout << "Setting next track on playbin: " << uri << std::endl;
                 static const bool do_pipeline_reset = false;
@@ -461,6 +462,12 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         d->engine->play();
 
         d->doing_go_to_track = false;
+    });
+
+    d->track_list->on_track_removed().connect([this](const media::Track::Id& id)
+    {
+        std::cout << "Track removed, detected from Player" << std::endl;
+        (void) id;
     });
 
     // Everything is setup, we now subscribe to death notifications.

@@ -165,9 +165,32 @@ void media::TestTrackList::test_shuffle(const std::string &uri1, const std::stri
         wait_for_about_to_finish();
 
         cout << "Going straight to the Track with Id of '/core/ubuntu/media/Service/sessions/0/TrackList/4'" << std::endl;
-        media::Track::Id id{"/core/ubuntu/media/Service/sessions/0/TrackList/4"};
+        const media::Track::Id id{"/core/ubuntu/media/Service/sessions/0/TrackList/4"};
         m_hubTrackList->go_to(id);
         cout << "Waiting for third track to finish playing..." << endl;
+        wait_for_about_to_finish();
+    }
+    else
+        cerr << "Playback did not start successfully" << endl;
+}
+
+void media::TestTrackList::test_remove_track(const std::string &uri1, const std::string &uri2, const std::string &uri3)
+{
+    add_track(uri1);
+    add_track(uri2);
+    add_track(uri3);
+
+    m_hubPlayerSession->play();
+
+    if (m_hubPlayerSession->playback_status() == media::Player::PlaybackStatus::playing)
+    {
+        cout << "Waiting for first track to finish playing..." << endl;
+        wait_for_about_to_finish();
+
+        const media::Track::Id id{"/core/ubuntu/media/Service/sessions/0/TrackList/1"};
+        m_hubTrackList->remove_track(id);
+
+        cout << "Waiting for track after removed track to finish playing..." << endl;
         wait_for_about_to_finish();
     }
     else
@@ -285,6 +308,7 @@ int main (int argc, char **argv)
     {
         tracklist->create_new_player_session();
         tracklist->test_shuffle(argv[1], argv[2], argv[3]);
+        tracklist->test_remove_track(argv[1], argv[2], argv[3]);
     }
     else
     {

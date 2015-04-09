@@ -1,5 +1,5 @@
 /*
- * Copyright © 2013 Canonical Ltd.
+ * Copyright © 2013-2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <stdio.h>
 #include <stdlib.h>
+#include <tuple>
 
 #include "track_list_implementation.h"
 
@@ -141,7 +142,6 @@ void media::TrackListImplementation::shuffle_tracks()
 
     auto result = tracks().update([this](TrackList::Container& container)
     {
-        media::TrackList::Container test;
         std::cout << "Storing original TrackList order" << std::endl;
         d->original_tracklist.assign(container.begin(), container.end());
         std::cout << "Shuffling the track container" << std::endl;
@@ -151,7 +151,8 @@ void media::TrackListImplementation::shuffle_tracks()
 
     if (result)
     {
-        on_track_list_replaced()();
+        media::TrackList::ContainerTrackIdTuple t{std::make_tuple(tracks().get(), current())};
+        on_track_list_replaced()(t);
     }
 }
 
@@ -168,6 +169,7 @@ void media::TrackListImplementation::unshuffle_tracks()
 
     if (result)
     {
-        on_track_list_replaced()();
+        media::TrackList::ContainerTrackIdTuple t{std::make_tuple(tracks().get(), current())};
+        on_track_list_replaced()(t);
     }
 }

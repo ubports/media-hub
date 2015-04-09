@@ -61,7 +61,7 @@ struct TrackList
         (
             TrackListReplaced,
             TrackList,
-            BOOST_IDENTITY_TYPE((std::tuple<std::vector<dbus::types::ObjectPath>, dbus::types::ObjectPath>))
+            BOOST_IDENTITY_TYPE((std::tuple<std::vector<core::ubuntu::media::Track::Id>, core::ubuntu::media::Track::Id>))
         )
 
         DBUS_CPP_SIGNAL_DEF
@@ -75,7 +75,7 @@ struct TrackList
         (
             TrackRemoved,
             TrackList,
-            dbus::types::ObjectPath
+            core::ubuntu::media::Track::Id
         )
 
         DBUS_CPP_SIGNAL_DEF

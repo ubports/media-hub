@@ -59,6 +59,8 @@ public:
 
     void test_shuffle(const std::string &uri1, const std::string &uri2, const std::string &uri3);
 
+    void test_remove_track(const std::string &uri1, const std::string &uri2, const std::string &uri3);
+
 protected:
     // Synchronously verify that a signal is emitted waiting up to timeout milliseconds
     template<class T>

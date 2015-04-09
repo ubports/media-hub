@@ -59,7 +59,7 @@ struct media::TrackListStub::Private
     std::shared_ptr<core::dbus::Property<mpris::TrackList::Properties::CanEditTracks>> can_edit_tracks;
     std::shared_ptr<core::dbus::Property<mpris::TrackList::Properties::Tracks>> tracks;
 
-    core::Signal<void> on_track_list_replaced;
+    core::Signal<media::TrackList::ContainerTrackIdTuple> on_track_list_replaced;
     core::Signal<Track::Id> on_track_added;
     core::Signal<Track::Id> on_track_removed;
     core::Signal<Track::Id> on_track_changed;
@@ -146,8 +146,9 @@ void media::TrackListStub::unshuffle_tracks()
 {
 }
 
-const core::Signal<void>& media::TrackListStub::on_track_list_replaced() const
+const core::Signal<media::TrackList::ContainerTrackIdTuple>& media::TrackListStub::on_track_list_replaced() const
 {
+    std::cout << "Signal on_track_list_replaced arrived via the bus" << std::endl;
     return d->on_track_list_replaced;
 }
 
@@ -159,6 +160,7 @@ const core::Signal<media::Track::Id>& media::TrackListStub::on_track_added() con
 
 const core::Signal<media::Track::Id>& media::TrackListStub::on_track_removed() const
 {
+    std::cout << "Signal on_track_removed arrived via the bus" << std::endl;
     return d->on_track_removed;
 }
 
