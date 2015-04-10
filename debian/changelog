@@ -1,8 +1,155 @@
-media-hub (3.0.0) UNRELEASED; urgency=medium
+media-hub (3.0.0+15.04.20150402-0ubuntu1) vivid; urgency=medium
 
+  [ Jim Hodapp ]
+  * Fix the bug which caused music playback to start playing again after
+    a phonecall hung up after being auto-paused by disconnecting a
+    headphone jack.
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Thu, 02 Apr 2015 16:43:42 +0000
+
+media-hub (3.0.0+15.04.20150320-0ubuntu1) vivid; urgency=medium
+
+  [ Thomas Voss ]
   * Refactor client-facing interfaces to pull out explicit dependency on hybris-based media layer.
 
- -- Thomas Voss <thomas.voss@canonical.com>  Tue, 11 Nov 2014 17:15:52 +0100
+  [ CI Train Bot ]
+  * New rebuild forced.
+
+  [ Jim Hodapp ]
+  * Disconnect playback_status_changed_signal in ~Private() to avoid a
+    deadlock.
+  * Prevent a 0 position from being reported to the app which happens
+    while seeking. Covers bad behavior that happens from GStreamer. Also
+    expose the about_to_finish signal to the client. Enable playback
+    again after manually seeking all the way to EOS. Also only send
+    VideoDimensionsChanged signal only when necessary.
+
+  [ Ricardo Mendoza ]
+  * Add an interface apparmor::ubuntu::RequestAuthenticator that is used
+    to authenticate incoming open uri requests. Add an interface
+    apparmor::ubuntu::RequestContextResolver that is used to resolve a
+    dbus name to an apparmor::ubuntu::Context. Provide an implementation
+    apparmor::ubuntu::ExistingAuthenticator that takes the impl. from
+    player_skeleton.cpp and uses it to implement the interface. Provide
+    an implementation apparmor::ubuntu::RequestContextResolver that
+    reaches out to the dbus daemon to resolve a given bus name to an
+    apparmor profile. Remove obsolete query for the apparmor profile in
+    ServiceSkeleton. Adjust the implementation in media::PlayerSkeleton
+    to rely on Request{Authenticator, ContextResolver}. removed:
+    src/core/media/apparmor.h added: src/core/media/apparmor/
+    src/core/media/apparmor/context.cpp
+    src/core/media/apparmor/context.h src/core/media/apparmor/dbus.h
+    src/core/media/apparmor/ubuntu.cpp src/core/media/apparmor/ubuntu.h
+  * Introduce an interface media::audio::OutputObserver that allows the
+    core classes to observer the state of external audio outputs
+    (headphones/headsets). Provide an implementation of
+    media::audio::OutputObserver that relies on Pulseaudio to monitor
+    the availability of ports on the default sink. Adjust
+    media::ServiceImplementation to use media::audio::OutputObserver,
+    defaulting to media::audio::PulseAudioOutputObserver.
+  * Migrate all Player DBus methods to use transact_method() instead of
+    invoke_method_synchronously(), to prevent bus executor deadlocks.
+
+  [ Ricardo Salveti de Araujo ]
+  * Add an interface apparmor::ubuntu::RequestAuthenticator that is used
+    to authenticate incoming open uri requests. Add an interface
+    apparmor::ubuntu::RequestContextResolver that is used to resolve a
+    dbus name to an apparmor::ubuntu::Context. Provide an implementation
+    apparmor::ubuntu::ExistingAuthenticator that takes the impl. from
+    player_skeleton.cpp and uses it to implement the interface. Provide
+    an implementation apparmor::ubuntu::RequestContextResolver that
+    reaches out to the dbus daemon to resolve a given bus name to an
+    apparmor profile. Remove obsolete query for the apparmor profile in
+    ServiceSkeleton. Adjust the implementation in media::PlayerSkeleton
+    to rely on Request{Authenticator, ContextResolver}. removed:
+    src/core/media/apparmor.h added: src/core/media/apparmor/
+    src/core/media/apparmor/context.cpp
+    src/core/media/apparmor/context.h src/core/media/apparmor/dbus.h
+    src/core/media/apparmor/ubuntu.cpp src/core/media/apparmor/ubuntu.h
+  * Move src/core/media/call-monitor to src/core/media/telephony.
+    Introduce a proper interface media::telephony::CallMonitor. Slightly
+    adjust existing implementation based on Qt. Adjust
+    media::ServiceImplementation to account for changes in
+    media::telephony::CallMonitor.
+
+  [ thomas-voss ]
+  * Add an interface apparmor::ubuntu::RequestAuthenticator that is used
+    to authenticate incoming open uri requests. Add an interface
+    apparmor::ubuntu::RequestContextResolver that is used to resolve a
+    dbus name to an apparmor::ubuntu::Context. Provide an implementation
+    apparmor::ubuntu::ExistingAuthenticator that takes the impl. from
+    player_skeleton.cpp and uses it to implement the interface. Provide
+    an implementation apparmor::ubuntu::RequestContextResolver that
+    reaches out to the dbus daemon to resolve a given bus name to an
+    apparmor profile. Remove obsolete query for the apparmor profile in
+    ServiceSkeleton. Adjust the implementation in media::PlayerSkeleton
+    to rely on Request{Authenticator, ContextResolver}. removed:
+    src/core/media/apparmor.h added: src/core/media/apparmor/
+    src/core/media/apparmor/context.cpp
+    src/core/media/apparmor/context.h src/core/media/apparmor/dbus.h
+    src/core/media/apparmor/ubuntu.cpp src/core/media/apparmor/ubuntu.h
+  * Add an interface media::ClientDeathObserver that abstracts away
+    receiving key-based death notifications for clients associated to
+    media::Player instances server-side Provide an implementation
+    media::HybrisClientDeathObserver that relies on hybris and
+    ultimately on Android's onBinderDied to receive death notifications.
+    Adjust media::PlayerStub and media::PlayerImplementation to account
+    for the new interface. Adjust the CMake setup for tests to link
+    media-hub-service instead of recompiling large parts of the
+    implementation classes.
+  * Decouple PlayerSkeleton and PlayerImplementation by making
+    PlayerImplementation being able to inherit from arbitrary base
+    classes, as long as they provide the set of properties and signals
+    defined by media::Player.
+  * Decouple the ServiceSkeleton from the ServiceImplementation by
+    introducing a common interface media::KeyedPlayerStore for storing
+    running Player sessions indexed by the Player::Key. Provide a
+    default implementation HashedKeyedPlayerStore relying on a hash map
+    for keeping track of player instances. Adjust implementation to
+    account for ServiceImplementation no longer inheriting from
+    ServiceSkeleton.
+  * Introduce a common class media::helper::ExternalHelpers that
+    provides a convenient way to:
+  * Introduce an interface media::RecorderObserver that allows the core
+    classes to monitor the overall state of the system. Provide an
+    implementation of media::RecorderObserver relying on Hybris to
+    interface with the Android side. Adjust the ServiceImplementation to
+    connect to the platform-default media::RecorderObserver.
+  * Introduce an interface media::audio::OutputObserver that allows the
+    core classes to observer the state of external audio outputs
+    (headphones/headsets). Provide an implementation of
+    media::audio::OutputObserver that relies on Pulseaudio to monitor
+    the availability of ports on the default sink. Adjust
+    media::ServiceImplementation to use media::audio::OutputObserver,
+    defaulting to media::audio::PulseAudioOutputObserver.
+  * Introduce an interface media::power::BatteryObserver to monitor the
+    current battery level of the system. The core reacts to low/very low
+    battery levels by pausing all multimedia playback sessions and
+    resumes them whenever the user has been notified of the critical
+    battery level. Provide an implementation of
+    media::power::BatteryObserver using
+    com.canonical.indicator.power.Battery. Adjust
+    media::ServiceImplementation to use media::power::BatteryObserver.
+  * Move gstreamer::Playbin implementation to its own cpp file, thus
+    internalizing the Hybris setup portions. Make sure that media-hub-
+    service knows about
+    media::Player::Error::OutOfProcessBufferStreamingNotSupported by
+    linking with media-hub-client.
+  * Move src/core/media/call-monitor to src/core/media/telephony.
+    Introduce a proper interface media::telephony::CallMonitor. Slightly
+    adjust existing implementation based on Qt. Adjust
+    media::ServiceImplementation to account for changes in
+    media::telephony::CallMonitor.
+  * Replace home-grown mask type for the video size with a std::tuple,
+    i.e., media::video::Dimensions. Introduce a simple TaggedInteger
+    class to distinguish between Width, Height and other dimensions.
+    Adjust interfaces of media::Player to rely on the new type. Adjust
+    implementation classes to account for interface changes. Adjust
+    Codec implementation for sending the tagged integer via the bus.
+    Adjust gstreamer::Engine and gstreamer::Playbin to hand out the
+    correct types.
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Fri, 20 Mar 2015 13:16:48 +0000
 
 media-hub (2.0.0+15.04.20150303-0ubuntu2) vivid; urgency=medium
 
