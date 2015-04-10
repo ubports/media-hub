@@ -465,6 +465,15 @@ media::PlayerImplementation<Parent>::~PlayerImplementation()
 }
 
 template<typename Parent>
+void media::PlayerImplementation<Parent>::reconnect()
+{
+    // FIXME do whatevr needs to be done to reconnect client signals in here
+    fprintf(stderr, "%s():%d\n", __func__, __LINE__);
+    d->config.client_death_observer->register_for_death_notifications_with_key(d->config.key);
+    fprintf(stderr, "%s():%d\n", __func__, __LINE__);
+}
+
+template<typename Parent>
 std::shared_ptr<media::TrackList> media::PlayerImplementation<Parent>::track_list()
 {
     return d->track_list;

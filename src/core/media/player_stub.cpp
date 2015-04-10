@@ -218,6 +218,11 @@ media::PlayerStub::~PlayerStub()
 {
 }
 
+void media::PlayerStub::reconnect()
+{
+    // No implementation
+}
+
 std::shared_ptr<media::TrackList> media::PlayerStub::track_list()
 {
     if (!d->track_list)

@@ -55,6 +55,8 @@ public:
     PlayerImplementation(const Configuration& configuration);
     ~PlayerImplementation();
 
+    virtual void reconnect();
+
     virtual std::shared_ptr<TrackList> track_list();
     virtual Player::PlayerKey key() const;
 

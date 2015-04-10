@@ -43,6 +43,8 @@ class PlayerStub : public Player
 
     ~PlayerStub();
 
+    virtual void reconnect();
+
     virtual std::shared_ptr<TrackList> track_list();
     virtual PlayerKey key() const;
 

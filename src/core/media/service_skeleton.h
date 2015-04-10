@@ -19,6 +19,8 @@
 #ifndef CORE_UBUNTU_MEDIA_SERVICE_SKELETON_H_
 #define CORE_UBUNTU_MEDIA_SERVICE_SKELETON_H_
 
+#include "apparmor/ubuntu.h"
+
 #include <core/media/service.h>
 
 #include "cover_art_resolver.h"
@@ -43,6 +45,7 @@ public:
     {
         std::shared_ptr<Service> impl;
         KeyedPlayerStore::Ptr player_store;
+        helper::ExternalServices& external_services;
         CoverArtResolver cover_art_resolver;
     };
 

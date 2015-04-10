@@ -123,7 +123,7 @@ int main()
     {
         impl,
         player_store,
-
+        external_services
     });
 
     std::thread service_worker
