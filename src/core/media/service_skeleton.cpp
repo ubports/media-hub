@@ -135,7 +135,7 @@ struct media::ServiceSkeleton::Private
 
             request_context_resolver->resolve_context_for_dbus_name_async(msg->sender(), [this, key, msg](const media::apparmor::ubuntu::Context& context)
             {
-                fprintf(stderr, "RICMM: %s():%d -- Inserting app_name='%s', attached=TRUE\n", __func__, __LINE__, context.str().c_str());
+                fprintf(stderr, "%s():%d -- app_name='%s', attached\n", __func__, __LINE__, context.str().c_str());
                 player_owner_map.insert(std::make_pair(key, std::make_tuple(context.str(), true, msg->sender())));
             });
             
@@ -207,7 +207,7 @@ struct media::ServiceSkeleton::Private
                 request_context_resolver->resolve_context_for_dbus_name_async(msg->sender(), [this, msg, key, op](const media::apparmor::ubuntu::Context& context)
                 {
                     auto info = player_owner_map.at(key);
-                    fprintf(stderr, "RICMM: %s():%d -- Reattaching app_name='%s', info='%s', '%s'\n", __func__, __LINE__, context.str().c_str(), std::get<0>(info).c_str(), std::get<2>(info).c_str());
+                    fprintf(stderr, "%s():%d -- reattach app_name='%s', info='%s', '%s'\n", __func__, __LINE__, context.str().c_str(), std::get<0>(info).c_str(), std::get<2>(info).c_str());
                     if (std::get<0>(info) == context.str()) {
                         std::get<1>(info) = true; // Set to Attached
                         std::get<2>(info) = msg->sender(); // Register new owner
@@ -275,7 +275,7 @@ struct media::ServiceSkeleton::Private
                 request_context_resolver->resolve_context_for_dbus_name_async(msg->sender(), [this, msg, key](const media::apparmor::ubuntu::Context& context)
                 {
                     auto info = player_owner_map.at(key);
-                    fprintf(stderr, "RICMM: %s():%d -- Destroying app_name='%s', info='%s', '%s'\n", __func__, __LINE__, context.str().c_str(), std::get<0>(info).c_str(), std::get<2>(info).c_str());
+                    fprintf(stderr, "%s():%d -- Destroying app_name='%s', info='%s', '%s'\n", __func__, __LINE__, context.str().c_str(), std::get<0>(info).c_str(), std::get<2>(info).c_str());
                     if (std::get<0>(info) == context.str()) {
                         player_owner_map.erase(key);
 
