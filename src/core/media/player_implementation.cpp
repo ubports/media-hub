@@ -68,7 +68,6 @@ struct media::PlayerImplementation<Parent>::Private :
           engine_playback_status_change_connection(engine->playback_status_changed_signal().connect(make_playback_status_change_handler())),
           doing_go_to_track(false)
     {
-        std::cout << "Creating new PlayerImplementation::Private" << std::endl;
         // Poor man's logging of release/acquire events.
         display_state_lock->acquired().connect([](media::power::DisplayState state)
         {
@@ -102,7 +101,6 @@ struct media::PlayerImplementation<Parent>::Private :
         // by disconnecting the state change signal
         engine_state_change_connection.disconnect();
 
-        std::cout << "** Disconnecting playback_status_changed_signal connection";
         // The engine destructor can lead to a playback status change which will
         // trigger the playback status change handler. Ensure the handler is not called
         // by disconnecting the playback status change signal
@@ -309,7 +307,6 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
     : Parent{config.parent},
       d{std::make_shared<Private>(this, config)}
 {
-    std::cout << "Creating new PlayerImplementation::Private" << std::endl;
     // Initialize default values for Player interface properties
     Parent::can_play().set(true);
     Parent::can_pause().set(true);
@@ -417,6 +414,7 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         // If the client disconnects, make sure both wakelock types
         // are cleared
         d->clear_wakelocks();
+        d->track_list->reset();
         // And tell the outside world that the client has gone away
         d->on_client_disconnected();
     });
@@ -614,41 +612,6 @@ template<typename Parent>
 void media::PlayerImplementation<Parent>::emit_playback_status_changed(const media::Player::PlaybackStatus &status)
 {
     Parent::playback_status_changed()(status);
-}
-
-// operator<< pretty prints the given playback status to the given output stream.
-std::ostream& media::operator<<(std::ostream& out, media::Player::PlaybackStatus status)
-{
-    switch (status)
-    {
-        case media::Player::PlaybackStatus::null:
-            return out << "PlaybackStatus::null";
-        case media::Player::PlaybackStatus::ready:
-            return out << "PlaybackStatus::ready";
-        case media::Player::PlaybackStatus::playing:
-            return out << "PlaybackStatus::playing";
-        case media::Player::PlaybackStatus::paused:
-            return out << "PlaybackStatus::paused";
-        case media::Player::PlaybackStatus::stopped:
-            return out << "PlaybackStatus::stopped";
-    }
-
-    return out;
-}
-
-std::ostream& media::operator<<(std::ostream& out, media::Player::LoopStatus loop_status)
-{
-    switch (loop_status)
-    {
-        case media::Player::LoopStatus::none:
-            return out << "LoopStatus::none";
-        case media::Player::LoopStatus::track:
-            return out << "LoopStatus::track";
-        case media::Player::LoopStatus::playlist:
-            return out << "LoopStatus::playlist";
-    }
-
-    return out;
 }
 
 #include <core/media/player_skeleton.h>

@@ -45,6 +45,7 @@ public:
     void go_to(const Track::Id& track);
     void shuffle_tracks();
     void unshuffle_tracks();
+    void reset();
 
 private:
     struct Private;

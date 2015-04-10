@@ -140,10 +140,17 @@ void media::TrackListStub::go_to(const media::Track::Id& track)
 
 void media::TrackListStub::shuffle_tracks()
 {
+    std::cerr << "shuffle_tracks() does nothing from the client side" << std::endl;
 }
 
 void media::TrackListStub::unshuffle_tracks()
 {
+    std::cerr << "unshuffle_tracks() does nothing from the client side" << std::endl;
+}
+
+void media::TrackListStub::reset()
+{
+    std::cerr << "reset() does nothing from the client side" << std::endl;
 }
 
 const core::Signal<media::TrackList::ContainerTrackIdTuple>& media::TrackListStub::on_track_list_replaced() const

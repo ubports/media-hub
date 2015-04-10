@@ -90,12 +90,13 @@ void media::TestTrackList::add_track(const string &uri, bool make_current)
 #include <unistd.h>
 void media::TestTrackList::test_basic_playback(const std::string &uri1, const std::string &uri2)
 {
-#if 0
-    m_hubTrackList->on_track_added().connect([](const media::Track::Id &new_id)
+    cout << "--> Running test: test_basic_playback" << std::endl;
+
+    core::Connection c =m_hubTrackList->on_track_added().connect([](const media::Track::Id &new_id)
     {
         cout << "Added track to TrackList with Id: " << new_id << endl;
     });
-#endif
+
     //create_new_player_session();
 
     m_hubPlayerSession->open_uri(uri1);
@@ -109,13 +110,21 @@ void media::TestTrackList::test_basic_playback(const std::string &uri1, const st
     m_hubPlayerSession->loop_status() = media::Player::LoopStatus::none;
 
     if (m_hubPlayerSession->playback_status() == media::Player::PlaybackStatus::playing)
+    {
+        cout << "Waiting for first track to finish playing..." << endl;
+        wait_for_about_to_finish();
         cout << "Basic playback was successful" << endl;
+    }
+
+    c.disconnect();
 
     //destroy_player_session();
 }
 
 void media::TestTrackList::test_has_next_track(const std::string &uri1, const std::string &uri2)
 {
+    cout << "--> Running test: test_has_next_track" << std::endl;
+
     //create_new_player_session();
 
     add_track(uri1);
@@ -140,6 +149,8 @@ void media::TestTrackList::test_has_next_track(const std::string &uri1, const st
 
 void media::TestTrackList::test_shuffle(const std::string &uri1, const std::string &uri2, const std::string &uri3)
 {
+    cout << "--> Running test: test_shuffle" << std::endl;
+
     add_track(uri1);
     add_track(uri2);
     add_track(uri3);
@@ -176,6 +187,13 @@ void media::TestTrackList::test_shuffle(const std::string &uri1, const std::stri
 
 void media::TestTrackList::test_remove_track(const std::string &uri1, const std::string &uri2, const std::string &uri3)
 {
+    cout << "--> Running test: test_remove_track" << std::endl;
+
+    core::Connection c =m_hubTrackList->on_track_removed().connect([](const media::Track::Id &new_id)
+    {
+        cout << "Removed track from TrackList with Id: " << new_id << endl;
+    });
+
     add_track(uri1);
     add_track(uri2);
     add_track(uri3);
@@ -218,73 +236,61 @@ bool media::TestTrackList::verify_signal_is_emitted(const core::Signal<T> &signa
 
 void media::TestTrackList::wait_for_about_to_finish()
 {
-    std::thread t1([this]
+    bool received_about_to_finish = false;
+    core::Connection c = m_hubPlayerSession->about_to_finish().connect([&received_about_to_finish]()
     {
-        bool received_about_to_finish = false;
-        m_hubPlayerSession->about_to_finish().connect([&received_about_to_finish]()
-        {
-            cout << "AboutToFinish signaled" << endl;
-            received_about_to_finish = true;
-        });
-        while (!received_about_to_finish)
-            std::this_thread::yield();
+        cout << "AboutToFinish signaled" << endl;
+        received_about_to_finish = true;
     });
+    while (!received_about_to_finish)
+        std::this_thread::yield();
 
-    t1.join();
+    c.disconnect();
 }
 
 void media::TestTrackList::wait_for_end_of_stream()
 {
-    std::thread t1([this]
+    bool reached_end_of_first_track = false;
+    core::Connection c = m_hubPlayerSession->end_of_stream().connect([&reached_end_of_first_track]()
     {
-        bool reached_end_of_first_track = false;
-        m_hubPlayerSession->end_of_stream().connect([&reached_end_of_first_track]()
-        {
-            cout << "EndOfStream signaled" << endl;
-            reached_end_of_first_track = true;
-        });
-        while (!reached_end_of_first_track)
-            std::this_thread::yield();
+        cout << "EndOfStream signaled" << endl;
+        reached_end_of_first_track = true;
     });
+    while (!reached_end_of_first_track)
+        std::this_thread::yield();
 
-    t1.join();
+    c.disconnect();
 }
 
 void media::TestTrackList::wait_for_playback_status_changed(core::ubuntu::media::Player::PlaybackStatus status)
 {
-    std::thread t1([this, status]
+    bool received_playback_status_changed = false;
+    core::Connection c = m_hubPlayerSession->playback_status().changed().connect([&received_playback_status_changed, &status](media::Player::PlaybackStatus new_status)
     {
-        bool received_playback_status_changed = false;
-        m_hubPlayerSession->playback_status().changed().connect([&received_playback_status_changed, &status](media::Player::PlaybackStatus new_status)
-        {
-            cout << "PlaybackStatusChanged signaled" << endl;
-            if (new_status == status)
-                received_playback_status_changed = true;
-        });
-        while (!received_playback_status_changed)
-            std::this_thread::yield();
+        cout << "PlaybackStatusChanged signaled" << endl;
+        if (new_status == status)
+            received_playback_status_changed = true;
     });
+    while (!received_playback_status_changed)
+        std::this_thread::yield();
 
-    t1.join();
+    c.disconnect();
 }
 
 core::ubuntu::media::Track::Id media::TestTrackList::wait_for_on_track_added()
 {
     media::Track::Id id;
-    std::thread t1([this, &id]
+    bool received_on_track_added = false;
+    core::Connection c = m_hubTrackList->on_track_added().connect([&received_on_track_added, &id](const media::Track::Id &new_id)
     {
-        bool received_on_track_added = false;
-        m_hubTrackList->on_track_added().connect([&received_on_track_added, &id](const media::Track::Id &new_id)
-        {
-            cout << "OnTrackAdded signaled" << endl;
-            id = new_id;
-            received_on_track_added = true;
-        });
-        while (!received_on_track_added)
-            std::this_thread::yield();
+        cout << "OnTrackAdded signaled" << endl;
+        id = new_id;
+        received_on_track_added = true;
     });
+    while (!received_on_track_added)
+        std::this_thread::yield();
 
-    t1.join();
+    c.disconnect();
 
     return id;
 }
@@ -307,6 +313,8 @@ int main (int argc, char **argv)
     else if (argc == 4)
     {
         tracklist->create_new_player_session();
+        tracklist->test_basic_playback(argv[1]);
+        tracklist->test_has_next_track(argv[1], argv[2]);
         tracklist->test_shuffle(argv[1], argv[2], argv[3]);
         tracklist->test_remove_track(argv[1], argv[2], argv[3]);
     }

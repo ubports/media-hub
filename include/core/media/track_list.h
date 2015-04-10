@@ -24,7 +24,8 @@
 #include <core/signal.h>
 
 #include <functional>
-#include <list>
+#include <iosfwd>
+#include <vector>
 #include <memory>
 
 namespace core
@@ -76,6 +77,9 @@ class TrackList : public std::enable_shared_from_this<TrackList>
     /** Restores the original order of tracks before shuffle mode was turned on. */
     virtual void unshuffle_tracks() = 0;
 
+    /** Clears and resets the TrackList to the same as a newly constructed instance. */
+    virtual void reset() = 0;
+
 
     /** Indicates that the entire tracklist has been replaced. */
     virtual const core::Signal<ContainerTrackIdTuple>& on_track_list_replaced() const = 0;
@@ -95,6 +99,7 @@ class TrackList : public std::enable_shared_from_this<TrackList>
 protected:
     TrackList();
 };
+
 }
 }
 }

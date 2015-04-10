@@ -74,6 +74,7 @@ private:
 
 // operator<< pretty prints the given TrackList status to the given output stream.
 std::ostream& operator<<(std::ostream& out, const core::ubuntu::media::TrackList& tracklist);
+
 }
 }
 }

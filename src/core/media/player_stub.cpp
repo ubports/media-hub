@@ -153,7 +153,7 @@ struct media::PlayerStub::Private
         {
             dbus.seeked_to->connect([this](std::uint64_t value)
             {
-                std::cout << "seeked_to signal arrived via the bus." << std::endl;
+                std::cout << "SeekedTo signal arrived via the bus." << std::endl;
                 seeked_to(value);
             });
 
@@ -222,7 +222,6 @@ std::shared_ptr<media::TrackList> media::PlayerStub::track_list()
 {
     if (!d->track_list)
     {
-        std::cout << "object_path tracklist: " << d->object->path().as_string() + "/TrackList" << std::endl;
         d->track_list = std::make_shared<media::TrackListStub>(
                     shared_from_this(),
                     dbus::types::ObjectPath(d->object->path().as_string() + "/TrackList"));
@@ -425,7 +424,6 @@ core::Property<media::Player::PlaybackRate>& media::PlayerStub::playback_rate()
 
 core::Property<bool>& media::PlayerStub::shuffle()
 {
-    std::cout << "Returning a read/write shuffle instance" << std::endl;
     return *d->properties.shuffle;
 }
 

@@ -33,6 +33,7 @@ struct media::TrackListImplementation::Private
     typedef std::map<Track::Id, std::tuple<Track::UriType, Track::MetaData>> MetaDataCache;
 
     dbus::types::ObjectPath path;
+    size_t track_counter;
     MetaDataCache meta_data_cache;
     std::shared_ptr<media::Engine::MetaDataExtractor> extractor;
     // Used for caching the original tracklist order to be used to restore the order
@@ -44,7 +45,7 @@ media::TrackListImplementation::TrackListImplementation(
         const dbus::types::ObjectPath& op,
         const std::shared_ptr<media::Engine::MetaDataExtractor>& extractor)
     : media::TrackListSkeleton(op),
-      d(new Private{op, Private::MetaDataCache{}, extractor, media::TrackList::Container{}})
+      d(new Private{op, 0, Private::MetaDataCache{}, extractor, media::TrackList::Container{}})
 {
     can_edit_tracks().set(true);
 }
@@ -78,11 +79,9 @@ void media::TrackListImplementation::add_track_with_uri_at(
         const media::Track::Id& position,
         bool make_current)
 {
-    static size_t track_counter = 0;
-
     std::cout << __PRETTY_FUNCTION__ << std::endl;
 
-    std::stringstream ss; ss << d->path.as_string() << "/" << track_counter++;
+    std::stringstream ss; ss << d->path.as_string() << "/" << d->track_counter++;
     Track::Id id{ss.str()};
 
     auto result = tracks().update([this, id, position, make_current](TrackList::Container& container)
@@ -132,6 +131,7 @@ void media::TrackListImplementation::remove_track(const media::Track::Id& id)
 void media::TrackListImplementation::go_to(const media::Track::Id& track)
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
+    // Signal the Player instance to go to a specific track for playback
     on_go_to_track()(track);
     on_track_changed()(track);
 }
@@ -172,4 +172,20 @@ void media::TrackListImplementation::unshuffle_tracks()
         media::TrackList::ContainerTrackIdTuple t{std::make_tuple(tracks().get(), current())};
         on_track_list_replaced()(t);
     }
+}
+
+void media::TrackListImplementation::reset()
+{
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+
+    auto result = tracks().update([this](TrackList::Container& container)
+    {
+        std::cout << "Clearing the TrackList" << std::endl;
+        container.clear();
+        container.resize(0);
+        d->track_counter = 0;
+        return true;
+    });
+
+    (void) result;
 }

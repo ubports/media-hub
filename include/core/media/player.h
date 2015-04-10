@@ -27,6 +27,7 @@
 #include <core/property.h>
 
 #include <chrono>
+#include <iosfwd>
 #include <memory>
 
 namespace core
@@ -178,6 +179,42 @@ class Player : public std::enable_shared_from_this<Player>
     Player();
 
 };
+
+// operator<< pretty prints the given playback status to the given output stream.
+inline std::ostream& operator<<(std::ostream& out, Player::PlaybackStatus status)
+{
+    switch (status)
+    {
+        case Player::PlaybackStatus::null:
+            return out << "PlaybackStatus::null";
+        case Player::PlaybackStatus::ready:
+            return out << "PlaybackStatus::ready";
+        case Player::PlaybackStatus::playing:
+            return out << "PlaybackStatus::playing";
+        case Player::PlaybackStatus::paused:
+            return out << "PlaybackStatus::paused";
+        case Player::PlaybackStatus::stopped:
+            return out << "PlaybackStatus::stopped";
+    }
+
+    return out;
+}
+
+inline std::ostream& operator<<(std::ostream& out, Player::LoopStatus loop_status)
+{
+    switch (loop_status)
+    {
+        case Player::LoopStatus::none:
+            return out << "LoopStatus::none";
+        case Player::LoopStatus::track:
+            return out << "LoopStatus::track";
+        case Player::LoopStatus::playlist:
+            return out << "LoopStatus::playlist";
+    }
+
+    return out;
+}
+
 }
 }
 }
