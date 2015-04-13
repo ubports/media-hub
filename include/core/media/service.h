@@ -42,9 +42,25 @@ class Service : public std::enable_shared_from_this<Service>
     Service& operator=(const Service&) = delete;
     bool operator==(const Service&) const = delete;
 
+    /** @brief Creates a session with the media-hub service. */
     virtual std::shared_ptr<Player> create_session(const Player::Configuration&) = 0;
+
+    /** @brief Detaches a UUID-identified session for later resuming. */
+    virtual void detach_session(const std::string& uuid, const Player::Configuration&) = 0;
+
+    /** @brief Reattaches to a UUID-identified session that is in detached state. */
+    virtual std::shared_ptr<Player> reattach_session(const std::string& uuid, const Player::Configuration&) = 0;
+
+    /** @brief Asks the service to destroy a session. The session is destroyed when the client exits. */
+    virtual void destroy_session(const std::string& uuid, const Player::Configuration&) = 0;
+
+    /** @brief Creates a fixed-named session with the media-hub service. */
     virtual std::shared_ptr<Player> create_fixed_session(const std::string& name, const Player::Configuration&) = 0;
+
+    /** @brief Resumes a fixed-name session directly by player key. */
     virtual std::shared_ptr<Player> resume_session(Player::PlayerKey) = 0;
+
+    /** @brief Pauses sessions other than the supplied one. */
     virtual void pause_other_sessions(Player::PlayerKey) = 0;
 
   protected:
