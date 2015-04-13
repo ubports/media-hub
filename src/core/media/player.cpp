@@ -32,6 +32,7 @@ const media::Player::Configuration& media::Player::Client::default_configuration
     static const media::Player::Configuration config
     {
         0,
+        "",
         nullptr,
         nullptr
     };

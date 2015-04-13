@@ -66,8 +66,43 @@ std::shared_ptr<media::Player> media::ServiceStub::create_session(const media::P
     return std::shared_ptr<media::Player>(new media::PlayerStub
     {
         shared_from_this(),
-        access_service()->object_for_path(op.value())
+        access_service()->object_for_path(std::get<0>(op.value()))
+        std::get<1>(op.value())
     });
+}
+
+void media::ServiceStub::detach_session(const std::string& uuid, const media::Player::Configuration&)
+{
+    auto op = d->object->invoke_method_synchronously<mpris::Service::DetachSession,
+         void>(uuid);
+
+    if (op.is_error())
+        throw std::runtime_error("Problem detaching session: " + op.error());
+}
+
+std::shared_ptr<media::Player> media::ServiceStub::reattach_session(const std::string& uuid, const media::Player::Configuration&)
+{
+    auto op = d->object->invoke_method_synchronously<mpris::Service::ReattachSession,
+         dbus::types::ObjectPath>(uuid);
+
+    if (op.is_error())
+        throw std::runtime_error("Problem reattaching session: " + op.error());
+
+    return std::shared_ptr<media::Player>(new media::PlayerStub
+    {
+        shared_from_this(),
+        access_service()->object_for_path(op.value()),
+        uuid
+    });
+}
+
+void media::ServiceStub::destroy_session(const std::string& uuid, const media::Player::Configuration&)
+{
+    auto op = d->object->invoke_method_synchronously<mpris::Service::DestroySession,
+         void>(uuid);
+
+    if (op.is_error())
+        throw std::runtime_error("Problem creating session: " + op.error());
 }
 
 std::shared_ptr<media::Player> media::ServiceStub::create_fixed_session(const std::string& name, const media::Player::Configuration&)

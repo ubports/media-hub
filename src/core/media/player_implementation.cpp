@@ -521,6 +521,13 @@ media::PlayerImplementation<Parent>::~PlayerImplementation()
 }
 
 template<typename Parent>
+void media::PlayerImplementation<Parent>::reconnect()
+{
+    // TODO: Reconnect all signals that would've expired on session dettachment
+    d->config.client_death_observer->register_for_death_notifications_with_key(d->config.key);
+}
+
+template<typename Parent>
 std::shared_ptr<media::TrackList> media::PlayerImplementation<Parent>::track_list()
 {
     return d->track_list;

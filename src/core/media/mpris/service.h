@@ -48,6 +48,42 @@ struct Service
             }
         };
 
+        struct DetachingSession
+        {
+            static const std::string& name()
+            {
+                static const std::string s
+                {
+                    "core.ubuntu.media.Service.Error.DetachingSession"
+                };
+                return s;
+            }
+        };
+
+        struct ReattachingSession
+        {
+            static const std::string& name()
+            {
+                static const std::string s
+                {
+                    "core.ubuntu.media.Service.Error.ReattachingSession"
+                };
+                return s;
+            }
+        };
+
+        struct DestroyingSession
+        {
+            static const std::string& name()
+            {
+                static const std::string s
+                {
+                    "core.ubuntu.media.Service.Error.DestroyingSession"
+                };
+                return s;
+            }
+        };
+
         struct CreatingFixedSession
         {
             static const std::string& name()
@@ -74,6 +110,9 @@ struct Service
     };
 
     DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(CreateSession, Service, 1000)
+    DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(DetachSession, Service, 1000)
+    DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(ReattachSession, Service, 1000)
+    DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(DestroySession, Service, 1000)
     DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(CreateFixedSession, Service, 1000)
     DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(ResumeSession, Service, 1000)
     DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(PauseOtherSessions, Service, 1000)
