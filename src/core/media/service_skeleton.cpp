@@ -57,7 +57,7 @@ struct media::ServiceSkeleton::Private
         : request_context_resolver(media::apparmor::ubuntu::make_platform_default_request_context_resolver(config.external_services)),
           impl(impl),
           object(impl->access_service()->add_object_for_path(
-                     dbus::traits::Service<media::Service>::object_path())),          
+                     dbus::traits::Service<media::Service>::object_path())),
           configuration(config),
           exported(impl->access_bus(), config.cover_art_resolver)
     {
