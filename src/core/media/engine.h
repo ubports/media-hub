@@ -38,6 +38,7 @@ public:
 
     enum class State
     {
+        no_media,
         ready,
         busy,
         playing,
@@ -75,7 +76,7 @@ public:
 
     virtual const core::Property<State>& state() const = 0;
 
-    virtual bool open_resource_for_uri(const core::ubuntu::media::Track::UriType& uri) = 0;
+    virtual bool open_resource_for_uri(const core::ubuntu::media::Track::UriType& uri, bool do_pipeline_reset) = 0;
     virtual bool open_resource_for_uri(const core::ubuntu::media::Track::UriType& uri, const Player::HeadersType&) = 0;
     // Throws core::ubuntu::media::Player::Error::OutOfProcessBufferStreamingNotSupported if the implementation does not
     // support this feature.

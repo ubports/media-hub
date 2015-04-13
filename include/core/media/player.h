@@ -27,6 +27,7 @@
 #include <core/property.h>
 
 #include <chrono>
+#include <iosfwd>
 #include <memory>
 
 namespace core
@@ -149,7 +150,7 @@ class Player : public std::enable_shared_from_this<Player>
     virtual const core::Property<PlaybackStatus>& playback_status() const = 0;
     virtual const core::Property<LoopStatus>& loop_status() const = 0;
     virtual const core::Property<PlaybackRate>& playback_rate() const = 0;
-    virtual const core::Property<bool>& is_shuffle() const = 0;
+    virtual const core::Property<bool>& shuffle() const = 0;
     virtual const core::Property<Track::MetaData>& meta_data_for_current_track() const = 0;
     virtual const core::Property<Volume>& volume() const = 0;
     virtual const core::Property<PlaybackRate>& minimum_playback_rate() const = 0;
@@ -162,7 +163,7 @@ class Player : public std::enable_shared_from_this<Player>
 
     virtual core::Property<LoopStatus>& loop_status() = 0;
     virtual core::Property<PlaybackRate>& playback_rate() = 0;
-    virtual core::Property<bool>& is_shuffle() = 0;
+    virtual core::Property<bool>& shuffle() = 0;
     virtual core::Property<Volume>& volume() = 0;
     virtual core::Property<AudioStreamRole>& audio_stream_role() = 0;
     virtual core::Property<Lifetime>& lifetime() = 0;
@@ -178,6 +179,42 @@ class Player : public std::enable_shared_from_this<Player>
     Player();
 
 };
+
+// operator<< pretty prints the given playback status to the given output stream.
+inline std::ostream& operator<<(std::ostream& out, Player::PlaybackStatus status)
+{
+    switch (status)
+    {
+        case Player::PlaybackStatus::null:
+            return out << "PlaybackStatus::null";
+        case Player::PlaybackStatus::ready:
+            return out << "PlaybackStatus::ready";
+        case Player::PlaybackStatus::playing:
+            return out << "PlaybackStatus::playing";
+        case Player::PlaybackStatus::paused:
+            return out << "PlaybackStatus::paused";
+        case Player::PlaybackStatus::stopped:
+            return out << "PlaybackStatus::stopped";
+    }
+
+    return out;
+}
+
+inline std::ostream& operator<<(std::ostream& out, Player::LoopStatus loop_status)
+{
+    switch (loop_status)
+    {
+        case Player::LoopStatus::none:
+            return out << "LoopStatus::none";
+        case Player::LoopStatus::track:
+            return out << "LoopStatus::track";
+        case Player::LoopStatus::playlist:
+            return out << "LoopStatus::playlist";
+    }
+
+    return out;
+}
+
 }
 }
 }

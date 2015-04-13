@@ -108,7 +108,7 @@ struct media::PlayerStub::Private
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::TypedPlaybackStatus>> playback_status;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::TypedLoopStatus>> loop_status;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::PlaybackRate>> playback_rate;
-        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Shuffle>> is_shuffle;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Shuffle>> shuffle;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::TypedMetaData>> meta_data_for_current_track;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Volume>> volume;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Position>> position;
@@ -153,7 +153,7 @@ struct media::PlayerStub::Private
         {
             dbus.seeked_to->connect([this](std::uint64_t value)
             {
-                std::cout << "seeked_to signal arrived via the bus." << std::endl;
+                std::cout << "SeekedTo signal arrived via the bus." << std::endl;
                 seeked_to(value);
             });
 
@@ -362,9 +362,9 @@ const core::Property<media::Player::PlaybackRate>& media::PlayerStub::playback_r
     return *d->properties.playback_rate;
 }
 
-const core::Property<bool>& media::PlayerStub::is_shuffle() const
+const core::Property<bool>& media::PlayerStub::shuffle() const
 {
-    return *d->properties.is_shuffle;
+    return *d->properties.shuffle;
 }
 
 const core::Property<media::Track::MetaData>& media::PlayerStub::meta_data_for_current_track() const
@@ -422,9 +422,9 @@ core::Property<media::Player::PlaybackRate>& media::PlayerStub::playback_rate()
     return *d->properties.playback_rate;
 }
 
-core::Property<bool>& media::PlayerStub::is_shuffle()
+core::Property<bool>& media::PlayerStub::shuffle()
 {
-    return *d->properties.is_shuffle;
+    return *d->properties.shuffle;
 }
 
 core::Property<media::Player::Volume>& media::PlayerStub::volume()
