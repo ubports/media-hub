@@ -39,10 +39,12 @@ class PlayerStub : public Player
   public:
     explicit PlayerStub(
         const std::shared_ptr<Service>& parent,
-        const std::shared_ptr<core::dbus::Object>& object);
+        const std::shared_ptr<core::dbus::Object>& object,
+        std::string uuid = "");
 
     ~PlayerStub();
 
+    virtual std::string uuid() const;
     virtual void reconnect();
 
     virtual std::shared_ptr<TrackList> track_list();

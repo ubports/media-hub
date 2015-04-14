@@ -44,7 +44,7 @@ media::TestTrackList::~TestTrackList()
 {
 }
 
-void media::TestTrackList::create_new_player_session()
+std::string media::TestTrackList::create_new_player_session()
 {
     try {
         m_hubPlayerSession = m_hubService->create_session(media::Player::Client::default_configuration());
@@ -59,9 +59,51 @@ void media::TestTrackList::create_new_player_session()
     catch (std::runtime_error &e) {
         cerr << "FATAL: Failed to retrieve the current player's TrackList: " << e.what() << endl;
     }
+
+    std::string uuid;
+    try {
+        uuid.assign(m_hubPlayerSession->uuid());
+    }
+    catch (std::runtime_error &e) {
+        cerr << "FATAL: Failed to retrieve the current player's uuid: " << e.what() << endl;
+    }
+
+    cout << "Connected to session " << uuid << endl;
+    return uuid;
 }
 
-void media::TestTrackList::destroy_player_session()
+void media::TestTrackList::detach_player_session(const std::string &uuid)
+{
+    try {
+        m_hubService->detach_session(uuid, media::Player::Client::default_configuration());
+    }
+    catch (std::runtime_error &e) {
+        cerr << "FATAL: Failed to detach the media-hub player session: " << e.what() << endl;
+    }
+    
+    cout << "Detached session " << uuid << endl;
+}
+
+void media::TestTrackList::reattach_player_session(const std::string &uuid)
+{
+    try {
+        m_hubPlayerSession = m_hubService->reattach_session(uuid, media::Player::Client::default_configuration());
+    }
+    catch (std::runtime_error &e) {
+        cerr << "FATAL: Failed to reattach the media-hub player session: " << e.what() << endl;
+    }
+
+    try {
+        m_hubTrackList = m_hubPlayerSession->track_list();
+    }
+    catch (std::runtime_error &e) {
+        cerr << "FATAL: Failed to retrieve the current player's TrackList: " << e.what() << endl;
+    }
+    
+    cout << "Re-connected to session " << uuid << endl;
+}
+
+void media::TestTrackList::destroy_player_session(const std::string &uuid)
 {
     // TODO: explicitly add a destroy session to the Service class after ricmm lands his new creation_session
     // that returns a session ID. This will allow me to clear the tracklist after each test.
@@ -121,6 +163,28 @@ void media::TestTrackList::test_basic_playback(const std::string &uri1, const st
     //destroy_player_session();
 }
 
+void media::TestTrackList::test_tracklist_resume(const std::string &uri1, const std::string &uri2, const std::string &uuid)
+{
+    cout << "--> Running test: test_tracklist_resume" << std::endl;
+
+    //create_new_player_session();
+
+    add_track(uri1);
+    add_track(uri2);
+
+    int initial_size = m_hubTrackList->tracks().get().size();
+    cout << "Tracklist size: " << initial_size << endl;
+    detach_player_session(uuid);
+    reattach_player_session(uuid);
+    cout << "Tracklist size: " << m_hubTrackList->tracks().get().size() << endl;
+
+    m_hubPlayerSession->play();
+
+    if (initial_size != m_hubTrackList->tracks().get().size())
+        cout << "Tracklist sizes are different, error in resuming" << endl;
+
+    //destroy_player_session();
+}
 void media::TestTrackList::test_has_next_track(const std::string &uri1, const std::string &uri2)
 {
     cout << "--> Running test: test_has_next_track" << std::endl;
@@ -317,6 +381,11 @@ int main (int argc, char **argv)
         tracklist->test_has_next_track(argv[1], argv[2]);
         tracklist->test_shuffle(argv[1], argv[2], argv[3]);
         tracklist->test_remove_track(argv[1], argv[2], argv[3]);
+    }
+    else if (argc == 5)
+    {
+        std::string uuid = tracklist->create_new_player_session();
+        tracklist->test_tracklist_resume(argv[1], argv[2], uuid);
     }
     else
     {

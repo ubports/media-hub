@@ -140,7 +140,7 @@ struct media::ServiceSkeleton::Private
             });
             
             auto reply = dbus::Message::make_method_return(msg);
-            reply->writer() << op;
+            reply->writer() << std::make_tuple(op, uuid);
 
             impl->access_bus()->send(reply);
         } catch(const std::runtime_error& e)
@@ -167,6 +167,8 @@ struct media::ServiceSkeleton::Private
                 if (std::get<1>(info) && (std::get<2>(info) == msg->sender())) { // Player is attached
                     std::get<1>(info) = false; // Detached
                     std::get<2>(info).clear(); // Clear registered sender/peer
+                    auto player = configuration.player_store->player_for_key(key);
+                    player->lifetime().set(media::Player::Lifetime::resumable);
                 }
             }
             

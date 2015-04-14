@@ -126,6 +126,7 @@ class Player : public std::enable_shared_from_this<Player>
     Player& operator=(const Player&) = delete;
     bool operator==(const Player&) const = delete;
 
+    virtual std::string uuid() const = 0;
     virtual void reconnect() = 0;
 
     virtual std::shared_ptr<TrackList> track_list() = 0;
