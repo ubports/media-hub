@@ -121,6 +121,20 @@ void media::TestTrackList::test_basic_playback(const std::string &uri1, const st
     //destroy_player_session();
 }
 
+void media::TestTrackList::test_ensure_tracklist_is_not_empty(const std::string &uri1, const std::string &uri2)
+{
+    cout << "--> Running test: test_ensure_tracklist_is_not_empty" << std::endl;
+
+    add_track(uri1);
+    if (!uri2.empty())
+        add_track(uri2);
+
+    if (m_hubTrackList->tracks()->size() == 1 or m_hubTrackList->tracks()->size() == 2)
+        cout << "TrackList is not empty, test success" << endl;
+    else
+        cout << "TrackList is empty, test failure" << endl;
+}
+
 void media::TestTrackList::test_has_next_track(const std::string &uri1, const std::string &uri2)
 {
     cout << "--> Running test: test_has_next_track" << std::endl;
@@ -303,17 +317,20 @@ int main (int argc, char **argv)
     {
         tracklist->create_new_player_session();
         tracklist->test_basic_playback(argv[1]);
+        tracklist->test_ensure_tracklist_is_not_empty(argv[1]);
     }
     else if (argc == 3)
     {
         tracklist->create_new_player_session();
-        tracklist->test_basic_playback(argv[1], argv[2]);
-        tracklist->test_has_next_track(argv[1], argv[2]);
+        //tracklist->test_basic_playback(argv[1], argv[2]);
+        tracklist->test_ensure_tracklist_is_not_empty(argv[1], argv[2]);
+        //tracklist->test_has_next_track(argv[1], argv[2]);
     }
     else if (argc == 4)
     {
         tracklist->create_new_player_session();
         tracklist->test_basic_playback(argv[1]);
+        tracklist->test_ensure_tracklist_is_not_empty(argv[1], argv[2]);
         tracklist->test_has_next_track(argv[1], argv[2]);
         tracklist->test_shuffle(argv[1], argv[2], argv[3]);
         tracklist->test_remove_track(argv[1], argv[2], argv[3]);

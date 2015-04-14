@@ -254,6 +254,8 @@ core::Property<bool>& media::TrackListSkeleton::can_edit_tracks()
 
 core::Property<media::TrackList::Container>& media::TrackListSkeleton::tracks()
 {
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    std::cout << "tracks() size: " << d->tracks->get().size() << std::endl;
     return *d->tracks;
 }
 
@@ -279,6 +281,8 @@ void media::TrackListSkeleton::on_shuffle_changed(bool shuffle)
 
 const core::Property<media::TrackList::Container>& media::TrackListSkeleton::tracks() const
 {
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    std::cout << "tracks() size: " << d->tracks->get().size() << std::endl;
     return *d->tracks;
 }
 
@@ -291,6 +295,7 @@ const core::Signal<media::TrackList::ContainerTrackIdTuple>& media::TrackListSke
 
 const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_added() const
 {
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
     return d->signals.on_track_added;
 }
 
@@ -318,6 +323,7 @@ core::Signal<media::TrackList::ContainerTrackIdTuple>& media::TrackListSkeleton:
 
 core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_added()
 {
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
     return d->signals.on_track_added;
 }
 
@@ -337,7 +343,7 @@ core::Signal<media::Track::Id>& media::TrackListSkeleton::on_go_to_track()
 }
 
 // operator<< pretty prints the given TrackList to the given output stream.
-std::ostream& media::operator<<(std::ostream& out, const media::TrackList& tracklist)
+inline std::ostream& media::operator<<(std::ostream& out, const media::TrackList& tracklist)
 {
     auto non_const_tl = const_cast<media::TrackList*>(&tracklist);
     out << "TrackList\n---------------" << std::endl;
@@ -347,7 +353,6 @@ std::ostream& media::operator<<(std::ostream& out, const media::TrackList& track
         out << "\t" << ((dynamic_cast<media::TrackListSkeleton*>(non_const_tl)->current() == id) ? "*" : "");
         out << "Track Id: " << id << std::endl;
         out << "\t\turi: " << dynamic_cast<media::TrackListImplementation*>(non_const_tl)->query_uri_for_track(id) << std::endl;
-        //out << "\t\thas_next: " << tracklist.has_next(
     }
 
     out << "---------------\nEnd TrackList" << std::endl;

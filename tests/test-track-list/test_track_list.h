@@ -53,6 +53,8 @@ public:
     // Takes in one or two files for playback, adds it/them to the TrackList, and plays
     void test_basic_playback(const std::string &uri1, const std::string &uri2 = std::string{});
 
+    void test_ensure_tracklist_is_not_empty(const std::string &uri1, const std::string &uri2 = std::string{});
+
     // Takes in one or two files for playback, adds it/them to the TrackList, plays and makes sure
     // that the Player advances the TrackList
     void test_has_next_track(const std::string &uri1, const std::string &uri2);

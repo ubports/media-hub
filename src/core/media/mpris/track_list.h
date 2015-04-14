@@ -90,7 +90,7 @@ struct TrackList
     {
         Properties() = delete;
 
-        DBUS_CPP_READABLE_PROPERTY_DEF(Tracks, TrackList, std::vector<std::string>)
+        DBUS_CPP_READABLE_PROPERTY_DEF(Tracks, TrackList, std::vector<core::ubuntu::media::Track::Id>)
         DBUS_CPP_READABLE_PROPERTY_DEF(CanEditTracks, TrackList, bool)
     };
 
@@ -109,6 +109,7 @@ struct TrackList
             // Default values assigned to exported dbus interface properties on construction
             struct Defaults
             {
+                Properties::Tracks::ValueType tracks{std::vector<core::ubuntu::media::Track::Id>()};
                 Properties::CanEditTracks::ValueType can_edit_tracks{true};
             } defaults;
         };
@@ -130,6 +131,7 @@ struct TrackList
               }
         {
             // Set the default value of the properties on the MPRIS TrackList dbus interface
+            properties.tracks->set(configuration.defaults.tracks);
             properties.can_edit_tracks->set(configuration.defaults.can_edit_tracks);
         }
 
