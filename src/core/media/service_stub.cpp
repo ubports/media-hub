@@ -58,7 +58,7 @@ media::ServiceStub::~ServiceStub()
 std::shared_ptr<media::Player> media::ServiceStub::create_session(const media::Player::Configuration&)
 {
     auto op = d->object->invoke_method_synchronously<mpris::Service::CreateSession,
-         dbus::types::ObjectPath>();
+         std::tuple<dbus::types::ObjectPath, std::string>>();
 
     if (op.is_error())
         throw std::runtime_error("Problem creating session: " + op.error());
@@ -66,7 +66,7 @@ std::shared_ptr<media::Player> media::ServiceStub::create_session(const media::P
     return std::shared_ptr<media::Player>(new media::PlayerStub
     {
         shared_from_this(),
-        access_service()->object_for_path(std::get<0>(op.value()))
+        access_service()->object_for_path(std::get<0>(op.value())),
         std::get<1>(op.value())
     });
 }

@@ -58,8 +58,8 @@ struct media::ServiceSkeleton::Private
           impl(impl),
           object(impl->access_service()->add_object_for_path(
                      dbus::traits::Service<media::Service>::object_path())),
-          exported(impl->access_bus(), config.cover_art_resolver),
-          configuration(config)
+          configuration(config),
+          exported(impl->access_bus(), config.cover_art_resolver)
     {
         object->install_method_handler<mpris::Service::CreateSession>(
                     std::bind(
@@ -167,6 +167,8 @@ struct media::ServiceSkeleton::Private
                 if (std::get<1>(info) && (std::get<2>(info) == msg->sender())) { // Player is attached
                     std::get<1>(info) = false; // Detached
                     std::get<2>(info).clear(); // Clear registered sender/peer
+                    auto player = configuration.player_store->player_for_key(key);
+                    player->lifetime().set(media::Player::Lifetime::resumable);
                 }
             }
             

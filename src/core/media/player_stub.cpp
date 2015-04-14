@@ -94,8 +94,8 @@ struct media::PlayerStub::Private
     std::shared_ptr<Service> parent;
     std::shared_ptr<TrackList> track_list;
     dbus::Object::Ptr object;
-    std::string uuid;
     media::Player::PlayerKey key;
+    std::string uuid;
     media::video::SinkFactory sink_factory;
     struct
     {
@@ -222,7 +222,7 @@ media::PlayerStub::~PlayerStub()
 {
 }
 
-std::string media::PlayerStub::uuid() const;
+std::string media::PlayerStub::uuid() const
 {
     return d->uuid;
 }
