@@ -59,10 +59,11 @@ struct media::TrackListStub::Private
     std::shared_ptr<core::dbus::Property<mpris::TrackList::Properties::CanEditTracks>> can_edit_tracks;
     std::shared_ptr<core::dbus::Property<mpris::TrackList::Properties::Tracks>> tracks;
 
-    core::Signal<void> on_track_list_replaced;
+    core::Signal<media::TrackList::ContainerTrackIdTuple> on_track_list_replaced;
     core::Signal<Track::Id> on_track_added;
     core::Signal<Track::Id> on_track_removed;
     core::Signal<Track::Id> on_track_changed;
+    core::Signal<Track::Id> on_go_to_track;
 };
 
 media::TrackListStub::TrackListStub(
@@ -137,22 +138,45 @@ void media::TrackListStub::go_to(const media::Track::Id& track)
         throw std::runtime_error("Problem adding track: " + op.error());
 }
 
-const core::Signal<void>& media::TrackListStub::on_track_list_replaced() const
+void media::TrackListStub::shuffle_tracks()
 {
+    std::cerr << "shuffle_tracks() does nothing from the client side" << std::endl;
+}
+
+void media::TrackListStub::unshuffle_tracks()
+{
+    std::cerr << "unshuffle_tracks() does nothing from the client side" << std::endl;
+}
+
+void media::TrackListStub::reset()
+{
+    std::cerr << "reset() does nothing from the client side" << std::endl;
+}
+
+const core::Signal<media::TrackList::ContainerTrackIdTuple>& media::TrackListStub::on_track_list_replaced() const
+{
+    std::cout << "Signal on_track_list_replaced arrived via the bus" << std::endl;
     return d->on_track_list_replaced;
 }
 
 const core::Signal<media::Track::Id>& media::TrackListStub::on_track_added() const
 {
+    std::cout << "Signal on_track_added arrived via the bus" << std::endl;
     return d->on_track_added;
 }
 
 const core::Signal<media::Track::Id>& media::TrackListStub::on_track_removed() const
 {
+    std::cout << "Signal on_track_removed arrived via the bus" << std::endl;
     return d->on_track_removed;
 }
 
 const core::Signal<media::Track::Id>& media::TrackListStub::on_track_changed() const
 {
     return d->on_track_changed;
+}
+
+const core::Signal<media::Track::Id>& media::TrackListStub::on_go_to_track() const
+{
+    return d->on_go_to_track;
 }

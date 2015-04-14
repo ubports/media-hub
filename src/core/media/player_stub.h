@@ -69,7 +69,7 @@ class PlayerStub : public Player
     virtual const core::Property<PlaybackStatus>& playback_status() const;
     virtual const core::Property<LoopStatus>& loop_status() const;
     virtual const core::Property<PlaybackRate>& playback_rate() const;
-    virtual const core::Property<bool>& is_shuffle() const;
+    virtual const core::Property<bool>& shuffle() const;
     virtual const core::Property<Track::MetaData>& meta_data_for_current_track() const;
     virtual const core::Property<Volume>& volume() const;
     virtual const core::Property<PlaybackRate>& minimum_playback_rate() const;
@@ -82,7 +82,7 @@ class PlayerStub : public Player
 
     virtual core::Property<LoopStatus>& loop_status();
     virtual core::Property<PlaybackRate>& playback_rate();
-    virtual core::Property<bool>& is_shuffle();
+    virtual core::Property<bool>& shuffle();
     virtual core::Property<Volume>& volume();
     virtual core::Property<AudioStreamRole>& audio_stream_role();
     virtual core::Property<Lifetime>& lifetime();

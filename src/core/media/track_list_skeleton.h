@@ -39,29 +39,42 @@ public:
 
     bool has_next() const;
     const Track::Id& next();
+    const Track::Id& current();
 
     const core::Property<bool>& can_edit_tracks() const;
     const core::Property<Container>& tracks() const;
 
-    const core::Signal<void>& on_track_list_replaced() const;
+    const core::Signal<ContainerTrackIdTuple>& on_track_list_replaced() const;
     const core::Signal<Track::Id>& on_track_added() const;
     const core::Signal<Track::Id>& on_track_removed() const;
     const core::Signal<Track::Id>& on_track_changed() const;
+    const core::Signal<Track::Id>& on_go_to_track() const;
+    core::Signal<Track::Id>& on_go_to_track();
+    core::Signal<Track::Id>& on_track_removed();
 
     core::Property<Container>& tracks();
+    void on_loop_status_changed(const core::ubuntu::media::Player::LoopStatus& loop_status);
+    core::ubuntu::media::Player::LoopStatus loop_status() const;
+
+    /** Gets called when the shuffle property on the Player interface is changed
+     * by the client */
+    void on_shuffle_changed(bool shuffle);
 
 protected:
     core::Property<bool>& can_edit_tracks();
 
-    core::Signal<void>& on_track_list_replaced();
+    core::Signal<ContainerTrackIdTuple>& on_track_list_replaced();
     core::Signal<Track::Id>& on_track_added();
-    core::Signal<Track::Id>& on_track_removed();
     core::Signal<Track::Id>& on_track_changed();
 
 private:
     struct Private;
     std::unique_ptr<Private> d;
 };
+
+// operator<< pretty prints the given TrackList status to the given output stream.
+std::ostream& operator<<(std::ostream& out, const core::ubuntu::media::TrackList& tracklist);
+
 }
 }
 }

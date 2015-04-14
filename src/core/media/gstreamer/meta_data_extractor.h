@@ -177,7 +177,7 @@ public:
             bus.on_new_message.connect(
                     [&](const gstreamer::Bus::Message& msg)
                     {
-                        std::cout << __PRETTY_FUNCTION__ << gst_message_type_get_name(msg.type) << std::endl;
+                        //std::cout << __PRETTY_FUNCTION__ << gst_message_type_get_name(msg.type) << std::endl;
                         if (msg.type == GST_MESSAGE_TAG)
                         {
                             MetaDataExtractor::on_tag_available(msg.detail.tag, meta_data);

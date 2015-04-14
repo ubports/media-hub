@@ -51,4 +51,5 @@ set(
 )
 
 # add_subdirectory(acceptance-tests)
+add_subdirectory(test-track-list)
 add_subdirectory(unit-tests)

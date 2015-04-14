@@ -1,5 +1,5 @@
 /*
- * Copyright © 2013 Canonical Ltd.
+ * Copyright © 2013-2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -43,6 +43,9 @@ public:
     void remove_track(const Track::Id& id);
 
     void go_to(const Track::Id& track);
+    void shuffle_tracks();
+    void unshuffle_tracks();
+    void reset();
 
 private:
     struct Private;
