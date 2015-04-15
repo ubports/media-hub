@@ -102,7 +102,7 @@ void media::ServiceStub::destroy_session(const std::string& uuid, const media::P
          void>(uuid);
 
     if (op.is_error())
-        throw std::runtime_error("Problem creating session: " + op.error());
+        throw std::runtime_error("Problem destroying session: " + op.error());
 }
 
 std::shared_ptr<media::Player> media::ServiceStub::create_fixed_session(const std::string& name, const media::Player::Configuration&)

@@ -164,6 +164,8 @@ struct media::ServiceSkeleton::Private
 
             if (player_owner_map.count(key) != 0) {
                 auto info = player_owner_map.at(key);
+                // Check if session is attached(1) and that the detachment
+                // request comes from the same peer(2) that created the session.
                 if (std::get<1>(info) && (std::get<2>(info) == msg->sender())) { // Player is attached
                     std::get<1>(info) = false; // Detached
                     std::get<2>(info).clear(); // Clear registered sender/peer
@@ -281,7 +283,7 @@ struct media::ServiceSkeleton::Private
                     if (std::get<0>(info) == context.str()) {
                         player_owner_map.erase(key);
 
-                        // Signal player reconnection
+                        // Reset lifecycle to non-resumable on the now-abandoned session
                         auto player = configuration.player_store->player_for_key(key);
                         player->lifetime().set(media::Player::Lifetime::normal);
 

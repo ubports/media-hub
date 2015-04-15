@@ -529,7 +529,6 @@ std::string media::PlayerImplementation<Parent>::uuid() const
 template<typename Parent>
 void media::PlayerImplementation<Parent>::reconnect()
 {
-    // TODO: Reconnect all signals that would've expired on session dettachment
     d->config.client_death_observer->register_for_death_notifications_with_key(d->config.key);
 }
 
