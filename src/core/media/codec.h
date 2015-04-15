@@ -23,6 +23,8 @@
 #include <core/media/player.h>
 #include <core/media/track.h>
 
+#include <core/dbus/types/stl/string.h>
+#include <core/dbus/types/stl/vector.h>
 #include <core/dbus/codec.h>
 
 namespace core

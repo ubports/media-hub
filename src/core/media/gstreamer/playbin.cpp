@@ -151,7 +151,6 @@ void gstreamer::Playbin::reset()
 void gstreamer::Playbin::reset_pipeline()
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
-    //TODO: Don't set state to NULL on playbin when about_to_finish calls next()
     auto ret = gst_element_set_state(pipeline, GST_STATE_NULL);
     switch(ret)
     {
@@ -416,27 +415,8 @@ std::string gstreamer::Playbin::uri() const
     return result;
 }
 
-gboolean gstreamer::Playbin::add_set_state_to_main_context(gpointer user_data)
+bool gstreamer::Playbin::set_state_and_wait(GstState new_state)
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-    std::pair<gstreamer::Playbin*, GstState> *p = static_cast<std::pair<gstreamer::Playbin*, GstState>*>(user_data);
-    gstreamer::Playbin *playbin = p->first;
-    const GstState new_state = p->second;
-    playbin->set_state_and_wait(new_state, false);
-    std::cout << "Deleting std::pair" << std::endl;
-    delete p;
-    return false;
-}
-
-bool gstreamer::Playbin::set_state_and_wait(GstState new_state, bool add_to_main_context)
-{
-    if (add_to_main_context)
-    {
-        std::cout << "Making call to set_state_and_wait on main loop context" << std::endl;
-        std::pair<gstreamer::Playbin*, GstState> *p = new std::pair<gstreamer::Playbin*, GstState>(this, new_state);
-        guint i = g_idle_add(gstreamer::Playbin::add_set_state_to_main_context, (gpointer)p);
-    }
-
     static const std::chrono::nanoseconds state_change_timeout
     {
         // We choose a quite high value here as tests are run under valgrind

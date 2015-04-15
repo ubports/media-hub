@@ -358,14 +358,12 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
     // When the client changes the loop status, make sure to update the TrackList
     Parent::loop_status().changed().connect([this](media::Player::LoopStatus loop_status)
     {
-        std::cout << "Player::LoopStatus value changed: " << loop_status << std::endl;
         d->track_list->on_loop_status_changed(loop_status);
     });
 
     // When the client changes the shuffle setting, make sure to update the TrackList
     Parent::shuffle().changed().connect([this](bool shuffle)
     {
-        std::cout << "Player::Shuffle value changed: " << (shuffle ? "shuffling" : "not shuffling") << std::endl;
         d->track_list->on_shuffle_changed(shuffle);
     });
 
@@ -445,7 +443,6 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         // handler.
         d->doing_go_to_track = true;
 
-        std::cout << "** on_go_to_track was signaled in PlayerImplementation, stopping playback" << std::endl;
         d->engine->stop();
 
         const Track::UriType uri = d->track_list->query_uri_for_track(id);
@@ -460,12 +457,6 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         d->engine->play();
 
         d->doing_go_to_track = false;
-    });
-
-    d->track_list->on_track_removed().connect([this](const media::Track::Id& id)
-    {
-        std::cout << "Track removed, detected from Player" << std::endl;
-        (void) id;
     });
 
     // Everything is setup, we now subscribe to death notifications.
