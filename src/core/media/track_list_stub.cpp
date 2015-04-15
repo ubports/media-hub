@@ -85,8 +85,6 @@ const core::Property<bool>& media::TrackListStub::can_edit_tracks() const
 
 const core::Property<media::TrackList::Container>& media::TrackListStub::tracks() const
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-    std::cout << "tracks() size: " << d->tracks->get().size() << std::endl;
     return *d->tracks;
 }
 

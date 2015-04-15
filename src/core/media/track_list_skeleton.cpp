@@ -61,7 +61,6 @@ struct media::TrackListSkeleton::Private
               skeleton.signals.tracklist_replaced
           }
     {
-        std::cout << "Creating new TrackListSkeleton::Private" << std::endl;
     }
 
     void handle_get_tracks_metadata(const core::dbus::Message::Ptr& msg)
@@ -103,7 +102,6 @@ struct media::TrackListSkeleton::Private
         media::Track::Id track;
         msg->reader() >> track;
 
-        std::cout << "Setting Track::Id: " << track << " to current track" << std::endl;
         current_track = std::find(tracks->get().begin(), tracks->get().end(), track);
         impl->go_to(track);
 
@@ -135,19 +133,16 @@ struct media::TrackListSkeleton::Private
             // Connect all of the MPRIS interface signals to be emitted over dbus
             on_track_added.connect([remote_track_added](const media::Track::Id &id)
             {
-                std::cout << "Emitting remote_track_added()" << std::endl;
                 remote_track_added->emit(id);
             });
 
             on_track_removed.connect([remote_track_removed](const media::Track::Id &id)
             {
-                std::cout << "Emitting remote_track_removed()" << std::endl;
                 remote_track_removed->emit(id);
             });
 
             on_track_list_replaced.connect([remote_track_list_replaced](const media::TrackList::ContainerTrackIdTuple &tltuple)
             {
-                std::cout << "Emitting remote_track_list_replaced()" << std::endl;
                 remote_track_list_replaced->emit(tltuple);
             });
         }
@@ -165,7 +160,6 @@ media::TrackListSkeleton::TrackListSkeleton(
     : dbus::Skeleton<media::TrackList>(the_session_bus()),
       d(new Private(this, access_service()->add_object_for_path(op)))
 {
-    std::cout << "Creating new TrackListSkeleton" << std::endl;
     d->object->install_method_handler<mpris::TrackList::GetTracksMetadata>(
         std::bind(&Private::handle_get_tracks_metadata,
                   std::ref(d),
@@ -193,7 +187,6 @@ media::TrackListSkeleton::~TrackListSkeleton()
 
 bool media::TrackListSkeleton::has_next() const
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
     const auto next_track = std::next(d->current_track);
     std::cout << "has_next track? " << (next_track != d->tracks->get().end() ? "yes" : "no") << std::endl;
     return next_track != d->tracks->get().end();
@@ -204,8 +197,6 @@ const media::Track::Id& media::TrackListSkeleton::next()
     std::cout << __PRETTY_FUNCTION__ << std::endl;
     if (d->tracks->get().empty())
         return *(d->current_track);
-
-    std::cout << "next() LoopStatus: " << d->loop_status << std::endl;
 
     // Loop on the current track forever
     if (d->loop_status == media::Player::LoopStatus::track)
@@ -223,9 +214,7 @@ const media::Track::Id& media::TrackListSkeleton::next()
     else if (has_next())
     {
         // Keep returning the next track until the last track is reached
-        std::cout << "Current track id before next(): " << *d->current_track << std::endl;
         d->current_track = std::next(d->current_track);
-        std::cout << "Current track id after next(): " << *d->current_track << std::endl;
         std::cout << *this << std::endl;
     }
 
@@ -234,9 +223,10 @@ const media::Track::Id& media::TrackListSkeleton::next()
 
 const media::Track::Id& media::TrackListSkeleton::current()
 {
+    // Prevent the TrackList from sitting at the end which will cause
+    // a segfault when calling current()
     if (d->tracks->get().size() && (d->current_track == d->empty_iterator))
     {
-        std::cout << "current_track id == the end()" << std::endl;
         d->current_track = d->tracks->get().begin();
     }
     return *(d->current_track);
@@ -254,8 +244,6 @@ core::Property<bool>& media::TrackListSkeleton::can_edit_tracks()
 
 core::Property<media::TrackList::Container>& media::TrackListSkeleton::tracks()
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-    std::cout << "tracks() size: " << d->tracks->get().size() << std::endl;
     return *d->skeleton.properties.tracks;
 }
 
@@ -271,7 +259,6 @@ media::Player::LoopStatus media::TrackListSkeleton::loop_status() const
 
 void media::TrackListSkeleton::on_shuffle_changed(bool shuffle)
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
     if (shuffle)
         shuffle_tracks();
     else
@@ -280,8 +267,6 @@ void media::TrackListSkeleton::on_shuffle_changed(bool shuffle)
 
 const core::Property<media::TrackList::Container>& media::TrackListSkeleton::tracks() const
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-    std::cout << "tracks() size: " << d->tracks->get().size() << std::endl;
     return *d->skeleton.properties.tracks;
 }
 
@@ -294,7 +279,6 @@ const core::Signal<media::TrackList::ContainerTrackIdTuple>& media::TrackListSke
 
 const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_added() const
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
     return d->signals.on_track_added;
 }
 
@@ -315,14 +299,11 @@ const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_go_to_track()
 
 core::Signal<media::TrackList::ContainerTrackIdTuple>& media::TrackListSkeleton::on_track_list_replaced()
 {
-    // Print the TrackList instance
-    std::cout << *this << std::endl;
     return d->signals.on_track_list_replaced;
 }
 
 core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_added()
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
     return d->signals.on_track_added;
 }
 

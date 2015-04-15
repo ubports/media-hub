@@ -96,7 +96,7 @@ struct Playbin
 
     // Sets the pipeline's state (stopped, playing, paused, etc). Optional parameter makes this call
     // in the main_loop context.
-    bool set_state_and_wait(GstState new_state, bool add_to_main_context = false);
+    bool set_state_and_wait(GstState new_state);
     bool seek(const std::chrono::microseconds& ms);
 
     core::ubuntu::media::video::Dimensions get_video_dimensions() const;
@@ -133,9 +133,6 @@ struct Playbin
         core::Signal<core::ubuntu::media::video::Dimensions> on_video_dimensions_changed;
         core::Signal<void> client_disconnected;
     } signals;
-
-private:
-    static gboolean add_set_state_to_main_context(gpointer user_data);
 };
 }
 

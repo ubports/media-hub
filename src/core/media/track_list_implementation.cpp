@@ -89,7 +89,6 @@ void media::TrackListImplementation::add_track_with_uri_at(
         auto it = std::find(container.begin(), container.end(), position);
         container.insert(it, id);
 
-        std::cout << "tracks() size: " << container.size() << std::endl;
         return true;
     });
 
@@ -144,9 +143,7 @@ void media::TrackListImplementation::shuffle_tracks()
 
     auto result = tracks().update([this](TrackList::Container& container)
     {
-        std::cout << "Storing original TrackList order" << std::endl;
         d->original_tracklist.assign(container.begin(), container.end());
-        std::cout << "Shuffling the track container" << std::endl;
         std::random_shuffle(container.begin(), container.end());
         return true;
     });
@@ -164,7 +161,6 @@ void media::TrackListImplementation::unshuffle_tracks()
 
     auto result = tracks().update([this](TrackList::Container& container)
     {
-        std::cout << "Restoring original TrackList order" << std::endl;
         container.assign(d->original_tracklist.begin(), d->original_tracklist.end());
         return true;
     });
@@ -182,7 +178,6 @@ void media::TrackListImplementation::reset()
 
     auto result = tracks().update([this](TrackList::Container& container)
     {
-        std::cout << "Clearing the TrackList" << std::endl;
         container.clear();
         container.resize(0);
         d->track_counter = 0;
