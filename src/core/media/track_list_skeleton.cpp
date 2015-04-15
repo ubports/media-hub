@@ -244,19 +244,19 @@ const media::Track::Id& media::TrackListSkeleton::current()
 
 const core::Property<bool>& media::TrackListSkeleton::can_edit_tracks() const
 {
-    return *d->can_edit_tracks;
+    return *d->skeleton.properties.can_edit_tracks;
 }
 
 core::Property<bool>& media::TrackListSkeleton::can_edit_tracks()
 {
-    return *d->can_edit_tracks;
+    return *d->skeleton.properties.can_edit_tracks;
 }
 
 core::Property<media::TrackList::Container>& media::TrackListSkeleton::tracks()
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
     std::cout << "tracks() size: " << d->tracks->get().size() << std::endl;
-    return *d->tracks;
+    return *d->skeleton.properties.tracks;
 }
 
 void media::TrackListSkeleton::on_loop_status_changed(const media::Player::LoopStatus& loop_status)
@@ -276,14 +276,13 @@ void media::TrackListSkeleton::on_shuffle_changed(bool shuffle)
         shuffle_tracks();
     else
         unshuffle_tracks();
-
 }
 
 const core::Property<media::TrackList::Container>& media::TrackListSkeleton::tracks() const
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
     std::cout << "tracks() size: " << d->tracks->get().size() << std::endl;
-    return *d->tracks;
+    return *d->skeleton.properties.tracks;
 }
 
 const core::Signal<media::TrackList::ContainerTrackIdTuple>& media::TrackListSkeleton::on_track_list_replaced() const
