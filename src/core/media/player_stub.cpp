@@ -95,7 +95,7 @@ struct media::PlayerStub::Private
     std::shared_ptr<TrackList> track_list;
     dbus::Object::Ptr object;
     media::Player::PlayerKey key;
-    const std::string& uuid;
+    std::string uuid;
     media::video::SinkFactory sink_factory;
     struct
     {
