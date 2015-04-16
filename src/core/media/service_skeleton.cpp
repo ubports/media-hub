@@ -730,6 +730,21 @@ std::shared_ptr<media::Player> media::ServiceSkeleton::create_session(const medi
     return d->configuration.impl->create_session(config);
 }
 
+void media::ServiceSkeleton::detach_session(const std::string& uuid, const media::Player::Configuration& config)
+{
+    return d->configuration.impl->detach_session(uuid, config);
+}
+
+std::shared_ptr<media::Player> media::ServiceSkeleton::reattach_session(const std::string& uuid, const media::Player::Configuration& config)
+{
+    return d->configuration.impl->reattach_session(uuid, config);
+}
+
+void media::ServiceSkeleton::destroy_session(const std::string& uuid, const media::Player::Configuration& config)
+{
+    return d->configuration.impl->destroy_session(uuid, config);
+}
+
 std::shared_ptr<media::Player> media::ServiceSkeleton::create_fixed_session(const std::string& name, const media::Player::Configuration&config)
 {
     return d->configuration.impl->create_fixed_session(name, config);

@@ -40,7 +40,7 @@ class PlayerStub : public Player
     explicit PlayerStub(
         const std::shared_ptr<Service>& parent,
         const std::shared_ptr<core::dbus::Object>& object,
-        std::string uuid = "");
+        const std::string& uuid = std::string{});
 
     ~PlayerStub();
 

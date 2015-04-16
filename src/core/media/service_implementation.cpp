@@ -217,6 +217,22 @@ std::shared_ptr<media::Player> media::ServiceImplementation::create_session(
     return player;
 }
 
+void media::ServiceImplementation::detach_session(const std::string&, const media::Player::Configuration&)
+{
+    // no impl
+}
+
+std::shared_ptr<media::Player> media::ServiceImplementation::reattach_session(const std::string&, const media::Player::Configuration&)
+{
+    // no impl
+    return std::shared_ptr<media::Player>();
+}
+
+void media::ServiceImplementation::destroy_session(const std::string&, const media::Player::Configuration&)
+{
+    // no impl
+}
+
 std::shared_ptr<media::Player> media::ServiceImplementation::create_fixed_session(const std::string&, const media::Player::Configuration&)
 {
   // no impl

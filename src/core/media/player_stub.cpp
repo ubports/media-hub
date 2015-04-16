@@ -44,7 +44,7 @@ struct media::PlayerStub::Private
 {
     Private(const std::shared_ptr<Service>& parent,
             const std::shared_ptr<core::dbus::Object>& object,
-            const std::string uuid
+            const std::string& uuid
             ) : parent(parent),
                 object(object),
                 key(object->invoke_method_synchronously<mpris::Player::Key, media::Player::PlayerKey>().value()),
@@ -95,7 +95,7 @@ struct media::PlayerStub::Private
     std::shared_ptr<TrackList> track_list;
     dbus::Object::Ptr object;
     media::Player::PlayerKey key;
-    std::string uuid;
+    const std::string& uuid;
     media::video::SinkFactory sink_factory;
     struct
     {
@@ -213,7 +213,7 @@ struct media::PlayerStub::Private
 media::PlayerStub::PlayerStub(
     const std::shared_ptr<Service>& parent,
     const std::shared_ptr<core::dbus::Object>& object,
-    std::string uuid)
+    const std::string& uuid)
         : d(new Private{parent, object, uuid})
 {
 }

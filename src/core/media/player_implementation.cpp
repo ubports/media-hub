@@ -515,6 +515,7 @@ template<typename Parent>
 std::string media::PlayerImplementation<Parent>::uuid() const
 {
     // No impl for now, as not needed internally.
+    return std::string{};
 }
 
 template<typename Parent>
