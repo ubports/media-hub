@@ -44,16 +44,14 @@ namespace media = core::ubuntu::media;
 
 struct media::TrackListSkeleton::Private
 {
-    Private(media::TrackListSkeleton* impl,
-            dbus::Object::Ptr object)
+    Private(media::TrackListSkeleton* impl, const dbus::Bus::Ptr& bus, const dbus::Object::Ptr& object)
         : impl(impl),
+          bus(bus),
           object(object),
-          can_edit_tracks(object->get_property<mpris::TrackList::Properties::CanEditTracks>()),
-          tracks(object->get_property<mpris::TrackList::Properties::Tracks>()),
-          current_track(tracks->get().begin()),
-          empty_iterator(tracks->get().begin()),
-          loop_status(media::Player::LoopStatus::none),
           skeleton{mpris::TrackList::Skeleton::Configuration{object, mpris::TrackList::Skeleton::Configuration::Defaults{}}},
+          current_track(skeleton.properties.tracks->get().begin()),
+          empty_iterator(skeleton.properties.tracks->get().begin()),
+          loop_status(media::Player::LoopStatus::none),
           signals
           {
               skeleton.signals.track_added,
@@ -72,7 +70,7 @@ struct media::TrackListSkeleton::Private
 
         auto reply = dbus::Message::make_method_return(msg);
         reply->writer() << *meta_data;
-        impl->access_bus()->send(reply);
+        bus->send(reply);
     }
 
     void handle_add_track_with_uri_at(const core::dbus::Message::Ptr& msg)
@@ -83,7 +81,7 @@ struct media::TrackListSkeleton::Private
         impl->add_track_with_uri_at(uri, after, make_current);
 
         auto reply = dbus::Message::make_method_return(msg);
-        impl->access_bus()->send(reply);
+        bus->send(reply);
     }
 
     void handle_remove_track(const core::dbus::Message::Ptr& msg)
@@ -94,7 +92,7 @@ struct media::TrackListSkeleton::Private
         impl->remove_track(track);
 
         auto reply = dbus::Message::make_method_return(msg);
-        impl->access_bus()->send(reply);
+        bus->send(reply);
     }
 
     void handle_go_to(const core::dbus::Message::Ptr& msg)
@@ -102,23 +100,21 @@ struct media::TrackListSkeleton::Private
         media::Track::Id track;
         msg->reader() >> track;
 
-        current_track = std::find(tracks->get().begin(), tracks->get().end(), track);
+        current_track = std::find(skeleton.properties.tracks->get().begin(), skeleton.properties.tracks->get().end(), track);
         impl->go_to(track);
 
         auto reply = dbus::Message::make_method_return(msg);
-        impl->access_bus()->send(reply);
+        bus->send(reply);
     }
 
     media::TrackListSkeleton* impl;
+    dbus::Bus::Ptr bus;
     dbus::Object::Ptr object;
 
-    std::shared_ptr<core::dbus::Property<mpris::TrackList::Properties::CanEditTracks>> can_edit_tracks;
-    std::shared_ptr<core::dbus::Property<mpris::TrackList::Properties::Tracks>> tracks;
+    mpris::TrackList::Skeleton skeleton;
     TrackList::ConstIterator current_track;
     TrackList::ConstIterator empty_iterator;
     media::Player::LoopStatus loop_status;
-
-    mpris::TrackList::Skeleton skeleton;
 
     struct Signals
     {
@@ -155,10 +151,8 @@ struct media::TrackListSkeleton::Private
     } signals;
 };
 
-media::TrackListSkeleton::TrackListSkeleton(
-        const dbus::types::ObjectPath& op)
-    : dbus::Skeleton<media::TrackList>(the_session_bus()),
-      d(new Private(this, access_service()->add_object_for_path(op)))
+media::TrackListSkeleton::TrackListSkeleton(const core::dbus::Bus::Ptr& bus, const core::dbus::Object::Ptr& object)
+    : d(new Private(this, bus, object))
 {
     d->object->install_method_handler<mpris::TrackList::GetTracksMetadata>(
         std::bind(&Private::handle_get_tracks_metadata,
@@ -226,7 +220,7 @@ const media::Track::Id& media::TrackListSkeleton::current()
     // Prevent the TrackList from sitting at the end which will cause
     // a segfault when calling current()
     if (tracks().get().size() && (d->current_track == d->empty_iterator))
-        d->current_track = tracks().get().begin();
+        d->current_track = d->skeleton.properties.tracks->get().begin();
     else if (tracks().get().empty())
         std::cerr << "TrackList is empty therefore there is no valid current track" << std::endl;
 

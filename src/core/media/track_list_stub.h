@@ -33,12 +33,12 @@ namespace ubuntu
 {
 namespace media
 {
-class TrackListStub : public core::dbus::Stub<core::ubuntu::media::TrackList>
+class TrackListStub : public core::ubuntu::media::TrackList
 {
 public:
     TrackListStub(
             const std::shared_ptr<Player>& parent,
-            const core::dbus::types::ObjectPath& op);
+            const core::dbus::Object::Ptr& object);
     ~TrackListStub();
 
     const core::Property<bool>& can_edit_tracks() const;

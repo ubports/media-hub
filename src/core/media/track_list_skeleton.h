@@ -22,6 +22,7 @@
 
 #include <core/media/player.h>
 
+#include <core/dbus/object.h>
 #include <core/dbus/skeleton.h>
 
 namespace core
@@ -30,11 +31,10 @@ namespace ubuntu
 {
 namespace media
 {
-class TrackListSkeleton : public core::dbus::Skeleton<core::ubuntu::media::TrackList>
+class TrackListSkeleton : public core::ubuntu::media::TrackList
 {
 public:
-    TrackListSkeleton(
-            const core::dbus::types::ObjectPath& op);
+    TrackListSkeleton(const core::dbus::Bus::Ptr& bus, const core::dbus::Object::Ptr& object);
     ~TrackListSkeleton();
 
     bool has_next() const;

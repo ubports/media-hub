@@ -101,6 +101,7 @@ struct media::ServiceSkeleton::Private
         {
             key,
             impl->access_bus(),
+            impl->access_service(),
             impl->access_service()->add_object_for_path(op)
         };
 
@@ -139,6 +140,7 @@ struct media::ServiceSkeleton::Private
                 {
                     key,
                     impl->access_bus(),
+                    impl->access_service(),
                     impl->access_service()->add_object_for_path(op)
                 };
 

@@ -59,8 +59,10 @@ struct media::PlayerImplementation<Parent>::Private :
           system_state_lock(config.power_state_controller->system_state_lock()),
           engine(std::make_shared<gstreamer::Engine>()),
           track_list(std::make_shared<TrackListImplementation>(
-                      dbus::types::ObjectPath(config.parent.session->path().as_string() + "/TrackList"),
-                      engine->meta_data_extractor())),
+              config.parent.bus,
+              config.parent.service->add_object_for_path(                  
+                  dbus::types::ObjectPath(config.parent.session->path().as_string() + "/TrackList")),
+              engine->meta_data_extractor())),
           system_wakelock_count(0),
           display_wakelock_count(0),
           previous_state(Engine::State::stopped),
