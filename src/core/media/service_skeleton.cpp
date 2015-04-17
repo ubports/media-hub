@@ -286,9 +286,9 @@ struct media::ServiceSkeleton::Private
                         // Reset lifecycle to non-resumable on the now-abandoned session
                         auto player = configuration.player_store->player_for_key(key);
 
-                        // Delete player instance
+                        // Delete player instance by abandonment
                         player->lifetime().set(media::Player::Lifetime::normal);
-                        delete player;
+                        player->abandon();
 
                         auto reply = dbus::Message::make_method_return(msg);
                         impl->access_bus()->send(reply);

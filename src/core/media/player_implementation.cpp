@@ -66,7 +66,8 @@ struct media::PlayerImplementation<Parent>::Private :
           previous_state(Engine::State::stopped),
           engine_state_change_connection(engine->state().changed().connect(make_state_change_handler())),
           engine_playback_status_change_connection(engine->playback_status_changed_signal().connect(make_playback_status_change_handler())),
-          doing_go_to_track(false)
+          doing_go_to_track(false),
+          doing_abandon(false)
     {
         // Poor man's logging of release/acquire events.
         display_state_lock->acquired().connect([](media::power::DisplayState state)
@@ -300,6 +301,7 @@ struct media::PlayerImplementation<Parent>::Private :
     core::Connection engine_playback_status_change_connection;
     // Prevent the TrackList from auto advancing to the next track
     std::atomic<bool> doing_go_to_track;
+    std::atomic<bool> doing_abandon;
 };
 
 template<typename Parent>
@@ -388,6 +390,9 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
 
     d->engine->about_to_finish_signal().connect([this]()
     {
+        if (d->doing_abandon)
+            return;
+
         Parent::about_to_finish()();
 
         if (!d->doing_go_to_track)
@@ -467,6 +472,9 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
     {
         if (auto sp = wp.lock())
         {
+            if (sp->doing_abandon)
+                return;
+
             if (died != sp->config.key)
                 return;
 
@@ -522,6 +530,14 @@ template<typename Parent>
 void media::PlayerImplementation<Parent>::reconnect()
 {
     d->config.client_death_observer->register_for_death_notifications_with_key(d->config.key);
+}
+
+template<typename Parent>
+void media::PlayerImplementation<Parent>::abandon()
+{
+    // Signal client disconnection due to abandonment of player
+    d->doing_abandon = true;
+    d->on_client_died();
 }
 
 template<typename Parent>

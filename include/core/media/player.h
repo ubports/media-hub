@@ -128,6 +128,7 @@ class Player : public std::enable_shared_from_this<Player>
 
     virtual std::string uuid() const = 0;
     virtual void reconnect() = 0;
+    virtual void abandon() = 0;
 
     virtual std::shared_ptr<TrackList> track_list() = 0;
     virtual PlayerKey key() const = 0;

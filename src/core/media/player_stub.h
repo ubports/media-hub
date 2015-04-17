@@ -46,6 +46,7 @@ class PlayerStub : public Player
 
     virtual std::string uuid() const;
     virtual void reconnect();
+    virtual void abandon();
 
     virtual std::shared_ptr<TrackList> track_list();
     virtual PlayerKey key() const;
