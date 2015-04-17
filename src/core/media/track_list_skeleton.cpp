@@ -48,10 +48,8 @@ struct media::TrackListSkeleton::Private
             dbus::Object::Ptr object)
         : impl(impl),
           object(object),
-          can_edit_tracks(object->get_property<mpris::TrackList::Properties::CanEditTracks>()),
-          tracks(object->get_property<mpris::TrackList::Properties::Tracks>()),
-          current_track(tracks->get().begin()),
-          empty_iterator(tracks->get().begin()),
+          current_track(tracks.get().begin()),
+          empty_iterator(tracks.get().begin()),
           loop_status(media::Player::LoopStatus::none),
           skeleton{mpris::TrackList::Skeleton::Configuration{object, mpris::TrackList::Skeleton::Configuration::Defaults{}}},
           signals
@@ -102,7 +100,7 @@ struct media::TrackListSkeleton::Private
         media::Track::Id track;
         msg->reader() >> track;
 
-        current_track = std::find(tracks->get().begin(), tracks->get().end(), track);
+        current_track = std::find(tracks.get().begin(), tracks.get().end(), track);
         impl->go_to(track);
 
         auto reply = dbus::Message::make_method_return(msg);
@@ -112,8 +110,9 @@ struct media::TrackListSkeleton::Private
     media::TrackListSkeleton* impl;
     dbus::Object::Ptr object;
 
-    std::shared_ptr<core::dbus::Property<mpris::TrackList::Properties::CanEditTracks>> can_edit_tracks;
-    std::shared_ptr<core::dbus::Property<mpris::TrackList::Properties::Tracks>> tracks;
+    core::Property<bool> can_edit_tracks;
+    core::Property<media::TrackList::Container> tracks;
+
     TrackList::ConstIterator current_track;
     TrackList::ConstIterator empty_iterator;
     media::Player::LoopStatus loop_status;
@@ -179,6 +178,18 @@ media::TrackListSkeleton::TrackListSkeleton(
         std::bind(&Private::handle_go_to,
                   std::ref(d),
                   std::placeholders::_1));
+
+    d->tracks.changed().connect([this](const media::TrackList::Container& tracks)
+    {
+        fprintf(stderr, "TRACKS CHANGED SEND DBUS NOW\n");
+        d->skeleton.properties.tracks->set(tracks);
+    });
+
+    d->can_edit_tracks.changed().connect([this](const bool& can_edit_tracks)
+    {
+        fprintf(stderr, "CAN_EDIT_TRACKS CHANGED SEND DBUS NOW\n");
+        d->skeleton.properties.can_edit_tracks->set(can_edit_tracks);
+    });
 }
 
 media::TrackListSkeleton::~TrackListSkeleton()
@@ -188,14 +199,14 @@ media::TrackListSkeleton::~TrackListSkeleton()
 bool media::TrackListSkeleton::has_next() const
 {
     const auto next_track = std::next(d->current_track);
-    std::cout << "has_next track? " << (next_track != d->tracks->get().end() ? "yes" : "no") << std::endl;
-    return next_track != d->tracks->get().end();
+    std::cout << "has_next track? " << (next_track != d->tracks.get().end() ? "yes" : "no") << std::endl;
+    return next_track != d->tracks.get().end();
 }
 
 const media::Track::Id& media::TrackListSkeleton::next()
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
-    if (d->tracks->get().empty())
+    if (d->tracks.get().empty())
         return *(d->current_track);
 
     // Loop on the current track forever
@@ -208,7 +219,7 @@ const media::Track::Id& media::TrackListSkeleton::next()
     else if (d->loop_status == media::Player::LoopStatus::playlist && !has_next())
     {
         std::cout << "Looping on the entire TrackList..." << std::endl;
-        d->current_track = d->tracks->get().begin();
+        d->current_track = d->tracks.get().begin();
         return *(d->current_track);
     }
     else if (has_next())
@@ -225,26 +236,27 @@ const media::Track::Id& media::TrackListSkeleton::current()
 {
     // Prevent the TrackList from sitting at the end which will cause
     // a segfault when calling current()
-    if (d->tracks->get().size() && (d->current_track == d->empty_iterator))
+    if (d->tracks.get().size() && (d->current_track == d->empty_iterator))
     {
-        d->current_track = d->tracks->get().begin();
+        d->current_track = d->tracks.get().begin();
     }
     return *(d->current_track);
 }
 
+
 const core::Property<bool>& media::TrackListSkeleton::can_edit_tracks() const
 {
-    return *d->skeleton.properties.can_edit_tracks;
+    return d->can_edit_tracks;
 }
 
 core::Property<bool>& media::TrackListSkeleton::can_edit_tracks()
 {
-    return *d->skeleton.properties.can_edit_tracks;
+    return d->can_edit_tracks;
 }
 
 core::Property<media::TrackList::Container>& media::TrackListSkeleton::tracks()
 {
-    return *d->skeleton.properties.tracks;
+    return d->tracks;
 }
 
 void media::TrackListSkeleton::on_loop_status_changed(const media::Player::LoopStatus& loop_status)
@@ -267,7 +279,7 @@ void media::TrackListSkeleton::on_shuffle_changed(bool shuffle)
 
 const core::Property<media::TrackList::Container>& media::TrackListSkeleton::tracks() const
 {
-    return *d->skeleton.properties.tracks;
+    return d->tracks;
 }
 
 const core::Signal<media::TrackList::ContainerTrackIdTuple>& media::TrackListSkeleton::on_track_list_replaced() const
