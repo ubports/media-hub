@@ -255,8 +255,8 @@ void media::TestTrackList::test_shuffle(const std::string &uri1, const std::stri
         cout << "Waiting for second track to finish playing..." << endl;
         wait_for_about_to_finish();
 
-        cout << "Going straight to the Track with Id of '/core/ubuntu/media/Service/sessions/0/TrackList/4'" << std::endl;
-        const media::Track::Id id{"/core/ubuntu/media/Service/sessions/0/TrackList/4"};
+        const media::Track::Id id{m_hubTrackList->tracks().get()[3]};
+        cout << "Going straight to the Track with Id " << id << std::endl;
         m_hubTrackList->go_to(id);
         cout << "Waiting for third track to finish playing..." << endl;
         wait_for_about_to_finish();
@@ -289,7 +289,8 @@ void media::TestTrackList::test_remove_track(const std::string &uri1, const std:
         cout << "Waiting for first track to finish playing..." << endl;
         wait_for_about_to_finish();
 
-        const media::Track::Id id{"/core/ubuntu/media/Service/sessions/0/TrackList/1"};
+        const media::Track::Id id{m_hubTrackList->tracks().get()[1]};
+        cout << "Removing Track with Id of '" << id << "'" << std::endl;
         m_hubTrackList->remove_track(id);
 
         cout << "Waiting for track after removed track to finish playing..." << endl;
@@ -393,7 +394,7 @@ int main (int argc, char **argv)
     else if (argc == 3)
     {
         tracklist->test_basic_playback(argv[1], argv[2]);
-        //tracklist->test_ensure_tracklist_is_not_empty(argv[1], argv[2]);
+        tracklist->test_ensure_tracklist_is_not_empty(argv[1], argv[2]);
         tracklist->test_has_next_track(argv[1], argv[2]);
     }
     else if (argc == 4)
