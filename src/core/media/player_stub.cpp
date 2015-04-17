@@ -44,7 +44,7 @@ struct media::PlayerStub::Private
 {
     Private(const std::shared_ptr<Service>& parent,
             const std::shared_ptr<core::dbus::Service>& service,
-            const std::shared_ptr<core::dbus::Object>& object
+            const std::shared_ptr<core::dbus::Object>& object,
             const std::string& uuid
             ) : parent(parent),
                 service(service),
