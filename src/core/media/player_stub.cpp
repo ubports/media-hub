@@ -43,9 +43,11 @@ namespace media = core::ubuntu::media;
 struct media::PlayerStub::Private
 {
     Private(const std::shared_ptr<Service>& parent,
-            const std::shared_ptr<core::dbus::Object>& object,
+            const std::shared_ptr<core::dbus::Service>& service,
+            const std::shared_ptr<core::dbus::Object>& object
             const std::string& uuid
             ) : parent(parent),
+                service(service),
                 object(object),
                 key(object->invoke_method_synchronously<mpris::Player::Key, media::Player::PlayerKey>().value()),
                 uuid(uuid),
@@ -93,6 +95,7 @@ struct media::PlayerStub::Private
 
     std::shared_ptr<Service> parent;
     std::shared_ptr<TrackList> track_list;
+    dbus::Service::Ptr service;
     dbus::Object::Ptr object;
     media::Player::PlayerKey key;
     std::string uuid;
@@ -212,9 +215,10 @@ struct media::PlayerStub::Private
 
 media::PlayerStub::PlayerStub(
     const std::shared_ptr<Service>& parent,
+    const std::shared_ptr<core::dbus::Service>& service,
     const std::shared_ptr<core::dbus::Object>& object,
     const std::string& uuid)
-        : d(new Private{parent, object, uuid})
+        : d(new Private{parent, service, object, uuid})
 {
 }
 
@@ -243,7 +247,9 @@ std::shared_ptr<media::TrackList> media::PlayerStub::track_list()
     {
         d->track_list = std::make_shared<media::TrackListStub>(
                     shared_from_this(),
-                    dbus::types::ObjectPath(d->object->path().as_string() + "/TrackList"));
+                    d->service->object_for_path(
+                        dbus::types::ObjectPath(
+                            d->object->path().as_string() + "/TrackList")));
     }
     return d->track_list;
 }

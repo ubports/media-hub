@@ -43,10 +43,10 @@ struct media::TrackListStub::Private
     Private(
             TrackListStub* impl,
             const std::shared_ptr<media::Player>& parent,
-            const dbus::types::ObjectPath& op)
+            const dbus::Object::Ptr& object)
         : impl(impl),
           parent(parent),
-          object(impl->access_service()->object_for_path(op)),
+          object(object),
           can_edit_tracks(object->get_property<mpris::TrackList::Properties::CanEditTracks>()),
           tracks(object->get_property<mpris::TrackList::Properties::Tracks>())
     {
@@ -68,9 +68,8 @@ struct media::TrackListStub::Private
 
 media::TrackListStub::TrackListStub(
         const std::shared_ptr<media::Player>& parent,
-        const core::dbus::types::ObjectPath& op)
-    : dbus::Stub<media::TrackList>(the_session_bus()),
-      d(new Private(this, parent, op))
+        const core::dbus::Object::Ptr& object)
+    : d(new Private(this, parent, object))
 {
 }
 

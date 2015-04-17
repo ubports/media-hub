@@ -32,7 +32,8 @@ class TrackListImplementation : public TrackListSkeleton
 {
 public:
     TrackListImplementation(
-            const core::dbus::types::ObjectPath& op,
+            const core::dbus::Bus::Ptr& bus,
+            const core::dbus::Object::Ptr& object,
             const std::shared_ptr<Engine::MetaDataExtractor>& extractor);
     ~TrackListImplementation();
 

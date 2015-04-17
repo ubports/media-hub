@@ -39,6 +39,7 @@ class PlayerStub : public Player
   public:
     explicit PlayerStub(
         const std::shared_ptr<Service>& parent,
+        const std::shared_ptr<core::dbus::Service>& service,
         const std::shared_ptr<core::dbus::Object>& object,
         const std::string& uuid = std::string{});
 

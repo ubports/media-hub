@@ -66,6 +66,7 @@ std::shared_ptr<media::Player> media::ServiceStub::create_session(const media::P
     return std::shared_ptr<media::Player>(new media::PlayerStub
     {
         shared_from_this(),
+        access_service(),
         access_service()->object_for_path(std::get<0>(op.value())),
         std::get<1>(op.value())
     });
@@ -91,6 +92,7 @@ std::shared_ptr<media::Player> media::ServiceStub::reattach_session(const std::s
     return std::shared_ptr<media::Player>(new media::PlayerStub
     {
         shared_from_this(),
+        access_service(),
         access_service()->object_for_path(op.value()),
         uuid
     });
@@ -116,6 +118,7 @@ std::shared_ptr<media::Player> media::ServiceStub::create_fixed_session(const st
     return std::shared_ptr<media::Player>(new media::PlayerStub
     {
         shared_from_this(),
+        access_service(),
         access_service()->object_for_path(op.value())
     });
 }
@@ -131,6 +134,7 @@ std::shared_ptr<media::Player> media::ServiceStub::resume_session(media::Player:
     return std::shared_ptr<media::Player>(new media::PlayerStub
     {
         shared_from_this(),
+        access_service(),
         access_service()->object_for_path(op.value())
     });
 }

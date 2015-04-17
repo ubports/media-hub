@@ -53,6 +53,8 @@ class PlayerSkeleton : public core::ubuntu::media::Player
     {
         // The bus connection we are associated with.
         std::shared_ptr<core::dbus::Bus> bus;
+        // The service instance we are exposed under.
+        std::shared_ptr<core::dbus::Service> service;
         // The session object that we want to expose the skeleton upon.
         std::shared_ptr<core::dbus::Object> session;
         // Our functional dependencies.

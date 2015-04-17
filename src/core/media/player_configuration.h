@@ -31,6 +31,8 @@ struct core::ubuntu::media::Player::Configuration
     core::ubuntu::media::Player::PlayerKey key;
     // The bus connection to expose objects on.
     std::shared_ptr<core::dbus::Bus> bus;
+    // The service instance we live under.
+    std::shared_ptr<core::dbus::Service> service;
     // The actual session object representing a player instance.
     std::shared_ptr<core::dbus::Object> session;
 };

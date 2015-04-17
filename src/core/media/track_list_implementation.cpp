@@ -32,7 +32,7 @@ struct media::TrackListImplementation::Private
 {
     typedef std::map<Track::Id, std::tuple<Track::UriType, Track::MetaData>> MetaDataCache;
 
-    dbus::types::ObjectPath path;
+    dbus::Object::Ptr object;
     size_t track_counter;
     MetaDataCache meta_data_cache;
     std::shared_ptr<media::Engine::MetaDataExtractor> extractor;
@@ -42,10 +42,11 @@ struct media::TrackListImplementation::Private
 };
 
 media::TrackListImplementation::TrackListImplementation(
-        const dbus::types::ObjectPath& op,
+        const dbus::Bus::Ptr& bus,
+        const dbus::Object::Ptr& object,
         const std::shared_ptr<media::Engine::MetaDataExtractor>& extractor)
-    : media::TrackListSkeleton(op),
-      d(new Private{op, 0, Private::MetaDataCache{}, extractor, media::TrackList::Container{}})
+    : media::TrackListSkeleton(bus, object),
+      d(new Private{object, 0, Private::MetaDataCache{}, extractor, media::TrackList::Container{}})
 {
     can_edit_tracks().set(true);
 }
@@ -81,7 +82,7 @@ void media::TrackListImplementation::add_track_with_uri_at(
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
 
-    std::stringstream ss; ss << d->path.as_string() << "/" << d->track_counter++;
+    std::stringstream ss; ss << d->object->path().as_string() << "/" << d->track_counter++;
     Track::Id id{ss.str()};
 
     auto result = tracks().update([this, id, position, make_current](TrackList::Container& container)

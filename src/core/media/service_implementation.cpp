@@ -187,6 +187,7 @@ std::shared_ptr<media::Player> media::ServiceImplementation::create_session(
         media::PlayerSkeleton::Configuration
         {
             conf.bus,
+            conf.service,
             conf.session,
             d->request_context_resolver,
             d->request_authenticator
