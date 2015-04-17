@@ -1,5 +1,5 @@
 /*
- * Copyright © 2013 Canonical Ltd.
+ * Copyright © 2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -188,14 +188,14 @@ media::TrackListSkeleton::~TrackListSkeleton()
 bool media::TrackListSkeleton::has_next() const
 {
     const auto next_track = std::next(d->current_track);
-    std::cout << "has_next track? " << (next_track != d->tracks->get().end() ? "yes" : "no") << std::endl;
-    return next_track != d->tracks->get().end();
+    std::cout << "has_next track? " << (next_track != tracks().get().end() ? "yes" : "no") << std::endl;
+    return next_track != tracks().get().end();
 }
 
 const media::Track::Id& media::TrackListSkeleton::next()
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
-    if (d->tracks->get().empty())
+    if (tracks().get().empty())
         return *(d->current_track);
 
     // Loop on the current track forever
@@ -208,7 +208,7 @@ const media::Track::Id& media::TrackListSkeleton::next()
     else if (d->loop_status == media::Player::LoopStatus::playlist && !has_next())
     {
         std::cout << "Looping on the entire TrackList..." << std::endl;
-        d->current_track = d->tracks->get().begin();
+        d->current_track = tracks().get().begin();
         return *(d->current_track);
     }
     else if (has_next())
@@ -225,10 +225,11 @@ const media::Track::Id& media::TrackListSkeleton::current()
 {
     // Prevent the TrackList from sitting at the end which will cause
     // a segfault when calling current()
-    if (d->tracks->get().size() && (d->current_track == d->empty_iterator))
-    {
-        d->current_track = d->tracks->get().begin();
-    }
+    if (tracks().get().size() && (d->current_track == d->empty_iterator))
+        d->current_track = tracks().get().begin();
+    else if (tracks().get().empty())
+        std::cerr << "TrackList is empty therefore there is no valid current track" << std::endl;
+
     return *(d->current_track);
 }
 
