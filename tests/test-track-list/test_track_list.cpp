@@ -393,6 +393,7 @@ int main (int argc, char **argv)
     else if (argc == 3)
     {
         tracklist->test_basic_playback(argv[1], argv[2]);
+        //tracklist->test_ensure_tracklist_is_not_empty(argv[1], argv[2]);
         tracklist->test_has_next_track(argv[1], argv[2]);
     }
     else if (argc == 4)
