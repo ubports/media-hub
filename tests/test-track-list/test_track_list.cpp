@@ -80,7 +80,7 @@ void media::TestTrackList::detach_player_session(const std::string &uuid)
     catch (std::runtime_error &e) {
         cerr << "FATAL: Failed to detach the media-hub player session: " << e.what() << endl;
     }
-    
+
     cout << "Detached session " << uuid << endl;
 }
 
@@ -99,14 +99,13 @@ void media::TestTrackList::reattach_player_session(const std::string &uuid)
     catch (std::runtime_error &e) {
         cerr << "FATAL: Failed to retrieve the current player's TrackList: " << e.what() << endl;
     }
-    
+
     cout << "Re-connected to session " << uuid << endl;
 }
 
 void media::TestTrackList::destroy_player_session(const std::string &uuid)
 {
-    // TODO: explicitly add a destroy session to the Service class after ricmm lands his new creation_session
-    // that returns a session ID. This will allow me to clear the tracklist after each test.
+    m_hubService->destroy_session(uuid, media::Player::Client::default_configuration());
     m_hubPlayerSession.reset();
 }
 
@@ -134,12 +133,12 @@ void media::TestTrackList::test_basic_playback(const std::string &uri1, const st
 {
     cout << "--> Running test: test_basic_playback" << std::endl;
 
-    core::Connection c =m_hubTrackList->on_track_added().connect([](const media::Track::Id &new_id)
+    const std::string uuid = create_new_player_session();
+
+    core::Connection c = m_hubTrackList->on_track_added().connect([](const media::Track::Id &new_id)
     {
         cout << "Added track to TrackList with Id: " << new_id << endl;
     });
-
-    //create_new_player_session();
 
     m_hubPlayerSession->open_uri(uri1);
     if (!uri2.empty())
@@ -160,7 +159,7 @@ void media::TestTrackList::test_basic_playback(const std::string &uri1, const st
 
     c.disconnect();
 
-    //destroy_player_session();
+    destroy_player_session(uuid);
 }
 
 void media::TestTrackList::test_tracklist_resume(const std::string &uri1, const std::string &uri2, const std::string &uuid)
@@ -170,7 +169,7 @@ void media::TestTrackList::test_tracklist_resume(const std::string &uri1, const 
     add_track(uri1);
     add_track(uri2);
 
-    int initial_size = m_hubTrackList->tracks().get().size();
+    const size_t initial_size = m_hubTrackList->tracks().get().size();
     cout << "Tracklist size: " << initial_size << endl;
     detach_player_session(uuid);
     reattach_player_session(uuid);
@@ -184,8 +183,9 @@ void media::TestTrackList::test_tracklist_resume(const std::string &uri1, const 
 
 void media::TestTrackList::test_ensure_tracklist_is_not_empty(const std::string &uri1, const std::string &uri2)
 {
-    //create_new_player_session();
     cout << "--> Running test: test_ensure_tracklist_is_not_empty" << std::endl;
+
+    const std::string uuid = create_new_player_session();
 
     add_track(uri1);
     if (!uri2.empty())
@@ -195,13 +195,15 @@ void media::TestTrackList::test_ensure_tracklist_is_not_empty(const std::string 
         cout << "TrackList is not empty, test success" << endl;
     else
         cout << "TrackList is empty, test failure" << endl;
+
+    destroy_player_session(uuid);
 }
 
 void media::TestTrackList::test_has_next_track(const std::string &uri1, const std::string &uri2)
 {
     cout << "--> Running test: test_has_next_track" << std::endl;
 
-    //create_new_player_session();
+    const std::string uuid = create_new_player_session();
 
     add_track(uri1);
     add_track(uri2);
@@ -220,12 +222,14 @@ void media::TestTrackList::test_has_next_track(const std::string &uri1, const st
     else
         cerr << "Playback did not start successfully" << endl;
 
-    //destroy_player_session();
+    destroy_player_session(uuid);
 }
 
 void media::TestTrackList::test_shuffle(const std::string &uri1, const std::string &uri2, const std::string &uri3)
 {
     cout << "--> Running test: test_shuffle" << std::endl;
+
+    const std::string uuid = create_new_player_session();
 
     add_track(uri1);
     add_track(uri2);
@@ -259,13 +263,17 @@ void media::TestTrackList::test_shuffle(const std::string &uri1, const std::stri
     }
     else
         cerr << "Playback did not start successfully" << endl;
+
+    destroy_player_session(uuid);
 }
 
 void media::TestTrackList::test_remove_track(const std::string &uri1, const std::string &uri2, const std::string &uri3)
 {
     cout << "--> Running test: test_remove_track" << std::endl;
 
-    core::Connection c =m_hubTrackList->on_track_removed().connect([](const media::Track::Id &new_id)
+    const std::string uuid = create_new_player_session();
+
+    core::Connection c = m_hubTrackList->on_track_removed().connect([](const media::Track::Id &new_id)
     {
         cout << "Removed track from TrackList with Id: " << new_id << endl;
     });
@@ -289,6 +297,8 @@ void media::TestTrackList::test_remove_track(const std::string &uri1, const std:
     }
     else
         cerr << "Playback did not start successfully" << endl;
+
+    destroy_player_session(uuid);
 }
 
 template<class T>
@@ -377,20 +387,17 @@ int main (int argc, char **argv)
 
     if (argc == 2)
     {
-        tracklist->create_new_player_session();
         tracklist->test_basic_playback(argv[1]);
         tracklist->test_ensure_tracklist_is_not_empty(argv[1]);
     }
     else if (argc == 3)
     {
-        tracklist->create_new_player_session();
-        //tracklist->test_basic_playback(argv[1], argv[2]);
-        tracklist->test_ensure_tracklist_is_not_empty(argv[1], argv[2]);
-        //tracklist->test_has_next_track(argv[1], argv[2]);
+        tracklist->test_basic_playback(argv[1], argv[2]);
+        //tracklist->test_ensure_tracklist_is_not_empty(argv[1], argv[2]);
+        tracklist->test_has_next_track(argv[1], argv[2]);
     }
     else if (argc == 4)
     {
-        tracklist->create_new_player_session();
         tracklist->test_basic_playback(argv[1]);
         tracklist->test_ensure_tracklist_is_not_empty(argv[1], argv[2]);
         tracklist->test_has_next_track(argv[1], argv[2]);
@@ -400,7 +407,10 @@ int main (int argc, char **argv)
     else if (argc == 5)
     {
         std::string uuid = tracklist->create_new_player_session();
+
         tracklist->test_tracklist_resume(argv[1], argv[2], uuid);
+
+        tracklist->destroy_player_session(uuid);
     }
     else
     {
