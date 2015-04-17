@@ -181,13 +181,11 @@ media::TrackListSkeleton::TrackListSkeleton(
 
     d->tracks.changed().connect([this](const media::TrackList::Container& tracks)
     {
-        fprintf(stderr, "TRACKS CHANGED SEND DBUS NOW\n");
         d->skeleton.properties.tracks->set(tracks);
     });
 
     d->can_edit_tracks.changed().connect([this](const bool& can_edit_tracks)
     {
-        fprintf(stderr, "CAN_EDIT_TRACKS CHANGED SEND DBUS NOW\n");
         d->skeleton.properties.can_edit_tracks->set(can_edit_tracks);
     });
 }
