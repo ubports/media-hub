@@ -44,11 +44,13 @@ struct media::PlayerStub::Private
 {
     Private(const std::shared_ptr<Service>& parent,
             const std::shared_ptr<core::dbus::Service>& service,
-            const std::shared_ptr<core::dbus::Object>& object
+            const std::shared_ptr<core::dbus::Object>& object,
+            const std::string& uuid
             ) : parent(parent),
                 service(service),
                 object(object),
                 key(object->invoke_method_synchronously<mpris::Player::Key, media::Player::PlayerKey>().value()),
+                uuid(uuid),
                 sink_factory(media::video::make_platform_default_sink_factory(key)),
                 properties
                 {
@@ -96,6 +98,7 @@ struct media::PlayerStub::Private
     dbus::Service::Ptr service;
     dbus::Object::Ptr object;
     media::Player::PlayerKey key;
+    std::string uuid;
     media::video::SinkFactory sink_factory;
     struct
     {
@@ -213,13 +216,29 @@ struct media::PlayerStub::Private
 media::PlayerStub::PlayerStub(
     const std::shared_ptr<Service>& parent,
     const std::shared_ptr<core::dbus::Service>& service,
-    const std::shared_ptr<core::dbus::Object>& object)
-    : d(new Private{parent, service, object})
+    const std::shared_ptr<core::dbus::Object>& object,
+    const std::string& uuid)
+        : d(new Private{parent, service, object, uuid})
 {
 }
 
 media::PlayerStub::~PlayerStub()
 {
+}
+
+std::string media::PlayerStub::uuid() const
+{
+    return d->uuid;
+}
+
+void media::PlayerStub::reconnect()
+{
+    // No implementation
+}
+
+void media::PlayerStub::abandon()
+{
+    // No implementation
 }
 
 std::shared_ptr<media::TrackList> media::PlayerStub::track_list()

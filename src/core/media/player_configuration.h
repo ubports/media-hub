@@ -27,7 +27,7 @@
 // to the implementation in a way that is opaque to the client.
 struct core::ubuntu::media::Player::Configuration
 {
-    // Unique key for identifying the session.
+    // Unique key for identifying the session path.
     core::ubuntu::media::Player::PlayerKey key;
     // The bus connection to expose objects on.
     std::shared_ptr<core::dbus::Bus> bus;

@@ -19,6 +19,8 @@
 #ifndef CORE_UBUNTU_MEDIA_SERVICE_SKELETON_H_
 #define CORE_UBUNTU_MEDIA_SERVICE_SKELETON_H_
 
+#include "apparmor/ubuntu.h"
+
 #include <core/media/service.h>
 
 #include "cover_art_resolver.h"
@@ -43,6 +45,7 @@ public:
     {
         std::shared_ptr<Service> impl;
         KeyedPlayerStore::Ptr player_store;
+        helper::ExternalServices& external_services;
         CoverArtResolver cover_art_resolver;
     };
 
@@ -51,6 +54,9 @@ public:
 
     // From media::Service
     std::shared_ptr<Player> create_session(const Player::Configuration&);
+    void detach_session(const std::string&, const Player::Configuration&);
+    std::shared_ptr<Player> reattach_session(const std::string&, const Player::Configuration&);
+    void destroy_session(const std::string&, const media::Player::Configuration&);
     std::shared_ptr<Player> create_fixed_session(const std::string& name, const Player::Configuration&);
     std::shared_ptr<Player> resume_session(Player::PlayerKey);
     void pause_other_sessions(Player::PlayerKey key);

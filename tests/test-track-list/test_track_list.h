@@ -45,14 +45,19 @@ public:
     TestTrackList();
     ~TestTrackList();
 
-    void create_new_player_session();
-    void destroy_player_session();
+    std::string create_new_player_session();
+    void detach_player_session(const std::string &uuid);
+    void reattach_player_session(const std::string &uuid);
+    void destroy_player_session(const std::string &uuid);
 
     void add_track(const std::string &uri, bool make_current = false);
 
     // Takes in one or two files for playback, adds it/them to the TrackList, and plays
     void test_basic_playback(const std::string &uri1, const std::string &uri2 = std::string{});
 
+    // Takes two uris and confirms that they remain after a detach/reattach
+    void test_tracklist_resume(const std::string &uri1, const std::string &uri2, const std::string &uuid);
+    
     void test_ensure_tracklist_is_not_empty(const std::string &uri1, const std::string &uri2 = std::string{});
 
     // Takes in one or two files for playback, adds it/them to the TrackList, plays and makes sure

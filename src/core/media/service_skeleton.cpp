@@ -35,6 +35,10 @@
 
 #include <core/posix/this_process.h>
 
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+
 #include <map>
 #include <regex>
 #include <sstream>
@@ -50,15 +54,31 @@ core::Signal<void> the_empty_signal;
 struct media::ServiceSkeleton::Private
 {
     Private(media::ServiceSkeleton* impl, const ServiceSkeleton::Configuration& config)
-        : impl(impl),
+        : request_context_resolver(media::apparmor::ubuntu::make_platform_default_request_context_resolver(config.external_services)),
+          impl(impl),
           object(impl->access_service()->add_object_for_path(
                      dbus::traits::Service<media::Service>::object_path())),
-          exported(impl->access_bus(), config.cover_art_resolver),
-          configuration(config)
+          configuration(config),
+          exported(impl->access_bus(), config.cover_art_resolver)
     {
         object->install_method_handler<mpris::Service::CreateSession>(
                     std::bind(
                         &Private::handle_create_session,
+                        this,
+                        std::placeholders::_1));
+        object->install_method_handler<mpris::Service::DetachSession>(
+                    std::bind(
+                        &Private::handle_detach_session,
+                        this,
+                        std::placeholders::_1));
+        object->install_method_handler<mpris::Service::ReattachSession>(
+                    std::bind(
+                        &Private::handle_reattach_session,
+                        this,
+                        std::placeholders::_1));
+        object->install_method_handler<mpris::Service::DestroySession>(
+                    std::bind(
+                        &Private::handle_destroy_session,
                         this,
                         std::placeholders::_1));
         object->install_method_handler<mpris::Service::CreateFixedSession>(
@@ -78,24 +98,26 @@ struct media::ServiceSkeleton::Private
                         std::placeholders::_1));
     }
 
-    std::pair<std::string, media::Player::PlayerKey> create_session_info()
+    std::tuple<std::string, media::Player::PlayerKey, std::string> create_session_info()
     {
         static unsigned int session_counter = 0;
 
         unsigned int current_session = session_counter++;
+        boost::uuids::uuid uuid = gen();
 
         std::stringstream ss;
         ss << "/core/ubuntu/media/Service/sessions/" << current_session;
 
-        return std::make_pair(ss.str(), media::Player::PlayerKey(current_session));
+        return std::make_tuple(ss.str(), media::Player::PlayerKey(current_session), to_string(uuid));
     }
 
     void handle_create_session(const core::dbus::Message::Ptr& msg)
     {
-        auto  session_info = create_session_info();
+        auto session_info = create_session_info();
 
-        dbus::types::ObjectPath op{session_info.first};
-        media::Player::PlayerKey key{session_info.second};
+        dbus::types::ObjectPath op{std::get<0>(session_info)};
+        media::Player::PlayerKey key{std::get<1>(session_info)};
+        std::string uuid{std::get<2>(session_info)};
 
         media::Player::Configuration config
         {
@@ -105,11 +127,21 @@ struct media::ServiceSkeleton::Private
             impl->access_service()->add_object_for_path(op)
         };
 
+        std::cout << "Session created by request of: " << msg->sender() << ", uuid: " << uuid << ", path:" << op << std::endl;
+
         try
         {
             configuration.player_store->add_player_for_key(key, impl->create_session(config));
+            uuid_player_map.insert(std::make_pair(uuid, key));
+
+            request_context_resolver->resolve_context_for_dbus_name_async(msg->sender(), [this, key, msg](const media::apparmor::ubuntu::Context& context)
+            {
+                fprintf(stderr, "%s():%d -- app_name='%s', attached\n", __func__, __LINE__, context.str().c_str());
+                player_owner_map.insert(std::make_pair(key, std::make_tuple(context.str(), true, msg->sender())));
+            });
+            
             auto reply = dbus::Message::make_method_return(msg);
-            reply->writer() << op;
+            reply->writer() << std::make_tuple(op, uuid);
 
             impl->access_bus()->send(reply);
         } catch(const std::runtime_error& e)
@@ -117,6 +149,174 @@ struct media::ServiceSkeleton::Private
             auto reply = dbus::Message::make_error(
                         msg,
                         mpris::Service::Errors::CreatingSession::name(),
+                        e.what());
+            impl->access_bus()->send(reply);
+        }
+    }
+
+    void handle_detach_session(const core::dbus::Message::Ptr& msg)
+    {
+        try
+        {
+            std::string uuid;
+            msg->reader() >> uuid;
+
+            auto key = uuid_player_map.at(uuid);
+
+            if (player_owner_map.count(key) != 0) {
+                auto info = player_owner_map.at(key);
+                // Check if session is attached(1) and that the detachment
+                // request comes from the same peer(2) that created the session.
+                if (std::get<1>(info) && (std::get<2>(info) == msg->sender())) { // Player is attached
+                    std::get<1>(info) = false; // Detached
+                    std::get<2>(info).clear(); // Clear registered sender/peer
+                    auto player = configuration.player_store->player_for_key(key);
+                    player->lifetime().set(media::Player::Lifetime::resumable);
+                }
+            }
+            
+            auto reply = dbus::Message::make_method_return(msg);
+            impl->access_bus()->send(reply);
+
+        } catch(const std::runtime_error& e)
+        {
+            auto reply = dbus::Message::make_error(
+                        msg,
+                        mpris::Service::Errors::DetachingSession::name(),
+                        e.what());
+            impl->access_bus()->send(reply);
+        }
+    }
+
+    void handle_reattach_session(const core::dbus::Message::Ptr& msg)
+    {
+        try
+        {
+            std::string uuid;
+            msg->reader() >> uuid;
+
+            if (uuid_player_map.count(uuid) != 0) {
+                auto key = uuid_player_map.at(uuid);
+                if (not configuration.player_store->has_player_for_key(key)) {
+                    auto reply = dbus::Message::make_error(
+                                msg,
+                                mpris::Service::Errors::ReattachingSession::name(),
+                                "Unable to locate player session");
+                    impl->access_bus()->send(reply);
+                    return;
+                }
+                std::stringstream ss;
+                ss << "/core/ubuntu/media/Service/sessions/" << key;
+                dbus::types::ObjectPath op{ss.str()};
+
+                request_context_resolver->resolve_context_for_dbus_name_async(msg->sender(), [this, msg, key, op](const media::apparmor::ubuntu::Context& context)
+                {
+                    auto info = player_owner_map.at(key);
+                    fprintf(stderr, "%s():%d -- reattach app_name='%s', info='%s', '%s'\n", __func__, __LINE__, context.str().c_str(), std::get<0>(info).c_str(), std::get<2>(info).c_str());
+                    if (std::get<0>(info) == context.str()) {
+                        std::get<1>(info) = true; // Set to Attached
+                        std::get<2>(info) = msg->sender(); // Register new owner
+
+                        // Signal player reconnection
+                        auto player = configuration.player_store->player_for_key(key);
+                        player->reconnect();
+
+                        auto reply = dbus::Message::make_method_return(msg);
+                        reply->writer() << op;
+
+                        impl->access_bus()->send(reply);
+                    }
+                    else {
+                        auto reply = dbus::Message::make_error(
+                                    msg,
+                                    mpris::Service::Errors::ReattachingSession::name(),
+                                    "Invalid permissions for the requested session");
+                        impl->access_bus()->send(reply);
+                        return;
+                    }
+                });
+            }
+            else {
+               auto reply = dbus::Message::make_error(
+                           msg,
+                           mpris::Service::Errors::ReattachingSession::name(),
+                           "Invalid session");
+               impl->access_bus()->send(reply);
+               return;
+            }
+        } catch(const std::runtime_error& e)
+        {
+            auto reply = dbus::Message::make_error(
+                        msg,
+                        mpris::Service::Errors::ReattachingSession::name(),
+                        e.what());
+            impl->access_bus()->send(reply);
+        }
+    }
+
+    void handle_destroy_session(const core::dbus::Message::Ptr& msg)
+    {
+     
+        try
+        {
+            std::string uuid;
+            msg->reader() >> uuid;
+
+            if (uuid_player_map.count(uuid) != 0) {
+                auto key = uuid_player_map.at(uuid);
+                if (not configuration.player_store->has_player_for_key(key)) {
+                    auto reply = dbus::Message::make_error(
+                                msg,
+                                mpris::Service::Errors::DestroyingSession::name(),
+                                "Unable to locate player session");
+                    impl->access_bus()->send(reply);
+                    return;
+                }
+
+                // Remove control entries from the map, at this point
+                // the session is no longer usable.
+                uuid_player_map.erase(uuid);
+
+                request_context_resolver->resolve_context_for_dbus_name_async(msg->sender(), [this, msg, key](const media::apparmor::ubuntu::Context& context)
+                {
+                    auto info = player_owner_map.at(key);
+                    fprintf(stderr, "%s():%d -- Destroying app_name='%s', info='%s', '%s'\n", __func__, __LINE__, context.str().c_str(), std::get<0>(info).c_str(), std::get<2>(info).c_str());
+                    if (std::get<0>(info) == context.str()) {
+                        player_owner_map.erase(key);
+
+                        // Reset lifecycle to non-resumable on the now-abandoned session
+                        auto player = configuration.player_store->player_for_key(key);
+
+                        // Delete player instance by abandonment
+                        player->lifetime().set(media::Player::Lifetime::normal);
+                        player->abandon();
+
+                        auto reply = dbus::Message::make_method_return(msg);
+                        impl->access_bus()->send(reply);
+                    }
+                    else {
+                        auto reply = dbus::Message::make_error(
+                                    msg,
+                                    mpris::Service::Errors::DestroyingSession::name(),
+                                    "Invalid permissions for the requested session");
+                        impl->access_bus()->send(reply);
+                        return;
+                    }
+                });
+            }
+            else {
+               auto reply = dbus::Message::make_error(
+                           msg,
+                           mpris::Service::Errors::DestroyingSession::name(),
+                           "Invalid session");
+               impl->access_bus()->send(reply);
+               return;
+            }
+        } catch(const std::runtime_error& e)
+        {
+            auto reply = dbus::Message::make_error(
+                        msg,
+                        mpris::Service::Errors::DestroyingSession::name(),
                         e.what());
             impl->access_bus()->send(reply);
         }
@@ -133,8 +333,8 @@ struct media::ServiceSkeleton::Private
                 // Create new session
                 auto session_info = create_session_info();
 
-                dbus::types::ObjectPath op{session_info.first};
-                media::Player::PlayerKey key{session_info.second};
+                dbus::types::ObjectPath op{std::get<0>(session_info)};
+                media::Player::PlayerKey key{std::get<1>(session_info)};
 
                 media::Player::Configuration config
                 {
@@ -148,7 +348,6 @@ struct media::ServiceSkeleton::Private
                 session->lifetime().set(media::Player::Lifetime::resumable);
 
                 configuration.player_store->add_player_for_key(key, session);
-
 
                 named_player_map.insert(std::make_pair(name, key));
 
@@ -233,6 +432,7 @@ struct media::ServiceSkeleton::Private
         impl->access_bus()->send(reply);
     }
 
+    media::apparmor::ubuntu::RequestContextResolver::Ptr request_context_resolver;
     media::ServiceSkeleton* impl;
     dbus::Object::Ptr object;
 
@@ -240,6 +440,14 @@ struct media::ServiceSkeleton::Private
     ServiceSkeleton::Configuration configuration;
     // We map named/fixed player instances to their respective keys.
     std::map<std::string, media::Player::PlayerKey> named_player_map;
+    // We map UUIDs to their respective keys.
+    std::map<std::string, media::Player::PlayerKey> uuid_player_map;
+    // We keep a list of keys and their respective owners and states.
+    // value: (owner context, attached state, attached dbus name)
+    std::map<media::Player::PlayerKey, std::tuple<std::string, bool, std::string>> player_owner_map;
+    
+    boost::uuids::random_generator gen;
+     
     // We expose the entire service as an MPRIS player.
     struct Exported
     {
@@ -525,6 +733,21 @@ media::ServiceSkeleton::~ServiceSkeleton()
 std::shared_ptr<media::Player> media::ServiceSkeleton::create_session(const media::Player::Configuration& config)
 {
     return d->configuration.impl->create_session(config);
+}
+
+void media::ServiceSkeleton::detach_session(const std::string& uuid, const media::Player::Configuration& config)
+{
+    return d->configuration.impl->detach_session(uuid, config);
+}
+
+std::shared_ptr<media::Player> media::ServiceSkeleton::reattach_session(const std::string& uuid, const media::Player::Configuration& config)
+{
+    return d->configuration.impl->reattach_session(uuid, config);
+}
+
+void media::ServiceSkeleton::destroy_session(const std::string& uuid, const media::Player::Configuration& config)
+{
+    return d->configuration.impl->destroy_session(uuid, config);
 }
 
 std::shared_ptr<media::Player> media::ServiceSkeleton::create_fixed_session(const std::string& name, const media::Player::Configuration&config)
