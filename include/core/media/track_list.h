@@ -67,8 +67,8 @@ class TrackList : public std::enable_shared_from_this<TrackList>
     /** Removes a Track from the TrackList. */
     virtual void remove_track(const Track::Id& id) = 0;
 
-    /** Skip to the specified TrackId. */
-    virtual void go_to(const Track::Id& track) = 0;
+    /** Skip to the specified TrackId. Calls stop() and play() on the player if toggle_player_state is true. */
+    virtual void go_to(const Track::Id& track, bool toggle_player_state) = 0;
 
 
     /** Reorders the tracks such that they are in a random order. */
@@ -94,7 +94,7 @@ class TrackList : public std::enable_shared_from_this<TrackList>
     virtual const core::Signal<Track::Id>& on_track_changed() const = 0;
 
     /** Used to notify the Player of when the client requested that the Player should immediately play a new track. */
-    virtual const core::Signal<Track::Id>& on_go_to_track() const = 0;
+    virtual const core::Signal<std::pair<Track::Id, bool>>& on_go_to_track() const = 0;
 
 protected:
     TrackList();

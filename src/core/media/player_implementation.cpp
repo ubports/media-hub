@@ -439,13 +439,17 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         Parent::error()(e);
     });
 
-    d->track_list->on_go_to_track().connect([this](const media::Track::Id& id)
+    d->track_list->on_go_to_track().connect([this](std::pair<const media::Track::Id, bool> p)
     {
         // This prevents the TrackList from auto advancing in other areas such as the about_to_finish signal
         // handler.
         d->doing_go_to_track = true;
 
-        d->engine->stop();
+        const media::Track::Id id = p.first;
+        const bool toggle_player_state = p.second;
+
+        if (toggle_player_state)
+            d->engine->stop();
 
         const Track::UriType uri = d->track_list->query_uri_for_track(id);
         if (!uri.empty())
@@ -456,7 +460,8 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
             d->engine->open_resource_for_uri(uri, do_pipeline_reset);
         }
 
-        d->engine->play();
+        if (toggle_player_state)
+            d->engine->play();
 
         d->doing_go_to_track = false;
     });

@@ -101,7 +101,8 @@ struct media::TrackListSkeleton::Private
         msg->reader() >> track;
 
         current_track = std::find(skeleton.properties.tracks->get().begin(), skeleton.properties.tracks->get().end(), track);
-        impl->go_to(track);
+        const bool toggle_player_state = true;
+        impl->go_to(track, toggle_player_state);
 
         auto reply = dbus::Message::make_method_return(msg);
         bus->send(reply);
@@ -147,7 +148,7 @@ struct media::TrackListSkeleton::Private
         core::Signal<Track::Id> on_track_removed;
         core::Signal<TrackList::ContainerTrackIdTuple> on_track_list_replaced;
         core::Signal<Track::Id> on_track_changed;
-        core::Signal<Track::Id> on_go_to_track;
+        core::Signal<std::pair<Track::Id, bool>> on_go_to_track;
     } signals;
 };
 
@@ -287,7 +288,7 @@ const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_changed
     return d->signals.on_track_changed;
 }
 
-const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_go_to_track() const
+const core::Signal<std::pair<media::Track::Id, bool>>& media::TrackListSkeleton::on_go_to_track() const
 {
     return d->signals.on_go_to_track;
 }
@@ -312,7 +313,7 @@ core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_changed()
     return d->signals.on_track_changed;
 }
 
-core::Signal<media::Track::Id>& media::TrackListSkeleton::on_go_to_track()
+core::Signal<std::pair<media::Track::Id, bool>>& media::TrackListSkeleton::on_go_to_track()
 {
     return d->signals.on_go_to_track;
 }

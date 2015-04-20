@@ -43,7 +43,7 @@ public:
     void add_track_with_uri_at(const Track::UriType& uri, const Track::Id& position, bool make_current);
     void remove_track(const Track::Id& id);
 
-    void go_to(const Track::Id& track);
+    void go_to(const Track::Id& track, bool toggle_player_state);
     void shuffle_tracks();
     void unshuffle_tracks();
     void reset();
