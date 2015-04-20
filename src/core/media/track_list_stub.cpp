@@ -63,7 +63,7 @@ struct media::TrackListStub::Private
     core::Signal<Track::Id> on_track_added;
     core::Signal<Track::Id> on_track_removed;
     core::Signal<Track::Id> on_track_changed;
-    core::Signal<Track::Id> on_go_to_track;
+    core::Signal<std::pair<Track::Id, bool>> on_go_to_track;
 };
 
 media::TrackListStub::TrackListStub(
@@ -128,7 +128,7 @@ void media::TrackListStub::remove_track(const media::Track::Id& track)
         throw std::runtime_error("Problem removing track: " + op.error());
 }
 
-void media::TrackListStub::go_to(const media::Track::Id& track)
+void media::TrackListStub::go_to(const media::Track::Id& track, bool toggle_player_state)
 {
     auto op = d->object->invoke_method_synchronously<mpris::TrackList::GoTo, void>(
                 track);
@@ -175,7 +175,7 @@ const core::Signal<media::Track::Id>& media::TrackListStub::on_track_changed() c
     return d->on_track_changed;
 }
 
-const core::Signal<media::Track::Id>& media::TrackListStub::on_go_to_track() const
+const core::Signal<std::pair<media::Track::Id, bool>>& media::TrackListStub::on_go_to_track() const
 {
     return d->on_go_to_track;
 }

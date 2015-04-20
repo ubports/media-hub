@@ -106,7 +106,13 @@ void media::TrackListImplementation::add_track_with_uri_at(
         }
 
         if (make_current)
-            go_to(id);
+        {
+            // Don't automatically call stop() and play() in player_implementation.cpp on_go_to_track()
+            // since this breaks video playback when using open_uri() (stop() and play() are unwanted in
+            // this scenario since the qtubuntu-media will handle this automatically)
+            const bool toggle_player_state = false;
+            go_to(id, toggle_player_state);
+        }
 
         // Signal to the client that a track was added to the TrackList
         on_track_added()(id);
@@ -130,11 +136,12 @@ void media::TrackListImplementation::remove_track(const media::Track::Id& id)
 
 }
 
-void media::TrackListImplementation::go_to(const media::Track::Id& track)
+void media::TrackListImplementation::go_to(const media::Track::Id& track, bool toggle_player_state)
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
+    std::pair<const media::Track::Id, bool> p = std::make_pair(track, toggle_player_state);
     // Signal the Player instance to go to a specific track for playback
-    on_go_to_track()(track);
+    on_go_to_track()(p);
     on_track_changed()(track);
 }
 
