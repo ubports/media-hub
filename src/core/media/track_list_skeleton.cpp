@@ -44,11 +44,15 @@ namespace media = core::ubuntu::media;
 
 struct media::TrackListSkeleton::Private
 {
-    Private(media::TrackListSkeleton* impl, const dbus::Bus::Ptr& bus, const dbus::Object::Ptr& object)
+    Private(media::TrackListSkeleton* impl, const dbus::Bus::Ptr& bus, const dbus::Object::Ptr& object,
+            const apparmor::ubuntu::RequestContextResolver::Ptr& request_context_resolver,
+            const media::apparmor::ubuntu::RequestAuthenticator::Ptr& request_authenticator)
         : impl(impl),
           bus(bus),
           object(object),
-          skeleton{mpris::TrackList::Skeleton::Configuration{object, mpris::TrackList::Skeleton::Configuration::Defaults{}}},
+          request_context_resolver(request_context_resolver),
+          request_authenticator(request_authenticator),
+          skeleton(mpris::TrackList::Skeleton::Configuration{object, mpris::TrackList::Skeleton::Configuration::Defaults{}}),
           current_track(skeleton.properties.tracks->get().begin()),
           empty_iterator(skeleton.properties.tracks->get().begin()),
           loop_status(media::Player::LoopStatus::none),
@@ -75,13 +79,24 @@ struct media::TrackListSkeleton::Private
 
     void handle_add_track_with_uri_at(const core::dbus::Message::Ptr& msg)
     {
-        Track::UriType uri; media::Track::Id after; bool make_current;
-        msg->reader() >> uri >> after >> make_current;
+        request_context_resolver->resolve_context_for_dbus_name_async(msg->sender(), [this, msg](const media::apparmor::ubuntu::Context& context)
+        {
+            Track::UriType uri; media::Track::Id after; bool make_current;
+            msg->reader() >> uri >> after >> make_current;
 
-        impl->add_track_with_uri_at(uri, after, make_current);
+            // Make sure the client has adequate apparmor permissions to open the URI
+            const auto result = request_authenticator->authenticate_open_uri_request(context, uri);
 
-        auto reply = dbus::Message::make_method_return(msg);
-        bus->send(reply);
+            auto reply = dbus::Message::make_method_return(msg);
+            // Only add the track to the TrackList if it passes the apparmor permissions check
+            if (std::get<0>(result))
+                impl->add_track_with_uri_at(uri, after, make_current);
+            else
+                std::cerr << "Warning: Not adding track " << uri <<
+                    " to TrackList because of inadequate client apparmor permissions." << std::endl;
+
+            bus->send(reply);
+        });
     }
 
     void handle_remove_track(const core::dbus::Message::Ptr& msg)
@@ -111,6 +126,8 @@ struct media::TrackListSkeleton::Private
     media::TrackListSkeleton* impl;
     dbus::Bus::Ptr bus;
     dbus::Object::Ptr object;
+    media::apparmor::ubuntu::RequestContextResolver::Ptr request_context_resolver;
+    media::apparmor::ubuntu::RequestAuthenticator::Ptr request_authenticator;
 
     mpris::TrackList::Skeleton skeleton;
     TrackList::ConstIterator current_track;
@@ -152,8 +169,10 @@ struct media::TrackListSkeleton::Private
     } signals;
 };
 
-media::TrackListSkeleton::TrackListSkeleton(const core::dbus::Bus::Ptr& bus, const core::dbus::Object::Ptr& object)
-    : d(new Private(this, bus, object))
+media::TrackListSkeleton::TrackListSkeleton(const core::dbus::Bus::Ptr& bus, const core::dbus::Object::Ptr& object,
+        const media::apparmor::ubuntu::RequestContextResolver::Ptr& request_context_resolver,
+        const media::apparmor::ubuntu::RequestAuthenticator::Ptr& request_authenticator)
+    : d(new Private(this, bus, object, request_context_resolver, request_authenticator))
 {
     d->object->install_method_handler<mpris::TrackList::GetTracksMetadata>(
         std::bind(&Private::handle_get_tracks_metadata,

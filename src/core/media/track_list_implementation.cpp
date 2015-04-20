@@ -44,8 +44,10 @@ struct media::TrackListImplementation::Private
 media::TrackListImplementation::TrackListImplementation(
         const dbus::Bus::Ptr& bus,
         const dbus::Object::Ptr& object,
-        const std::shared_ptr<media::Engine::MetaDataExtractor>& extractor)
-    : media::TrackListSkeleton(bus, object),
+        const std::shared_ptr<media::Engine::MetaDataExtractor>& extractor,
+        const media::apparmor::ubuntu::RequestContextResolver::Ptr& request_context_resolver,
+        const media::apparmor::ubuntu::RequestAuthenticator::Ptr& request_authenticator)
+    : media::TrackListSkeleton(bus, object, request_context_resolver, request_authenticator),
       d(new Private{object, 0, Private::MetaDataCache{}, extractor, media::TrackList::Container{}})
 {
     can_edit_tracks().set(true);

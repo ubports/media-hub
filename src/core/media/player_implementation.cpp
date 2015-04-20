@@ -60,9 +60,11 @@ struct media::PlayerImplementation<Parent>::Private :
           engine(std::make_shared<gstreamer::Engine>()),
           track_list(std::make_shared<TrackListImplementation>(
               config.parent.bus,
-              config.parent.service->add_object_for_path(                  
+              config.parent.service->add_object_for_path(
                   dbus::types::ObjectPath(config.parent.session->path().as_string() + "/TrackList")),
-              engine->meta_data_extractor())),
+              engine->meta_data_extractor(),
+              config.parent.request_context_resolver,
+              config.parent.request_authenticator)),
           system_wakelock_count(0),
           display_wakelock_count(0),
           previous_state(Engine::State::stopped),
@@ -541,12 +543,9 @@ media::video::Sink::Ptr media::PlayerImplementation<Parent>::create_gl_texture_v
 template<typename Parent>
 bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri)
 {
-    if (d->track_list != nullptr)
-        // Set new track as the current track to play
-        d->track_list->add_track_with_uri_at(uri, media::TrackList::after_empty_track(), true);
-
-    static const bool do_pipeline_reset = true;
-    return d->engine->open_resource_for_uri(uri, do_pipeline_reset);
+    // Set new track as the current track to play
+    d->track_list->add_track_with_uri_at(uri, media::TrackList::after_empty_track(), true);
+    return true;
 }
 
 template<typename Parent>

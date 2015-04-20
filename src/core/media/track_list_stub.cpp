@@ -89,8 +89,7 @@ const core::Property<media::TrackList::Container>& media::TrackListStub::tracks(
 
 media::Track::MetaData media::TrackListStub::query_meta_data_for_track(const media::Track::Id& id)
 {
-    auto op
-            = d->object->invoke_method_synchronously<
+    auto op = d->object->invoke_method_synchronously<
                 mpris::TrackList::GetTracksMetadata,
                 std::map<std::string, std::string>>(id);
 
@@ -130,6 +129,7 @@ void media::TrackListStub::remove_track(const media::Track::Id& track)
 
 void media::TrackListStub::go_to(const media::Track::Id& track, bool toggle_player_state)
 {
+    (void) toggle_player_state;
     auto op = d->object->invoke_method_synchronously<mpris::TrackList::GoTo, void>(
                 track);
 

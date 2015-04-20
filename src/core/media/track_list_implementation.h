@@ -34,7 +34,9 @@ public:
     TrackListImplementation(
             const core::dbus::Bus::Ptr& bus,
             const core::dbus::Object::Ptr& object,
-            const std::shared_ptr<Engine::MetaDataExtractor>& extractor);
+            const std::shared_ptr<Engine::MetaDataExtractor>& extractor,
+            const core::ubuntu::media::apparmor::ubuntu::RequestContextResolver::Ptr& request_context_resolver,
+            const core::ubuntu::media::apparmor::ubuntu::RequestAuthenticator::Ptr& request_authenticator);
     ~TrackListImplementation();
 
     Track::UriType query_uri_for_track(const Track::Id& id);

@@ -179,6 +179,7 @@ struct media::PlayerSkeleton::Private
             Track::UriType uri;
             in->reader() >> uri;
 
+            // Make sure the client has adequate apparmor permissions to open the URI
             auto result = request_authenticator->authenticate_open_uri_request(context, uri);
 
             auto reply = dbus::Message::make_method_return(in);

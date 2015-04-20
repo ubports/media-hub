@@ -18,6 +18,8 @@
 #ifndef CORE_UBUNTU_MEDIA_TRACK_LIST_SKELETON_H_
 #define CORE_UBUNTU_MEDIA_TRACK_LIST_SKELETON_H_
 
+#include "apparmor/ubuntu.h"
+
 #include <core/media/track_list.h>
 
 #include <core/media/player.h>
@@ -34,7 +36,9 @@ namespace media
 class TrackListSkeleton : public core::ubuntu::media::TrackList
 {
 public:
-    TrackListSkeleton(const core::dbus::Bus::Ptr& bus, const core::dbus::Object::Ptr& object);
+    TrackListSkeleton(const core::dbus::Bus::Ptr& bus, const core::dbus::Object::Ptr& object,
+        const core::ubuntu::media::apparmor::ubuntu::RequestContextResolver::Ptr& request_context_resolver,
+        const core::ubuntu::media::apparmor::ubuntu::RequestAuthenticator::Ptr& request_authenticator);
     ~TrackListSkeleton();
 
     bool has_next() const;

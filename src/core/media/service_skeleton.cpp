@@ -131,7 +131,7 @@ struct media::ServiceSkeleton::Private
 
             if (named_player_map.count(name) == 0) {
                 // Create new session
-                auto  session_info = create_session_info();
+                auto session_info = create_session_info();
 
                 dbus::types::ObjectPath op{session_info.first};
                 media::Player::PlayerKey key{session_info.second};
