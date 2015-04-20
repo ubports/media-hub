@@ -22,7 +22,10 @@
 #include <core/dbus/macros.h>
 
 #include <core/dbus/types/any.h>
+#include <core/dbus/macros.h>
 #include <core/dbus/types/object_path.h>
+#include <core/dbus/object.h>
+#include <core/dbus/property.h>
 #include <core/dbus/types/variant.h>
 
 #include <boost/utility/identity_type.hpp>
@@ -37,38 +40,42 @@ namespace mpris
 {
 struct TrackList
 {
+    typedef std::map<std::string, core::dbus::types::Variant> Dictionary;
+
     static const std::string& name()
     {
-        static const std::string s{"core.ubuntu.media.Service.Player.TrackList"};
+        static const std::string s{"org.mpris.MediaPlayer2.TrackList"};
         return s;
     }
 
-    DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(GetTracksMetadata, TrackList, 1000)
-    DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(AddTrack, TrackList, 1000)
-    DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(RemoveTrack, TrackList, 1000)
-    DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(GoTo, TrackList, 1000)
+    DBUS_CPP_METHOD_DEF(GetTracksMetadata, TrackList)
+    DBUS_CPP_METHOD_DEF(AddTrack, TrackList)
+    DBUS_CPP_METHOD_DEF(RemoveTrack, TrackList)
+    DBUS_CPP_METHOD_DEF(GoTo, TrackList)
 
     struct Signals
     {
+        Signals() = delete;
+
         DBUS_CPP_SIGNAL_DEF
         (
             TrackListReplaced,
             TrackList,
-            BOOST_IDENTITY_TYPE((std::tuple<std::vector<dbus::types::ObjectPath>, dbus::types::ObjectPath>))
+            BOOST_IDENTITY_TYPE((std::tuple<std::vector<core::ubuntu::media::Track::Id>, core::ubuntu::media::Track::Id>))
         )
 
         DBUS_CPP_SIGNAL_DEF
         (
             TrackAdded,
             TrackList,
-            BOOST_IDENTITY_TYPE((std::tuple<std::map<std::string, dbus::types::Variant>, dbus::types::ObjectPath>))
+            core::ubuntu::media::Track::Id
         )
 
         DBUS_CPP_SIGNAL_DEF
         (
             TrackRemoved,
             TrackList,
-            dbus::types::ObjectPath
+            core::ubuntu::media::Track::Id
         )
 
         DBUS_CPP_SIGNAL_DEF
@@ -81,8 +88,93 @@ struct TrackList
 
     struct Properties
     {
-        DBUS_CPP_READABLE_PROPERTY_DEF(Tracks, TrackList, std::vector<std::string>)
+        Properties() = delete;
+
+        DBUS_CPP_READABLE_PROPERTY_DEF(Tracks, TrackList, std::vector<core::ubuntu::media::Track::Id>)
         DBUS_CPP_READABLE_PROPERTY_DEF(CanEditTracks, TrackList, bool)
+    };
+
+    struct Skeleton
+    {
+        static const std::vector<std::string>& the_empty_list_of_invalidated_properties()
+        {
+            static const std::vector<std::string> instance; return instance;
+        }
+
+        // Object instance creation time properties go here.
+        struct Configuration
+        {
+            // The dbus object that should implement org.mpris.MediaPlayer2
+            core::dbus::Object::Ptr object;
+            // Default values assigned to exported dbus interface properties on construction
+            struct Defaults
+            {
+                Properties::Tracks::ValueType tracks{std::vector<core::ubuntu::media::Track::Id>()};
+                Properties::CanEditTracks::ValueType can_edit_tracks{true};
+            } defaults;
+        };
+
+        Skeleton(const Configuration& configuration)
+            : configuration(configuration),
+              properties
+              {
+                  configuration.object->get_property<Properties::Tracks>(),
+                  configuration.object->get_property<Properties::CanEditTracks>(),
+              },
+              signals
+              {
+                  configuration.object->get_signal<Signals::TrackListReplaced>(),
+                  configuration.object->get_signal<Signals::TrackAdded>(),
+                  configuration.object->get_signal<Signals::TrackRemoved>(),
+                  configuration.object->get_signal<Signals::TrackMetadataChanged>(),
+                  configuration.object->template get_signal<core::dbus::interfaces::Properties::Signals::PropertiesChanged>()
+              }
+        {
+            // Set the default value of the properties on the MPRIS TrackList dbus interface
+            properties.tracks->set(configuration.defaults.tracks);
+            properties.can_edit_tracks->set(configuration.defaults.can_edit_tracks);
+        }
+
+        template<typename Property>
+        void on_property_value_changed(const typename Property::ValueType& value)
+        {
+            Dictionary dict;
+            dict[Property::name()] = dbus::types::Variant::encode(value);
+
+            signals.properties_changed->emit(std::make_tuple(
+                            dbus::traits::Service<TrackList>::interface_name(),
+                            dict,
+                            the_empty_list_of_invalidated_properties()));
+        }
+
+        std::map<std::string, core::dbus::types::Variant> get_all_properties()
+        {
+            std::map<std::string, core::dbus::types::Variant> dict;
+            dict[Properties::Tracks::name()] = core::dbus::types::Variant::encode(properties.tracks->get());
+            dict[Properties::CanEditTracks::name()] = core::dbus::types::Variant::encode(properties.can_edit_tracks->get());
+
+            return dict;
+        }
+
+        Configuration configuration;
+
+        struct
+        {
+            std::shared_ptr<core::dbus::Property<Properties::Tracks>> tracks;
+            std::shared_ptr<core::dbus::Property<Properties::CanEditTracks>> can_edit_tracks;
+        } properties;
+
+        struct
+        {
+            core::dbus::Signal<Signals::TrackListReplaced, Signals::TrackListReplaced::ArgumentType>::Ptr tracklist_replaced;
+            core::dbus::Signal<Signals::TrackAdded, Signals::TrackAdded::ArgumentType>::Ptr track_added;
+            core::dbus::Signal<Signals::TrackRemoved, Signals::TrackRemoved::ArgumentType>::Ptr track_removed;
+            core::dbus::Signal<Signals::TrackMetadataChanged, Signals::TrackMetadataChanged::ArgumentType>::Ptr track_metadata_changed;
+
+            dbus::Signal <core::dbus::interfaces::Properties::Signals::PropertiesChanged,
+                core::dbus::interfaces::Properties::Signals::PropertiesChanged::ArgumentType
+            >::Ptr properties_changed;
+        } signals;
     };
 };
 }

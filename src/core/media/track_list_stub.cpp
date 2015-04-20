@@ -43,10 +43,10 @@ struct media::TrackListStub::Private
     Private(
             TrackListStub* impl,
             const std::shared_ptr<media::Player>& parent,
-            const dbus::types::ObjectPath& op)
+            const dbus::Object::Ptr& object)
         : impl(impl),
           parent(parent),
-          object(impl->access_service()->object_for_path(op)),
+          object(object),
           can_edit_tracks(object->get_property<mpris::TrackList::Properties::CanEditTracks>()),
           tracks(object->get_property<mpris::TrackList::Properties::Tracks>())
     {
@@ -59,17 +59,17 @@ struct media::TrackListStub::Private
     std::shared_ptr<core::dbus::Property<mpris::TrackList::Properties::CanEditTracks>> can_edit_tracks;
     std::shared_ptr<core::dbus::Property<mpris::TrackList::Properties::Tracks>> tracks;
 
-    core::Signal<void> on_track_list_replaced;
+    core::Signal<media::TrackList::ContainerTrackIdTuple> on_track_list_replaced;
     core::Signal<Track::Id> on_track_added;
     core::Signal<Track::Id> on_track_removed;
     core::Signal<Track::Id> on_track_changed;
+    core::Signal<std::pair<Track::Id, bool>> on_go_to_track;
 };
 
 media::TrackListStub::TrackListStub(
         const std::shared_ptr<media::Player>& parent,
-        const core::dbus::types::ObjectPath& op)
-    : dbus::Stub<media::TrackList>(the_session_bus()),
-      d(new Private(this, parent, op))
+        const core::dbus::Object::Ptr& object)
+    : d(new Private(this, parent, object))
 {
 }
 
@@ -89,8 +89,7 @@ const core::Property<media::TrackList::Container>& media::TrackListStub::tracks(
 
 media::Track::MetaData media::TrackListStub::query_meta_data_for_track(const media::Track::Id& id)
 {
-    auto op
-            = d->object->invoke_method_synchronously<
+    auto op = d->object->invoke_method_synchronously<
                 mpris::TrackList::GetTracksMetadata,
                 std::map<std::string, std::string>>(id);
 
@@ -128,8 +127,9 @@ void media::TrackListStub::remove_track(const media::Track::Id& track)
         throw std::runtime_error("Problem removing track: " + op.error());
 }
 
-void media::TrackListStub::go_to(const media::Track::Id& track)
+void media::TrackListStub::go_to(const media::Track::Id& track, bool toggle_player_state)
 {
+    (void) toggle_player_state;
     auto op = d->object->invoke_method_synchronously<mpris::TrackList::GoTo, void>(
                 track);
 
@@ -137,22 +137,45 @@ void media::TrackListStub::go_to(const media::Track::Id& track)
         throw std::runtime_error("Problem adding track: " + op.error());
 }
 
-const core::Signal<void>& media::TrackListStub::on_track_list_replaced() const
+void media::TrackListStub::shuffle_tracks()
 {
+    std::cerr << "shuffle_tracks() does nothing from the client side" << std::endl;
+}
+
+void media::TrackListStub::unshuffle_tracks()
+{
+    std::cerr << "unshuffle_tracks() does nothing from the client side" << std::endl;
+}
+
+void media::TrackListStub::reset()
+{
+    std::cerr << "reset() does nothing from the client side" << std::endl;
+}
+
+const core::Signal<media::TrackList::ContainerTrackIdTuple>& media::TrackListStub::on_track_list_replaced() const
+{
+    std::cout << "Signal on_track_list_replaced arrived via the bus" << std::endl;
     return d->on_track_list_replaced;
 }
 
 const core::Signal<media::Track::Id>& media::TrackListStub::on_track_added() const
 {
+    std::cout << "Signal on_track_added arrived via the bus" << std::endl;
     return d->on_track_added;
 }
 
 const core::Signal<media::Track::Id>& media::TrackListStub::on_track_removed() const
 {
+    std::cout << "Signal on_track_removed arrived via the bus" << std::endl;
     return d->on_track_removed;
 }
 
 const core::Signal<media::Track::Id>& media::TrackListStub::on_track_changed() const
 {
     return d->on_track_changed;
+}
+
+const core::Signal<std::pair<media::Track::Id, bool>>& media::TrackListStub::on_go_to_track() const
+{
+    return d->on_go_to_track;
 }

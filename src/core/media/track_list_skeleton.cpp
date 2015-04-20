@@ -1,5 +1,5 @@
 /*
- * Copyright © 2013 Canonical Ltd.
+ * Copyright © 2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -17,6 +17,7 @@
  */
 
 #include "track_list_skeleton.h"
+#include "track_list_implementation.h"
 
 #include <core/media/player.h>
 #include <core/media/track_list.h>
@@ -35,6 +36,7 @@
 #include <core/dbus/types/stl/map.h>
 #include <core/dbus/types/stl/vector.h>
 
+#include <iostream>
 #include <limits>
 
 namespace dbus = core::dbus;
@@ -42,14 +44,24 @@ namespace media = core::ubuntu::media;
 
 struct media::TrackListSkeleton::Private
 {
-    Private(media::TrackListSkeleton* impl,
-            dbus::Object::Ptr object)
+    Private(media::TrackListSkeleton* impl, const dbus::Bus::Ptr& bus, const dbus::Object::Ptr& object,
+            const apparmor::ubuntu::RequestContextResolver::Ptr& request_context_resolver,
+            const media::apparmor::ubuntu::RequestAuthenticator::Ptr& request_authenticator)
         : impl(impl),
+          bus(bus),
           object(object),
-          can_edit_tracks(object->get_property<mpris::TrackList::Properties::CanEditTracks>()),
-          tracks(object->get_property<mpris::TrackList::Properties::Tracks>()),
-          current_track(tracks->get().begin()),
-          empty_iterator(tracks->get().begin())
+          request_context_resolver(request_context_resolver),
+          request_authenticator(request_authenticator),
+          skeleton(mpris::TrackList::Skeleton::Configuration{object, mpris::TrackList::Skeleton::Configuration::Defaults{}}),
+          current_track(skeleton.properties.tracks->get().begin()),
+          empty_iterator(skeleton.properties.tracks->get().begin()),
+          loop_status(media::Player::LoopStatus::none),
+          signals
+          {
+              skeleton.signals.track_added,
+              skeleton.signals.track_removed,
+              skeleton.signals.tracklist_replaced
+          }
     {
     }
 
@@ -62,18 +74,29 @@ struct media::TrackListSkeleton::Private
 
         auto reply = dbus::Message::make_method_return(msg);
         reply->writer() << *meta_data;
-        impl->access_bus()->send(reply);
+        bus->send(reply);
     }
 
     void handle_add_track_with_uri_at(const core::dbus::Message::Ptr& msg)
     {
-        Track::UriType uri; media::Track::Id after; bool make_current;
-        msg->reader() >> uri >> after >> make_current;
+        request_context_resolver->resolve_context_for_dbus_name_async(msg->sender(), [this, msg](const media::apparmor::ubuntu::Context& context)
+        {
+            Track::UriType uri; media::Track::Id after; bool make_current;
+            msg->reader() >> uri >> after >> make_current;
 
-        impl->add_track_with_uri_at(uri, after, make_current);
+            // Make sure the client has adequate apparmor permissions to open the URI
+            const auto result = request_authenticator->authenticate_open_uri_request(context, uri);
 
-        auto reply = dbus::Message::make_method_return(msg);
-        impl->access_bus()->send(reply);
+            auto reply = dbus::Message::make_method_return(msg);
+            // Only add the track to the TrackList if it passes the apparmor permissions check
+            if (std::get<0>(result))
+                impl->add_track_with_uri_at(uri, after, make_current);
+            else
+                std::cerr << "Warning: Not adding track " << uri <<
+                    " to TrackList because of inadequate client apparmor permissions." << std::endl;
+
+            bus->send(reply);
+        });
     }
 
     void handle_remove_track(const core::dbus::Message::Ptr& msg)
@@ -84,7 +107,7 @@ struct media::TrackListSkeleton::Private
         impl->remove_track(track);
 
         auto reply = dbus::Message::make_method_return(msg);
-        impl->access_bus()->send(reply);
+        bus->send(reply);
     }
 
     void handle_go_to(const core::dbus::Message::Ptr& msg)
@@ -92,30 +115,64 @@ struct media::TrackListSkeleton::Private
         media::Track::Id track;
         msg->reader() >> track;
 
-        impl->go_to(track);
+        current_track = std::find(skeleton.properties.tracks->get().begin(), skeleton.properties.tracks->get().end(), track);
+        const bool toggle_player_state = true;
+        impl->go_to(track, toggle_player_state);
 
         auto reply = dbus::Message::make_method_return(msg);
-        impl->access_bus()->send(reply);
+        bus->send(reply);
     }
 
     media::TrackListSkeleton* impl;
+    dbus::Bus::Ptr bus;
     dbus::Object::Ptr object;
+    media::apparmor::ubuntu::RequestContextResolver::Ptr request_context_resolver;
+    media::apparmor::ubuntu::RequestAuthenticator::Ptr request_authenticator;
 
-    std::shared_ptr<core::dbus::Property<mpris::TrackList::Properties::CanEditTracks>> can_edit_tracks;
-    std::shared_ptr<core::dbus::Property<mpris::TrackList::Properties::Tracks>> tracks;
+    mpris::TrackList::Skeleton skeleton;
     TrackList::ConstIterator current_track;
     TrackList::ConstIterator empty_iterator;
+    media::Player::LoopStatus loop_status;
 
-    core::Signal<void> on_track_list_replaced;
-    core::Signal<Track::Id> on_track_added;
-    core::Signal<Track::Id> on_track_removed;
-    core::Signal<Track::Id> on_track_changed;
+    struct Signals
+    {
+        typedef core::dbus::Signal<mpris::TrackList::Signals::TrackAdded, mpris::TrackList::Signals::TrackAdded::ArgumentType> DBusTrackAddedSignal;
+        typedef core::dbus::Signal<mpris::TrackList::Signals::TrackRemoved, mpris::TrackList::Signals::TrackRemoved::ArgumentType> DBusTrackRemovedSignal;
+        typedef core::dbus::Signal<mpris::TrackList::Signals::TrackListReplaced, mpris::TrackList::Signals::TrackListReplaced::ArgumentType> DBusTrackListReplacedSignal;
+
+        Signals(const std::shared_ptr<DBusTrackAddedSignal>& remote_track_added,
+                const std::shared_ptr<DBusTrackRemovedSignal>& remote_track_removed,
+                const std::shared_ptr<DBusTrackListReplacedSignal>& remote_track_list_replaced)
+        {
+            // Connect all of the MPRIS interface signals to be emitted over dbus
+            on_track_added.connect([remote_track_added](const media::Track::Id &id)
+            {
+                remote_track_added->emit(id);
+            });
+
+            on_track_removed.connect([remote_track_removed](const media::Track::Id &id)
+            {
+                remote_track_removed->emit(id);
+            });
+
+            on_track_list_replaced.connect([remote_track_list_replaced](const media::TrackList::ContainerTrackIdTuple &tltuple)
+            {
+                remote_track_list_replaced->emit(tltuple);
+            });
+        }
+
+        core::Signal<Track::Id> on_track_added;
+        core::Signal<Track::Id> on_track_removed;
+        core::Signal<TrackList::ContainerTrackIdTuple> on_track_list_replaced;
+        core::Signal<Track::Id> on_track_changed;
+        core::Signal<std::pair<Track::Id, bool>> on_go_to_track;
+    } signals;
 };
 
-media::TrackListSkeleton::TrackListSkeleton(
-        const dbus::types::ObjectPath& op)
-    : dbus::Skeleton<media::TrackList>(the_session_bus()),
-      d(new Private(this, access_service()->add_object_for_path(op)))
+media::TrackListSkeleton::TrackListSkeleton(const core::dbus::Bus::Ptr& bus, const core::dbus::Object::Ptr& object,
+        const media::apparmor::ubuntu::RequestContextResolver::Ptr& request_context_resolver,
+        const media::apparmor::ubuntu::RequestAuthenticator::Ptr& request_authenticator)
+    : d(new Private(this, bus, object, request_context_resolver, request_authenticator))
 {
     d->object->install_method_handler<mpris::TrackList::GetTracksMetadata>(
         std::bind(&Private::handle_get_tracks_metadata,
@@ -144,80 +201,156 @@ media::TrackListSkeleton::~TrackListSkeleton()
 
 bool media::TrackListSkeleton::has_next() const
 {
-    return d->current_track != d->tracks->get().end();
+    const auto next_track = std::next(d->current_track);
+    std::cout << "has_next track? " << (next_track != tracks().get().end() ? "yes" : "no") << std::endl;
+    return next_track != tracks().get().end();
 }
 
 const media::Track::Id& media::TrackListSkeleton::next()
 {
-    if (d->tracks->get().empty())
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    if (tracks().get().empty())
         return *(d->current_track);
 
-    if (d->tracks->get().size() && (d->current_track == d->empty_iterator))
-    {        
-        d->current_track = d->tracks->get().begin();
-        return *(d->current_track = std::next(d->current_track));
+    // Loop on the current track forever
+    if (d->loop_status == media::Player::LoopStatus::track)
+    {
+        std::cout << "Looping on the current track..." << std::endl;
+        return *(d->current_track);
+    }
+    // Loop over the whole playlist and repeat
+    else if (d->loop_status == media::Player::LoopStatus::playlist && !has_next())
+    {
+        std::cout << "Looping on the entire TrackList..." << std::endl;
+        d->current_track = tracks().get().begin();
+        return *(d->current_track);
+    }
+    else if (has_next())
+    {
+        // Keep returning the next track until the last track is reached
+        d->current_track = std::next(d->current_track);
+        std::cout << *this << std::endl;
     }
 
-    d->current_track = std::next(d->current_track);
+    return *(d->current_track);
+}
+
+const media::Track::Id& media::TrackListSkeleton::current()
+{
+    // Prevent the TrackList from sitting at the end which will cause
+    // a segfault when calling current()
+    if (tracks().get().size() && (d->current_track == d->empty_iterator))
+        d->current_track = d->skeleton.properties.tracks->get().begin();
+    else if (tracks().get().empty())
+        std::cerr << "TrackList is empty therefore there is no valid current track" << std::endl;
+
     return *(d->current_track);
 }
 
 const core::Property<bool>& media::TrackListSkeleton::can_edit_tracks() const
 {
-    return *d->can_edit_tracks;
+    return *d->skeleton.properties.can_edit_tracks;
 }
 
 core::Property<bool>& media::TrackListSkeleton::can_edit_tracks()
 {
-    return *d->can_edit_tracks;
+    return *d->skeleton.properties.can_edit_tracks;
 }
 
 core::Property<media::TrackList::Container>& media::TrackListSkeleton::tracks()
 {
-    return *d->tracks;
+    return *d->skeleton.properties.tracks;
+}
+
+void media::TrackListSkeleton::on_loop_status_changed(const media::Player::LoopStatus& loop_status)
+{
+    d->loop_status = loop_status;
+}
+
+media::Player::LoopStatus media::TrackListSkeleton::loop_status() const
+{
+    return d->loop_status;
+}
+
+void media::TrackListSkeleton::on_shuffle_changed(bool shuffle)
+{
+    if (shuffle)
+        shuffle_tracks();
+    else
+        unshuffle_tracks();
 }
 
 const core::Property<media::TrackList::Container>& media::TrackListSkeleton::tracks() const
 {
-    return *d->tracks;
+    return *d->skeleton.properties.tracks;
 }
 
-const core::Signal<void>& media::TrackListSkeleton::on_track_list_replaced() const
+const core::Signal<media::TrackList::ContainerTrackIdTuple>& media::TrackListSkeleton::on_track_list_replaced() const
 {
-    return d->on_track_list_replaced;
+    // Print the TrackList instance
+    std::cout << *this << std::endl;
+    return d->signals.on_track_list_replaced;
 }
 
 const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_added() const
 {
-    return d->on_track_added;
+    return d->signals.on_track_added;
 }
 
 const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_removed() const
 {
-    return d->on_track_removed;
+    return d->signals.on_track_removed;
 }
 
 const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_changed() const
 {
-    return d->on_track_changed;
+    return d->signals.on_track_changed;
 }
 
-core::Signal<void>& media::TrackListSkeleton::on_track_list_replaced()
+const core::Signal<std::pair<media::Track::Id, bool>>& media::TrackListSkeleton::on_go_to_track() const
 {
-    return d->on_track_list_replaced;
+    return d->signals.on_go_to_track;
+}
+
+core::Signal<media::TrackList::ContainerTrackIdTuple>& media::TrackListSkeleton::on_track_list_replaced()
+{
+    return d->signals.on_track_list_replaced;
 }
 
 core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_added()
 {
-    return d->on_track_added;
+    return d->signals.on_track_added;
 }
 
 core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_removed()
 {
-    return d->on_track_removed;
+    return d->signals.on_track_removed;
 }
 
 core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_changed()
 {
-    return d->on_track_changed;
+    return d->signals.on_track_changed;
 }
+
+core::Signal<std::pair<media::Track::Id, bool>>& media::TrackListSkeleton::on_go_to_track()
+{
+    return d->signals.on_go_to_track;
+}
+
+// operator<< pretty prints the given TrackList to the given output stream.
+inline std::ostream& media::operator<<(std::ostream& out, const media::TrackList& tracklist)
+{
+    auto non_const_tl = const_cast<media::TrackList*>(&tracklist);
+    out << "TrackList\n---------------" << std::endl;
+    for (const media::Track::Id &id : tracklist.tracks().get())
+    {
+        // '*' denotes the current track
+        out << "\t" << ((dynamic_cast<media::TrackListSkeleton*>(non_const_tl)->current() == id) ? "*" : "");
+        out << "Track Id: " << id << std::endl;
+        out << "\t\turi: " << dynamic_cast<media::TrackListImplementation*>(non_const_tl)->query_uri_for_track(id) << std::endl;
+    }
+
+    out << "---------------\nEnd TrackList" << std::endl;
+    return out;
+}
+

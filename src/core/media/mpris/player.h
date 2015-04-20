@@ -271,7 +271,7 @@ struct Player
             properties.orientation->set(core::ubuntu::media::Player::Orientation::rotate0);
             properties.lifetime->set(core::ubuntu::media::Player::Lifetime::normal);
             properties.playback_rate->set(configuration.defaults.playback_rate);
-            properties.is_shuffle->set(configuration.defaults.shuffle);
+            properties.shuffle->set(configuration.defaults.shuffle);
             properties.position->set(configuration.defaults.position);
             properties.duration->set(configuration.defaults.duration);
             properties.minimum_playback_rate->set(configuration.defaults.minimum_rate);
@@ -301,6 +301,11 @@ struct Player
             properties.loop_status->changed().connect([this](const std::string& status)
             {
                 on_property_value_changed<Properties::LoopStatus>(status);
+            });
+
+            properties.shuffle->changed().connect([this](bool shuffle)
+            {
+                on_property_value_changed<Properties::Shuffle>(shuffle);
             });
         }
 
@@ -332,7 +337,7 @@ struct Player
             dict[Properties::Orientation::name()] = dbus::types::Variant::encode(properties.orientation->get());
             dict[Properties::Lifetime::name()] = dbus::types::Variant::encode(properties.lifetime->get());
             dict[Properties::PlaybackRate::name()] = dbus::types::Variant::encode(properties.playback_rate->get());
-            dict[Properties::Shuffle::name()] = dbus::types::Variant::encode(properties.is_shuffle->get());
+            dict[Properties::Shuffle::name()] = dbus::types::Variant::encode(properties.shuffle->get());
             dict[Properties::Duration::name()] = dbus::types::Variant::encode(properties.duration->get());
             dict[Properties::Position::name()] = dbus::types::Variant::encode(properties.position->get());
             dict[Properties::MinimumRate::name()] = dbus::types::Variant::encode(properties.minimum_playback_rate->get());
@@ -363,7 +368,7 @@ struct Player
             std::shared_ptr<core::dbus::Property<Properties::Orientation>> orientation;
             std::shared_ptr<core::dbus::Property<Properties::Lifetime>> lifetime;
             std::shared_ptr<core::dbus::Property<Properties::PlaybackRate>> playback_rate;
-            std::shared_ptr<core::dbus::Property<Properties::Shuffle>> is_shuffle;
+            std::shared_ptr<core::dbus::Property<Properties::Shuffle>> shuffle;
             std::shared_ptr<core::dbus::Property<Properties::TypedMetaData>> typed_meta_data_for_current_track;
             std::shared_ptr<core::dbus::Property<Properties::Volume>> volume;
             std::shared_ptr<core::dbus::Property<Properties::Position>> position;

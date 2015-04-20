@@ -1,5 +1,5 @@
 /*
- * Copyright © 2013 Canonical Ltd.
+ * Copyright © 2013-2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -16,8 +16,10 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
+#include <algorithm>
 #include <stdio.h>
 #include <stdlib.h>
+#include <tuple>
 
 #include "track_list_implementation.h"
 
@@ -30,16 +32,23 @@ struct media::TrackListImplementation::Private
 {
     typedef std::map<Track::Id, std::tuple<Track::UriType, Track::MetaData>> MetaDataCache;
 
-    dbus::types::ObjectPath path;
+    dbus::Object::Ptr object;
+    size_t track_counter;
     MetaDataCache meta_data_cache;
     std::shared_ptr<media::Engine::MetaDataExtractor> extractor;
+    // Used for caching the original tracklist order to be used to restore the order
+    // to the live TrackList after shuffle is turned off
+    media::TrackList::Container original_tracklist;
 };
 
 media::TrackListImplementation::TrackListImplementation(
-        const dbus::types::ObjectPath& op,
-        const std::shared_ptr<media::Engine::MetaDataExtractor>& extractor)
-    : media::TrackListSkeleton(op),
-      d(new Private{op, Private::MetaDataCache{}, extractor})
+        const dbus::Bus::Ptr& bus,
+        const dbus::Object::Ptr& object,
+        const std::shared_ptr<media::Engine::MetaDataExtractor>& extractor,
+        const media::apparmor::ubuntu::RequestContextResolver::Ptr& request_context_resolver,
+        const media::apparmor::ubuntu::RequestAuthenticator::Ptr& request_authenticator)
+    : media::TrackListSkeleton(bus, object, request_context_resolver, request_authenticator),
+      d(new Private{object, 0, Private::MetaDataCache{}, extractor, media::TrackList::Container{}})
 {
     can_edit_tracks().set(true);
 }
@@ -73,15 +82,16 @@ void media::TrackListImplementation::add_track_with_uri_at(
         const media::Track::Id& position,
         bool make_current)
 {
-    static size_t track_counter = 0;
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
 
-    std::stringstream ss; ss << d->path.as_string() << "/" << track_counter++;
+    std::stringstream ss; ss << d->object->path().as_string() << "/" << d->track_counter++;
     Track::Id id{ss.str()};
 
     auto result = tracks().update([this, id, position, make_current](TrackList::Container& container)
     {
         auto it = std::find(container.begin(), container.end(), position);
         container.insert(it, id);
+
         return true;
     });
 
@@ -98,8 +108,15 @@ void media::TrackListImplementation::add_track_with_uri_at(
         }
 
         if (make_current)
-            go_to(id);
+        {
+            // Don't automatically call stop() and play() in player_implementation.cpp on_go_to_track()
+            // since this breaks video playback when using open_uri() (stop() and play() are unwanted in
+            // this scenario since the qtubuntu-media will handle this automatically)
+            const bool toggle_player_state = false;
+            go_to(id, toggle_player_state);
+        }
 
+        // Signal to the client that a track was added to the TrackList
         on_track_added()(id);
     }
 }
@@ -121,7 +138,61 @@ void media::TrackListImplementation::remove_track(const media::Track::Id& id)
 
 }
 
-void media::TrackListImplementation::go_to(const media::Track::Id& track)
+void media::TrackListImplementation::go_to(const media::Track::Id& track, bool toggle_player_state)
 {
-    (void) track;
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    std::pair<const media::Track::Id, bool> p = std::make_pair(track, toggle_player_state);
+    // Signal the Player instance to go to a specific track for playback
+    on_go_to_track()(p);
+    on_track_changed()(track);
+}
+
+void media::TrackListImplementation::shuffle_tracks()
+{
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+
+    auto result = tracks().update([this](TrackList::Container& container)
+    {
+        d->original_tracklist.assign(container.begin(), container.end());
+        std::random_shuffle(container.begin(), container.end());
+        return true;
+    });
+
+    if (result)
+    {
+        media::TrackList::ContainerTrackIdTuple t{std::make_tuple(tracks().get(), current())};
+        on_track_list_replaced()(t);
+    }
+}
+
+void media::TrackListImplementation::unshuffle_tracks()
+{
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+
+    auto result = tracks().update([this](TrackList::Container& container)
+    {
+        container.assign(d->original_tracklist.begin(), d->original_tracklist.end());
+        return true;
+    });
+
+    if (result)
+    {
+        media::TrackList::ContainerTrackIdTuple t{std::make_tuple(tracks().get(), current())};
+        on_track_list_replaced()(t);
+    }
+}
+
+void media::TrackListImplementation::reset()
+{
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+
+    auto result = tracks().update([this](TrackList::Container& container)
+    {
+        container.clear();
+        container.resize(0);
+        d->track_counter = 0;
+        return true;
+    });
+
+    (void) result;
 }

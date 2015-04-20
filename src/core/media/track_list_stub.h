@@ -33,12 +33,12 @@ namespace ubuntu
 {
 namespace media
 {
-class TrackListStub : public core::dbus::Stub<core::ubuntu::media::TrackList>
+class TrackListStub : public core::ubuntu::media::TrackList
 {
 public:
     TrackListStub(
             const std::shared_ptr<Player>& parent,
-            const core::dbus::types::ObjectPath& op);
+            const core::dbus::Object::Ptr& object);
     ~TrackListStub();
 
     const core::Property<bool>& can_edit_tracks() const;
@@ -49,12 +49,18 @@ public:
     void add_track_with_uri_at(const Track::UriType& uri, const Track::Id& position, bool make_current);
     void remove_track(const Track::Id& id);
 
-    void go_to(const Track::Id& track);
+    void go_to(const Track::Id& track, bool toggle_player_state);
 
-    const core::Signal<void>& on_track_list_replaced() const;
+    void shuffle_tracks();
+    void unshuffle_tracks();
+
+    void reset();
+
+    const core::Signal<ContainerTrackIdTuple>& on_track_list_replaced() const;
     const core::Signal<Track::Id>& on_track_added() const;
     const core::Signal<Track::Id>& on_track_removed() const;
     const core::Signal<Track::Id>& on_track_changed() const;
+    const core::Signal<std::pair<Track::Id, bool>>& on_go_to_track() const;
 
 private:
     struct Private;

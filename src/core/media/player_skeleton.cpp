@@ -179,6 +179,7 @@ struct media::PlayerSkeleton::Private
             Track::UriType uri;
             in->reader() >> uri;
 
+            // Make sure the client has adequate apparmor permissions to open the URI
             auto result = request_authenticator->authenticate_open_uri_request(context, uri);
 
             auto reply = dbus::Message::make_method_return(in);
@@ -407,9 +408,9 @@ const core::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::playba
     return *d->skeleton.properties.playback_rate;
 }
 
-const core::Property<bool>& media::PlayerSkeleton::is_shuffle() const
+const core::Property<bool>& media::PlayerSkeleton::shuffle() const
 {
-    return *d->skeleton.properties.is_shuffle;
+    return *d->skeleton.properties.shuffle;
 }
 
 const core::Property<media::Track::MetaData>& media::PlayerSkeleton::meta_data_for_current_track() const
@@ -467,9 +468,9 @@ core::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::playback_rat
     return *d->skeleton.properties.playback_rate;
 }
 
-core::Property<bool>& media::PlayerSkeleton::is_shuffle()
+core::Property<bool>& media::PlayerSkeleton::shuffle()
 {
-    return *d->skeleton.properties.is_shuffle;
+    return *d->skeleton.properties.shuffle;
 }
 
 core::Property<media::Player::Volume>& media::PlayerSkeleton::volume()

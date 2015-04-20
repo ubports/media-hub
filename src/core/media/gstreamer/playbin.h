@@ -89,11 +89,13 @@ struct Playbin
     uint64_t position() const;
     uint64_t duration() const;
 
-    void set_uri(const std::string& uri, const core::ubuntu::media::Player::HeadersType& headers);
+    void set_uri(const std::string& uri, const core::ubuntu::media::Player::HeadersType& headers, bool do_pipeline_reset = true);
     std::string uri() const;
 
     void setup_source(GstElement *source);
 
+    // Sets the pipeline's state (stopped, playing, paused, etc). Optional parameter makes this call
+    // in the main_loop context.
     bool set_state_and_wait(GstState new_state);
     bool seek(const std::chrono::microseconds& ms);
 

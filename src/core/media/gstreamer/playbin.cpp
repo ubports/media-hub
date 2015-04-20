@@ -24,6 +24,8 @@
 #include <hybris/media/surface_texture_client_hybris.h>
 #include <hybris/media/media_codec_layer.h>
 
+#include <utility>
+
 namespace
 {
 void setup_video_sink_for_buffer_streaming(GstElement* video_sink)
@@ -365,9 +367,11 @@ uint64_t gstreamer::Playbin::duration() const
 
 void gstreamer::Playbin::set_uri(
     const std::string& uri,
-    const core::ubuntu::media::Player::HeadersType& headers = core::ubuntu::media::Player::HeadersType())
+    const core::ubuntu::media::Player::HeadersType& headers = core::ubuntu::media::Player::HeadersType(),
+    bool do_pipeline_reset)
 {
-    reset_pipeline();
+    if (do_pipeline_reset)
+        reset_pipeline();
 
     g_object_set(pipeline, "uri", uri.c_str(), NULL);
     if (is_video_file(uri))

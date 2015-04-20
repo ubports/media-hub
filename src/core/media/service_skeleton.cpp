@@ -52,7 +52,7 @@ struct media::ServiceSkeleton::Private
     Private(media::ServiceSkeleton* impl, const ServiceSkeleton::Configuration& config)
         : impl(impl),
           object(impl->access_service()->add_object_for_path(
-                     dbus::traits::Service<media::Service>::object_path())),          
+                     dbus::traits::Service<media::Service>::object_path())),
           exported(impl->access_bus(), config.cover_art_resolver),
           configuration(config)
     {
@@ -101,6 +101,7 @@ struct media::ServiceSkeleton::Private
         {
             key,
             impl->access_bus(),
+            impl->access_service(),
             impl->access_service()->add_object_for_path(op)
         };
 
@@ -130,7 +131,7 @@ struct media::ServiceSkeleton::Private
 
             if (named_player_map.count(name) == 0) {
                 // Create new session
-                auto  session_info = create_session_info();
+                auto session_info = create_session_info();
 
                 dbus::types::ObjectPath op{session_info.first};
                 media::Player::PlayerKey key{session_info.second};
@@ -139,6 +140,7 @@ struct media::ServiceSkeleton::Private
                 {
                     key,
                     impl->access_bus(),
+                    impl->access_service(),
                     impl->access_service()->add_object_for_path(op)
                 };
 
@@ -266,6 +268,7 @@ struct media::ServiceSkeleton::Private
 
         static std::string service_name()
         {
+#if 0
             static const bool export_to_indicator_sound_via_mpris
             {
                 core::posix::this_process::env::get("UBUNTU_MEDIA_HUB_EXPORT_TO_INDICATOR_VIA_MPRIS", "0") == "1"
@@ -273,6 +276,9 @@ struct media::ServiceSkeleton::Private
 
             return export_to_indicator_sound_via_mpris ? "org.mpris.MediaPlayer2.MediaHub" :
                                                          "hidden.org.mpris.MediaPlayer2.MediaHub";
+#else
+            return "org.mpris.MediaPlayer2.MediaHub";
+#endif
         }
 
         explicit Exported(const dbus::Bus::Ptr& bus, const media::CoverArtResolver& cover_art_resolver)

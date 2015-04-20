@@ -43,8 +43,10 @@ namespace media = core::ubuntu::media;
 struct media::PlayerStub::Private
 {
     Private(const std::shared_ptr<Service>& parent,
+            const std::shared_ptr<core::dbus::Service>& service,
             const std::shared_ptr<core::dbus::Object>& object
             ) : parent(parent),
+                service(service),
                 object(object),
                 key(object->invoke_method_synchronously<mpris::Player::Key, media::Player::PlayerKey>().value()),
                 sink_factory(media::video::make_platform_default_sink_factory(key)),
@@ -91,6 +93,7 @@ struct media::PlayerStub::Private
 
     std::shared_ptr<Service> parent;
     std::shared_ptr<TrackList> track_list;
+    dbus::Service::Ptr service;
     dbus::Object::Ptr object;
     media::Player::PlayerKey key;
     media::video::SinkFactory sink_factory;
@@ -108,7 +111,7 @@ struct media::PlayerStub::Private
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::TypedPlaybackStatus>> playback_status;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::TypedLoopStatus>> loop_status;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::PlaybackRate>> playback_rate;
-        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Shuffle>> is_shuffle;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Shuffle>> shuffle;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::TypedMetaData>> meta_data_for_current_track;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Volume>> volume;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Position>> position;
@@ -153,7 +156,7 @@ struct media::PlayerStub::Private
         {
             dbus.seeked_to->connect([this](std::uint64_t value)
             {
-                std::cout << "seeked_to signal arrived via the bus." << std::endl;
+                std::cout << "SeekedTo signal arrived via the bus." << std::endl;
                 seeked_to(value);
             });
 
@@ -209,8 +212,9 @@ struct media::PlayerStub::Private
 
 media::PlayerStub::PlayerStub(
     const std::shared_ptr<Service>& parent,
+    const std::shared_ptr<core::dbus::Service>& service,
     const std::shared_ptr<core::dbus::Object>& object)
-        : d(new Private{parent, object})
+    : d(new Private{parent, service, object})
 {
 }
 
@@ -224,7 +228,9 @@ std::shared_ptr<media::TrackList> media::PlayerStub::track_list()
     {
         d->track_list = std::make_shared<media::TrackListStub>(
                     shared_from_this(),
-                    dbus::types::ObjectPath(d->object->path().as_string() + "/TrackList"));
+                    d->service->object_for_path(
+                        dbus::types::ObjectPath(
+                            d->object->path().as_string() + "/TrackList")));
     }
     return d->track_list;
 }
@@ -362,9 +368,9 @@ const core::Property<media::Player::PlaybackRate>& media::PlayerStub::playback_r
     return *d->properties.playback_rate;
 }
 
-const core::Property<bool>& media::PlayerStub::is_shuffle() const
+const core::Property<bool>& media::PlayerStub::shuffle() const
 {
-    return *d->properties.is_shuffle;
+    return *d->properties.shuffle;
 }
 
 const core::Property<media::Track::MetaData>& media::PlayerStub::meta_data_for_current_track() const
@@ -422,9 +428,9 @@ core::Property<media::Player::PlaybackRate>& media::PlayerStub::playback_rate()
     return *d->properties.playback_rate;
 }
 
-core::Property<bool>& media::PlayerStub::is_shuffle()
+core::Property<bool>& media::PlayerStub::shuffle()
 {
-    return *d->properties.is_shuffle;
+    return *d->properties.shuffle;
 }
 
 core::Property<media::Player::Volume>& media::PlayerStub::volume()

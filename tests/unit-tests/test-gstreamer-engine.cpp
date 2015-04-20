@@ -103,7 +103,8 @@ TEST(GStreamerEngine, DISABLED_setting_uri_and_starting_audio_only_playback_work
                     std::ref(wst),
                     std::placeholders::_1));
 
-    EXPECT_TRUE(engine.open_resource_for_uri(test_file_uri));
+    static const bool do_pipeline_reset = true;
+    EXPECT_TRUE(engine.open_resource_for_uri(test_file_uri, do_pipeline_reset));
     EXPECT_TRUE(engine.play());
     EXPECT_TRUE(wst.wait_for_state_for(
                     core::ubuntu::media::Engine::State::playing,
@@ -144,7 +145,8 @@ TEST(GStreamerEngine, DISABLED_setting_uri_and_starting_video_playback_works)
                     std::ref(wst),
                     std::placeholders::_1));
 
-    EXPECT_TRUE(engine.open_resource_for_uri(test_file_uri));
+    static const bool do_pipeline_reset = true;
+    EXPECT_TRUE(engine.open_resource_for_uri(test_file_uri, do_pipeline_reset));
     EXPECT_TRUE(engine.play());
     EXPECT_TRUE(wst.wait_for_state_for(
                     core::ubuntu::media::Engine::State::playing,
@@ -234,7 +236,8 @@ TEST(GStreamerEngine, DISABLED_stop_pause_play_seek_audio_only_works)
                     std::ref(wst),
                     std::placeholders::_1));
 
-    EXPECT_TRUE(engine.open_resource_for_uri(test_file_uri));
+    static const bool do_pipeline_reset = true;
+    EXPECT_TRUE(engine.open_resource_for_uri(test_file_uri, do_pipeline_reset));
     EXPECT_TRUE(engine.play());
     EXPECT_TRUE(wst.wait_for_state_for(
                     core::ubuntu::media::Engine::State::playing,
@@ -282,7 +285,8 @@ TEST(GStreamerEngine, DISABLED_stop_pause_play_seek_video_works)
                     std::ref(wst),
                     std::placeholders::_1));
 
-    EXPECT_TRUE(engine.open_resource_for_uri(test_file_uri));
+    static const bool do_pipeline_reset = true;
+    EXPECT_TRUE(engine.open_resource_for_uri(test_file_uri, do_pipeline_reset));
     EXPECT_TRUE(engine.play());
     EXPECT_TRUE(wst.wait_for_state_for(
                     core::ubuntu::media::Engine::State::playing,
@@ -328,7 +332,8 @@ TEST(GStreamerEngine, get_position_duration_work)
                     std::ref(wst),
                     std::placeholders::_1));
 
-    EXPECT_TRUE(engine.open_resource_for_uri(test_file_uri));
+    static const bool do_pipeline_reset = true;
+    EXPECT_TRUE(engine.open_resource_for_uri(test_file_uri, do_pipeline_reset));
     EXPECT_TRUE(engine.play());
     EXPECT_TRUE(wst.wait_for_state_for(
                     core::ubuntu::media::Engine::State::playing,
@@ -363,7 +368,8 @@ TEST(GStreamerEngine, adjusting_volume_works)
                     &core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State>::trigger,
                     std::ref(wst),
                     std::placeholders::_1));
-    EXPECT_TRUE(engine.open_resource_for_uri(test_file_uri));
+    static const bool do_pipeline_reset = true;
+    EXPECT_TRUE(engine.open_resource_for_uri(test_file_uri, do_pipeline_reset));
     EXPECT_TRUE(engine.play());
     EXPECT_TRUE(wst.wait_for_state_for(
                     core::ubuntu::media::Engine::State::playing,

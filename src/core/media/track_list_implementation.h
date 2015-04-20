@@ -1,5 +1,5 @@
 /*
- * Copyright © 2013 Canonical Ltd.
+ * Copyright © 2013-2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -32,8 +32,11 @@ class TrackListImplementation : public TrackListSkeleton
 {
 public:
     TrackListImplementation(
-            const core::dbus::types::ObjectPath& op,
-            const std::shared_ptr<Engine::MetaDataExtractor>& extractor);
+            const core::dbus::Bus::Ptr& bus,
+            const core::dbus::Object::Ptr& object,
+            const std::shared_ptr<Engine::MetaDataExtractor>& extractor,
+            const core::ubuntu::media::apparmor::ubuntu::RequestContextResolver::Ptr& request_context_resolver,
+            const core::ubuntu::media::apparmor::ubuntu::RequestAuthenticator::Ptr& request_authenticator);
     ~TrackListImplementation();
 
     Track::UriType query_uri_for_track(const Track::Id& id);
@@ -42,7 +45,10 @@ public:
     void add_track_with_uri_at(const Track::UriType& uri, const Track::Id& position, bool make_current);
     void remove_track(const Track::Id& id);
 
-    void go_to(const Track::Id& track);
+    void go_to(const Track::Id& track, bool toggle_player_state);
+    void shuffle_tracks();
+    void unshuffle_tracks();
+    void reset();
 
 private:
     struct Private;

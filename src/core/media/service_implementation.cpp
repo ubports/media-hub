@@ -53,6 +53,8 @@ using namespace std;
 
 struct media::ServiceImplementation::Private
 {
+    // Create all of the appropriate observers and helper class instances to be
+    // passed to the PlayerImplementation
     Private(const ServiceImplementation::Configuration& configuration)
         : configuration(configuration),
           resume_key(std::numeric_limits<std::uint32_t>::max()),
@@ -72,7 +74,7 @@ struct media::ServiceImplementation::Private
     media::ServiceImplementation::Configuration configuration;
     // This holds the key of the multimedia role Player instance that was paused
     // when the battery level reached 10% or 5%
-    media::Player::PlayerKey resume_key;    
+    media::Player::PlayerKey resume_key;
     media::power::BatteryObserver::Ptr battery_observer;
     media::power::StateController::Ptr power_state_controller;
     media::power::StateController::Lock<media::power::DisplayState>::Ptr display_state_lock;
@@ -185,6 +187,7 @@ std::shared_ptr<media::Player> media::ServiceImplementation::create_session(
         media::PlayerSkeleton::Configuration
         {
             conf.bus,
+            conf.service,
             conf.session,
             d->request_context_resolver,
             d->request_authenticator
@@ -262,17 +265,17 @@ void media::ServiceImplementation::pause_other_sessions(media::Player::PlayerKey
 void media::ServiceImplementation::pause_all_multimedia_sessions(bool resume_play_after_phonecall)
 {
     d->configuration.player_store->enumerate_players([this, resume_play_after_phonecall](const media::Player::PlayerKey& key, const std::shared_ptr<media::Player>& player)
-                      {
-                          if (player->playback_status() == Player::playing
-                              && player->audio_stream_role() == media::Player::multimedia)
-                          {
-                              auto paused_player_pair = std::make_pair(key, resume_play_after_phonecall);
-                              d->paused_sessions.push_back(paused_player_pair);
-                              std::cout << "Pausing Player with key: " << key << ", resuming after phone call? "
-                                  << (resume_play_after_phonecall ? "yes" : "no") << std::endl;
-                              player->pause();
-                          }
-                      });
+    {
+        if (player->playback_status() == Player::playing
+            && player->audio_stream_role() == media::Player::multimedia)
+        {
+            auto paused_player_pair = std::make_pair(key, resume_play_after_phonecall);
+            d->paused_sessions.push_back(paused_player_pair);
+            std::cout << "Pausing Player with key: " << key << ", resuming after phone call? "
+                << (resume_play_after_phonecall ? "yes" : "no") << std::endl;
+            player->pause();
+        }
+    });
 }
 
 void media::ServiceImplementation::resume_paused_multimedia_sessions(bool resume_video_sessions)

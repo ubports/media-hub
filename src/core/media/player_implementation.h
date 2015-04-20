@@ -78,8 +78,8 @@ private:
     struct Private;
     std::shared_ptr<Private> d;
 };
+
 }
 }
 }
 #endif // CORE_UBUNTU_MEDIA_PLAYER_IMPLEMENTATION_H_
-
