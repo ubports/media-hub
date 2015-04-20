@@ -1,8 +1,18 @@
-media-hub (3.1.0) UNRELEASED; urgency=medium
+media-hub (3.1.0+15.04.20150420.1-0ubuntu1) vivid; urgency=medium
 
+  [ Ricardo Mendoza ]
   * Support for signalling player reconnection up the stack.
 
- -- Ricardo Mendoza <ricardo.mendoza@canonical.com>  Fri, 10 Apr 2015 18:20:32 +0200
+  [ CI Train Bot ]
+  * New rebuild forced.
+
+  [ Jim Hodapp ]
+  * Implements the backend portion of TrackLists required to allow
+    clients to be able to hand off a playlist to media-hub and keep
+    playing music in order, shuffled and/or looped without the app being
+    in the foreground
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Mon, 20 Apr 2015 17:56:09 +0000
 
 media-hub (3.0.0+15.04.20150402-0ubuntu1) vivid; urgency=medium
 
