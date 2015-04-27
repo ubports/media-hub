@@ -1,3 +1,18 @@
+media-hub (3.1.0+15.04.20150427.3-0ubuntu1) vivid; urgency=medium
+
+  [ CI Train Bot ]
+  * New rebuild forced.
+
+  [ Jim Hodapp ]
+  * Reset the tracklist everytime a client app calls open_uri() and
+    disabling mpris interface by default (LP: #1449213) (LP: #1449213)
+
+  [ Ricardo Mendoza ]
+  * Reset the tracklist everytime a client app calls open_uri() and
+    disabling mpris interface by default (LP: #1449213) (LP: #1449213)
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Mon, 27 Apr 2015 23:33:13 +0000
+
 media-hub (3.1.0+15.04.20150420.1-0ubuntu1) vivid; urgency=medium
 
   [ Ricardo Mendoza ]
