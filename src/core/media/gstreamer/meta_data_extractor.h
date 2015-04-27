@@ -191,7 +191,7 @@ public:
         g_object_set(decoder, "uri", uri.c_str(), NULL);
         gst_element_set_state(pipe, GST_STATE_PAUSED);
 
-        if (std::future_status::ready != future.wait_for(std::chrono::seconds(2)))
+        if (std::future_status::ready != future.wait_for(std::chrono::seconds(4)))
         {
             gst_element_set_state(pipe, GST_STATE_NULL);
             throw std::runtime_error("Problem extracting meta data for track");

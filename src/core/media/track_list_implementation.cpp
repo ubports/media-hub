@@ -99,9 +99,13 @@ void media::TrackListImplementation::add_track_with_uri_at(
     {
         if (d->meta_data_cache.count(id) == 0)
         {
-            d->meta_data_cache[id] = std::make_tuple(
-                        uri,
-                        d->extractor->meta_data_for_track_with_uri(uri));
+            try {
+                d->meta_data_cache[id] = std::make_tuple(
+                            uri,
+                            d->extractor->meta_data_for_track_with_uri(uri));
+            } catch (const std::runtime_error &e) {
+                std::cerr << "Failed to retrieve metadata for track '" << uri << "' (" << e.what() << ")" << std::endl;
+            }
         } else
         {
             std::get<0>(d->meta_data_cache[id]) = uri;
