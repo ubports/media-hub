@@ -573,6 +573,7 @@ media::video::Sink::Ptr media::PlayerImplementation<Parent>::create_gl_texture_v
 template<typename Parent>
 bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri)
 {
+    d->track_list->reset();
     // Set new track as the current track to play
     d->track_list->add_track_with_uri_at(uri, media::TrackList::after_empty_track(), true);
     return true;
