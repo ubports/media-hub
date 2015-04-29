@@ -510,7 +510,6 @@ std::string gstreamer::Playbin::get_file_content_type(const std::string& uri) co
         return std::string();
 
     std::string filename(uri);
-    std::cout << "filename: " << filename << std::endl;
     size_t pos = uri.find("file://");
     if (pos != std::string::npos)
         filename = uri.substr(pos + 7, std::string::npos);

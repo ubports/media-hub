@@ -316,8 +316,8 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
     Parent::can_play().set(true);
     Parent::can_pause().set(true);
     Parent::can_seek().set(true);
-    Parent::can_go_previous().set(true);
-    Parent::can_go_next().set(true);
+    Parent::can_go_previous().set(false);
+    Parent::can_go_next().set(false);
     Parent::is_video_source().set(false);
     Parent::is_audio_source().set(false);
     Parent::shuffle().set(false);
@@ -359,6 +359,18 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         return d->engine->is_audio_source().get();
     };
     Parent::is_audio_source().install(audio_type_getter);
+
+    std::function<bool()> can_go_next_getter = [this]()
+    {
+        return d->track_list->has_next();
+    };
+    Parent::can_go_next().install(can_go_next_getter);
+
+    std::function<bool()> can_go_previous_getter = [this]()
+    {
+        return d->track_list->has_previous();
+    };
+    Parent::can_go_previous().install(can_go_previous_getter);
 
     // When the client changes the loop status, make sure to update the TrackList
     Parent::loop_status().changed().connect([this](media::Player::LoopStatus loop_status)
@@ -588,11 +600,13 @@ bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri, co
 template<typename Parent>
 void media::PlayerImplementation<Parent>::next()
 {
+    d->track_list->next();
 }
 
 template<typename Parent>
 void media::PlayerImplementation<Parent>::previous()
 {
+    d->track_list->previous();
 }
 
 template<typename Parent>

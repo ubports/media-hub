@@ -70,6 +70,18 @@ class TrackList : public std::enable_shared_from_this<TrackList>
     /** Skip to the specified TrackId. Calls stop() and play() on the player if toggle_player_state is true. */
     virtual void go_to(const Track::Id& track, bool toggle_player_state) = 0;
 
+    /** Returns true if there is a next track in the TrackList after the current one playing */
+    bool has_next() const;
+
+    /** Returns true if there is a previous track in the TrackList before the current one playing */
+    bool has_previous() const;
+
+    /** Skip to the next Track in the TrackList if there is one. */
+    virtual Track::Id next() = 0;
+
+    /** Skip to the previous Track in the TrackList if there is one. */
+    virtual Track::Id previous() = 0;
+
 
     /** Reorders the tracks such that they are in a random order. */
     virtual void shuffle_tracks() = 0;

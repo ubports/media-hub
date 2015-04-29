@@ -51,6 +51,9 @@ public:
 
     void go_to(const Track::Id& track, bool toggle_player_state);
 
+    Track::Id next();
+    Track::Id previous();
+
     void shuffle_tracks();
     void unshuffle_tracks();
 

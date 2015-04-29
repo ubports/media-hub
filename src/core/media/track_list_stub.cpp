@@ -137,6 +137,18 @@ void media::TrackListStub::go_to(const media::Track::Id& track, bool toggle_play
         throw std::runtime_error("Problem adding track: " + op.error());
 }
 
+media::Track::Id media::TrackListStub::next()
+{
+    // TODO: Add this to the dbus interface on the server and implement a proper dbus method call
+    return media::Track::Id{"/empty/track/id"};
+}
+
+media::Track::Id media::TrackListStub::previous()
+{
+    // TODO: Add this to the dbus interface on the server and implement a proper dbus method call
+    return media::Track::Id{"/empty/track/id"};
+}
+
 void media::TrackListStub::shuffle_tracks()
 {
     std::cerr << "shuffle_tracks() does nothing from the client side" << std::endl;
