@@ -177,7 +177,7 @@ struct media::PlayerStub::Private
 
             dbus.playback_status_changed->connect([this](const media::Player::PlaybackStatus& status)
             {
-                std::cout << "PlaybackStatusChanged signal arrived via the bus." << std::endl;
+                std::cout << "PlaybackStatusChanged signal arrived via the bus (Status: " << status << ")" << std::endl;
                 playback_status_changed(status);
             });
 

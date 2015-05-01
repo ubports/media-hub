@@ -49,10 +49,27 @@ struct Init
 
 struct gstreamer::Engine::Private
 {
-    void on_playbin_state_changed(
-            const gstreamer::Bus::Message::Detail::StateChanged& state_change)
+    media::Player::PlaybackStatus gst_state_to_player_status(const gstreamer::Bus::Message::Detail::StateChanged& state)
     {
-        (void) state_change;
+        if (state.new_state == GST_STATE_PLAYING)
+            return media::Player::PlaybackStatus::playing;
+        else if (state.new_state == GST_STATE_PAUSED)
+            return media::Player::PlaybackStatus::paused;
+        else if (state.new_state == GST_STATE_READY)
+            return media::Player::PlaybackStatus::ready;
+        else if (state.new_state == GST_STATE_NULL)
+            return media::Player::PlaybackStatus::null;
+        else
+            return media::Player::PlaybackStatus::stopped;
+    }
+
+    void on_playbin_state_changed(const std::pair<gstreamer::Bus::Message::Detail::StateChanged,std::string>& p)
+    {
+        if (p.second == "playbin")
+        {
+            std::cout << "State changed on playbin: " << p.first.new_state << std::endl;
+            playback_status_changed(gst_state_to_player_status(p.first));
+        }
     }
 
     // Converts from a GStreamer GError to a media::Player:Error enum
@@ -95,6 +112,7 @@ struct gstreamer::Engine::Private
             switch (ewi.error->code)
             {
             case GST_STREAM_ERROR_CODEC_NOT_FOUND:
+            case GST_STREAM_ERROR_DECODE:
                 return media::Player::Error::format_error;
             default:
                 std::cerr << "Got an unhandled stream error: '"

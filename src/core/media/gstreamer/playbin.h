@@ -125,7 +125,7 @@ struct Playbin
         core::Signal<Bus::Message::Detail::ErrorWarningInfo> on_warning;
         core::Signal<Bus::Message::Detail::ErrorWarningInfo> on_info;
         core::Signal<Bus::Message::Detail::Tag> on_tag_available;
-        core::Signal<Bus::Message::Detail::StateChanged> on_state_changed;
+        core::Signal<std::pair<Bus::Message::Detail::StateChanged,std::string>> on_state_changed;
         core::Signal<uint64_t> on_seeked_to;
         core::Signal<void> on_end_of_stream;
         core::Signal<core::ubuntu::media::Player::PlaybackStatus> on_playback_status_changed;
