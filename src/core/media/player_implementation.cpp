@@ -574,9 +574,11 @@ template<typename Parent>
 bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri)
 {
     d->track_list->reset();
-    // Set new track as the current track to play
-    d->track_list->add_track_with_uri_at(uri, media::TrackList::after_empty_track(), true);
-    return true;
+    const bool ret = d->engine->open_resource_for_uri(uri, false);
+    // Don't set new track as the current track to play since we're calling open_resource_for_uri above
+    static const bool make_current = false;
+    d->track_list->add_track_with_uri_at(uri, media::TrackList::after_empty_track(), make_current);
+    return ret;
 }
 
 template<typename Parent>
