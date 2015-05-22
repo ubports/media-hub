@@ -1,3 +1,10 @@
+media-hub (3.1.0+15.04.20150511-0ubuntu1) vivid; urgency=medium
+
+  [ Jim Hodapp ]
+  * Make sure recorded videos are able to play. (LP: #1451816)
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Mon, 11 May 2015 19:52:34 +0000
+
 media-hub (3.1.0+15.04.20150427.3-0ubuntu1) vivid; urgency=medium
 
   [ CI Train Bot ]
