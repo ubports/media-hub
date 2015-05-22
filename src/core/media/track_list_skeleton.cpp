@@ -206,7 +206,17 @@ bool media::TrackListSkeleton::has_next() const
     return next_track != tracks().get().end();
 }
 
-const media::Track::Id& media::TrackListSkeleton::next()
+bool media::TrackListSkeleton::has_previous() const
+{
+    // If we are looping over the entire list, then there is always a previous track
+    if (d->loop_status == media::Player::LoopStatus::playlist)
+        return true;
+
+    std::cout << "has_previous track? " << (d->current_track != tracks().get().begin() ? "yes" : "no") << std::endl;
+    return d->current_track != tracks().get().begin();
+}
+
+media::Track::Id media::TrackListSkeleton::next()
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
     if (tracks().get().empty())
@@ -232,6 +242,12 @@ const media::Track::Id& media::TrackListSkeleton::next()
         std::cout << *this << std::endl;
     }
 
+    return *(d->current_track);
+}
+
+media::Track::Id media::TrackListSkeleton::previous()
+{
+    // TODO: Add logic to calculate the previous track
     return *(d->current_track);
 }
 

@@ -194,7 +194,7 @@ void gstreamer::Playbin::on_new_message(const Bus::Message& message)
         }
         break;
     case GST_MESSAGE_STATE_CHANGED:
-        signals.on_state_changed(message.detail.state_changed);
+        signals.on_state_changed(std::make_pair(message.detail.state_changed, message.source));
         break;
     case GST_MESSAGE_ASYNC_DONE:
         if (is_seeking)
@@ -510,7 +510,6 @@ std::string gstreamer::Playbin::get_file_content_type(const std::string& uri) co
         return std::string();
 
     std::string filename(uri);
-    std::cout << "filename: " << filename << std::endl;
     size_t pos = uri.find("file://");
     if (pos != std::string::npos)
         filename = uri.substr(pos + 7, std::string::npos);

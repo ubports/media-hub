@@ -42,7 +42,9 @@ public:
     ~TrackListSkeleton();
 
     bool has_next() const;
-    const Track::Id& next();
+    bool has_previous() const;
+    Track::Id next();
+    Track::Id previous();
     const Track::Id& current();
 
     const core::Property<bool>& can_edit_tracks() const;
