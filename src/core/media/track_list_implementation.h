@@ -46,8 +46,6 @@ public:
     void remove_track(const Track::Id& id);
 
     void go_to(const Track::Id& track, bool toggle_player_state);
-    bool has_next() const;
-    bool has_previous() const;
     void shuffle_tracks();
     void unshuffle_tracks();
     void reset();

@@ -33,3 +33,13 @@ media::TrackList::TrackList()
 media::TrackList::~TrackList()
 {
 }
+
+bool media::TrackList::has_next() const
+{
+    return false;
+}
+
+bool media::TrackList::has_previous() const
+{
+    return false;
+}
