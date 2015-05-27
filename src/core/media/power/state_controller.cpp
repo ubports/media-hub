@@ -98,6 +98,8 @@ struct DisplayStateLock : public media::power::StateController::Lock<media::powe
     // From core::ubuntu::media::power::StateController::Lock<DisplayState>
     void request_acquire(media::power::DisplayState state) override
     {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+
         if (state == media::power::DisplayState::off)
             return;
 
@@ -205,29 +207,51 @@ struct SystemStateLock : public media::power::StateController::Lock<media::power
     // the system to stay active.
     void request_acquire(media::power::SystemState state) override
     {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+
         if (state == media::power::SystemState::suspend)
             return;
 
-        // Keep scope of this lock tight as to avoid
-        // deadlocks on PlayerImplementation destruction
+        // Tighten the scope on the unique_lock
         {
-            std::lock_guard<std::mutex> lg{system_state_cookie_store_guard};
-            if (system_state_cookie_store.count(state) > 0)
+            // Using a unique_lock instead of lock_guard to avoid deadlocks and instead, gracefully fail
+            std::unique_lock<std::mutex> ul{system_state_cookie_store_guard, std::try_to_lock};
+            if (ul.owns_lock())
+            {
+                if (system_state_cookie_store.count(state) > 0)
+                    return;
+            }
+            else
+            {
+                std::cerr << "Failed to lock system_state_cookie_store_guard and check system lock state" << std::endl;
+                // Prevent system_state_cookie_store.count(state) and the actual call to requestSysState below from
+                // getting out of sync.
                 return;
+            }
         }
 
         std::weak_ptr<SystemStateLock> wp{shared_from_this()};
 
-        object->invoke_method_asynchronously_with_callback<com::canonical::powerd::Interface::requestSysState, std::string>([wp, state](const core::dbus::Result<std::string>& result)
+        object->invoke_method_asynchronously_with_callback<com::canonical::powerd::Interface::requestSysState, std::string>([wp, state, this](const core::dbus::Result<std::string>& result)
         {
-            if (result.is_error()) // TODO(tvoss): We should log the error condition here.
+            if (result.is_error())
+            {
+                std::cerr << result.error().print() << std::endl;
                 return;
+            }
 
             if (auto sp = wp.lock())
             {
-                std::lock_guard<std::mutex> lg{sp->system_state_cookie_store_guard};
+                // Tighten the scope on the unique_lock
+                {
+                    // Using a unique_lock instead of lock_guard to avoid deadlocks and instead, gracefully fail
+                    std::unique_lock<std::mutex> ul{system_state_cookie_store_guard, std::try_to_lock};
+                    if (ul.owns_lock())
+                        sp->system_state_cookie_store[state] = result.value();
+                    else
+                        std::cerr << "Failed to lock system_state_cookie_store_guard and update system lock state" << std::endl;
+                }
 
-                sp->system_state_cookie_store[state] = result.value();
                 sp->signals.acquired(state);
             }
         }, std::string{wake_lock_name}, static_cast<std::int32_t>(state));
@@ -240,23 +264,42 @@ struct SystemStateLock : public media::power::StateController::Lock<media::power
         if (state == media::power::SystemState::suspend)
             return;
 
-        std::lock_guard<std::mutex> lg{system_state_cookie_store_guard};
-
-        if (system_state_cookie_store.count(state) == 0)
-            return;
+        // Tighten the scope on the unique_lock
+        {
+            // Using a unique_lock instead of lock_guard to avoid deadlocks and instead, gracefully fail
+            std::unique_lock<std::mutex> ul{system_state_cookie_store_guard, std::try_to_lock};
+            if (ul.owns_lock())
+            {
+                if (system_state_cookie_store.count(state) == 0)
+                    return;
+            }
+            else
+            {
+                std::cerr << "Failed to lock system_state_cookie_store_guard and check system lock state" << std::endl;
+                // Prevent system_state_cookie_store.count(state) and the actual call to clearSysState below from
+                // getting out of sync.
+                return;
+            }
+        }
 
         std::weak_ptr<SystemStateLock> wp{shared_from_this()};
 
-        object->invoke_method_asynchronously_with_callback<com::canonical::powerd::Interface::clearSysState, void>([wp, state](const core::dbus::Result<void>& result)
+        object->invoke_method_asynchronously_with_callback<com::canonical::powerd::Interface::clearSysState, void>([this, wp, state](const core::dbus::Result<void>& result)
         {
             if (result.is_error())
                 std::cerr << result.error().print() << std::endl;
 
             if (auto sp = wp.lock())
             {
-                std::lock_guard<std::mutex> lg{sp->system_state_cookie_store_guard};
+                // Tighten the scope on the unique_lock
+                {
+                    std::unique_lock<std::mutex> ul{system_state_cookie_store_guard, std::try_to_lock};
+                    if (ul.owns_lock())
+                        sp->system_state_cookie_store.erase(state);
+                    else
+                        std::cerr << "Failed to lock system_state_cookie_store_guard and erase system lock state" << std::endl;
+                }
 
-                sp->system_state_cookie_store.erase(state);
                 sp->signals.released(state);
             }
         }, system_state_cookie_store.at(state));
