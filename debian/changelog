@@ -1,3 +1,14 @@
+media-hub (3.1.0+15.10.20150527.1-0ubuntu1) wily; urgency=medium
+
+  [ CI Train Bot ]
+  * New rebuild forced.
+
+  [ Jim Hodapp ]
+  * Use try_lock() instead of a lock_guard to fail gracefully from rare
+    deadlock situations. (LP: #1457129)
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Wed, 27 May 2015 18:38:16 +0000
+
 media-hub (3.1.0+15.10.20150522-0ubuntu1) wily; urgency=medium
 
   [ Jim Hodapp ]
