@@ -79,12 +79,13 @@ struct gstreamer::Engine::Private
         {
             switch (ewi.error->code)
             {
+            case GST_CORE_ERROR_FAILED:
             case GST_CORE_ERROR_NEGOTIATION:
                 return media::Player::Error::resource_error;
             case GST_CORE_ERROR_MISSING_PLUGIN:
                 return media::Player::Error::format_error;
             default:
-                std::cerr << "Got an unhandled core error: '"
+                std::cerr << "** Encountered an unhandled core error: '"
                     << ewi.debug << "' (code: " << ewi.error->code << ")" << std::endl;
                 return media::Player::Error::no_error;
             }
@@ -93,6 +94,7 @@ struct gstreamer::Engine::Private
         {
             switch (ewi.error->code)
             {
+            case GST_RESOURCE_ERROR_FAILED:
             case GST_RESOURCE_ERROR_NOT_FOUND:
             case GST_RESOURCE_ERROR_OPEN_READ:
             case GST_RESOURCE_ERROR_OPEN_WRITE:
@@ -102,7 +104,7 @@ struct gstreamer::Engine::Private
             case GST_RESOURCE_ERROR_NOT_AUTHORIZED:
                 return media::Player::Error::access_denied_error;
             default:
-                std::cerr << "Got an unhandled resource error: '"
+                std::cerr << "** Encountered an unhandled resource error: '"
                     << ewi.debug << "' (code: " << ewi.error->code << ")" << std::endl;
                 return media::Player::Error::no_error;
             }
@@ -111,11 +113,13 @@ struct gstreamer::Engine::Private
         {
             switch (ewi.error->code)
             {
+            case GST_STREAM_ERROR_FAILED:
+                return media::Player::Error::resource_error;
             case GST_STREAM_ERROR_CODEC_NOT_FOUND:
             case GST_STREAM_ERROR_DECODE:
                 return media::Player::Error::format_error;
             default:
-                std::cerr << "Got an unhandled stream error: '"
+                std::cerr << "** Encountered an unhandled stream error: '"
                     << ewi.debug << "' (code: " << ewi.error->code << ")" << std::endl;
                 return media::Player::Error::no_error;
             }
