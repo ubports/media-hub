@@ -80,9 +80,13 @@ struct gstreamer::Engine::Private
             switch (ewi.error->code)
             {
             case GST_CORE_ERROR_FAILED:
+                std::cerr << "** Encountered a GST_CORE_ERROR_FAILED" << std::endl;
+                return media::Player::Error::resource_error;
             case GST_CORE_ERROR_NEGOTIATION:
+                std::cerr << "** Encountered a GST_CORE_ERROR_NEGOTIATION" << std::endl;
                 return media::Player::Error::resource_error;
             case GST_CORE_ERROR_MISSING_PLUGIN:
+                std::cerr << "** Encountered a GST_CORE_ERROR_MISSING_PLUGIN" << std::endl;
                 return media::Player::Error::format_error;
             default:
                 std::cerr << "** Encountered an unhandled core error: '"
@@ -95,13 +99,25 @@ struct gstreamer::Engine::Private
             switch (ewi.error->code)
             {
             case GST_RESOURCE_ERROR_FAILED:
+                std::cerr << "** Encountered a GST_RESOURCE_ERROR_FAILED" << std::endl;
+                return media::Player::Error::resource_error;
             case GST_RESOURCE_ERROR_NOT_FOUND:
+                std::cerr << "** Encountered a GST_RESOURCE_ERROR_NOT_FOUND" << std::endl;
+                return media::Player::Error::resource_error;
             case GST_RESOURCE_ERROR_OPEN_READ:
+                std::cerr << "** Encountered a GST_RESOURCE_ERROR_OPEN_READ" << std::endl;
+                return media::Player::Error::resource_error;
             case GST_RESOURCE_ERROR_OPEN_WRITE:
+                std::cerr << "** Encountered a GST_RESOURCE_ERROR_OPEN_WRITE" << std::endl;
+                return media::Player::Error::resource_error;
             case GST_RESOURCE_ERROR_READ:
+                std::cerr << "** Encountered a GST_RESOURCE_ERROR_READ" << std::endl;
+                return media::Player::Error::resource_error;
             case GST_RESOURCE_ERROR_WRITE:
+                std::cerr << "** Encountered a GST_RESOURCE_ERROR_WRITE" << std::endl;
                 return media::Player::Error::resource_error;
             case GST_RESOURCE_ERROR_NOT_AUTHORIZED:
+                std::cerr << "** Encountered a GST_RESOURCE_ERROR_NOT_AUTHORIZED" << std::endl;
                 return media::Player::Error::access_denied_error;
             default:
                 std::cerr << "** Encountered an unhandled resource error: '"
@@ -114,9 +130,13 @@ struct gstreamer::Engine::Private
             switch (ewi.error->code)
             {
             case GST_STREAM_ERROR_FAILED:
+                std::cerr << "** Encountered a GST_STREAM_ERROR_FAILED" << std::endl;
                 return media::Player::Error::resource_error;
             case GST_STREAM_ERROR_CODEC_NOT_FOUND:
+                std::cerr << "** Encountered a GST_STREAM_ERROR_CODEC_NOT_FOUND" << std::endl;
+                return media::Player::Error::format_error;
             case GST_STREAM_ERROR_DECODE:
+                std::cerr << "** Encountered a GST_STREAM_ERROR_DECODE" << std::endl;
                 return media::Player::Error::format_error;
             default:
                 std::cerr << "** Encountered an unhandled stream error: '"
