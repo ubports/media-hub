@@ -1,3 +1,14 @@
+media-hub (3.1.0+15.10.20150601-0ubuntu1) wily; urgency=medium
+
+  [ CI Train Bot ]
+  * New rebuild forced.
+
+  [ Jim Hodapp ]
+  * Add next/previous track implementation for the Player and
+    can_go_next/previous.
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Mon, 01 Jun 2015 16:31:53 +0000
+
 media-hub (3.1.0+15.10.20150527.1-0ubuntu1) wily; urgency=medium
 
   [ CI Train Bot ]
