@@ -118,6 +118,8 @@ struct Playbin
     core::ubuntu::media::Player::HeadersType request_headers;
     core::ubuntu::media::Player::Lifetime player_lifetime;
     bool is_eos;
+    gulong about_to_finish_handler_id;
+    gulong source_setup_handler_id;
     struct
     {
         core::Signal<void> about_to_finish;

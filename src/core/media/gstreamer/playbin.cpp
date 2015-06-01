@@ -101,25 +101,25 @@ gstreamer::Playbin::Playbin()
       is_seeking(false),
       previous_position(0),
       player_lifetime(media::Player::Lifetime::normal),
-      is_eos(false)
+      is_eos(false),
+      about_to_finish_handler_id(0),
+      source_setup_handler_id(0)
 {
     if (!pipeline)
         throw std::runtime_error("Could not create pipeline for playbin.");
-
-    is_eos = false;
 
     // Add audio and/or video sink elements depending on environment variables
     // being set or not set
     setup_pipeline_for_audio_video();
 
-    g_signal_connect(
+    about_to_finish_handler_id = g_signal_connect(
                 pipeline,
                 "about-to-finish",
                 G_CALLBACK(about_to_finish),
                 this
                 );
 
-    g_signal_connect(
+    source_setup_handler_id = g_signal_connect(
         pipeline,
         "source-setup",
         G_CALLBACK(source_setup),
@@ -129,6 +129,9 @@ gstreamer::Playbin::Playbin()
 
 gstreamer::Playbin::~Playbin()
 {
+    g_signal_handler_disconnect(pipeline, about_to_finish_handler_id);
+    g_signal_handler_disconnect(pipeline, source_setup_handler_id);
+
     if (pipeline)
         gst_object_unref(pipeline);
 }
