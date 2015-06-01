@@ -92,10 +92,10 @@ gstreamer::Playbin::Playbin()
       bus{gst_element_get_bus(pipeline)},
       file_type(MEDIA_FILE_TYPE_NONE),
       video_sink(nullptr),
-      on_new_message_connection(
-          bus.on_new_message.connect(
+      on_new_message_connection_async(
+          bus.on_new_message_async.connect(
               std::bind(
-                  &Playbin::on_new_message,
+                  &Playbin::on_new_message_async,
                   this,
                   std::placeholders::_1))),
       is_seeking(false),
@@ -170,7 +170,7 @@ void gstreamer::Playbin::reset_pipeline()
     file_type = MEDIA_FILE_TYPE_NONE;
 }
 
-void gstreamer::Playbin::on_new_message(const Bus::Message& message)
+void gstreamer::Playbin::on_new_message_async(const Bus::Message& message)
 {
     switch(message.type)
     {
@@ -182,6 +182,9 @@ void gstreamer::Playbin::on_new_message(const Bus::Message& message)
         break;
     case GST_MESSAGE_INFO:
         signals.on_info(message.detail.error_warning_info);
+        break;
+    case GST_MESSAGE_STATE_CHANGED:
+        signals.on_state_changed(std::make_pair(message.detail.state_changed, message.source));
         break;
     case GST_MESSAGE_TAG:
         {
@@ -195,9 +198,6 @@ void gstreamer::Playbin::on_new_message(const Bus::Message& message)
 
             signals.on_tag_available(message.detail.tag);
         }
-        break;
-    case GST_MESSAGE_STATE_CHANGED:
-        signals.on_state_changed(std::make_pair(message.detail.state_changed, message.source));
         break;
     case GST_MESSAGE_ASYNC_DONE:
         if (is_seeking)
