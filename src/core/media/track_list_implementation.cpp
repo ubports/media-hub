@@ -151,16 +151,6 @@ void media::TrackListImplementation::go_to(const media::Track::Id& track, bool t
     on_track_changed()(track);
 }
 
-bool media::TrackListImplementation::has_next() const
-{
-    return media::TrackListSkeleton::has_next();
-}
-
-bool media::TrackListImplementation::has_previous() const
-{
-    return media::TrackListSkeleton::has_previous();
-}
-
 void media::TrackListImplementation::shuffle_tracks()
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
