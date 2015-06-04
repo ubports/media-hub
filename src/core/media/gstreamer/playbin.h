@@ -71,6 +71,7 @@ struct Playbin
     void reset_pipeline();
 
     void on_new_message(const Bus::Message& message);
+    void on_new_message_async(const Bus::Message& message);
 
     gstreamer::Bus& message_bus();
 
@@ -112,12 +113,14 @@ struct Playbin
     gstreamer::Bus bus;
     MediaFileType file_type;
     GstElement* video_sink;
-    core::Connection on_new_message_connection;
+    core::Connection on_new_message_connection_async;
     bool is_seeking;
     mutable uint64_t previous_position;
     core::ubuntu::media::Player::HeadersType request_headers;
     core::ubuntu::media::Player::Lifetime player_lifetime;
     bool is_eos;
+    gulong about_to_finish_handler_id;
+    gulong source_setup_handler_id;
     struct
     {
         core::Signal<void> about_to_finish;

@@ -411,7 +411,11 @@ TEST(GStreamerEngine, meta_data_extractor_provides_correct_tags)
     ASSERT_TRUE(test::copy_test_media_file_to("test.mp3", test_file));
 
     gstreamer::Engine engine;
-    auto md = engine.meta_data_extractor()->meta_data_for_track_with_uri(test_file_uri);
+
+    core::ubuntu::media::Track::MetaData md;
+    ASSERT_NO_THROW({
+        md = engine.meta_data_extractor()->meta_data_for_track_with_uri(test_file_uri);
+    });
 
     if (0 < md.count(xesam::Album::name))
         EXPECT_EQ("Test", md.get(xesam::Album::name));

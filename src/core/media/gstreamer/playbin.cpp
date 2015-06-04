@@ -92,34 +92,34 @@ gstreamer::Playbin::Playbin()
       bus{gst_element_get_bus(pipeline)},
       file_type(MEDIA_FILE_TYPE_NONE),
       video_sink(nullptr),
-      on_new_message_connection(
-          bus.on_new_message.connect(
+      on_new_message_connection_async(
+          bus.on_new_message_async.connect(
               std::bind(
-                  &Playbin::on_new_message,
+                  &Playbin::on_new_message_async,
                   this,
                   std::placeholders::_1))),
       is_seeking(false),
       previous_position(0),
       player_lifetime(media::Player::Lifetime::normal),
-      is_eos(false)
+      is_eos(false),
+      about_to_finish_handler_id(0),
+      source_setup_handler_id(0)
 {
     if (!pipeline)
         throw std::runtime_error("Could not create pipeline for playbin.");
-
-    is_eos = false;
 
     // Add audio and/or video sink elements depending on environment variables
     // being set or not set
     setup_pipeline_for_audio_video();
 
-    g_signal_connect(
+    about_to_finish_handler_id = g_signal_connect(
                 pipeline,
                 "about-to-finish",
                 G_CALLBACK(about_to_finish),
                 this
                 );
 
-    g_signal_connect(
+    source_setup_handler_id = g_signal_connect(
         pipeline,
         "source-setup",
         G_CALLBACK(source_setup),
@@ -129,6 +129,9 @@ gstreamer::Playbin::Playbin()
 
 gstreamer::Playbin::~Playbin()
 {
+    g_signal_handler_disconnect(pipeline, about_to_finish_handler_id);
+    g_signal_handler_disconnect(pipeline, source_setup_handler_id);
+
     if (pipeline)
         gst_object_unref(pipeline);
 }
@@ -167,7 +170,7 @@ void gstreamer::Playbin::reset_pipeline()
     file_type = MEDIA_FILE_TYPE_NONE;
 }
 
-void gstreamer::Playbin::on_new_message(const Bus::Message& message)
+void gstreamer::Playbin::on_new_message_async(const Bus::Message& message)
 {
     switch(message.type)
     {
@@ -179,6 +182,9 @@ void gstreamer::Playbin::on_new_message(const Bus::Message& message)
         break;
     case GST_MESSAGE_INFO:
         signals.on_info(message.detail.error_warning_info);
+        break;
+    case GST_MESSAGE_STATE_CHANGED:
+        signals.on_state_changed(std::make_pair(message.detail.state_changed, message.source));
         break;
     case GST_MESSAGE_TAG:
         {
@@ -192,9 +198,6 @@ void gstreamer::Playbin::on_new_message(const Bus::Message& message)
 
             signals.on_tag_available(message.detail.tag);
         }
-        break;
-    case GST_MESSAGE_STATE_CHANGED:
-        signals.on_state_changed(std::make_pair(message.detail.state_changed, message.source));
         break;
     case GST_MESSAGE_ASYNC_DONE:
         if (is_seeking)

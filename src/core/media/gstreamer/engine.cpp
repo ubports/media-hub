@@ -75,53 +75,97 @@ struct gstreamer::Engine::Private
     // Converts from a GStreamer GError to a media::Player:Error enum
     media::Player::Error from_gst_errorwarning(const gstreamer::Bus::Message::Detail::ErrorWarningInfo& ewi)
     {
+        media::Player::Error ret_error = media::Player::Error::no_error;
+
         if (g_strcmp0(g_quark_to_string(ewi.error->domain), "gst-core-error-quark") == 0)
         {
             switch (ewi.error->code)
             {
+            case GST_CORE_ERROR_FAILED:
+                std::cerr << "** Encountered a GST_CORE_ERROR_FAILED" << std::endl;
+                ret_error = media::Player::Error::resource_error;
+                break;
             case GST_CORE_ERROR_NEGOTIATION:
-                return media::Player::Error::resource_error;
+                std::cerr << "** Encountered a GST_CORE_ERROR_NEGOTIATION" << std::endl;
+                ret_error = media::Player::Error::resource_error;
+                break;
             case GST_CORE_ERROR_MISSING_PLUGIN:
-                return media::Player::Error::format_error;
+                std::cerr << "** Encountered a GST_CORE_ERROR_MISSING_PLUGIN" << std::endl;
+                ret_error = media::Player::Error::format_error;
+                break;
             default:
-                std::cerr << "Got an unhandled core error: '"
+                std::cerr << "** Encountered an unhandled core error: '"
                     << ewi.debug << "' (code: " << ewi.error->code << ")" << std::endl;
-                return media::Player::Error::no_error;
+                ret_error = media::Player::Error::no_error;
+                break;
             }
         }
         else if (g_strcmp0(g_quark_to_string(ewi.error->domain), "gst-resource-error-quark") == 0)
         {
             switch (ewi.error->code)
             {
+            case GST_RESOURCE_ERROR_FAILED:
+                std::cerr << "** Encountered a GST_RESOURCE_ERROR_FAILED" << std::endl;
+                ret_error = media::Player::Error::resource_error;
+                break;
             case GST_RESOURCE_ERROR_NOT_FOUND:
+                std::cerr << "** Encountered a GST_RESOURCE_ERROR_NOT_FOUND" << std::endl;
+                ret_error = media::Player::Error::resource_error;
+                break;
             case GST_RESOURCE_ERROR_OPEN_READ:
+                std::cerr << "** Encountered a GST_RESOURCE_ERROR_OPEN_READ" << std::endl;
+                ret_error = media::Player::Error::resource_error;
+                break;
             case GST_RESOURCE_ERROR_OPEN_WRITE:
+                std::cerr << "** Encountered a GST_RESOURCE_ERROR_OPEN_WRITE" << std::endl;
+                ret_error = media::Player::Error::resource_error;
+                break;
             case GST_RESOURCE_ERROR_READ:
+                std::cerr << "** Encountered a GST_RESOURCE_ERROR_READ" << std::endl;
+                ret_error = media::Player::Error::resource_error;
+                break;
             case GST_RESOURCE_ERROR_WRITE:
-                return media::Player::Error::resource_error;
+                std::cerr << "** Encountered a GST_RESOURCE_ERROR_WRITE" << std::endl;
+                ret_error = media::Player::Error::resource_error;
+                break;
             case GST_RESOURCE_ERROR_NOT_AUTHORIZED:
-                return media::Player::Error::access_denied_error;
+                std::cerr << "** Encountered a GST_RESOURCE_ERROR_NOT_AUTHORIZED" << std::endl;
+                ret_error = media::Player::Error::access_denied_error;
+                break;
             default:
-                std::cerr << "Got an unhandled resource error: '"
+                std::cerr << "** Encountered an unhandled resource error: '"
                     << ewi.debug << "' (code: " << ewi.error->code << ")" << std::endl;
-                return media::Player::Error::no_error;
+                ret_error = media::Player::Error::no_error;
+                break;
             }
         }
         else if (g_strcmp0(g_quark_to_string(ewi.error->domain), "gst-stream-error-quark") == 0)
         {
             switch (ewi.error->code)
             {
+            case GST_STREAM_ERROR_FAILED:
+                std::cerr << "** Encountered a GST_STREAM_ERROR_FAILED" << std::endl;
+                ret_error = media::Player::Error::resource_error;
+                break;
             case GST_STREAM_ERROR_CODEC_NOT_FOUND:
+                std::cerr << "** Encountered a GST_STREAM_ERROR_CODEC_NOT_FOUND" << std::endl;
+                ret_error = media::Player::Error::format_error;
+                break;
             case GST_STREAM_ERROR_DECODE:
-                return media::Player::Error::format_error;
+                std::cerr << "** Encountered a GST_STREAM_ERROR_DECODE" << std::endl;
+                ret_error = media::Player::Error::format_error;
+                break;
             default:
-                std::cerr << "Got an unhandled stream error: '"
+                std::cerr << "** Encountered an unhandled stream error: '"
                     << ewi.debug << "' (code: " << ewi.error->code << ")" << std::endl;
-                return media::Player::Error::no_error;
+                ret_error = media::Player::Error::no_error;
+                break;
             }
         }
 
-        return media::Player::Error::no_error;
+        std::cout << "Resetting playbin pipeline after unrecoverable error" << std::endl;
+        playbin.reset();
+        return ret_error;
     }
 
     void on_playbin_error(const gstreamer::Bus::Message::Detail::ErrorWarningInfo& ewi)

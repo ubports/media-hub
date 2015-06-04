@@ -277,12 +277,38 @@ public:
 
         auto thiz = static_cast<Bus*>(data);
         Message message(msg);
-        thiz->on_new_message(message);
+        if (message.type == GST_MESSAGE_TAG || message.type == GST_MESSAGE_ASYNC_DONE)
+            thiz->on_new_message(message);
 
-        return GST_BUS_DROP;
+        return GST_BUS_PASS;
     }
 
-    Bus(GstBus* bus) : bus(bus)
+    static gboolean bus_watch_handler(
+            GstBus* bus,
+            GstMessage* msg,
+            gpointer data)
+    {
+        (void) bus;
+
+        auto thiz = static_cast<Bus*>(data);
+        Message message(msg);
+        thiz->on_new_message_async(message);
+
+        return true;
+    }
+
+    Bus(GstBus* bus) : bus(bus), bus_watch_id(0)
+    {
+        set_bus(bus);
+    }
+
+    ~Bus()
+    {
+        g_source_remove(bus_watch_id);
+        gst_object_unref(bus);
+    }
+
+    void set_bus(GstBus* bus)
     {
         if (!bus)
             throw std::runtime_error("Cannot create Bus instance if underlying instance is NULL.");
@@ -292,15 +318,20 @@ public:
                     Bus::sync_handler,
                     this,
                     nullptr);
-    }
 
-    ~Bus()
-    {
-        gst_object_unref(bus);
+        // Use a watch for most messages instead of the sync handler so that our context is not
+        // the same as the streaming thread, which can cause deadlocks in GStreamer
+        // if, for example, attempting to change the pipeline state from this context.
+        bus_watch_id = gst_bus_add_watch(
+                            bus,
+                            Bus::bus_watch_handler,
+                            this);
     }
 
     GstBus* bus;
     core::Signal<Message> on_new_message;
+    core::Signal<Message> on_new_message_async;
+    guint bus_watch_id;
 };
 }
 
