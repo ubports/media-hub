@@ -1,3 +1,14 @@
+media-hub (3.1.0+15.10.20150604-0ubuntu1) wily; urgency=medium
+
+  [ CI Train Bot ]
+  * New rebuild forced.
+
+  [ Jim Hodapp ]
+  * Handle a wider array of GStreamer errors so that .ogv files are
+    reported as failing to play. (LP: #1458040)
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Thu, 04 Jun 2015 14:18:22 +0000
+
 media-hub (3.1.0+15.10.20150601-0ubuntu1) wily; urgency=medium
 
   [ CI Train Bot ]
