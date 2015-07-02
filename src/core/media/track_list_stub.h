@@ -45,6 +45,7 @@ public:
     const core::Property<Container>& tracks() const;
 
     Track::MetaData query_meta_data_for_track(const Track::Id& id);
+    Track::UriType query_uri_for_track(const Track::Id& id);
 
     void add_track_with_uri_at(const Track::UriType& uri, const Track::Id& position, bool make_current);
     void remove_track(const Track::Id& id);

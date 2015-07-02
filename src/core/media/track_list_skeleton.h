@@ -41,8 +41,8 @@ public:
         const core::ubuntu::media::apparmor::ubuntu::RequestAuthenticator::Ptr& request_authenticator);
     ~TrackListSkeleton();
 
-    bool has_next() const;
-    bool has_previous() const;
+    bool has_next();
+    bool has_previous();
     Track::Id next();
     Track::Id previous();
     const Track::Id& current();
@@ -67,6 +67,9 @@ public:
     void on_shuffle_changed(bool shuffle);
 
 protected:
+    bool is_last_track();
+    const TrackList::ConstIterator& current_iterator();
+
     core::Property<bool>& can_edit_tracks();
 
     core::Signal<ContainerTrackIdTuple>& on_track_list_replaced();

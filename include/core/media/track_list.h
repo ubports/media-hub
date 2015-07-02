@@ -25,8 +25,9 @@
 
 #include <functional>
 #include <iosfwd>
-#include <vector>
 #include <memory>
+#include <string>
+#include <vector>
 
 namespace core
 {
@@ -45,6 +46,10 @@ class TrackList : public std::enable_shared_from_this<TrackList>
     typedef Container::const_iterator ConstIterator;
 
     static const Track::Id& after_empty_track();
+    /*
+     * @brief Returns the dbus-object path prefix for a Track: e.g. /org/mpris/MediaPlayer2/TrackList
+     */
+    static const std::string& track_id_path();
 
     TrackList(const TrackList&) = delete;
     ~TrackList();
@@ -60,6 +65,9 @@ class TrackList : public std::enable_shared_from_this<TrackList>
 
     /** Gets all the metadata available for a given Track. */
     virtual Track::MetaData query_meta_data_for_track(const Track::Id& id) = 0;
+
+    /** Gets the URI for a given Track. */
+    virtual Track::UriType query_uri_for_track(const Track::Id& id) = 0;
 
     /** Adds a URI in the TrackList. */
     virtual void add_track_with_uri_at(const Track::UriType& uri, const Track::Id& position, bool make_current) = 0;

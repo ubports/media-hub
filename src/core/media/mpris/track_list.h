@@ -49,6 +49,7 @@ struct TrackList
     }
 
     DBUS_CPP_METHOD_DEF(GetTracksMetadata, TrackList)
+    DBUS_CPP_METHOD_DEF(GetTracksUri, TrackList)
     DBUS_CPP_METHOD_DEF(AddTrack, TrackList)
     DBUS_CPP_METHOD_DEF(RemoveTrack, TrackList)
     DBUS_CPP_METHOD_DEF(GoTo, TrackList)
@@ -74,6 +75,13 @@ struct TrackList
         DBUS_CPP_SIGNAL_DEF
         (
             TrackRemoved,
+            TrackList,
+            core::ubuntu::media::Track::Id
+        )
+
+        DBUS_CPP_SIGNAL_DEF
+        (
+            TrackChanged,
             TrackList,
             core::ubuntu::media::Track::Id
         )
@@ -126,6 +134,7 @@ struct TrackList
                   configuration.object->get_signal<Signals::TrackListReplaced>(),
                   configuration.object->get_signal<Signals::TrackAdded>(),
                   configuration.object->get_signal<Signals::TrackRemoved>(),
+                  configuration.object->get_signal<Signals::TrackChanged>(),
                   configuration.object->get_signal<Signals::TrackMetadataChanged>(),
                   configuration.object->template get_signal<core::dbus::interfaces::Properties::Signals::PropertiesChanged>()
               }
@@ -169,6 +178,7 @@ struct TrackList
             core::dbus::Signal<Signals::TrackListReplaced, Signals::TrackListReplaced::ArgumentType>::Ptr tracklist_replaced;
             core::dbus::Signal<Signals::TrackAdded, Signals::TrackAdded::ArgumentType>::Ptr track_added;
             core::dbus::Signal<Signals::TrackRemoved, Signals::TrackRemoved::ArgumentType>::Ptr track_removed;
+            core::dbus::Signal<Signals::TrackChanged, Signals::TrackChanged::ArgumentType>::Ptr track_changed;
             core::dbus::Signal<Signals::TrackMetadataChanged, Signals::TrackMetadataChanged::ArgumentType>::Ptr track_metadata_changed;
 
             dbus::Signal <core::dbus::interfaces::Properties::Signals::PropertiesChanged,

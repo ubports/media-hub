@@ -139,7 +139,7 @@ struct media::ServiceSkeleton::Private
                 fprintf(stderr, "%s():%d -- app_name='%s', attached\n", __func__, __LINE__, context.str().c_str());
                 player_owner_map.insert(std::make_pair(key, std::make_tuple(context.str(), true, msg->sender())));
             });
-            
+
             auto reply = dbus::Message::make_method_return(msg);
             reply->writer() << std::make_tuple(op, uuid);
 
@@ -174,7 +174,7 @@ struct media::ServiceSkeleton::Private
                     player->lifetime().set(media::Player::Lifetime::resumable);
                 }
             }
-            
+
             auto reply = dbus::Message::make_method_return(msg);
             impl->access_bus()->send(reply);
 
@@ -256,7 +256,6 @@ struct media::ServiceSkeleton::Private
 
     void handle_destroy_session(const core::dbus::Message::Ptr& msg)
     {
-     
         try
         {
             std::string uuid;
@@ -445,9 +444,9 @@ struct media::ServiceSkeleton::Private
     // We keep a list of keys and their respective owners and states.
     // value: (owner context, attached state, attached dbus name)
     std::map<media::Player::PlayerKey, std::tuple<std::string, bool, std::string>> player_owner_map;
-    
+
     boost::uuids::random_generator gen;
-     
+
     // We expose the entire service as an MPRIS player.
     struct Exported
     {

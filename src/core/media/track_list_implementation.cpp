@@ -59,10 +59,14 @@ media::TrackListImplementation::~TrackListImplementation()
 
 media::Track::UriType media::TrackListImplementation::query_uri_for_track(const media::Track::Id& id)
 {
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+
     auto it = d->meta_data_cache.find(id);
 
     if (it == d->meta_data_cache.end())
         return Track::UriType{};
+
+    std::cout << "returning uri: " << std::get<0>(it->second) << std::endl;
 
     return std::get<0>(it->second);
 }
@@ -87,10 +91,14 @@ void media::TrackListImplementation::add_track_with_uri_at(
     std::stringstream ss; ss << d->object->path().as_string() << "/" << d->track_counter++;
     Track::Id id{ss.str()};
 
+    std::cout << "Adding Track::Id: " << id << std::endl;
+    std::cout << "\tURI: " << uri << std::endl;
+
     auto result = tracks().update([this, id, position, make_current](TrackList::Container& container)
     {
         auto it = std::find(container.begin(), container.end(), position);
         container.insert(it, id);
+        std::cout << "container.size(): " << container.size() << std::endl;
 
         return true;
     });
@@ -120,8 +128,10 @@ void media::TrackListImplementation::add_track_with_uri_at(
             go_to(id, toggle_player_state);
         }
 
+        std::cout << "Signaling that we just added track id: " << id << std::endl;
         // Signal to the client that a track was added to the TrackList
         on_track_added()(id);
+        std::cout << "Signaled that we just added track id: " << id << std::endl;
     }
 }
 
