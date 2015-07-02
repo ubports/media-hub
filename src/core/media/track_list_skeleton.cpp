@@ -99,7 +99,7 @@ struct media::TrackListSkeleton::Private
             msg->reader() >> uri >> after >> make_current;
 
             // Make sure the client has adequate apparmor permissions to open the URI
-            //const auto result = request_authenticator->authenticate_open_uri_request(context, uri);
+            const auto result = request_authenticator->authenticate_open_uri_request(context, uri);
 
             auto reply = dbus::Message::make_method_return(msg);
             // Only add the track to the TrackList if it passes the apparmor permissions check
