@@ -475,13 +475,7 @@ struct media::ServiceSkeleton::Private
 
         static std::string service_name()
         {
-            static const bool export_to_indicator_sound_via_mpris
-            {
-                core::posix::this_process::env::get("UBUNTU_MEDIA_HUB_EXPORT_TO_INDICATOR_VIA_MPRIS", "0") == "1"
-            };
-
-            return export_to_indicator_sound_via_mpris ? "org.mpris.MediaPlayer2.MediaHub" :
-                                                         "hidden.org.mpris.MediaPlayer2.MediaHub";
+            return "org.mpris.MediaPlayer2.MediaHub";
         }
 
         explicit Exported(const dbus::Bus::Ptr& bus, const media::CoverArtResolver& cover_art_resolver)
