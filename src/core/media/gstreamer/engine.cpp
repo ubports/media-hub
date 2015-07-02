@@ -389,9 +389,9 @@ bool gstreamer::Engine::play()
 bool gstreamer::Engine::stop()
 {
     // No need to wait, and we can immediately return.
-    //if (d->state == media::Engine::State::stopped)
-    if (d->state != media::Engine::State::playing ||
-            d->state == media::Engine::State::paused)
+    if (d->state == media::Engine::State::stopped)
+    //if (d->state != media::Engine::State::playing ||
+    //        d->state == media::Engine::State::paused)
     {
         std::cout << "Current state is not playing nor paused - no need to change state to stopped" << std::endl;
         return true;
