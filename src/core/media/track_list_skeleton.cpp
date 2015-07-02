@@ -93,7 +93,7 @@ struct media::TrackListSkeleton::Private
     void handle_add_track_with_uri_at(const core::dbus::Message::Ptr& msg)
     {
         std::cout << "*** " << __PRETTY_FUNCTION__ << std::endl;
-        //request_context_resolver->resolve_context_for_dbus_name_async(msg->sender(), [this, msg](const media::apparmor::ubuntu::Context& context)
+        request_context_resolver->resolve_context_for_dbus_name_async(msg->sender(), [this, msg](const media::apparmor::ubuntu::Context& context)
         {
             Track::UriType uri; media::Track::Id after; bool make_current;
             msg->reader() >> uri >> after >> make_current;
@@ -103,18 +103,16 @@ struct media::TrackListSkeleton::Private
 
             auto reply = dbus::Message::make_method_return(msg);
             // Only add the track to the TrackList if it passes the apparmor permissions check
-            //if (std::get<0>(result))
+            if (std::get<0>(result))
             {
                 impl->add_track_with_uri_at(uri, after, make_current);
             }
-#if 0
             else
                 std::cerr << "Warning: Not adding track " << uri <<
                     " to TrackList because of inadequate client apparmor permissions." << std::endl;
-#endif
 
             bus->send(reply);
-        }//);
+        });
     }
 
     void handle_remove_track(const core::dbus::Message::Ptr& msg)
