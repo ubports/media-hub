@@ -301,13 +301,41 @@ media::Track::Id media::TrackListSkeleton::next()
 media::Track::Id media::TrackListSkeleton::previous()
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
-    // TODO: Add logic to calculate the previous track
-    return *(d->current_track);
+    if (tracks().get().empty())
+        return *(current_iterator());
+
+    // Loop on the current track forever
+    if (d->loop_status == media::Player::LoopStatus::track)
+    {
+        std::cout << "Looping on the current track..." << std::endl;
+        on_track_changed()(*(current_iterator()));
+        return *(current_iterator());
+    }
+    // Loop over the whole playlist and repeat
+    else if (d->loop_status == media::Player::LoopStatus::playlist && !has_previous())
+    {
+        std::cout << "Looping on the entire TrackList..." << std::endl;
+        d->current_track = tracks().get().end();
+        on_track_changed()(*(current_iterator()));
+        return *(current_iterator());
+    }
+    else if (has_previous())
+    {
+        // Keep returning the previous track until the first track is reached
+        d->current_track = std::prev(current_iterator());
+        std::cout << "tracks() size: " << tracks().get().size() << std::endl;
+        std::cout << "Should be emitting on_track_changed" << std::endl;
+        on_track_changed()(*(current_iterator()));
+        //std::cout << *this << std::endl;
+    }
+
+    std::cout << "About to return current()" << std::endl;
+    return *(current_iterator());
 }
 
 const media::Track::Id& media::TrackListSkeleton::current()
 {
-    return *current_iterator();
+    return *(current_iterator());
 }
 
 const media::TrackList::ConstIterator& media::TrackListSkeleton::current_iterator()
