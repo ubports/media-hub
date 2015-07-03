@@ -52,6 +52,7 @@ public:
 
     const core::Signal<ContainerTrackIdTuple>& on_track_list_replaced() const;
     const core::Signal<Track::Id>& on_track_added() const;
+    core::Signal<Track::Id>& on_track_added();
     const core::Signal<Track::Id>& on_track_removed() const;
     const core::Signal<Track::Id>& on_track_changed() const;
     const core::Signal<std::pair<Track::Id, bool>>& on_go_to_track() const;
@@ -73,7 +74,6 @@ protected:
     core::Property<bool>& can_edit_tracks();
 
     core::Signal<ContainerTrackIdTuple>& on_track_list_replaced();
-    core::Signal<Track::Id>& on_track_added();
     core::Signal<Track::Id>& on_track_changed();
 
 private:

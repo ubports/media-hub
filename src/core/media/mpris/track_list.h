@@ -126,16 +126,16 @@ struct TrackList
             : configuration(configuration),
               properties
               {
-                  configuration.object->get_property<Properties::Tracks>(),
-                  configuration.object->get_property<Properties::CanEditTracks>(),
+                  configuration.object->template get_property<Properties::Tracks>(),
+                  configuration.object->template get_property<Properties::CanEditTracks>(),
               },
               signals
               {
-                  configuration.object->get_signal<Signals::TrackListReplaced>(),
-                  configuration.object->get_signal<Signals::TrackAdded>(),
-                  configuration.object->get_signal<Signals::TrackRemoved>(),
-                  configuration.object->get_signal<Signals::TrackChanged>(),
-                  configuration.object->get_signal<Signals::TrackMetadataChanged>(),
+                  configuration.object->template get_signal<Signals::TrackListReplaced>(),
+                  configuration.object->template get_signal<Signals::TrackAdded>(),
+                  configuration.object->template get_signal<Signals::TrackRemoved>(),
+                  configuration.object->template get_signal<Signals::TrackChanged>(),
+                  configuration.object->template get_signal<Signals::TrackMetadataChanged>(),
                   configuration.object->template get_signal<core::dbus::interfaces::Properties::Signals::PropertiesChanged>()
               }
         {

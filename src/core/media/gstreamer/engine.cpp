@@ -389,7 +389,7 @@ bool gstreamer::Engine::stop()
     //if (d->state != media::Engine::State::playing ||
     //        d->state == media::Engine::State::paused)
     {
-        std::cout << "Current state is not playing nor paused - no need to change state to stopped" << std::endl;
+        std::cout << "Current player state is already stopped - no need to change state to stopped" << std::endl;
         return true;
     }
 

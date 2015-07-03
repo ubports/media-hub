@@ -107,6 +107,7 @@ void media::TrackListImplementation::add_track_with_uri_at(
     {
         if (d->meta_data_cache.count(id) == 0)
         {
+            // FIXME: This code seems to conflict badly when called multiple times in a row: causes segfaults
 #if 1
             try {
                 d->meta_data_cache[id] = std::make_tuple(
