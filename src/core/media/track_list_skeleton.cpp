@@ -232,13 +232,6 @@ bool media::TrackListSkeleton::has_next()
     if (tracks().get().empty())
         return false;
 
-    const auto current_track = current_iterator();
-    const auto next_track = std::next(current_track);
-    std::cout << "has_next track? " << (!is_last_track() ? "yes" : "no") << std::endl;
-    //if (!is_last_track())
-        std::cout << "current track::id: " << current() << std::endl;
-    if (next_track != d->empty_iterator && next_track != std::end(tracks().get()))
-        std::cout << "next track::id: " << *(next_track) << std::endl;
     return !is_last_track();
 }
 
@@ -251,16 +244,14 @@ bool media::TrackListSkeleton::has_previous()
     if (d->loop_status == media::Player::LoopStatus::playlist)
         return true;
 
-    std::cout << "has_previous track? " << (d->current_track != std::begin(tracks().get()) ? "yes" : "no") << std::endl;
     return d->current_track != std::begin(tracks().get());
 }
 
 bool media::TrackListSkeleton::is_last_track()
 {
-    std::cout << "is_last_track: " << ((d->current_track == d->empty_iterator or d->current_track == std::end(tracks().get())) ? "yes" : "no") << std::endl;
-    std::cout << "d->current_track != d->empty_iterator: " << (d->current_track == d->empty_iterator ? "true" : "false") << std::endl;
-    std::cout << "d->current_track != std::end(tracks().get(): " << (d->current_track == std::end(tracks().get()) ? "true" : "false") << std::endl;
-    return d->current_track == d->empty_iterator or d->current_track == std::end(tracks().get());
+    const auto current_track = current_iterator();
+    const auto next_track = std::next(current_track);
+    return next_track == d->empty_iterator or next_track == std::end(tracks().get());
 }
 
 media::Track::Id media::TrackListSkeleton::next()
