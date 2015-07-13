@@ -344,6 +344,14 @@ const media::TrackList::ConstIterator& media::TrackListSkeleton::current_iterato
     return d->current_track;
 }
 
+void media::TrackListSkeleton::reset_current_iterator_if_needed()
+{
+    // If all tracks got removed then we need to keep a sane current
+    // iterator for further use.
+    if (tracks().get().empty())
+        d->current_track = d->empty_iterator;
+}
+
 const core::Property<bool>& media::TrackListSkeleton::can_edit_tracks() const
 {
     return *d->skeleton.properties.can_edit_tracks;

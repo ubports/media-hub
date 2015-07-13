@@ -150,6 +150,8 @@ void media::TrackListImplementation::remove_track(const media::Track::Id& id)
         return true;
     });
 
+    reset_current_iterator_if_needed();
+
     if (result)
     {
         d->meta_data_cache.erase(id);

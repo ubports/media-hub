@@ -70,6 +70,7 @@ public:
 protected:
     bool is_last_track();
     const TrackList::ConstIterator& current_iterator();
+    void reset_current_iterator_if_needed();
 
     core::Property<bool>& can_edit_tracks();
 
