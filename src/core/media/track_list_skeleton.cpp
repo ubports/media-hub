@@ -260,20 +260,20 @@ media::Track::Id media::TrackListSkeleton::next()
     if (tracks().get().empty())
         return *(current_iterator());
 
+    bool do_go_to_next_track = false;
+
     // Loop on the current track forever
     if (d->loop_status == media::Player::LoopStatus::track)
     {
         std::cout << "Looping on the current track..." << std::endl;
-        on_track_changed()(*(current_iterator()));
-        return *(current_iterator());
+        do_go_to_next_track = true;
     }
     // Loop over the whole playlist and repeat
     else if (d->loop_status == media::Player::LoopStatus::playlist && !has_next())
     {
         std::cout << "Looping on the entire TrackList..." << std::endl;
         d->current_track = tracks().get().begin();
-        on_track_changed()(*(current_iterator()));
-        return *(current_iterator());
+        do_go_to_next_track = true;
     }
     else if (has_next())
     {
@@ -281,11 +281,22 @@ media::Track::Id media::TrackListSkeleton::next()
         d->current_track = std::next(current_iterator());
         std::cout << "tracks() size: " << tracks().get().size() << std::endl;
         std::cout << "Should be emitting on_track_changed" << std::endl;
-        on_track_changed()(*(current_iterator()));
-        //std::cout << *this << std::endl;
+        do_go_to_next_track = true;
     }
 
-    std::cout << "About to return current()" << std::endl;
+    if (do_go_to_next_track)
+    {
+        on_track_changed()(*(current_iterator()));
+        // Don't automatically call stop() and play() in player_implementation.cpp on_go_to_track()
+        // since this breaks video playback when using open_uri() (stop() and play() are unwanted in
+        // this scenario since the qtubuntu-media will handle this automatically)
+        const bool toggle_player_state = false;
+        const media::Track::Id id = *(current_iterator());
+        const std::pair<const media::Track::Id, bool> p = std::make_pair(id, toggle_player_state);
+        on_go_to_track()(p);
+    }
+
+    std::cout << "next() - About to return current_iterator()" << std::endl;
     return *(current_iterator());
 }
 
@@ -295,20 +306,20 @@ media::Track::Id media::TrackListSkeleton::previous()
     if (tracks().get().empty())
         return *(current_iterator());
 
+    bool do_go_to_previous_track = false;
+
     // Loop on the current track forever
     if (d->loop_status == media::Player::LoopStatus::track)
     {
         std::cout << "Looping on the current track..." << std::endl;
-        on_track_changed()(*(current_iterator()));
-        return *(current_iterator());
+        do_go_to_previous_track = true;
     }
     // Loop over the whole playlist and repeat
     else if (d->loop_status == media::Player::LoopStatus::playlist && !has_previous())
     {
         std::cout << "Looping on the entire TrackList..." << std::endl;
         d->current_track = tracks().get().end();
-        on_track_changed()(*(current_iterator()));
-        return *(current_iterator());
+        do_go_to_previous_track = true;
     }
     else if (has_previous())
     {
@@ -316,11 +327,22 @@ media::Track::Id media::TrackListSkeleton::previous()
         d->current_track = std::prev(current_iterator());
         std::cout << "tracks() size: " << tracks().get().size() << std::endl;
         std::cout << "Should be emitting on_track_changed" << std::endl;
-        on_track_changed()(*(current_iterator()));
-        //std::cout << *this << std::endl;
+        do_go_to_previous_track = true;
     }
 
-    std::cout << "About to return current()" << std::endl;
+    if (do_go_to_previous_track)
+    {
+        on_track_changed()(*(current_iterator()));
+        // Don't automatically call stop() and play() in player_implementation.cpp on_go_to_track()
+        // since this breaks video playback when using open_uri() (stop() and play() are unwanted in
+        // this scenario since the qtubuntu-media will handle this automatically)
+        const bool toggle_player_state = false;
+        const media::Track::Id id = *(current_iterator());
+        const std::pair<const media::Track::Id, bool> p = std::make_pair(id, toggle_player_state);
+        on_go_to_track()(p);
+    }
+
+    std::cout << "previous() - About to return current_iterator()" << std::endl;
     return *(current_iterator());
 }
 

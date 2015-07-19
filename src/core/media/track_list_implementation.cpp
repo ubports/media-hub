@@ -59,21 +59,19 @@ media::TrackListImplementation::~TrackListImplementation()
 
 media::Track::UriType media::TrackListImplementation::query_uri_for_track(const media::Track::Id& id)
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-
-    auto it = d->meta_data_cache.find(id);
+    const auto it = d->meta_data_cache.find(id);
 
     if (it == d->meta_data_cache.end())
         return Track::UriType{};
 
-    std::cout << "returning uri: " << std::get<0>(it->second) << std::endl;
+    //std::cout << "returning uri: " << std::get<0>(it->second) << std::endl;
 
     return std::get<0>(it->second);
 }
 
 media::Track::MetaData media::TrackListImplementation::query_meta_data_for_track(const media::Track::Id& id)
 {
-    auto it = d->meta_data_cache.find(id);
+    const auto it = d->meta_data_cache.find(id);
 
     if (it == d->meta_data_cache.end())
         return Track::MetaData{};

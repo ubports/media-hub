@@ -463,6 +463,7 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
 
     d->track_list->on_go_to_track().connect([this](std::pair<const media::Track::Id, bool> p)
     {
+        std::cout << "player_implementation()->on_go_to_track() lambda: " << p.first << ", " << p.second << std::endl;
         // This prevents the TrackList from auto advancing in other areas such as the about_to_finish signal
         // handler.
         // This lambda needs to be mutually exclusive with the about_to_finish lambda above
