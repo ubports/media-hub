@@ -378,6 +378,7 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
     // When the client changes the loop status, make sure to update the TrackList
     Parent::loop_status().changed().connect([this](media::Player::LoopStatus loop_status)
     {
+        std::cout << "LoopStatus: " << loop_status << std::endl;
         d->track_list->on_loop_status_changed(loop_status);
     });
 
