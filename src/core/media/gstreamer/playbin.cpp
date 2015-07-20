@@ -28,15 +28,22 @@
 
 namespace
 {
-void setup_video_sink_for_buffer_streaming(GstElement* video_sink)
+void setup_video_sink_for_buffer_streaming(GstElement* pipeline)
 {
     // Get the service-side BufferQueue (IGraphicBufferProducer) and associate it with
     // the SurfaceTextureClientHybris instance
     IGBPWrapperHybris igbp = decoding_service_get_igraphicbufferproducer();
     SurfaceTextureClientHybris stc = surface_texture_client_create_by_igbp(igbp);
+
     // Because mirsink is being loaded, we are definitely doing * hardware rendering.
-    surface_texture_client_set_hardware_rendering (stc, TRUE);
-    g_object_set (G_OBJECT (video_sink), "surface", static_cast<gpointer>(stc), static_cast<char*>(NULL));
+    surface_texture_client_set_hardware_rendering(stc, TRUE);
+
+    GstContext *context = gst_context_new("gst.mir.MirContext", TRUE);
+    GstStructure *structure = gst_context_writable_structure(context);
+    gst_structure_set(structure, "gst_mir_context", G_TYPE_POINTER, stc, NULL);
+
+    /* Propagate context in pipeline (needed by amchybris and mirsink) */
+    gst_element_set_context(pipeline, context);
 }
 }
 #else  // MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER
@@ -44,7 +51,7 @@ namespace
 {
 void setup_video_sink_for_buffer_streaming(GstElement*)
 {
-    throw core::ubuntu::media::Player::Error::OutOfProcessBufferStreamingNotSupported{};
+    throw core::ubuntu::media::Player::Errors::OutOfProcessBufferStreamingNotSupported{};
 }
 }
 #endif // MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER
@@ -267,7 +274,7 @@ void gstreamer::Playbin::create_video_sink(uint32_t)
         "No video sink configured for the current pipeline"
     };
 
-    setup_video_sink_for_buffer_streaming(video_sink);
+    setup_video_sink_for_buffer_streaming(pipeline);
 }
 
 void gstreamer::Playbin::set_volume(double new_volume)

@@ -1,3 +1,10 @@
+media-hub (3.1.0+15.10.20150720-0ubuntu1) UNRELEASED; urgency=medium
+
+  * Set gstreamer context directly instead of using gobject to communicate
+    with the video sink. 
+
+ -- Alfonso Sanchez-Beato (email Canonical) <alfonso.sanchez-beato@canonical.com>  Mon, 20 Jul 2015 18:46:25 +0200
+
 media-hub (3.1.0+15.10.20150604-0ubuntu1) wily; urgency=medium
 
   [ CI Train Bot ]
