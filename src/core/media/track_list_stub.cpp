@@ -120,6 +120,7 @@ struct media::TrackListStub::Private
         core::Signal<media::TrackList::ContainerTrackIdTuple> on_track_list_replaced;
         core::Signal<Track::Id> on_track_changed;
         core::Signal<std::pair<Track::Id, bool>> on_go_to_track;
+        core::Signal<void> on_end_of_tracklist;
 
         struct DBus
         {
@@ -264,4 +265,9 @@ const core::Signal<media::Track::Id>& media::TrackListStub::on_track_changed() c
 const core::Signal<std::pair<media::Track::Id, bool>>& media::TrackListStub::on_go_to_track() const
 {
     return d->signals.on_go_to_track;
+}
+
+const core::Signal<void>& media::TrackListStub::on_end_of_tracklist() const
+{
+    return d->signals.on_end_of_tracklist;
 }

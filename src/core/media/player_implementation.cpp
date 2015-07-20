@@ -409,13 +409,15 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
 
     d->engine->about_to_finish_signal().connect([this]()
     {
+        std::cout << "*** player_implementation()->about_to_finish_signal() lambda" << std::endl;
+
         if (d->doing_abandon)
             return;
 
-        Parent::about_to_finish()();
-
         // This lambda needs to be mutually exclusive with the on_go_to_track lambda below
         d->doing_go_to_track.lock();
+
+        Parent::about_to_finish()();
 
         const media::Track::Id prev_track_id = d->track_list->current();
         // Make sure that the TrackList keeps advancing. The logic for what gets played next,
@@ -429,6 +431,7 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         }
 
         d->doing_go_to_track.unlock();
+        std::cout << "*** exiting player_implementation()->about_to_finish() lambda" << std::endl;
     });
 
     d->engine->client_disconnected_signal().connect([this]()
@@ -462,9 +465,20 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         Parent::error()(e);
     });
 
+    d->track_list->on_end_of_tracklist().connect([this]()
+    {
+        std::cout << "*** player_implementation()->on_end_of_tracklist() lambda: " << std::endl;
+        if (d->engine->state() != gstreamer::Engine::State::ready
+                && d->engine->state() != gstreamer::Engine::State::stopped)
+        {
+            std::cout << "End of tracklist reached, stopping playback" << std::endl;
+            d->engine->stop();
+        }
+    });
+
     d->track_list->on_go_to_track().connect([this](std::pair<const media::Track::Id, bool> p)
     {
-        std::cout << "player_implementation()->on_go_to_track() lambda: " << p.first << ", " << p.second << std::endl;
+        std::cout << "*** player_implementation()->on_go_to_track() lambda: " << p.first << ", " << p.second << std::endl;
         // This prevents the TrackList from auto advancing in other areas such as the about_to_finish signal
         // handler.
         // This lambda needs to be mutually exclusive with the about_to_finish lambda above
@@ -489,7 +503,7 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
             d->engine->play();
 
         d->doing_go_to_track.unlock();
-
+        std::cout << "*** exiting player_implementation()->on_go_to_track() lambda" << std::endl;
     });
 
     d->track_list->on_track_added().connect([this](const media::Track::Id& id)

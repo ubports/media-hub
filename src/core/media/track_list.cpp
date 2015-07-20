@@ -26,12 +26,6 @@ const media::Track::Id& media::TrackList::after_empty_track()
     return id;
 }
 
-const std::string& media::TrackList::track_id_path()
-{
-    static const std::string path{"/org/mpris/MediaPlayer2/TrackList/"};
-    return path;
-}
-
 media::TrackList::TrackList()
 {
 }

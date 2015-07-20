@@ -46,10 +46,6 @@ class TrackList : public std::enable_shared_from_this<TrackList>
     typedef Container::const_iterator ConstIterator;
 
     static const Track::Id& after_empty_track();
-    /*
-     * @brief Returns the dbus-object path prefix for a Track: e.g. /org/mpris/MediaPlayer2/TrackList
-     */
-    static const std::string& track_id_path();
 
     TrackList(const TrackList&) = delete;
     ~TrackList();
@@ -115,6 +111,9 @@ class TrackList : public std::enable_shared_from_this<TrackList>
 
     /** Used to notify the Player of when the client requested that the Player should immediately play a new track. */
     virtual const core::Signal<std::pair<Track::Id, bool>>& on_go_to_track() const = 0;
+
+    /** Used to notify the Player of when the end of the tracklist has been reached. */
+    virtual const core::Signal<void>& on_end_of_tracklist() const = 0;
 
 protected:
     TrackList();

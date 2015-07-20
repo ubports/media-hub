@@ -189,6 +189,7 @@ struct media::TrackListSkeleton::Private
         core::Signal<Track::Id> on_track_changed;
         core::Signal<TrackList::ContainerTrackIdTuple> on_track_list_replaced;
         core::Signal<std::pair<Track::Id, bool>> on_go_to_track;
+        core::Signal<void> on_end_of_tracklist;
     } signals;
 };
 
@@ -232,7 +233,8 @@ bool media::TrackListSkeleton::has_next()
     if (tracks().get().empty())
         return false;
 
-    return !is_last_track();
+    const auto next_track = std::next(current_iterator());
+    return !is_last_track(next_track);
 }
 
 bool media::TrackListSkeleton::has_previous()
@@ -247,41 +249,53 @@ bool media::TrackListSkeleton::has_previous()
     return d->current_track != std::begin(tracks().get());
 }
 
-bool media::TrackListSkeleton::is_last_track()
+bool media::TrackListSkeleton::is_first_track(const ConstIterator &it)
 {
-    const auto current_track = current_iterator();
-    const auto next_track = std::next(current_track);
-    return next_track == d->empty_iterator or next_track == std::end(tracks().get());
+    return it == std::begin(tracks().get());
+}
+
+bool media::TrackListSkeleton::is_last_track(const TrackList::ConstIterator &it)
+{
+    return it == std::end(tracks().get());
 }
 
 media::Track::Id media::TrackListSkeleton::next()
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
     if (tracks().get().empty())
-        return *(current_iterator());
+        return *(d->empty_iterator);
 
+    const auto next_track = std::next(current_iterator());
     bool do_go_to_next_track = false;
 
-    // Loop on the current track forever
+    // End of the track reached so loop around to the beginning of the track
     if (d->loop_status == media::Player::LoopStatus::track)
     {
-        std::cout << "Looping on the current track..." << std::endl;
+        std::cout << "Looping on the current track since LoopStatus is set to track" << std::endl;
         do_go_to_next_track = true;
     }
-    // Loop over the whole playlist and repeat
+    // End of the tracklist reached so loop around to the beginning of the tracklist
     else if (d->loop_status == media::Player::LoopStatus::playlist && !has_next())
     {
-        std::cout << "Looping on the entire TrackList..." << std::endl;
+        std::cout << "Looping on the tracklist since LoopStatus is set to playlist" << std::endl;
         d->current_track = tracks().get().begin();
         do_go_to_next_track = true;
     }
-    else if (has_next())
+    else
     {
-        // Keep returning the next track until the last track is reached
-        d->current_track = std::next(current_iterator());
-        std::cout << "tracks() size: " << tracks().get().size() << std::endl;
-        std::cout << "Should be emitting on_track_changed" << std::endl;
-        do_go_to_next_track = true;
+        // Next track is not the last track
+        if (not is_last_track(next_track))
+        {
+            std::cout << "Advancing to next track: " << *(next_track) << std::endl;
+            d->current_track = next_track;
+            do_go_to_next_track = true;
+        }
+        // At the end of the tracklist and not set to loop, so we stop advancing the tracklist
+        else
+        {
+            std::cout << "End of tracklist reached, not advancing to next since LoopStatus is set to none" << std::endl;
+            on_end_of_tracklist()();
+        }
     }
 
     if (do_go_to_next_track)
@@ -293,10 +307,10 @@ media::Track::Id media::TrackListSkeleton::next()
         const bool toggle_player_state = false;
         const media::Track::Id id = *(current_iterator());
         const std::pair<const media::Track::Id, bool> p = std::make_pair(id, toggle_player_state);
+        // Signal the PlayerImplementation to play the next track
         on_go_to_track()(p);
     }
 
-    std::cout << "next() - About to return current_iterator()" << std::endl;
     return *(current_iterator());
 }
 
@@ -304,7 +318,7 @@ media::Track::Id media::TrackListSkeleton::previous()
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
     if (tracks().get().empty())
-        return *(current_iterator());
+        return *(d->empty_iterator);
 
     bool do_go_to_previous_track = false;
 
@@ -321,13 +335,21 @@ media::Track::Id media::TrackListSkeleton::previous()
         d->current_track = tracks().get().end();
         do_go_to_previous_track = true;
     }
-    else if (has_previous())
+    else
     {
-        // Keep returning the previous track until the first track is reached
-        d->current_track = std::prev(current_iterator());
-        std::cout << "tracks() size: " << tracks().get().size() << std::endl;
-        std::cout << "Should be emitting on_track_changed" << std::endl;
-        do_go_to_previous_track = true;
+        // Current track is not the first track
+        if (not is_first_track(current_iterator()))
+        {
+            // Keep returning the previous track until the first track is reached
+            d->current_track = std::prev(current_iterator());
+            do_go_to_previous_track = true;
+        }
+        // At the beginning of the tracklist and not set to loop, so we stop advancing the tracklist
+        else
+        {
+            std::cout << "Beginning of tracklist reached, not advancing to previous since LoopStatus is set to none" << std::endl;
+            on_end_of_tracklist()();
+        }
     }
 
     if (do_go_to_previous_track)
@@ -439,6 +461,11 @@ const core::Signal<std::pair<media::Track::Id, bool>>& media::TrackListSkeleton:
     return d->signals.on_go_to_track;
 }
 
+const core::Signal<void>& media::TrackListSkeleton::on_end_of_tracklist() const
+{
+    return d->signals.on_end_of_tracklist;
+}
+
 core::Signal<media::TrackList::ContainerTrackIdTuple>& media::TrackListSkeleton::on_track_list_replaced()
 {
     return d->signals.on_track_list_replaced;
@@ -462,6 +489,11 @@ core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_changed()
 core::Signal<std::pair<media::Track::Id, bool>>& media::TrackListSkeleton::on_go_to_track()
 {
     return d->signals.on_go_to_track;
+}
+
+core::Signal<void>& media::TrackListSkeleton::on_end_of_tracklist()
+{
+    return d->signals.on_end_of_tracklist;
 }
 
 // operator<< pretty prints the given TrackList to the given output stream.

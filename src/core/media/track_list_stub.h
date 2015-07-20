@@ -65,6 +65,7 @@ public:
     const core::Signal<Track::Id>& on_track_removed() const;
     const core::Signal<Track::Id>& on_track_changed() const;
     const core::Signal<std::pair<Track::Id, bool>>& on_go_to_track() const;
+    const core::Signal<void>& on_end_of_tracklist() const;
 
 private:
     struct Private;
