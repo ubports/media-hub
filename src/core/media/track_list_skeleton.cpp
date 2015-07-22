@@ -275,7 +275,7 @@ media::Track::Id media::TrackListSkeleton::next()
         do_go_to_next_track = true;
     }
     // End of the tracklist reached so loop around to the beginning of the tracklist
-    else if (d->loop_status == media::Player::LoopStatus::playlist && !has_next())
+    else if (d->loop_status == media::Player::LoopStatus::playlist && not has_next())
     {
         std::cout << "Looping on the tracklist since LoopStatus is set to playlist" << std::endl;
         d->current_track = tracks().get().begin();
@@ -329,10 +329,10 @@ media::Track::Id media::TrackListSkeleton::previous()
         do_go_to_previous_track = true;
     }
     // Loop over the whole playlist and repeat
-    else if (d->loop_status == media::Player::LoopStatus::playlist && !has_previous())
+    else if (d->loop_status == media::Player::LoopStatus::playlist && is_first_track(current_iterator()))
     {
         std::cout << "Looping on the entire TrackList..." << std::endl;
-        d->current_track = tracks().get().end();
+        d->current_track = std::prev(tracks().get().end());
         do_go_to_previous_track = true;
     }
     else
@@ -364,7 +364,6 @@ media::Track::Id media::TrackListSkeleton::previous()
         on_go_to_track()(p);
     }
 
-    std::cout << "previous() - About to return current_iterator()" << std::endl;
     return *(current_iterator());
 }
 

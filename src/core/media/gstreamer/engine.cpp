@@ -374,7 +374,6 @@ struct gstreamer::Engine::Private
 
 gstreamer::Engine::Engine() : d(new Private{})
 {
-    cout << "Creating a new Engine instance in " << __PRETTY_FUNCTION__ << endl;
     d->state = media::Engine::State::no_media;
 }
 

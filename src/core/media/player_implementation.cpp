@@ -409,12 +409,12 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
 
     d->engine->about_to_finish_signal().connect([this]()
     {
-        std::cout << "*** player_implementation()->about_to_finish_signal() lambda" << std::endl;
-
         if (d->doing_abandon)
             return;
 
-        // This lambda needs to be mutually exclusive with the on_go_to_track lambda below
+        // Prevent on_go_to_track from executing as it's not needed in this case. on_go_to_track
+        // (see the lambda below) is only needed when the client explicitly calls next() not during
+        // the about_to_finish condition
         d->doing_go_to_track.lock();
 
         Parent::about_to_finish()();
@@ -425,13 +425,12 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         const Track::UriType uri = d->track_list->query_uri_for_track(d->track_list->next());
         if (prev_track_id != d->track_list->current() && !uri.empty())
         {
-            std::cout << "Setting next track on playbin: " << uri << std::endl;
+            std::cout << "Advancing to next track on playbin: " << uri << std::endl;
             static const bool do_pipeline_reset = false;
             d->engine->open_resource_for_uri(uri, do_pipeline_reset);
         }
 
         d->doing_go_to_track.unlock();
-        std::cout << "*** exiting player_implementation()->about_to_finish() lambda" << std::endl;
     });
 
     d->engine->client_disconnected_signal().connect([this]()
@@ -467,7 +466,6 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
 
     d->track_list->on_end_of_tracklist().connect([this]()
     {
-        std::cout << "*** player_implementation()->on_end_of_tracklist() lambda: " << std::endl;
         if (d->engine->state() != gstreamer::Engine::State::ready
                 && d->engine->state() != gstreamer::Engine::State::stopped)
         {
@@ -476,13 +474,15 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         }
     });
 
+
     d->track_list->on_go_to_track().connect([this](std::pair<const media::Track::Id, bool> p)
     {
-        std::cout << "*** player_implementation()->on_go_to_track() lambda: " << p.first << ", " << p.second << std::endl;
-        // This prevents the TrackList from auto advancing in other areas such as the about_to_finish signal
-        // handler.
         // This lambda needs to be mutually exclusive with the about_to_finish lambda above
-        d->doing_go_to_track.lock();
+        const bool locked = d->doing_go_to_track.try_lock();
+        // If the try_lock fails, it means that about_to_finish lambda above has it locked and it will
+        // call d->engine->open_resource_for_uri()
+        if (!locked)
+            return;
 
         const media::Track::Id id = p.first;
         const bool toggle_player_state = p.second;
@@ -503,7 +503,6 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
             d->engine->play();
 
         d->doing_go_to_track.unlock();
-        std::cout << "*** exiting player_implementation()->on_go_to_track() lambda" << std::endl;
     });
 
     d->track_list->on_track_added().connect([this](const media::Track::Id& id)
