@@ -425,7 +425,18 @@ void media::TrackListSkeleton::on_shuffle_changed(bool shuffle)
     if (shuffle)
         shuffle_tracks();
     else
+    {
+        // Save the current Track::Id of what's currently playing to restore after unshuffle
+        const media::Track::Id current_id = *(current_iterator());
+
         unshuffle_tracks();
+
+        // Since we use assign() in unshuffle_tracks, which invalidates existing iterators, we need
+        // to make sure that current is pointing to the right place
+        auto it = std::find(tracks().get().begin(), tracks().get().end(), current_id);
+        if (it != tracks().get().end())
+            d->current_track = it;
+    }
 }
 
 const core::Property<media::TrackList::Container>& media::TrackListSkeleton::tracks() const

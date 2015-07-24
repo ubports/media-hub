@@ -174,6 +174,7 @@ void media::TrackListImplementation::shuffle_tracks()
 
     auto result = tracks().update([this](TrackList::Container& container)
     {
+        // Save off the original TrackList ordering
         d->original_tracklist.assign(container.begin(), container.end());
         std::random_shuffle(container.begin(), container.end());
         return true;
@@ -192,6 +193,7 @@ void media::TrackListImplementation::unshuffle_tracks()
 
     auto result = tracks().update([this](TrackList::Container& container)
     {
+        // Restore the original TrackList ordering
         container.assign(d->original_tracklist.begin(), d->original_tracklist.end());
         return true;
     });
