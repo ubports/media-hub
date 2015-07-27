@@ -53,6 +53,7 @@ struct TrackList
     DBUS_CPP_METHOD_DEF(AddTrack, TrackList)
     DBUS_CPP_METHOD_DEF(RemoveTrack, TrackList)
     DBUS_CPP_METHOD_DEF(GoTo, TrackList)
+    DBUS_CPP_METHOD_DEF(Reset, TrackList)
 
     struct Signals
     {

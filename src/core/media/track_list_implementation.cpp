@@ -215,6 +215,9 @@ void media::TrackListImplementation::reset()
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
 
+    // Make sure playback stops
+    on_end_of_tracklist()();
+
     auto result = tracks().update([this](TrackList::Container& container)
     {
         container.clear();
@@ -222,6 +225,8 @@ void media::TrackListImplementation::reset()
         d->track_counter = 0;
         return true;
     });
+
+    media::TrackListSkeleton::reset();
 
     (void) result;
 }

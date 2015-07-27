@@ -80,6 +80,8 @@ protected:
     core::Signal<ContainerTrackIdTuple>& on_track_list_replaced();
     core::Signal<Track::Id>& on_track_changed();
 
+    void reset();
+
 private:
     struct Private;
     std::unique_ptr<Private> d;

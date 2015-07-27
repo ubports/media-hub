@@ -70,8 +70,7 @@ struct media::PlayerImplementation<Parent>::Private :
           previous_state(Engine::State::stopped),
           engine_state_change_connection(engine->state().changed().connect(make_state_change_handler())),
           engine_playback_status_change_connection(engine->playback_status_changed_signal().connect(make_playback_status_change_handler())),
-          doing_abandon(false),
-          added_first_track(false)
+          doing_abandon(false)
     {
         // Poor man's logging of release/acquire events.
         display_state_lock->acquired().connect([](media::power::DisplayState state)
@@ -285,8 +284,21 @@ struct media::PlayerImplementation<Parent>::Private :
 
     void on_client_died()
     {
-        added_first_track = false;
         engine->reset();
+    }
+
+    void open_first_track_from_tracklist(const media::Track::Id& id)
+    {
+        const Track::UriType uri = track_list->query_uri_for_track(id);
+        if (!uri.empty())
+        {
+            // Using a TrackList for playback, added tracks via add_track(), but open_uri hasn't been called yet
+            // to load a media resource
+            std::cout << "Calling d->engine->open_resource_for_uri() for first track added only: " << uri << std::endl;
+            std::cout << "\twith a Track::Id: " << id << std::endl;
+            static const bool do_pipeline_reset = false;
+            engine->open_resource_for_uri(uri, do_pipeline_reset);
+        }
     }
 
     // Our link back to our parent.
@@ -307,7 +319,6 @@ struct media::PlayerImplementation<Parent>::Private :
     // Prevent the TrackList from auto advancing to the next track
     std::mutex doing_go_to_track;
     std::atomic<bool> doing_abandon;
-    std::atomic<bool> added_first_track;
 };
 
 template<typename Parent>
@@ -438,7 +449,6 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         // If the client disconnects, make sure both wakelock types
         // are cleared
         d->clear_wakelocks();
-        d->added_first_track = false;
         d->track_list->reset();
         // And tell the outside world that the client has gone away
         d->on_client_disconnected();
@@ -508,20 +518,8 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
     d->track_list->on_track_added().connect([this](const media::Track::Id& id)
     {
         std::cout << "** Track was added, handling in PlayerImplementation" << std::endl;
-        if (!d->added_first_track)
-        {
-            // Only need to call open_resource_for_uri for the first track once per cleared (reset)
-            // TrackList
-            d->added_first_track = true;
-            const Track::UriType uri = d->track_list->query_uri_for_track(id);
-            if (!uri.empty())
-            {
-                std::cout << "Calling d->engine->open_resource_for_uri() for first track added only: " << uri << std::endl;
-                std::cout << "\twith a Track::Id: " << id << std::endl;
-                static const bool do_pipeline_reset = false;
-                d->engine->open_resource_for_uri(uri, do_pipeline_reset);
-            }
-        }
+        if (d->track_list->tracks()->size() == 1)
+            d->open_first_track_from_tracklist(id);
     });
 
     // Everything is setup, we now subscribe to death notifications.
@@ -652,16 +650,6 @@ void media::PlayerImplementation<Parent>::previous()
 template<typename Parent>
 void media::PlayerImplementation<Parent>::play()
 {
-    if (d->track_list != nullptr && d->track_list->tracks()->size() > 0 && d->engine->state() == media::Engine::State::no_media)
-    {
-        // Using a TrackList for playback, added tracks via add_track(), but open_uri hasn't been called yet
-        // to load a media resource
-        std::cout << "No media loaded yet, calling open_uri on first track in track_list" << std::endl;
-        static const bool do_pipeline_reset = true;
-        d->engine->open_resource_for_uri(d->track_list->query_uri_for_track(d->track_list->current()), do_pipeline_reset);
-        std::cout << *d->track_list << endl;
-    }
-
     d->engine->play();
 }
 

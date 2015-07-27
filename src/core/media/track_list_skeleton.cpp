@@ -139,6 +139,14 @@ struct media::TrackListSkeleton::Private
         bus->send(reply);
     }
 
+    void handle_reset(const core::dbus::Message::Ptr& msg)
+    {
+        impl->reset();
+
+        auto reply = dbus::Message::make_method_return(msg);
+        bus->send(reply);
+    }
+
     media::TrackListSkeleton* impl;
     dbus::Bus::Ptr bus;
     dbus::Object::Ptr object;
@@ -220,6 +228,11 @@ media::TrackListSkeleton::TrackListSkeleton(const core::dbus::Bus::Ptr& bus, con
 
     d->object->install_method_handler<mpris::TrackList::GoTo>(
         std::bind(&Private::handle_go_to,
+                  std::ref(d),
+                  std::placeholders::_1));
+
+    d->object->install_method_handler<mpris::TrackList::Reset>(
+        std::bind(&Private::handle_reset,
                   std::ref(d),
                   std::placeholders::_1));
 }
@@ -504,6 +517,12 @@ core::Signal<std::pair<media::Track::Id, bool>>& media::TrackListSkeleton::on_go
 core::Signal<void>& media::TrackListSkeleton::on_end_of_tracklist()
 {
     return d->signals.on_end_of_tracklist;
+}
+
+void media::TrackListSkeleton::reset()
+{
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    d->current_track = d->empty_iterator;
 }
 
 // operator<< pretty prints the given TrackList to the given output stream.

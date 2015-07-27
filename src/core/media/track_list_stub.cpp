@@ -239,7 +239,10 @@ void media::TrackListStub::unshuffle_tracks()
 
 void media::TrackListStub::reset()
 {
-    std::cerr << "reset() does nothing from the client side" << std::endl;
+    auto op = d->object->invoke_method_synchronously<mpris::TrackList::Reset, void>();
+
+    if (op.is_error())
+        throw std::runtime_error("Problem resetting tracklist: " + op.error());
 }
 
 const core::Signal<media::TrackList::ContainerTrackIdTuple>& media::TrackListStub::on_track_list_replaced() const
