@@ -172,6 +172,9 @@ void media::TrackListImplementation::shuffle_tracks()
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
 
+    if (tracks().get().empty())
+        return;
+
     auto result = tracks().update([this](TrackList::Container& container)
     {
         // Save off the original TrackList ordering
@@ -190,6 +193,9 @@ void media::TrackListImplementation::shuffle_tracks()
 void media::TrackListImplementation::unshuffle_tracks()
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
+
+    if (tracks().get().empty())
+        return;
 
     auto result = tracks().update([this](TrackList::Container& container)
     {
