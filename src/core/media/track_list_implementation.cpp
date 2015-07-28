@@ -198,7 +198,7 @@ void media::TrackListImplementation::unshuffle_tracks()
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
 
-    if (tracks().get().empty())
+    if (tracks().get().empty() or d->original_tracklist.empty())
         return;
 
     auto result = tracks().update([this](TrackList::Container& container)
