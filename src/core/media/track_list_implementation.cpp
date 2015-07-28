@@ -133,6 +133,10 @@ void media::TrackListImplementation::add_track_with_uri_at(
             go_to(id, toggle_player_state);
         }
 
+        // Signal to the client that the current track has changed for the first track added to the TrackList
+        if (tracks().get().size() == 1)
+            on_track_changed()(id);
+
         std::cout << "Signaling that we just added track id: " << id << std::endl;
         // Signal to the client that a track was added to the TrackList
         on_track_added()(id);
