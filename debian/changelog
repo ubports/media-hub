@@ -1,4 +1,10 @@
-media-hub (3.1.0+15.10.20150601-0ubuntu1) wily; urgency=medium
+media-hub (3.1.0+15.04.20150601-0ubuntu2) vivid; urgency=medium
+
+  * Change version to vivid+overlay
+
+ -- Jim Hodapp <jim.hodapp@canonical.com>  Fri, 07 Aug 2015 10:38:08 -0400
+
+media-hub (3.1.0+15.04.20150601-0ubuntu1) vivid; urgency=medium
 
   [ CI Train Bot ]
   * New rebuild forced.
