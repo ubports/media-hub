@@ -1,10 +1,43 @@
-media-hub (3.1.0+15.04.20150601-0ubuntu2) vivid; urgency=medium
+media-hub (3.1.0+15.04.20150710-0ubuntu2) vivid; urgency=medium
 
-  * Change version to vivid+overlay
+  * Change version to vivid+overlay 
 
- -- Jim Hodapp <jim.hodapp@canonical.com>  Fri, 07 Aug 2015 10:38:08 -0400
+ -- Jim Hodapp <jim.hodapp@canonical.com>  Fri, 07 Aug 2015 10:46:42 -0400
 
-media-hub (3.1.0+15.04.20150601-0ubuntu1) vivid; urgency=medium
+media-hub (3.1.0+15.04.20150710-0ubuntu1) vivid; urgency=medium
+
+  [ CI Train Bot ]
+  * New rebuild forced.
+
+  [ Jim Hodapp ]
+  * Only send the video_dimensions_changed signal if the dimensions
+    actually changed. Also, no longer need is_eos flag.
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Fri, 10 Jul 2015 18:12:21 +0000
+
+media-hub (3.1.0+15.10.20150604-0ubuntu1) wily; urgency=medium
+
+  [ CI Train Bot ]
+  * New rebuild forced.
+
+  [ Jim Hodapp ]
+  * Handle a wider array of GStreamer errors so that .ogv files are
+    reported as failing to play. (LP: #1458040)
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Thu, 04 Jun 2015 14:18:22 +0000
+
+media-hub (3.1.0+15.10.20150601-0ubuntu1) wily; urgency=medium
+
+  [ CI Train Bot ]
+  * New rebuild forced.
+
+  [ Jim Hodapp ]
+  * Add next/previous track implementation for the Player and
+    can_go_next/previous.
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Mon, 01 Jun 2015 16:31:53 +0000
+
+media-hub (3.1.0+15.10.20150601-0ubuntu1) wily; urgency=medium
 
   [ CI Train Bot ]
   * New rebuild forced.
