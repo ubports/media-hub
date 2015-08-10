@@ -1,5 +1,5 @@
 /*
- * Copyright © 2013 Canonical Ltd.
+ * Copyright © 2013-2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -19,6 +19,8 @@
 #include <core/media/gstreamer/playbin.h>
 
 #include <core/media/gstreamer/engine.h>
+
+#include <gst/pbutils/missing-plugins.h>
 
 #if defined(MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER)
 #include <hybris/media/surface_texture_client_hybris.h>
@@ -105,7 +107,11 @@ gstreamer::Playbin::Playbin()
         core::ubuntu::media::video::Width{0}},
       player_lifetime(media::Player::Lifetime::normal),
       about_to_finish_handler_id(0),
-      source_setup_handler_id(0)
+      source_setup_handler_id(0),
+      is_missing_audio_codec(false),
+      is_missing_video_codec(false),
+      audio_stream_id(-1),
+      video_stream_id(-1)
 {
     if (!pipeline)
         throw std::runtime_error("Could not create pipeline for playbin.");
@@ -170,6 +176,44 @@ void gstreamer::Playbin::reset_pipeline()
         std::cout << "Failed to reset the pipeline state. Client reconnect may not function properly." << std::endl;
     }
     file_type = MEDIA_FILE_TYPE_NONE;
+    is_missing_audio_codec = false;
+    is_missing_video_codec = false;
+    audio_stream_id = -1;
+    video_stream_id = -1;
+}
+
+void gstreamer::Playbin::process_message_element(GstMessage *message)
+{
+    if (!gst_is_missing_plugin_message(message))
+      return;
+
+    gchar *desc = gst_missing_plugin_message_get_description(message);
+    std::cerr << "Missing plugin: " << desc << std::endl;
+    g_free(desc);
+
+    const GstStructure *msg_data = gst_message_get_structure(message);
+    if (g_strcmp0("decoder", gst_structure_get_string(msg_data, "type")) != 0)
+        return;
+
+    GstCaps *caps;
+    if (!gst_structure_get(msg_data, "detail", GST_TYPE_CAPS, &caps, NULL)) {
+        std::cerr << __PRETTY_FUNCTION__ << ": No detail" << std::endl;
+        return;
+    }
+
+    GstStructure *caps_data = gst_caps_get_structure(caps, 0);
+    if (!caps_data) {
+        std::cerr << __PRETTY_FUNCTION__ << ": No caps data" << std::endl;
+        return;
+    }
+
+    const gchar *mime = gst_structure_get_name(caps_data);
+    if (strstr(mime, "audio"))
+        is_missing_audio_codec = true;
+    else if (strstr(mime, "video"))
+        is_missing_video_codec = true;
+
+    std::cerr << "Missing decoder for " << mime << std::endl;
 }
 
 void gstreamer::Playbin::on_new_message_async(const Bus::Message& message)
@@ -186,7 +230,14 @@ void gstreamer::Playbin::on_new_message_async(const Bus::Message& message)
         signals.on_info(message.detail.error_warning_info);
         break;
     case GST_MESSAGE_STATE_CHANGED:
+        if (message.source == "playbin") {
+            g_object_get(G_OBJECT(pipeline), "current-audio", &audio_stream_id, NULL);
+            g_object_get(G_OBJECT(pipeline), "current-video", &video_stream_id, NULL);
+        }
         signals.on_state_changed(std::make_pair(message.detail.state_changed, message.source));
+        break;
+    case GST_MESSAGE_ELEMENT:
+        process_message_element(message.message);
         break;
     case GST_MESSAGE_TAG:
         {
@@ -590,4 +641,23 @@ bool gstreamer::Playbin::is_video_file(const std::string& uri) const
 gstreamer::Playbin::MediaFileType gstreamer::Playbin::media_file_type() const
 {
     return file_type;
+}
+
+bool gstreamer::Playbin::can_play_streams() const
+{
+    /*
+     * We do not consider that we can play the video when
+     * 1. No audio stream selected due to missing decoder
+     * 2. No video stream selected due to missing decoder
+     * 3. No stream selected at all
+     * Note that if there are several, say, audio streams, we will play the file
+     * provided that we can decode just one of them, even if there are missing
+     * audio codecs. We will also play files with only one type of stream.
+     */
+    if ((is_missing_audio_codec && audio_stream_id == -1) ||
+            (is_missing_video_codec && video_stream_id == -1) ||
+            (audio_stream_id == -1 && video_stream_id == -1))
+        return false;
+    else
+        return true;
 }
