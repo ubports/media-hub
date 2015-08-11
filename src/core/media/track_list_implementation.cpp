@@ -64,8 +64,6 @@ media::Track::UriType media::TrackListImplementation::query_uri_for_track(const 
     if (it == d->meta_data_cache.end())
         return Track::UriType{};
 
-    //std::cout << "returning uri: " << std::get<0>(it->second) << std::endl;
-
     return std::get<0>(it->second);
 }
 
@@ -116,8 +114,8 @@ void media::TrackListImplementation::add_track_with_uri_at(
             }
 #else
             d->meta_data_cache[id] = std::make_tuple(
-		            uri,
-                            core::ubuntu::media::Track::MetaData{});
+                    uri,
+                    core::ubuntu::media::Track::MetaData{});
 #endif
         } else
         {

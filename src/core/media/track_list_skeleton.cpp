@@ -104,9 +104,7 @@ struct media::TrackListSkeleton::Private
             auto reply = dbus::Message::make_method_return(msg);
             // Only add the track to the TrackList if it passes the apparmor permissions check
             if (std::get<0>(result))
-            {
                 impl->add_track_with_uri_at(uri, after, make_current);
-            }
             else
                 std::cerr << "Warning: Not adding track " << uri <<
                     " to TrackList because of inadequate client apparmor permissions." << std::endl;
@@ -395,7 +393,9 @@ const media::TrackList::ConstIterator& media::TrackListSkeleton::current_iterato
         d->current_track = d->skeleton.properties.tracks->get().begin();
     }
     else if (tracks().get().empty())
+    {
         std::cerr << "TrackList is empty therefore there is no valid current track" << std::endl;
+    }
 
     return d->current_track;
 }
