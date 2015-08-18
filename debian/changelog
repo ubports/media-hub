@@ -1,4 +1,4 @@
-media-hub (3.1.0+15.10.20150710-0ubuntu2) vivid; urgency=medium
+media-hub (3.1.0+15.04.20150818-0ubuntu1) vivid; urgency=medium
 
   * Allow media-hub to process streams coming via HTTPS urls (Justin McPherson)
 
