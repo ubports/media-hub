@@ -1,3 +1,9 @@
+media-hub (3.1.0+15.04.20150818-0ubuntu1) vivid; urgency=medium
+
+  * Add HTTPS to the list of supported URL schemes (courtesy Justin McPherson)
+
+ -- David Barth <david.barth@canonical.com>  Wed, 19 Aug 2015 09:22:37 +0200
+
 media-hub (3.1.0+15.04.20150710-0ubuntu1) vivid; urgency=medium
 
   [ CI Train Bot ]
