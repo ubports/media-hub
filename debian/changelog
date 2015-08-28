@@ -21,7 +21,24 @@ media-hub (3.1.0+15.04.20150710-0ubuntu1) vivid; urgency=medium
 
  -- CI Train Bot <ci-train-bot@canonical.com>  Fri, 10 Jul 2015 18:12:21 +0000
 
-media-hub (3.1.0+15.10.20150604-0ubuntu1) wily; urgency=medium
+media-hub (3.1.0+15.04.20150710-0ubuntu2) UNRELEASED; urgency=medium
+
+  * Change version to vivid+overlay
+
+ -- Jim Hodapp <jim.hodapp@canonical.com>  Fri, 07 Aug 2015 10:46:42 -0400
+
+media-hub (3.1.0+15.04.20150710-0ubuntu1) vivid; urgency=medium
+
+  [ CI Train Bot ]
+  * New rebuild forced.
+
+  [ Jim Hodapp ]
+  * Only send the video_dimensions_changed signal if the dimensions
+    actually changed. Also, no longer need is_eos flag.
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Fri, 10 Jul 2015 18:12:21 +0000
+
+media-hub (3.1.0+15.04.20150604-0ubuntu1) vivid; urgency=medium
 
   [ CI Train Bot ]
   * New rebuild forced.
@@ -32,7 +49,7 @@ media-hub (3.1.0+15.10.20150604-0ubuntu1) wily; urgency=medium
 
  -- CI Train Bot <ci-train-bot@canonical.com>  Thu, 04 Jun 2015 14:18:22 +0000
 
-media-hub (3.1.0+15.10.20150601-0ubuntu1) wily; urgency=medium
+media-hub (3.1.0+15.04.20150601-0ubuntu1) vivid; urgency=medium
 
   [ CI Train Bot ]
   * New rebuild forced.
@@ -43,7 +60,7 @@ media-hub (3.1.0+15.10.20150601-0ubuntu1) wily; urgency=medium
 
  -- CI Train Bot <ci-train-bot@canonical.com>  Mon, 01 Jun 2015 16:31:53 +0000
 
-media-hub (3.1.0+15.10.20150527.1-0ubuntu1) wily; urgency=medium
+media-hub (3.1.0+15.04.20150527.1-0ubuntu1) vivid; urgency=medium
 
   [ CI Train Bot ]
   * New rebuild forced.
@@ -54,7 +71,7 @@ media-hub (3.1.0+15.10.20150527.1-0ubuntu1) wily; urgency=medium
 
  -- CI Train Bot <ci-train-bot@canonical.com>  Wed, 27 May 2015 18:38:16 +0000
 
-media-hub (3.1.0+15.10.20150522-0ubuntu1) wily; urgency=medium
+media-hub (3.1.0+15.04.20150522-0ubuntu1) vivid; urgency=medium
 
   [ Jim Hodapp ]
   * Fix issues with not reporting failed decoding error to the client.

@@ -287,6 +287,20 @@ struct media::PlayerImplementation<Parent>::Private :
         engine->reset();
     }
 
+    void open_first_track_from_tracklist(const media::Track::Id& id)
+    {
+        const Track::UriType uri = track_list->query_uri_for_track(id);
+        if (!uri.empty())
+        {
+            // Using a TrackList for playback, added tracks via add_track(), but open_uri hasn't been called yet
+            // to load a media resource
+            std::cout << "Calling d->engine->open_resource_for_uri() for first track added only: " << uri << std::endl;
+            std::cout << "\twith a Track::Id: " << id << std::endl;
+            static const bool do_pipeline_reset = false;
+            engine->open_resource_for_uri(uri, do_pipeline_reset);
+        }
+    }
+
     // Our link back to our parent.
     media::PlayerImplementation<Parent>* parent;
     // We just store the parameters passed on construction.
@@ -375,6 +389,7 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
     // When the client changes the loop status, make sure to update the TrackList
     Parent::loop_status().changed().connect([this](media::Player::LoopStatus loop_status)
     {
+        std::cout << "LoopStatus: " << loop_status << std::endl;
         d->track_list->on_loop_status_changed(loop_status);
     });
 
@@ -408,10 +423,12 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         if (d->doing_abandon)
             return;
 
-        Parent::about_to_finish()();
-
-        // This lambda needs to be mutually exclusive with the on_go_to_track lambda below
+        // Prevent on_go_to_track from executing as it's not needed in this case. on_go_to_track
+        // (see the lambda below) is only needed when the client explicitly calls next() not during
+        // the about_to_finish condition
         d->doing_go_to_track.lock();
+
+        Parent::about_to_finish()();
 
         const media::Track::Id prev_track_id = d->track_list->current();
         // Make sure that the TrackList keeps advancing. The logic for what gets played next,
@@ -419,7 +436,7 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         const Track::UriType uri = d->track_list->query_uri_for_track(d->track_list->next());
         if (prev_track_id != d->track_list->current() && !uri.empty())
         {
-            std::cout << "Setting next track on playbin: " << uri << std::endl;
+            std::cout << "Advancing to next track on playbin: " << uri << std::endl;
             static const bool do_pipeline_reset = false;
             d->engine->open_resource_for_uri(uri, do_pipeline_reset);
         }
@@ -457,12 +474,25 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         Parent::error()(e);
     });
 
+    d->track_list->on_end_of_tracklist().connect([this]()
+    {
+        if (d->engine->state() != gstreamer::Engine::State::ready
+                && d->engine->state() != gstreamer::Engine::State::stopped)
+        {
+            std::cout << "End of tracklist reached, stopping playback" << std::endl;
+            d->engine->stop();
+        }
+    });
+
+
     d->track_list->on_go_to_track().connect([this](std::pair<const media::Track::Id, bool> p)
     {
-        // This prevents the TrackList from auto advancing in other areas such as the about_to_finish signal
-        // handler.
         // This lambda needs to be mutually exclusive with the about_to_finish lambda above
-        d->doing_go_to_track.lock();
+        const bool locked = d->doing_go_to_track.try_lock();
+        // If the try_lock fails, it means that about_to_finish lambda above has it locked and it will
+        // call d->engine->open_resource_for_uri()
+        if (!locked)
+            return;
 
         const media::Track::Id id = p.first;
         const bool toggle_player_state = p.second;
@@ -483,7 +513,13 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
             d->engine->play();
 
         d->doing_go_to_track.unlock();
+    });
 
+    d->track_list->on_track_added().connect([this](const media::Track::Id& id)
+    {
+        std::cout << "** Track was added, handling in PlayerImplementation" << std::endl;
+        if (d->track_list->tracks()->size() == 1)
+            d->open_first_track_from_tracklist(id);
     });
 
     // Everything is setup, we now subscribe to death notifications.
@@ -614,16 +650,6 @@ void media::PlayerImplementation<Parent>::previous()
 template<typename Parent>
 void media::PlayerImplementation<Parent>::play()
 {
-    if (d->track_list != nullptr && d->track_list->tracks()->size() > 0 && d->engine->state() == media::Engine::State::no_media)
-    {
-        // Using a TrackList for playback, added tracks via add_track(), but open_uri hasn't been called yet
-        // to load a media resource
-        std::cout << "No media loaded yet, calling open_uri on first track in track_list" << std::endl;
-        static const bool do_pipeline_reset = true;
-        d->engine->open_resource_for_uri(d->track_list->query_uri_for_track(d->track_list->current()), do_pipeline_reset);
-        std::cout << *d->track_list << endl;
-    }
-
     d->engine->play();
 }
 

@@ -139,7 +139,7 @@ struct media::ServiceSkeleton::Private
                 fprintf(stderr, "%s():%d -- app_name='%s', attached\n", __func__, __LINE__, context.str().c_str());
                 player_owner_map.insert(std::make_pair(key, std::make_tuple(context.str(), true, msg->sender())));
             });
-            
+
             auto reply = dbus::Message::make_method_return(msg);
             reply->writer() << std::make_tuple(op, uuid);
 
@@ -161,20 +161,24 @@ struct media::ServiceSkeleton::Private
             std::string uuid;
             msg->reader() >> uuid;
 
-            auto key = uuid_player_map.at(uuid);
+            // Make sure we don't try to do a lookup if the map is empty
+            if (!uuid_player_map.empty())
+            {
+                const auto key = uuid_player_map.at(uuid);
 
-            if (player_owner_map.count(key) != 0) {
-                auto info = player_owner_map.at(key);
-                // Check if session is attached(1) and that the detachment
-                // request comes from the same peer(2) that created the session.
-                if (std::get<1>(info) && (std::get<2>(info) == msg->sender())) { // Player is attached
-                    std::get<1>(info) = false; // Detached
-                    std::get<2>(info).clear(); // Clear registered sender/peer
-                    auto player = configuration.player_store->player_for_key(key);
-                    player->lifetime().set(media::Player::Lifetime::resumable);
+                if (player_owner_map.count(key) != 0) {
+                    auto info = player_owner_map.at(key);
+                    // Check if session is attached(1) and that the detachment
+                    // request comes from the same peer(2) that created the session.
+                    if (std::get<1>(info) && (std::get<2>(info) == msg->sender())) { // Player is attached
+                        std::get<1>(info) = false; // Detached
+                        std::get<2>(info).clear(); // Clear registered sender/peer
+                        auto player = configuration.player_store->player_for_key(key);
+                        player->lifetime().set(media::Player::Lifetime::resumable);
+                    }
                 }
             }
-            
+
             auto reply = dbus::Message::make_method_return(msg);
             impl->access_bus()->send(reply);
 
@@ -256,7 +260,6 @@ struct media::ServiceSkeleton::Private
 
     void handle_destroy_session(const core::dbus::Message::Ptr& msg)
     {
-     
         try
         {
             std::string uuid;
@@ -445,9 +448,9 @@ struct media::ServiceSkeleton::Private
     // We keep a list of keys and their respective owners and states.
     // value: (owner context, attached state, attached dbus name)
     std::map<media::Player::PlayerKey, std::tuple<std::string, bool, std::string>> player_owner_map;
-    
+
     boost::uuids::random_generator gen;
-     
+
     // We expose the entire service as an MPRIS player.
     struct Exported
     {
