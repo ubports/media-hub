@@ -1,3 +1,10 @@
+media-hub (3.1.0+15.10.20150901-0ubuntu1) UNRELEASED; urgency=medium
+
+  [ Thomas Voß ]
+  * Bump major revision to account for toolchain update. Fixes LP:#1452331
+
+ -- Alfonso Sanchez-Beato (email Canonical) <alfonso.sanchez-beato@canonical.com>  Tue, 01 Sep 2015 10:25:36 +0200
+
 media-hub (3.1.0+15.10.20150724-0ubuntu1) wily; urgency=medium
 
   [ Alfonso Sanchez-Beato (email Canonical) ]
