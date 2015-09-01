@@ -177,7 +177,9 @@ apparmor::ubuntu::RequestAuthenticator::Result apparmor::ubuntu::ExistingAuthent
     {
         return Result{true, "Client can access content in /usr/share/sounds"};
     }
-    else if (parsed_uri.scheme == "http" || parsed_uri.scheme == "rtsp")
+    else if (parsed_uri.scheme == "http" ||
+             parsed_uri.scheme == "https" ||
+             parsed_uri.scheme == "rtsp")
     {
         return Result{true, "Client can access streaming content"};
     }
