@@ -25,9 +25,10 @@ namespace media = core::ubuntu::media;
 struct media::Track::Private
 {
     media::Track::Id id;
+    media::Track::UriType uri;
 };
 
-media::Track::Track(const media::Track::Id& id) : d(new Private{id})
+media::Track::Track(const media::Track::Id& id) : d(new Private{id, std::string{}})
 {
 }
 
@@ -38,4 +39,9 @@ media::Track::~Track()
 const media::Track::Id& media::Track::id() const
 {
     return d->id;
+}
+
+const media::Track::UriType& media::Track::uri() const
+{
+    return d->uri;
 }
