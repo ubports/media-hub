@@ -107,6 +107,7 @@ public:
     bool operator==(const Track&) const;
 
     virtual const Id& id() const;
+    virtual const UriType& uri() const;
     /*
     class MetaData
     {

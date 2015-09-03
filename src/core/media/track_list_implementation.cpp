@@ -59,7 +59,7 @@ media::TrackListImplementation::~TrackListImplementation()
 
 media::Track::UriType media::TrackListImplementation::query_uri_for_track(const media::Track::Id& id)
 {
-    auto it = d->meta_data_cache.find(id);
+    const auto it = d->meta_data_cache.find(id);
 
     if (it == d->meta_data_cache.end())
         return Track::UriType{};
@@ -69,7 +69,7 @@ media::Track::UriType media::TrackListImplementation::query_uri_for_track(const 
 
 media::Track::MetaData media::TrackListImplementation::query_meta_data_for_track(const media::Track::Id& id)
 {
-    auto it = d->meta_data_cache.find(id);
+    const auto it = d->meta_data_cache.find(id);
 
     if (it == d->meta_data_cache.end())
         return Track::MetaData{};
@@ -87,10 +87,14 @@ void media::TrackListImplementation::add_track_with_uri_at(
     std::stringstream ss; ss << d->object->path().as_string() << "/" << d->track_counter++;
     Track::Id id{ss.str()};
 
+    std::cout << "Adding Track::Id: " << id << std::endl;
+    std::cout << "\tURI: " << uri << std::endl;
+
     auto result = tracks().update([this, id, position, make_current](TrackList::Container& container)
     {
         auto it = std::find(container.begin(), container.end(), position);
         container.insert(it, id);
+        std::cout << "container.size(): " << container.size() << std::endl;
 
         return true;
     });
@@ -99,6 +103,8 @@ void media::TrackListImplementation::add_track_with_uri_at(
     {
         if (d->meta_data_cache.count(id) == 0)
         {
+            // FIXME: This code seems to conflict badly when called multiple times in a row: causes segfaults
+#if 0
             try {
                 d->meta_data_cache[id] = std::make_tuple(
                             uri,
@@ -106,6 +112,11 @@ void media::TrackListImplementation::add_track_with_uri_at(
             } catch (const std::runtime_error &e) {
                 std::cerr << "Failed to retrieve metadata for track '" << uri << "' (" << e.what() << ")" << std::endl;
             }
+#else
+            d->meta_data_cache[id] = std::make_tuple(
+                    uri,
+                    core::ubuntu::media::Track::MetaData{});
+#endif
         } else
         {
             std::get<0>(d->meta_data_cache[id]) = uri;
@@ -120,8 +131,14 @@ void media::TrackListImplementation::add_track_with_uri_at(
             go_to(id, toggle_player_state);
         }
 
+        // Signal to the client that the current track has changed for the first track added to the TrackList
+        if (tracks().get().size() == 1)
+            on_track_changed()(id);
+
+        std::cout << "Signaling that we just added track id: " << id << std::endl;
         // Signal to the client that a track was added to the TrackList
         on_track_added()(id);
+        std::cout << "Signaled that we just added track id: " << id << std::endl;
     }
 }
 
@@ -132,6 +149,8 @@ void media::TrackListImplementation::remove_track(const media::Track::Id& id)
         container.erase(std::find(container.begin(), container.end(), id));
         return true;
     });
+
+    reset_current_iterator_if_needed();
 
     if (result)
     {
@@ -155,8 +174,12 @@ void media::TrackListImplementation::shuffle_tracks()
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
 
+    if (tracks().get().empty())
+        return;
+
     auto result = tracks().update([this](TrackList::Container& container)
     {
+        // Save off the original TrackList ordering
         d->original_tracklist.assign(container.begin(), container.end());
         std::random_shuffle(container.begin(), container.end());
         return true;
@@ -173,8 +196,12 @@ void media::TrackListImplementation::unshuffle_tracks()
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
 
+    if (tracks().get().empty() or d->original_tracklist.empty())
+        return;
+
     auto result = tracks().update([this](TrackList::Container& container)
     {
+        // Restore the original TrackList ordering
         container.assign(d->original_tracklist.begin(), d->original_tracklist.end());
         return true;
     });
@@ -190,6 +217,9 @@ void media::TrackListImplementation::reset()
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
 
+    // Make sure playback stops
+    on_end_of_tracklist()();
+
     auto result = tracks().update([this](TrackList::Container& container)
     {
         container.clear();
@@ -197,6 +227,8 @@ void media::TrackListImplementation::reset()
         d->track_counter = 0;
         return true;
     });
+
+    media::TrackListSkeleton::reset();
 
     (void) result;
 }
