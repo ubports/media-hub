@@ -1,9 +1,13 @@
-media-hub (3.1.0+15.04.20150901-0ubuntu1) UNRELEASED; urgency=medium
+media-hub (3.1.0+15.04.20150904-0ubuntu1) vivid; urgency=medium
 
+  [ Alfonso Sanchez-Beato (email Canonical) ]
   * Gather information about missing codecs and selected streams from gstreamer
     so we have more information on whether we should play the video or not.
 
- -- Alfonso Sanchez-Beato (email Canonical) <alfonso.sanchez-beato@canonical.com>  Mon, 10 Aug 2015 15:04:18 +0200
+  [ CI Train Bot ]
+  * No-change rebuild.
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Fri, 04 Sep 2015 18:51:23 +0000
 
 media-hub (3.1.0+15.04.20150828-0ubuntu1) vivid; urgency=medium
 
