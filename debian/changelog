@@ -1,27 +1,21 @@
+media-hub (3.1.0+15.04.20150901-0ubuntu1) UNRELEASED; urgency=medium
+
+  * Gather information about missing codecs and selected streams from gstreamer
+    so we have more information on whether we should play the video or not.
+
+ -- Alfonso Sanchez-Beato (email Canonical) <alfonso.sanchez-beato@canonical.com>  Mon, 10 Aug 2015 15:04:18 +0200
+
 media-hub (3.1.0+15.04.20150828-0ubuntu1) vivid; urgency=medium
 
   * New rebuild forced.
 
  -- CI Train Bot <ci-train-bot@canonical.com>  Fri, 28 Aug 2015 13:51:58 +0000
 
-media-hub (3.1.0+15.04.20150819-0ubuntu1) vivid; urgency=medium
-
-  * 
-
- -- CI Train Bot <ci-train-bot@canonical.com>  Wed, 19 Aug 2015 07:39:04 +0000
-
 media-hub (3.1.0+15.04.20150818-0ubuntu1) vivid; urgency=medium
 
   * Add HTTPS to the list of supported URL schemes (courtesy Justin McPherson)
 
  -- David Barth <david.barth@canonical.com>  Wed, 19 Aug 2015 09:22:37 +0200
-
-media-hub (3.1.0+15.04.20150810-0ubuntu1) UNRELEASED; urgency=medium
-
-  * Gather information about missing codecs and selected streams from gstreamer
-    so we have more information on whether we should play the video or not.
-
- -- Alfonso Sanchez-Beato (email Canonical) <alfonso.sanchez-beato@canonical.com>  Mon, 10 Aug 2015 15:04:18 +0200
 
 media-hub (3.1.0+15.04.20150710-0ubuntu1) vivid; urgency=medium
 
