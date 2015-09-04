@@ -391,7 +391,6 @@ struct gstreamer::Engine::Private
 
 gstreamer::Engine::Engine() : d(new Private{})
 {
-    cout << "Creating a new Engine instance in " << __PRETTY_FUNCTION__ << endl;
     d->state = media::Engine::State::no_media;
 }
 
@@ -430,7 +429,7 @@ void gstreamer::Engine::create_video_sink(uint32_t texture_id)
 
 bool gstreamer::Engine::play()
 {
-    auto result = d->playbin.set_state_and_wait(GST_STATE_PLAYING);
+    const auto result = d->playbin.set_state_and_wait(GST_STATE_PLAYING);
 
     if (result)
     {
@@ -447,10 +446,12 @@ bool gstreamer::Engine::stop()
 {
     // No need to wait, and we can immediately return.
     if (d->state == media::Engine::State::stopped)
+    {
+        std::cerr << "Current player state is already stopped - no need to change state to stopped" << std::endl;
         return true;
+    }
 
-    auto result = d->playbin.set_state_and_wait(GST_STATE_NULL);
-
+    const auto result = d->playbin.set_state_and_wait(GST_STATE_NULL);
     if (result)
     {
         d->state = media::Engine::State::stopped;
@@ -463,7 +464,7 @@ bool gstreamer::Engine::stop()
 
 bool gstreamer::Engine::pause()
 {
-    auto result = d->playbin.set_state_and_wait(GST_STATE_PAUSED);
+    const auto result = d->playbin.set_state_and_wait(GST_STATE_PAUSED);
 
     if (result)
     {

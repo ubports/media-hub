@@ -25,8 +25,9 @@
 
 #include <functional>
 #include <iosfwd>
-#include <vector>
 #include <memory>
+#include <string>
+#include <vector>
 
 namespace core
 {
@@ -60,6 +61,9 @@ class TrackList : public std::enable_shared_from_this<TrackList>
 
     /** Gets all the metadata available for a given Track. */
     virtual Track::MetaData query_meta_data_for_track(const Track::Id& id) = 0;
+
+    /** Gets the URI for a given Track. */
+    virtual Track::UriType query_uri_for_track(const Track::Id& id) = 0;
 
     /** Adds a URI in the TrackList. */
     virtual void add_track_with_uri_at(const Track::UriType& uri, const Track::Id& position, bool make_current) = 0;
@@ -107,6 +111,9 @@ class TrackList : public std::enable_shared_from_this<TrackList>
 
     /** Used to notify the Player of when the client requested that the Player should immediately play a new track. */
     virtual const core::Signal<std::pair<Track::Id, bool>>& on_go_to_track() const = 0;
+
+    /** Used to notify the Player of when the end of the tracklist has been reached. */
+    virtual const core::Signal<void>& on_end_of_tracklist() const = 0;
 
 protected:
     TrackList();

@@ -45,6 +45,7 @@ public:
     const core::Property<Container>& tracks() const;
 
     Track::MetaData query_meta_data_for_track(const Track::Id& id);
+    Track::UriType query_uri_for_track(const Track::Id& id);
 
     void add_track_with_uri_at(const Track::UriType& uri, const Track::Id& position, bool make_current);
     void remove_track(const Track::Id& id);
@@ -64,6 +65,7 @@ public:
     const core::Signal<Track::Id>& on_track_removed() const;
     const core::Signal<Track::Id>& on_track_changed() const;
     const core::Signal<std::pair<Track::Id, bool>>& on_go_to_track() const;
+    const core::Signal<void>& on_end_of_tracklist() const;
 
 private:
     struct Private;
