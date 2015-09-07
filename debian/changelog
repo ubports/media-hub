@@ -1,3 +1,11 @@
+media-hub (4.0.0+15.10.20150907-0ubuntu1) wily; urgency=medium
+
+  * Gather information about missing codecs and selected streams from
+    gstreamer so we have more information on whether we should play the
+    video or not.
+
+ -- Alfonso Sanchez-Beato <alfonso.sanchez-beato@canonical.com>  Mon, 07 Sep 2015 10:26:04 +0000
+
 media-hub (4.0.0+15.10.20150903-0ubuntu1) wily; urgency=medium
 
   [ Alfonso Sanchez-Beato ]
