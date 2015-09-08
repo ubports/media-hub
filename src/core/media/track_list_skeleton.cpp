@@ -521,7 +521,6 @@ core::Signal<void>& media::TrackListSkeleton::on_end_of_tracklist()
 
 void media::TrackListSkeleton::reset()
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
     d->current_track = d->empty_iterator;
 }
 

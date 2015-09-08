@@ -246,6 +246,11 @@ std::shared_ptr<media::Player> media::ServiceImplementation::resume_session(medi
   return std::shared_ptr<media::Player>();
 }
 
+void media::ServiceImplementation::set_current_player(Player::PlayerKey key)
+{
+  // no impl
+}
+
 void media::ServiceImplementation::pause_other_sessions(media::Player::PlayerKey key)
 {
     if (not d->configuration.player_store->has_player_for_key(key))

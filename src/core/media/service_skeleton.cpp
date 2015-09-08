@@ -91,6 +91,11 @@ struct media::ServiceSkeleton::Private
                         &Private::handle_resume_session,
                         this,
                         std::placeholders::_1));
+        object->install_method_handler<mpris::Service::SetCurrentPlayer>(
+                    std::bind(
+                        &Private::handle_set_current_player,
+                        this,
+                        std::placeholders::_1));
         object->install_method_handler<mpris::Service::PauseOtherSessions>(
                     std::bind(
                         &Private::handle_pause_other_sessions,
@@ -139,8 +144,6 @@ struct media::ServiceSkeleton::Private
             {
                 fprintf(stderr, "%s():%d -- app_name='%s', attached\n", __func__, __LINE__, context.str().c_str());
                 player_owner_map.insert(std::make_pair(key, std::make_tuple(context.str(), true, msg->sender())));
-                const auto player = configuration.player_store->player_for_key(key);
-                exported.set_current_player(player);
             });
 
             auto reply = dbus::Message::make_method_return(msg);
@@ -228,7 +231,12 @@ struct media::ServiceSkeleton::Private
                         // Signal player reconnection
                         auto player = configuration.player_store->player_for_key(key);
                         player->reconnect();
-                        exported.set_current_player(player);
+                        // We only care to allow the MPRIS controls to apply to multimedia player (i.e. audio, video)
+                        if (player->audio_stream_role() == media::Player::AudioStreamRole::multimedia)
+                        {
+                            std::cout << "Setting current_player" << std::endl;
+                            exported.set_current_player(player);
+                        }
 
                         auto reply = dbus::Message::make_method_return(msg);
                         reply->writer() << op;
@@ -296,7 +304,6 @@ struct media::ServiceSkeleton::Private
                         // Reset lifecycle to non-resumable on the now-abandoned session
                         auto player = configuration.player_store->player_for_key(key);
 
-                        exported.reset_current_player();
                         // Delete player instance by abandonment
                         player->lifetime().set(media::Player::Lifetime::normal);
                         player->abandon();
@@ -431,9 +438,18 @@ struct media::ServiceSkeleton::Private
         }
     }
 
+    void handle_set_current_player(const core::dbus::Message::Ptr& msg)
+    {
+        Player::PlayerKey key;
+        msg->reader() >> key;
+        impl->set_current_player(key);
+
+        auto reply = dbus::Message::make_method_return(msg);
+        impl->access_bus()->send(reply);
+    }
+
     void handle_pause_other_sessions(const core::dbus::Message::Ptr& msg)
     {
-        std::cout << __PRETTY_FUNCTION__ << std::endl;
         Player::PlayerKey key;
         msg->reader() >> key;
         impl->pause_other_sessions(key);
@@ -516,8 +532,9 @@ struct media::ServiceSkeleton::Private
             {
                 const auto sp = current_player.lock();
 
-                if (sp)
-                    sp->next();
+                if (sp and
+                    sp->audio_stream_role() == media::Player::AudioStreamRole::multimedia)
+                        sp->next();
 
                 Exported::bus->send(core::dbus::Message::make_method_return(msg));
             };
@@ -527,8 +544,9 @@ struct media::ServiceSkeleton::Private
             {
                 const auto sp = current_player.lock();
 
-                if (sp)
-                    sp->previous();
+                if (sp and
+                    sp->audio_stream_role() == media::Player::AudioStreamRole::multimedia)
+                        sp->previous();
 
                 Exported::bus->send(core::dbus::Message::make_method_return(msg));
             };
@@ -538,7 +556,8 @@ struct media::ServiceSkeleton::Private
             {
                 const auto sp = current_player.lock();
 
-                if (sp)
+                if (sp and sp->audio_stream_role() == media::Player::AudioStreamRole::multimedia
+                       and sp->can_pause())
                     sp->pause();
 
                 Exported::bus->send(core::dbus::Message::make_method_return(msg));
@@ -549,7 +568,7 @@ struct media::ServiceSkeleton::Private
             {
                 const auto sp = current_player.lock();
 
-                if (sp)
+                if (sp and sp->audio_stream_role() == media::Player::AudioStreamRole::multimedia)
                     sp->stop();
 
                 Exported::bus->send(core::dbus::Message::make_method_return(msg));
@@ -560,7 +579,8 @@ struct media::ServiceSkeleton::Private
             {
                 const auto sp = current_player.lock();
 
-                if (sp)
+                if (sp and sp->audio_stream_role() == media::Player::AudioStreamRole::multimedia
+                       and sp->can_play())
                     sp->play();
 
                 Exported::bus->send(core::dbus::Message::make_method_return(msg));
@@ -571,11 +591,13 @@ struct media::ServiceSkeleton::Private
             {
                 const auto sp = current_player.lock();
 
-                if (sp)
+                if (sp and sp->audio_stream_role() == media::Player::AudioStreamRole::multimedia)
                 {
-                    if (sp->playback_status() == media::Player::PlaybackStatus::playing)
+                    if (sp->playback_status() == media::Player::PlaybackStatus::playing
+                            and sp->can_pause())
                         sp->pause();
-                    else if (sp->playback_status() != media::Player::PlaybackStatus::null)
+                    else if (sp->playback_status() != media::Player::PlaybackStatus::null
+                                and sp->can_play())
                         sp->play();
                 }
 
@@ -586,7 +608,7 @@ struct media::ServiceSkeleton::Private
 
         void set_current_player(const std::shared_ptr<media::Player>& cp)
         {
-            std::cout << __PRETTY_FUNCTION__ << std::endl;
+            std::cout << "*** " << __PRETTY_FUNCTION__ << std::endl;
             // We will not keep the object alive.
             current_player = cp;
 
@@ -683,6 +705,14 @@ std::shared_ptr<media::Player> media::ServiceSkeleton::create_fixed_session(cons
 std::shared_ptr<media::Player> media::ServiceSkeleton::resume_session(media::Player::PlayerKey key)
 {
     return d->configuration.impl->resume_session(key);
+}
+
+void media::ServiceSkeleton::set_current_player(media::Player::PlayerKey key)
+{
+    const auto player = d->configuration.player_store->player_for_key(key);
+    // We only care to allow the MPRIS controls to apply to multimedia player (i.e. audio, video)
+    if (player->audio_stream_role() == media::Player::AudioStreamRole::multimedia)
+        d->exported.set_current_player(player);
 }
 
 void media::ServiceSkeleton::pause_other_sessions(media::Player::PlayerKey key)

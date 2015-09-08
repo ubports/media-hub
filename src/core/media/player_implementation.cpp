@@ -376,13 +376,15 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
 
     std::function<bool()> can_go_next_getter = [this]()
     {
-        return d->track_list->has_next();
+        // If LoopStatus == playlist, then there is always a next track
+        return d->track_list->has_next() or Parent::loop_status() == Player::LoopStatus::playlist;
     };
     Parent::can_go_next().install(can_go_next_getter);
 
     std::function<bool()> can_go_previous_getter = [this]()
     {
-        return d->track_list->has_previous();
+        // If LoopStatus == playlist, then there is always a next previous
+        return d->track_list->has_previous()  or Parent::loop_status() == Player::LoopStatus::playlist;
     };
     Parent::can_go_previous().install(can_go_previous_getter);
 
