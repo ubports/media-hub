@@ -67,8 +67,22 @@ struct gstreamer::Engine::Private
     {
         if (p.second == "playbin")
         {
-            std::cout << "State changed on playbin: " << p.first.new_state << std::endl;
-            playback_status_changed(gst_state_to_player_status(p.first));
+            std::cout << "State changed on playbin: "
+                      << gst_element_state_get_name(p.first.new_state) << std::endl;
+            const auto status = gst_state_to_player_status(p.first);
+            /*
+             * When state moves to "paused" the pipeline is already set. We check that we
+             * have streams to play.
+             */
+            if (status == media::Player::PlaybackStatus::paused &&
+                    !playbin.can_play_streams()) {
+                std::cerr << "** Cannot play: some codecs are missing" << std::endl;
+                playbin.reset();
+                const media::Player::Error e = media::Player::Error::format_error;
+                error(e);
+            } else {
+                playback_status_changed(status);
+            }
         }
     }
 
@@ -149,7 +163,8 @@ struct gstreamer::Engine::Private
                 break;
             case GST_STREAM_ERROR_CODEC_NOT_FOUND:
                 std::cerr << "** Encountered a GST_STREAM_ERROR_CODEC_NOT_FOUND" << std::endl;
-                ret_error = media::Player::Error::format_error;
+                // Missing codecs are handled later, when state switches to "paused"
+                ret_error = media::Player::Error::no_error;
                 break;
             case GST_STREAM_ERROR_DECODE:
                 std::cerr << "** Encountered a GST_STREAM_ERROR_DECODE" << std::endl;
@@ -163,8 +178,10 @@ struct gstreamer::Engine::Private
             }
         }
 
-        std::cout << "Resetting playbin pipeline after unrecoverable error" << std::endl;
-        playbin.reset();
+        if (ret_error != media::Player::Error::no_error) {
+            std::cerr << "Resetting playbin pipeline after unrecoverable error" << std::endl;
+            playbin.reset();
+        }
         return ret_error;
     }
 

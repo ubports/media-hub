@@ -72,6 +72,7 @@ struct Playbin
 
     void on_new_message(const Bus::Message& message);
     void on_new_message_async(const Bus::Message& message);
+    void process_message_element(GstMessage *message);
 
     gstreamer::Bus& message_bus();
 
@@ -110,6 +111,8 @@ struct Playbin
 
     MediaFileType media_file_type() const;
 
+    bool can_play_streams() const;
+
     GstElement* pipeline;
     gstreamer::Bus bus;
     MediaFileType file_type;
@@ -137,6 +140,10 @@ struct Playbin
         core::Signal<core::ubuntu::media::video::Dimensions> on_video_dimensions_changed;
         core::Signal<void> client_disconnected;
     } signals;
+    bool is_missing_audio_codec;
+    bool is_missing_video_codec;
+    gint audio_stream_id;
+    gint video_stream_id;
 };
 }
 
