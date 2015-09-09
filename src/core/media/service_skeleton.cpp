@@ -532,9 +532,8 @@ struct media::ServiceSkeleton::Private
             {
                 const auto sp = current_player.lock();
 
-                if (sp and
-                    sp->audio_stream_role() == media::Player::AudioStreamRole::multimedia)
-                        sp->next();
+                if (sp and is_multimedia_role())
+                    sp->next();
 
                 Exported::bus->send(core::dbus::Message::make_method_return(msg));
             };
@@ -544,9 +543,8 @@ struct media::ServiceSkeleton::Private
             {
                 const auto sp = current_player.lock();
 
-                if (sp and
-                    sp->audio_stream_role() == media::Player::AudioStreamRole::multimedia)
-                        sp->previous();
+                if (sp and is_multimedia_role())
+                    sp->previous();
 
                 Exported::bus->send(core::dbus::Message::make_method_return(msg));
             };
@@ -556,8 +554,7 @@ struct media::ServiceSkeleton::Private
             {
                 const auto sp = current_player.lock();
 
-                if (sp and sp->audio_stream_role() == media::Player::AudioStreamRole::multimedia
-                       and sp->can_pause())
+                if (sp and is_multimedia_role() and sp->can_pause())
                     sp->pause();
 
                 Exported::bus->send(core::dbus::Message::make_method_return(msg));
@@ -568,7 +565,7 @@ struct media::ServiceSkeleton::Private
             {
                 const auto sp = current_player.lock();
 
-                if (sp and sp->audio_stream_role() == media::Player::AudioStreamRole::multimedia)
+                if (sp and is_multimedia_role())
                     sp->stop();
 
                 Exported::bus->send(core::dbus::Message::make_method_return(msg));
@@ -579,8 +576,7 @@ struct media::ServiceSkeleton::Private
             {
                 const auto sp = current_player.lock();
 
-                if (sp and sp->audio_stream_role() == media::Player::AudioStreamRole::multimedia
-                       and sp->can_play())
+                if (sp and is_multimedia_role() and sp->can_play())
                     sp->play();
 
                 Exported::bus->send(core::dbus::Message::make_method_return(msg));
@@ -591,7 +587,7 @@ struct media::ServiceSkeleton::Private
             {
                 const auto sp = current_player.lock();
 
-                if (sp and sp->audio_stream_role() == media::Player::AudioStreamRole::multimedia)
+                if (sp and is_multimedia_role())
                 {
                     if (sp->playback_status() == media::Player::PlaybackStatus::playing
                             and sp->can_pause())
@@ -604,6 +600,13 @@ struct media::ServiceSkeleton::Private
                 Exported::bus->send(core::dbus::Message::make_method_return(msg));
             };
             object->install_method_handler<mpris::Player::PlayPause>(play_pause);
+        }
+
+        inline bool is_multimedia_role()
+        {
+            const auto sp = current_player.lock();
+
+            return (sp ? sp->audio_stream_role() == media::Player::AudioStreamRole::multimedia : false);
         }
 
         void set_current_player(const std::shared_ptr<media::Player>& cp)
