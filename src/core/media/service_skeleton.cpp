@@ -532,7 +532,7 @@ struct media::ServiceSkeleton::Private
             {
                 const auto sp = current_player.lock();
 
-                if (sp and is_multimedia_role())
+                if (is_multimedia_role())
                     sp->next();
 
                 Exported::bus->send(core::dbus::Message::make_method_return(msg));
@@ -543,7 +543,7 @@ struct media::ServiceSkeleton::Private
             {
                 const auto sp = current_player.lock();
 
-                if (sp and is_multimedia_role())
+                if (is_multimedia_role())
                     sp->previous();
 
                 Exported::bus->send(core::dbus::Message::make_method_return(msg));
@@ -554,7 +554,7 @@ struct media::ServiceSkeleton::Private
             {
                 const auto sp = current_player.lock();
 
-                if (sp and is_multimedia_role() and sp->can_pause())
+                if (is_multimedia_role() and sp->can_pause())
                     sp->pause();
 
                 Exported::bus->send(core::dbus::Message::make_method_return(msg));
@@ -565,7 +565,7 @@ struct media::ServiceSkeleton::Private
             {
                 const auto sp = current_player.lock();
 
-                if (sp and is_multimedia_role())
+                if (is_multimedia_role())
                     sp->stop();
 
                 Exported::bus->send(core::dbus::Message::make_method_return(msg));
@@ -576,7 +576,7 @@ struct media::ServiceSkeleton::Private
             {
                 const auto sp = current_player.lock();
 
-                if (sp and is_multimedia_role() and sp->can_play())
+                if (is_multimedia_role() and sp->can_play())
                     sp->play();
 
                 Exported::bus->send(core::dbus::Message::make_method_return(msg));
@@ -587,7 +587,7 @@ struct media::ServiceSkeleton::Private
             {
                 const auto sp = current_player.lock();
 
-                if (sp and is_multimedia_role())
+                if (is_multimedia_role())
                 {
                     if (sp->playback_status() == media::Player::PlaybackStatus::playing
                             and sp->can_pause())
