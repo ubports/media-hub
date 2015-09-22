@@ -241,8 +241,23 @@ media::TrackListSkeleton::~TrackListSkeleton()
 
 bool media::TrackListSkeleton::has_next()
 {
-    if (tracks().get().empty())
+    auto n_tracks = tracks().get().size();
+
+    if (n_tracks == 0)
         return false;
+
+    // TODO Using current_iterator() makes media-hub crash later. Logic for
+    // handling the iterators must be reviewed. As a minimum updates to the
+    // track list should update current_track instead of the list being sneakly
+    // changed in player_implementation.cpp.
+    // To avoid the crash we consider that current_track will be eventually
+    // initialized to the first track when current_iterator() gets called.
+    if (d->current_track == d->empty_iterator) {
+        if (n_tracks < 2)
+            return false;
+        else
+            return true;
+    }
 
     const auto next_track = std::next(current_iterator());
     return !is_last_track(next_track);
@@ -250,7 +265,7 @@ bool media::TrackListSkeleton::has_next()
 
 bool media::TrackListSkeleton::has_previous()
 {
-    if (tracks().get().empty())
+    if (tracks().get().empty() || d->current_track == d->empty_iterator)
         return false;
 
     // If we are looping over the entire list, then there is always a previous track

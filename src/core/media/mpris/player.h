@@ -307,6 +307,26 @@ struct Player
             {
                 on_property_value_changed<Properties::Shuffle>(shuffle);
             });
+
+            properties.can_play->changed().connect([this](bool can_play)
+            {
+                on_property_value_changed<Properties::CanPlay>(can_play);
+            });
+
+            properties.can_pause->changed().connect([this](bool can_pause)
+            {
+                on_property_value_changed<Properties::CanPause>(can_pause);
+            });
+
+            properties.can_go_next->changed().connect([this](bool can_go_next)
+            {
+                on_property_value_changed<Properties::CanGoNext>(can_go_next);
+            });
+
+            properties.can_go_previous->changed().connect([this](bool can_go_previous)
+            {
+                on_property_value_changed<Properties::CanGoPrevious>(can_go_previous);
+            });
         }
 
         template<typename Property>

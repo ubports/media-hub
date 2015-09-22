@@ -301,6 +301,18 @@ struct media::PlayerImplementation<Parent>::Private :
         }
     }
 
+    void update_mpris_properties(const media::Track::Id& id)
+    {
+        bool has_previous = track_list->has_previous();
+        bool has_next = track_list->has_next();
+        std::cout << "Updating properties for " << id
+                  << "; has_previous: " << has_previous
+                  << ", has_next: " << has_next << std::endl;
+        // Signal changed properties
+        parent->Parent::can_go_previous().set(has_previous);
+        parent->Parent::can_go_next().set(has_next);
+    }
+
     // Our link back to our parent.
     media::PlayerImplementation<Parent>* parent;
     // We just store the parameters passed on construction.
@@ -522,6 +534,13 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         std::cout << "** Track was added, handling in PlayerImplementation" << std::endl;
         if (d->track_list->tracks()->size() == 1)
             d->open_first_track_from_tracklist(id);
+
+        d->update_mpris_properties(id);
+    });
+
+    d->track_list->on_track_changed().connect([this](const media::Track::Id& id)
+    {
+        d->update_mpris_properties(id);
     });
 
     // Everything is setup, we now subscribe to death notifications.

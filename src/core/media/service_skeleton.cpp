@@ -617,6 +617,71 @@ struct media::ServiceSkeleton::Private
 
             // And announce that we can be controlled again.
             player.properties.can_control->set(true);
+
+            // We wire up player state changes
+            connections.seeked_to = cp->seeked_to().connect([this](std::uint64_t position)
+            {
+                player.signals.seeked_to->emit(position);
+            });
+
+            connections.duration_changed = cp->duration().changed().connect([this](std::uint64_t duration)
+            {
+                player.properties.duration->set(duration);
+            });
+
+            connections.position_changed = cp->position().changed().connect([this](std::uint64_t position)
+            {
+                player.properties.position->set(position);
+            });
+
+            connections.playback_status_changed = cp->playback_status().changed().connect(
+                [this](core::ubuntu::media::Player::PlaybackStatus status)
+            {
+                player.properties.playback_status->set(mpris::Player::PlaybackStatus::from(status));
+            });
+
+            connections.loop_status_changed = cp->loop_status().changed().connect(
+                [this](core::ubuntu::media::Player::LoopStatus status)
+            {
+                player.properties.loop_status->set(mpris::Player::LoopStatus::from(status));
+            });
+
+#if 0
+            // TODO Lambda currently crashing, needs further research
+            connections.meta_data_changed = cp->meta_data_for_current_track().changed().connect(
+                [this](const core::ubuntu::media::Track::MetaData& md)
+            {
+                mpris::Player::Dictionary dict;
+
+                bool has_title = md.count(xesam::Title::name) > 0;
+                bool has_album_name = md.count(xesam::Album::name) > 0;
+                bool has_artist_name = md.count(xesam::Artist::name) > 0;
+
+                if (has_title)
+                    dict[xesam::Title::name] = dbus::types::Variant::encode(md.get(xesam::Title::name));
+                if (has_album_name)
+                    dict[xesam::Album::name] = dbus::types::Variant::encode(md.get(xesam::Album::name));
+                if (has_artist_name)
+                    dict[xesam::Artist::name] = dbus::types::Variant::encode(md.get(xesam::Artist::name));
+
+                dict[mpris::metadata::ArtUrl::name] = dbus::types::Variant::encode(
+                            cover_art_resolver(
+                                has_title ? md.get(xesam::Title::name) : "",
+                                has_album_name ? md.get(xesam::Album::name) : "",
+                                has_artist_name ? md.get(xesam::Artist::name) : ""));
+
+                mpris::Player::Dictionary wrap;
+                wrap[mpris::Player::Properties::Metadata::name()] = dbus::types::Variant::encode(dict);
+
+                player.signals.properties_changed->emit(
+                            std::make_tuple(
+                                dbus::traits::Service<
+                                    mpris::Player::Properties::Metadata::Interface>
+                                        ::interface_name(),
+                                wrap,
+                                std::vector<std::string>()));
+                                });
+#endif
         }
 
         void reset_current_player()
