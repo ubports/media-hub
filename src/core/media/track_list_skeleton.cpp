@@ -288,8 +288,11 @@ bool media::TrackListSkeleton::is_last_track(const TrackList::ConstIterator &it)
 media::Track::Id media::TrackListSkeleton::next()
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
-    if (tracks().get().empty())
-        return *(d->empty_iterator);
+    if (tracks().get().empty()) {
+        // TODO Change ServiceSkeleton to return with error from DBus call
+        std::cerr << "ERROR: no tracks, cannot go to next" << std::endl;
+        return "";
+    }
 
     const auto next_track = std::next(current_iterator());
     bool do_go_to_next_track = false;
@@ -343,8 +346,11 @@ media::Track::Id media::TrackListSkeleton::next()
 media::Track::Id media::TrackListSkeleton::previous()
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
-    if (tracks().get().empty())
-        return *(d->empty_iterator);
+    if (tracks().get().empty()) {
+        // TODO Change ServiceSkeleton to return with error from DBus call
+        std::cerr << "ERROR: no tracks, cannot go to previous" << std::endl;
+        return "";
+    }
 
     bool do_go_to_previous_track = false;
 

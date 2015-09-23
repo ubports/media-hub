@@ -303,8 +303,10 @@ struct media::PlayerImplementation<Parent>::Private :
 
     void update_mpris_properties(const media::Track::Id& id)
     {
-        bool has_previous = track_list->has_previous();
-        bool has_next = track_list->has_next();
+        bool has_previous =    track_list->has_previous()
+                            or parent->Parent::loop_status() != Player::LoopStatus::none;
+        bool has_next =    track_list->has_next()
+                        or parent->Parent::loop_status() != Player::LoopStatus::none;
         std::cout << "Updating properties for " << id
                   << "; has_previous: " << has_previous
                   << ", has_next: " << has_next << std::endl;
@@ -389,14 +391,14 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
     std::function<bool()> can_go_next_getter = [this]()
     {
         // If LoopStatus == playlist, then there is always a next track
-        return d->track_list->has_next() or Parent::loop_status() == Player::LoopStatus::playlist;
+        return d->track_list->has_next() or Parent::loop_status() != Player::LoopStatus::none;
     };
     Parent::can_go_next().install(can_go_next_getter);
 
     std::function<bool()> can_go_previous_getter = [this]()
     {
         // If LoopStatus == playlist, then there is always a next previous
-        return d->track_list->has_previous() or Parent::loop_status() == Player::LoopStatus::playlist;
+        return d->track_list->has_previous() or Parent::loop_status() != Player::LoopStatus::none;
     };
     Parent::can_go_previous().install(can_go_previous_getter);
 

@@ -646,6 +646,31 @@ struct media::ServiceSkeleton::Private
                 player.properties.loop_status->set(mpris::Player::LoopStatus::from(status));
             });
 
+            connections.can_go_previous_changed = cp->can_go_previous().changed().connect(
+                [this](bool can_go_previous)
+            {
+                player.properties.can_go_previous->set(can_go_previous);
+            });
+
+            connections.can_go_next_changed = cp->can_go_next().changed().connect(
+                [this](bool can_go_next)
+            {
+                player.properties.can_go_next->set(can_go_next);
+            });
+
+            // Sync property values between session and player mpris::Player instances
+            // TODO Getters from media::Player actually return values from a
+            // mpris::Player::Skeleton instance different from "player". Each of them use
+            // different DBus object paths. Does this make any sense? Discuss.
+            player.properties.duration->set(cp->duration().get());
+            player.properties.position->set(cp->position().get());
+            player.properties.playback_status->set(mpris::Player::PlaybackStatus::from(
+                                                       cp->playback_status().get()));
+            player.properties.loop_status->set(mpris::Player::LoopStatus::from(
+                                                   cp->loop_status().get()));
+            player.properties.can_go_previous->set(cp->can_go_previous().get());
+            player.properties.can_go_next->set(cp->can_go_next().get());
+
 #if 0
             // TODO Lambda currently crashing, needs further research
             connections.meta_data_changed = cp->meta_data_for_current_track().changed().connect(
@@ -724,6 +749,14 @@ struct media::ServiceSkeleton::Private
                 the_empty_signal.connect([](){})
             };
             core::Connection loop_status_changed
+            {
+                the_empty_signal.connect([](){})
+            };
+            core::Connection can_go_previous_changed
+            {
+                the_empty_signal.connect([](){})
+            };
+            core::Connection can_go_next_changed
             {
                 the_empty_signal.connect([](){})
             };
