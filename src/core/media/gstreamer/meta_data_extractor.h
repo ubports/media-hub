@@ -147,7 +147,7 @@ public:
     MetaDataExtractor()
         : pipe(gst_pipeline_new("meta_data_extractor_pipeline")),
           decoder(gst_element_factory_make ("uridecodebin", NULL)),
-          bus(GST_ELEMENT_BUS(pipe))
+          bus(gst_element_get_bus(pipe))
     {
         gst_bin_add(GST_BIN(pipe), decoder);
 
@@ -159,8 +159,40 @@ public:
 
     ~MetaDataExtractor()
     {
-        gst_element_set_state(pipe, GST_STATE_NULL);
-        // gst_object_unref(pipe);
+        set_state_and_wait(GST_STATE_NULL);
+        gst_object_unref(pipe);
+    }
+
+    bool set_state_and_wait(GstState new_state)
+    {
+        static const std::chrono::nanoseconds state_change_timeout
+        {
+            // We choose a quite high value here as tests are run under valgrind
+            // and gstreamer pipeline setup/state changes take longer in that scenario.
+            // The value does not negatively impact runtime performance.
+            std::chrono::milliseconds{5000}
+        };
+
+        auto ret = gst_element_set_state(pipe, new_state);
+
+        bool result = false; GstState current, pending;
+        switch(ret)
+        {
+            case GST_STATE_CHANGE_FAILURE:
+                result = false; break;
+            case GST_STATE_CHANGE_NO_PREROLL:
+            case GST_STATE_CHANGE_SUCCESS:
+                result = true; break;
+            case GST_STATE_CHANGE_ASYNC:
+                result = GST_STATE_CHANGE_SUCCESS == gst_element_get_state(
+                    pipe,
+                    &current,
+                    &pending,
+                    state_change_timeout.count());
+                break;
+        }
+
+        return result;
     }
 
     core::ubuntu::media::Track::MetaData meta_data_for_track_with_uri(const core::ubuntu::media::Track::UriType& uri)
@@ -193,11 +225,11 @@ public:
 
         if (std::future_status::ready != future.wait_for(std::chrono::seconds(4)))
         {
-            gst_element_set_state(pipe, GST_STATE_NULL);
+            set_state_and_wait(GST_STATE_NULL);
             throw std::runtime_error("Problem extracting meta data for track");
         } else
         {
-            gst_element_set_state(pipe, GST_STATE_NULL);
+            set_state_and_wait(GST_STATE_NULL);
         }
 
         return future.get();
