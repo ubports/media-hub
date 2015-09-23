@@ -117,6 +117,7 @@ struct Playbin
     gstreamer::Bus bus;
     MediaFileType file_type;
     GstElement* video_sink;
+    GstElement* audio_sink;
     core::Connection on_new_message_connection_async;
     bool is_seeking;
     mutable uint64_t previous_position;

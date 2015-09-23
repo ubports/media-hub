@@ -94,6 +94,7 @@ gstreamer::Playbin::Playbin()
       bus{gst_element_get_bus(pipeline)},
       file_type(MEDIA_FILE_TYPE_NONE),
       video_sink(nullptr),
+      audio_sink(nullptr),
       on_new_message_connection_async(
           bus.on_new_message_async.connect(
               std::bind(
@@ -142,6 +143,12 @@ gstreamer::Playbin::~Playbin()
 
     if (pipeline)
         gst_object_unref(pipeline);
+
+    if (video_sink)
+        gst_object_unref(video_sink);
+
+    if (audio_sink)
+        gst_object_unref(audio_sink);
 }
 
 void gstreamer::Playbin::reset()
@@ -283,7 +290,7 @@ void gstreamer::Playbin::setup_pipeline_for_audio_video()
 
     if (::getenv("CORE_UBUNTU_MEDIA_SERVICE_AUDIO_SINK_NAME") != nullptr)
     {
-        auto audio_sink = gst_element_factory_make (
+        audio_sink = gst_element_factory_make (
                     ::getenv("CORE_UBUNTU_MEDIA_SERVICE_AUDIO_SINK_NAME"),
                     "audio-sink");
 
@@ -294,6 +301,8 @@ void gstreamer::Playbin::setup_pipeline_for_audio_video()
                     "audio-sink",
                     audio_sink,
                     NULL);
+
+        gst_object_unref(audio_sink);
     }
 
     if (::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME") != nullptr)
@@ -309,6 +318,8 @@ void gstreamer::Playbin::setup_pipeline_for_audio_video()
                 "video-sink",
                 video_sink,
                 NULL);
+
+        gst_object_unref(video_sink);
     }
 }
 
