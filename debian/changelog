@@ -1,4 +1,4 @@
-media-hub (3.2.0+15.04.20150904-0ubuntu1) UNRELEASED; urgency=medium
+media-hub (3.2.0+15.04.20150928-0ubuntu1) UNRELEASED; urgency=medium
 
   * Make sure the correct player is set as the current player controled by
     MPRIS.
