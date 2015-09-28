@@ -301,13 +301,13 @@ struct media::PlayerImplementation<Parent>::Private :
         }
     }
 
-    void update_mpris_properties(const media::Track::Id& id)
+    void update_mpris_properties(void)
     {
         bool has_previous =    track_list->has_previous()
                             or parent->Parent::loop_status() != Player::LoopStatus::none;
         bool has_next =    track_list->has_next()
                         or parent->Parent::loop_status() != Player::LoopStatus::none;
-        std::cout << "Updating properties for " << id
+        std::cout << "Updating properties track list"
                   << "; has_previous: " << has_previous
                   << ", has_next: " << has_next << std::endl;
         // Signal changed properties
@@ -537,13 +537,25 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         if (d->track_list->tracks()->size() == 1)
             d->open_first_track_from_tracklist(id);
 
-        d->update_mpris_properties(id);
+        d->update_mpris_properties();
     });
 
-    d->track_list->on_track_changed().connect([this](const media::Track::Id& id)
+    d->track_list->on_track_removed().connect([this](const media::Track::Id&)
     {
-        d->update_mpris_properties(id);
+        d->update_mpris_properties();
     });
+
+    d->track_list->on_track_changed().connect([this](const media::Track::Id&)
+    {
+        d->update_mpris_properties();
+    });
+
+    d->track_list->on_track_list_replaced().connect(
+        [this](const media::TrackList::ContainerTrackIdTuple&)
+        {
+            d->update_mpris_properties();
+        }
+    );
 
     // Everything is setup, we now subscribe to death notifications.
     std::weak_ptr<Private> wp{d};

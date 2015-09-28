@@ -51,6 +51,7 @@ public:
     const core::Property<Container>& tracks() const;
 
     const core::Signal<ContainerTrackIdTuple>& on_track_list_replaced() const;
+    core::Signal<ContainerTrackIdTuple>& on_track_list_replaced();
     const core::Signal<Track::Id>& on_track_added() const;
     core::Signal<Track::Id>& on_track_added();
     const core::Signal<Track::Id>& on_track_removed() const;
@@ -77,8 +78,6 @@ protected:
     void reset_current_iterator_if_needed();
 
     core::Property<bool>& can_edit_tracks();
-
-    core::Signal<ContainerTrackIdTuple>& on_track_list_replaced();
 
     void reset();
 

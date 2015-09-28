@@ -217,16 +217,24 @@ void media::TrackListImplementation::reset()
 {
     // Make sure playback stops
     on_end_of_tracklist()();
+    // And make sure there is no "current" track
+    media::TrackListSkeleton::reset();
 
     auto result = tracks().update([this](TrackList::Container& container)
     {
-        container.clear();
+        TrackList::Container ids = container;
+
+        for (auto it = container.begin(); it != container.end(); ) {
+            auto id = *it;
+            it = container.erase(it);
+            on_track_removed()(id);
+        }
+
         container.resize(0);
         d->track_counter = 0;
+
         return true;
     });
-
-    media::TrackListSkeleton::reset();
 
     (void) result;
 }
