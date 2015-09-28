@@ -241,7 +241,7 @@ media::TrackListSkeleton::~TrackListSkeleton()
 
 bool media::TrackListSkeleton::has_next()
 {
-    auto n_tracks = tracks().get().size();
+    const auto n_tracks = tracks().get().size();
 
     if (n_tracks == 0)
         return false;
@@ -291,7 +291,7 @@ media::Track::Id media::TrackListSkeleton::next()
     if (tracks().get().empty()) {
         // TODO Change ServiceSkeleton to return with error from DBus call
         std::cerr << "ERROR: no tracks, cannot go to next" << std::endl;
-        return "";
+        return media::Track::Id{};
     }
 
     const auto next_track = std::next(current_iterator());
@@ -349,7 +349,7 @@ media::Track::Id media::TrackListSkeleton::previous()
     if (tracks().get().empty()) {
         // TODO Change ServiceSkeleton to return with error from DBus call
         std::cerr << "ERROR: no tracks, cannot go to previous" << std::endl;
-        return "";
+        return media::Track::Id{};
     }
 
     bool do_go_to_previous_track = false;

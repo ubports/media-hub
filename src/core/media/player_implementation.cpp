@@ -307,7 +307,7 @@ struct media::PlayerImplementation<Parent>::Private :
                             or parent->Parent::loop_status() != Player::LoopStatus::none;
         bool has_next =    track_list->has_next()
                         or parent->Parent::loop_status() != Player::LoopStatus::none;
-        std::cout << "Updating properties track list"
+        std::cout << "Updating MPRIS TrackList properties"
                   << "; has_previous: " << has_previous
                   << ", has_next: " << has_next << std::endl;
         // Signal changed properties

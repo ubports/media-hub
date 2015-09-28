@@ -661,7 +661,9 @@ struct media::ServiceSkeleton::Private
             // Sync property values between session and player mpris::Player instances
             // TODO Getters from media::Player actually return values from a
             // mpris::Player::Skeleton instance different from "player". Each of them use
-            // different DBus object paths. Does this make any sense? Discuss.
+            // different DBus object paths, /core/ubuntu/media/Service/sessions/<n>
+            // and /org/mpris/MediaPlayer2 (this is the one enforced by the MPRIS spec).
+            // Discuss why this is needed with tvoss.
             player.properties.duration->set(cp->duration().get());
             player.properties.position->set(cp->position().get());
             player.properties.playback_status->set(mpris::Player::PlaybackStatus::from(
