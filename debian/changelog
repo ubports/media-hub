@@ -8,6 +8,17 @@ media-hub (3.2.0+15.04.20150904-0ubuntu1) UNRELEASED; urgency=medium
 
  -- phablet <phablet@ubuntu-phablet>  Tue, 08 Sep 2015 17:18:15 -0400
 
+media-hub (3.1.0+15.04.20150923.1-0ubuntu1) vivid; urgency=medium
+
+  [ Simon Fels ]
+  * Prevent us from leaking file descriptors and memory due to not releasing
+    gstreamer elements correctly.
+
+  [ CI Train Bot ]
+  * No-change rebuild.
+
+ -- Simon Fels <simon.busch@canonical.com>  Wed, 23 Sep 2015 14:23:10 +0000
+
 media-hub (3.1.0+15.04.20150904-0ubuntu1) vivid; urgency=medium
 
   [ Alfonso Sanchez-Beato (email Canonical) ]
