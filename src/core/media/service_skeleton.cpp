@@ -492,11 +492,6 @@ struct media::ServiceSkeleton::Private
         {
             mpris::Player::Skeleton::Configuration::Defaults defaults;
 
-            // Disabled as track list is not fully implemented yet.
-            defaults.can_go_next = false;
-            // Disabled as track list is not fully implemented yet.
-            defaults.can_go_previous = false;
-
             return defaults;
         }
 
@@ -646,6 +641,18 @@ struct media::ServiceSkeleton::Private
                 player.properties.loop_status->set(mpris::Player::LoopStatus::from(status));
             });
 
+            connections.can_play_changed = cp->can_play().changed().connect(
+                [this](bool can_play)
+            {
+                player.properties.can_play->set(can_play);
+            });
+
+            connections.can_pause_changed = cp->can_pause().changed().connect(
+                [this](bool can_pause)
+            {
+                player.properties.can_pause->set(can_pause);
+            });
+
             connections.can_go_previous_changed = cp->can_go_previous().changed().connect(
                 [this](bool can_go_previous)
             {
@@ -670,6 +677,8 @@ struct media::ServiceSkeleton::Private
                                                        cp->playback_status().get()));
             player.properties.loop_status->set(mpris::Player::LoopStatus::from(
                                                    cp->loop_status().get()));
+            player.properties.can_play->set(cp->can_play().get());
+            player.properties.can_pause->set(cp->can_pause().get());
             player.properties.can_go_previous->set(cp->can_go_previous().get());
             player.properties.can_go_next->set(cp->can_go_next().get());
 
@@ -751,6 +760,14 @@ struct media::ServiceSkeleton::Private
                 the_empty_signal.connect([](){})
             };
             core::Connection loop_status_changed
+            {
+                the_empty_signal.connect([](){})
+            };
+            core::Connection can_play_changed
+            {
+                the_empty_signal.connect([](){})
+            };
+            core::Connection can_pause_changed
             {
                 the_empty_signal.connect([](){})
             };

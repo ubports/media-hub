@@ -307,12 +307,19 @@ struct media::PlayerImplementation<Parent>::Private :
                             or parent->Parent::loop_status() != Player::LoopStatus::none;
         bool has_next =    track_list->has_next()
                         or parent->Parent::loop_status() != Player::LoopStatus::none;
+        auto n_tracks = track_list->tracks()->size();
+        bool has_tracks = (n_tracks > 0) ? true : false;
+
         std::cout << "Updating MPRIS TrackList properties"
-                  << "; has_previous: " << has_previous
+                  << "; Tracks: " << n_tracks
+                  << ", has_previous: " << has_previous
                   << ", has_next: " << has_next << std::endl;
-        // Signal changed properties
-        parent->Parent::can_go_previous().set(has_previous);
-        parent->Parent::can_go_next().set(has_next);
+
+        // Update properties
+        parent->can_play().set(has_tracks);
+        parent->can_pause().set(has_tracks);
+        parent->can_go_previous().set(has_previous);
+        parent->can_go_next().set(has_next);
     }
 
     // Our link back to our parent.
@@ -341,8 +348,8 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
       d{std::make_shared<Private>(this, config)}
 {
     // Initialize default values for Player interface properties
-    Parent::can_play().set(true);
-    Parent::can_pause().set(true);
+    Parent::can_play().set(false);
+    Parent::can_pause().set(false);
     Parent::can_seek().set(true);
     Parent::can_go_previous().set(false);
     Parent::can_go_next().set(false);

@@ -192,12 +192,12 @@ struct Player
             // Default values for properties
             struct Defaults
             {
-                Properties::CanPlay::ValueType can_play{true};
-                Properties::CanPause::ValueType can_pause{true};
+                Properties::CanPlay::ValueType can_play{false};
+                Properties::CanPause::ValueType can_pause{false};
                 Properties::CanSeek::ValueType can_seek{true};
                 Properties::CanControl::ValueType can_control{true};
-                Properties::CanGoNext::ValueType can_go_next{true};
-                Properties::CanGoPrevious::ValueType can_go_previous{true};
+                Properties::CanGoNext::ValueType can_go_next{false};
+                Properties::CanGoPrevious::ValueType can_go_previous{false};
                 Properties::IsVideoSource::ValueType is_video_source{false};
                 Properties::IsAudioSource::ValueType is_audio_source{true};
                 Properties::PlaybackStatus::ValueType playback_status{PlaybackStatus::stopped};
