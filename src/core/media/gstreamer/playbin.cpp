@@ -136,19 +136,39 @@ gstreamer::Playbin::Playbin()
         );
 }
 
+// Note that we might be accessing freed memory here, so activate DEBUG_REFS
+// only for debugging
+//#define DEBUG_REFS
+#ifdef DEBUG_REFS
+static void print_refs(const gstreamer::Playbin &pb, const char *func)
+{
+    using namespace std;
+
+    cout << func << endl;
+    if (pb.pipeline)
+        cout << "pipeline:   " << GST_OBJECT_REFCOUNT(pb.pipeline) << endl;
+    if (pb.video_sink)
+        cout << "video_sink: " << GST_OBJECT_REFCOUNT(pb.video_sink) << endl;
+    if (pb.audio_sink)
+        cout << "audio_sink: " << GST_OBJECT_REFCOUNT(pb.audio_sink) << endl;
+}
+#endif
+
 gstreamer::Playbin::~Playbin()
 {
+#ifdef DEBUG_REFS
+    print_refs(*this, "gstreamer::Playbin::~Playbin pipeline");
+#endif
+
     g_signal_handler_disconnect(pipeline, about_to_finish_handler_id);
     g_signal_handler_disconnect(pipeline, source_setup_handler_id);
 
     if (pipeline)
         gst_object_unref(pipeline);
 
-    if (video_sink)
-        gst_object_unref(video_sink);
-
-    if (audio_sink)
-        gst_object_unref(audio_sink);
+#ifdef DEBUG_REFS
+    print_refs(*this, "gstreamer::Playbin::~Playbin pipeline");
+#endif
 }
 
 void gstreamer::Playbin::reset()
@@ -301,8 +321,6 @@ void gstreamer::Playbin::setup_pipeline_for_audio_video()
                     "audio-sink",
                     audio_sink,
                     NULL);
-
-        gst_object_unref(audio_sink);
     }
 
     if (::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME") != nullptr)
@@ -318,8 +336,6 @@ void gstreamer::Playbin::setup_pipeline_for_audio_video()
                 "video-sink",
                 video_sink,
                 NULL);
-
-        gst_object_unref(video_sink);
     }
 }
 
@@ -378,17 +394,13 @@ media::Player::Orientation gstreamer::Playbin::orientation_lut(const gchar *orie
 /** Sets the new audio stream role on the pulsesink in playbin */
 void gstreamer::Playbin::set_audio_stream_role(media::Player::AudioStreamRole new_audio_role)
 {
-    GstElement *audio_sink = NULL;
-    g_object_get (pipeline, "audio-sink", &audio_sink, NULL);
-
     std::string role_str("props,media.role=" + get_audio_role_str(new_audio_role));
     std::cout << "Audio stream role: " << role_str << std::endl;
 
     GstStructure *props = gst_structure_from_string (role_str.c_str(), NULL);
-    if (audio_sink != nullptr && props != nullptr)
+    if (audio_sink != nullptr && props != nullptr) {
         g_object_set (audio_sink, "stream-properties", props, NULL);
-    else
-    {
+    } else {
         std::cerr <<
             "Warning: couldn't set audio stream role - couldn't get audio_sink from pipeline" <<
             std::endl;
