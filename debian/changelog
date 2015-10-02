@@ -1,3 +1,11 @@
+media-hub (3.1.0+15.04.20151002-0ubuntu1) vivid; urgency=medium
+
+  * Avoid getting additional references for audio_sink, which were not
+    being freed. Also, remove unneeded unrefs that must be performed in
+    gstreamer instead.
+
+ -- Alfonso Sanchez-Beato <alfonso.sanchez-beato@canonical.com>  Fri, 02 Oct 2015 14:23:08 +0000
+
 media-hub (3.1.0+15.04.20150923.1-0ubuntu1) vivid; urgency=medium
 
   [ Simon Fels ]
