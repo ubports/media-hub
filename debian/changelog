@@ -1,12 +1,16 @@
-media-hub (3.2.0+15.04.20150928-0ubuntu1) UNRELEASED; urgency=medium
+media-hub (3.2.0+15.04.20151014-0ubuntu1) vivid; urgency=medium
 
+  [ Jim Hodapp ]
   * Make sure the correct player is set as the current player controled by
     MPRIS.
   * Improved the can_go_next() and can_go_previous() logic to always return
     true if the loop_status is currently set to loop over the entire
     playlist.
 
- -- Jim Hodapp <jim.hodapp@canonical.com>  Tue, 08 Sep 2015 17:18:15 -0400
+  [ CI Train Bot ]
+  * No-change rebuild.
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Wed, 14 Oct 2015 20:58:32 +0000
 
 media-hub (3.1.0+15.04.20151002-0ubuntu1) vivid; urgency=medium
 
