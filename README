@@ -1,3 +1,12 @@
+Coding Convention:
+------------------
+
+NOTE: the media-hub code did not start out with the following coding convention, but it is being introduced to try and
+converge on a standard from this point forward:
+
+https://google-styleguide.googlecode.com/svn/trunk/cppguide.html
+
+
 To Build:
 ---------
 

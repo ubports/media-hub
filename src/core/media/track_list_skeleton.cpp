@@ -241,8 +241,23 @@ media::TrackListSkeleton::~TrackListSkeleton()
 
 bool media::TrackListSkeleton::has_next()
 {
-    if (tracks().get().empty())
+    const auto n_tracks = tracks().get().size();
+
+    if (n_tracks == 0)
         return false;
+
+    // TODO Using current_iterator() makes media-hub crash later. Logic for
+    // handling the iterators must be reviewed. As a minimum updates to the
+    // track list should update current_track instead of the list being sneakly
+    // changed in player_implementation.cpp.
+    // To avoid the crash we consider that current_track will be eventually
+    // initialized to the first track when current_iterator() gets called.
+    if (d->current_track == d->empty_iterator) {
+        if (n_tracks < 2)
+            return false;
+        else
+            return true;
+    }
 
     const auto next_track = std::next(current_iterator());
     return !is_last_track(next_track);
@@ -250,7 +265,7 @@ bool media::TrackListSkeleton::has_next()
 
 bool media::TrackListSkeleton::has_previous()
 {
-    if (tracks().get().empty())
+    if (tracks().get().empty() || d->current_track == d->empty_iterator)
         return false;
 
     // If we are looping over the entire list, then there is always a previous track
@@ -273,8 +288,11 @@ bool media::TrackListSkeleton::is_last_track(const TrackList::ConstIterator &it)
 media::Track::Id media::TrackListSkeleton::next()
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
-    if (tracks().get().empty())
-        return *(d->empty_iterator);
+    if (tracks().get().empty()) {
+        // TODO Change ServiceSkeleton to return with error from DBus call
+        std::cerr << "ERROR: no tracks, cannot go to next" << std::endl;
+        return media::Track::Id{};
+    }
 
     const auto next_track = std::next(current_iterator());
     bool do_go_to_next_track = false;
@@ -328,8 +346,11 @@ media::Track::Id media::TrackListSkeleton::next()
 media::Track::Id media::TrackListSkeleton::previous()
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
-    if (tracks().get().empty())
-        return *(d->empty_iterator);
+    if (tracks().get().empty()) {
+        // TODO Change ServiceSkeleton to return with error from DBus call
+        std::cerr << "ERROR: no tracks, cannot go to previous" << std::endl;
+        return media::Track::Id{};
+    }
 
     bool do_go_to_previous_track = false;
 
@@ -521,7 +542,6 @@ core::Signal<void>& media::TrackListSkeleton::on_end_of_tracklist()
 
 void media::TrackListSkeleton::reset()
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
     d->current_track = d->empty_iterator;
 }
 

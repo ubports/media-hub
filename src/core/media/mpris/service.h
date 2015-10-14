@@ -115,6 +115,7 @@ struct Service
     DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(DestroySession, Service, 1000)
     DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(CreateFixedSession, Service, 1000)
     DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(ResumeSession, Service, 1000)
+    DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(SetCurrentPlayer, Service, 1000)
     DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(PauseOtherSessions, Service, 1000)
 };
 }
