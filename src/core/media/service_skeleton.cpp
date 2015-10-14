@@ -59,7 +59,7 @@ struct media::ServiceSkeleton::Private
           object(impl->access_service()->add_object_for_path(
                      dbus::traits::Service<media::Service>::object_path())),
           configuration(config),
-          exported(impl->access_bus(), config.cover_art_resolver)
+          exported(impl->access_bus(), config.cover_art_resolver, impl)
     {
         object->install_method_handler<mpris::Service::CreateSession>(
                     std::bind(
@@ -495,7 +495,8 @@ struct media::ServiceSkeleton::Private
             return defaults;
         }
 
-        explicit Exported(const dbus::Bus::Ptr& bus, const media::CoverArtResolver& cover_art_resolver)
+        explicit Exported(const dbus::Bus::Ptr& bus, const media::CoverArtResolver& cover_art_resolver,
+                media::ServiceSkeleton* impl)
             : bus{bus},
               /* Export MediaHub service interface on dbus */
               service{dbus::Service::add_service(bus, "org.mpris.MediaPlayer2.MediaHub")},
@@ -503,7 +504,8 @@ struct media::ServiceSkeleton::Private
               media_player{mpris::MediaPlayer2::Skeleton::Configuration{bus, object, media_player_defaults()}},
               player{mpris::Player::Skeleton::Configuration{bus, object, player_defaults()}},
               playlists{mpris::Playlists::Skeleton::Configuration{bus, object, mpris::Playlists::Skeleton::Configuration::Defaults{}}},
-              cover_art_resolver{cover_art_resolver}
+              cover_art_resolver{cover_art_resolver},
+              impl{impl}
         {
             object->install_method_handler<core::dbus::interfaces::Properties::GetAll>([this](const core::dbus::Message::Ptr& msg)
             {
@@ -567,18 +569,25 @@ struct media::ServiceSkeleton::Private
             };
             object->install_method_handler<mpris::Player::Stop>(stop);
 
-            auto play = [this](const core::dbus::Message::Ptr& msg)
+            auto play = [this, impl](const core::dbus::Message::Ptr& msg)
             {
                 const auto sp = current_player.lock();
 
                 if (is_multimedia_role() and sp->can_play())
+                {
+                    // Make sure other player sessions that are already playing
+                    // are paused before triggering new player (sp) to play
+                    if (impl)
+                        impl->pause_other_sessions(sp->key());
+
                     sp->play();
+                }
 
                 Exported::bus->send(core::dbus::Message::make_method_return(msg));
             };
             object->install_method_handler<mpris::Player::Play>(play);
 
-            auto play_pause = [this](const core::dbus::Message::Ptr& msg)
+            auto play_pause = [this, impl](const core::dbus::Message::Ptr& msg)
             {
                 const auto sp = current_player.lock();
 
@@ -589,7 +598,14 @@ struct media::ServiceSkeleton::Private
                         sp->pause();
                     else if (sp->playback_status() != media::Player::PlaybackStatus::null
                                 and sp->can_play())
+                    {
+                        // Make sure other player sessions that are already playing
+                        // are paused before triggering new player (sp) to play
+                        if (impl)
+                            impl->pause_other_sessions(sp->key());
+
                         sp->play();
+                    }
                 }
 
                 Exported::bus->send(core::dbus::Message::make_method_return(msg));
@@ -705,10 +721,10 @@ struct media::ServiceSkeleton::Private
                             has_title ? md.get(xesam::Title::name) : "",
                             has_album_name ? md.get(xesam::Album::name) : "",
                             has_artist_name ? md.get(xesam::Artist::name) : ""));
-                    
+
                     mpris::Player::Dictionary wrap;
                     wrap[mpris::Player::Properties::Metadata::name()] = dbus::types::Variant::encode(dict);
-                    
+
                     player.signals.properties_changed->emit(
                         std::make_tuple(
                             dbus::traits::Service<
@@ -740,6 +756,9 @@ struct media::ServiceSkeleton::Private
         media::CoverArtResolver cover_art_resolver;
         // The actual player instance.
         std::weak_ptr<media::Player> current_player;
+
+        media::ServiceSkeleton* impl;
+
         // We track event connections.
         struct
         {
