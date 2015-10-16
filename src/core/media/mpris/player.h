@@ -192,12 +192,12 @@ struct Player
             // Default values for properties
             struct Defaults
             {
-                Properties::CanPlay::ValueType can_play{true};
-                Properties::CanPause::ValueType can_pause{true};
+                Properties::CanPlay::ValueType can_play{false};
+                Properties::CanPause::ValueType can_pause{false};
                 Properties::CanSeek::ValueType can_seek{true};
                 Properties::CanControl::ValueType can_control{true};
-                Properties::CanGoNext::ValueType can_go_next{true};
-                Properties::CanGoPrevious::ValueType can_go_previous{true};
+                Properties::CanGoNext::ValueType can_go_next{false};
+                Properties::CanGoPrevious::ValueType can_go_previous{false};
                 Properties::IsVideoSource::ValueType is_video_source{false};
                 Properties::IsAudioSource::ValueType is_audio_source{true};
                 Properties::PlaybackStatus::ValueType playback_status{PlaybackStatus::stopped};
@@ -306,6 +306,26 @@ struct Player
             properties.shuffle->changed().connect([this](bool shuffle)
             {
                 on_property_value_changed<Properties::Shuffle>(shuffle);
+            });
+
+            properties.can_play->changed().connect([this](bool can_play)
+            {
+                on_property_value_changed<Properties::CanPlay>(can_play);
+            });
+
+            properties.can_pause->changed().connect([this](bool can_pause)
+            {
+                on_property_value_changed<Properties::CanPause>(can_pause);
+            });
+
+            properties.can_go_next->changed().connect([this](bool can_go_next)
+            {
+                on_property_value_changed<Properties::CanGoNext>(can_go_next);
+            });
+
+            properties.can_go_previous->changed().connect([this](bool can_go_previous)
+            {
+                on_property_value_changed<Properties::CanGoPrevious>(can_go_previous);
             });
         }
 

@@ -301,6 +301,27 @@ struct media::PlayerImplementation<Parent>::Private :
         }
     }
 
+    void update_mpris_properties(void)
+    {
+        bool has_previous =    track_list->has_previous()
+                            or parent->Parent::loop_status() != Player::LoopStatus::none;
+        bool has_next =    track_list->has_next()
+                        or parent->Parent::loop_status() != Player::LoopStatus::none;
+        auto n_tracks = track_list->tracks()->size();
+        bool has_tracks = (n_tracks > 0) ? true : false;
+
+        std::cout << "Updating MPRIS TrackList properties"
+                  << "; Tracks: " << n_tracks
+                  << ", has_previous: " << has_previous
+                  << ", has_next: " << has_next << std::endl;
+
+        // Update properties
+        parent->can_play().set(has_tracks);
+        parent->can_pause().set(has_tracks);
+        parent->can_go_previous().set(has_previous);
+        parent->can_go_next().set(has_next);
+    }
+
     // Our link back to our parent.
     media::PlayerImplementation<Parent>* parent;
     // We just store the parameters passed on construction.
@@ -327,8 +348,8 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
       d{std::make_shared<Private>(this, config)}
 {
     // Initialize default values for Player interface properties
-    Parent::can_play().set(true);
-    Parent::can_pause().set(true);
+    Parent::can_play().set(false);
+    Parent::can_pause().set(false);
     Parent::can_seek().set(true);
     Parent::can_go_previous().set(false);
     Parent::can_go_next().set(false);
@@ -376,13 +397,15 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
 
     std::function<bool()> can_go_next_getter = [this]()
     {
-        return d->track_list->has_next();
+        // If LoopStatus == playlist, then there is always a next track
+        return d->track_list->has_next() or Parent::loop_status() != Player::LoopStatus::none;
     };
     Parent::can_go_next().install(can_go_next_getter);
 
     std::function<bool()> can_go_previous_getter = [this]()
     {
-        return d->track_list->has_previous();
+        // If LoopStatus == playlist, then there is always a next previous
+        return d->track_list->has_previous() or Parent::loop_status() != Player::LoopStatus::none;
     };
     Parent::can_go_previous().install(can_go_previous_getter);
 
@@ -520,7 +543,26 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         std::cout << "** Track was added, handling in PlayerImplementation" << std::endl;
         if (d->track_list->tracks()->size() == 1)
             d->open_first_track_from_tracklist(id);
+
+        d->update_mpris_properties();
     });
+
+    d->track_list->on_track_removed().connect([this](const media::Track::Id&)
+    {
+        d->update_mpris_properties();
+    });
+
+    d->track_list->on_track_changed().connect([this](const media::Track::Id&)
+    {
+        d->update_mpris_properties();
+    });
+
+    d->track_list->on_track_list_replaced().connect(
+        [this](const media::TrackList::ContainerTrackIdTuple&)
+        {
+            d->update_mpris_properties();
+        }
+    );
 
     // Everything is setup, we now subscribe to death notifications.
     std::weak_ptr<Private> wp{d};
