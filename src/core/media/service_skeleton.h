@@ -59,6 +59,7 @@ public:
     void destroy_session(const std::string&, const media::Player::Configuration&);
     std::shared_ptr<Player> create_fixed_session(const std::string& name, const Player::Configuration&);
     std::shared_ptr<Player> resume_session(Player::PlayerKey);
+    void set_current_player(Player::PlayerKey key);
     void pause_other_sessions(Player::PlayerKey key);
 
     void run();

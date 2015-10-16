@@ -59,7 +59,7 @@ struct media::ServiceSkeleton::Private
           object(impl->access_service()->add_object_for_path(
                      dbus::traits::Service<media::Service>::object_path())),
           configuration(config),
-          exported(impl->access_bus(), config.cover_art_resolver)
+          exported(impl->access_bus(), config.cover_art_resolver, impl)
     {
         object->install_method_handler<mpris::Service::CreateSession>(
                     std::bind(
@@ -91,6 +91,11 @@ struct media::ServiceSkeleton::Private
                         &Private::handle_resume_session,
                         this,
                         std::placeholders::_1));
+        object->install_method_handler<mpris::Service::SetCurrentPlayer>(
+                    std::bind(
+                        &Private::handle_set_current_player,
+                        this,
+                        std::placeholders::_1));
         object->install_method_handler<mpris::Service::PauseOtherSessions>(
                     std::bind(
                         &Private::handle_pause_other_sessions,
@@ -102,7 +107,7 @@ struct media::ServiceSkeleton::Private
     {
         static unsigned int session_counter = 0;
 
-        unsigned int current_session = session_counter++;
+        const unsigned int current_session = session_counter++;
         boost::uuids::uuid uuid = gen();
 
         std::stringstream ss;
@@ -134,7 +139,8 @@ struct media::ServiceSkeleton::Private
             configuration.player_store->add_player_for_key(key, impl->create_session(config));
             uuid_player_map.insert(std::make_pair(uuid, key));
 
-            request_context_resolver->resolve_context_for_dbus_name_async(msg->sender(), [this, key, msg](const media::apparmor::ubuntu::Context& context)
+            request_context_resolver->resolve_context_for_dbus_name_async(msg->sender(),
+                    [this, key, msg](const media::apparmor::ubuntu::Context& context)
             {
                 fprintf(stderr, "%s():%d -- app_name='%s', attached\n", __func__, __LINE__, context.str().c_str());
                 player_owner_map.insert(std::make_pair(key, std::make_tuple(context.str(), true, msg->sender())));
@@ -213,7 +219,8 @@ struct media::ServiceSkeleton::Private
                 ss << "/core/ubuntu/media/Service/sessions/" << key;
                 dbus::types::ObjectPath op{ss.str()};
 
-                request_context_resolver->resolve_context_for_dbus_name_async(msg->sender(), [this, msg, key, op](const media::apparmor::ubuntu::Context& context)
+                request_context_resolver->resolve_context_for_dbus_name_async(msg->sender(),
+                        [this, msg, key, op](const media::apparmor::ubuntu::Context& context)
                 {
                     auto info = player_owner_map.at(key);
                     fprintf(stderr, "%s():%d -- reattach app_name='%s', info='%s', '%s'\n", __func__, __LINE__, context.str().c_str(), std::get<0>(info).c_str(), std::get<2>(info).c_str());
@@ -224,6 +231,12 @@ struct media::ServiceSkeleton::Private
                         // Signal player reconnection
                         auto player = configuration.player_store->player_for_key(key);
                         player->reconnect();
+                        // We only care to allow the MPRIS controls to apply to multimedia player (i.e. audio, video)
+                        if (player->audio_stream_role() == media::Player::AudioStreamRole::multimedia)
+                        {
+                            std::cout << "Setting current_player" << std::endl;
+                            exported.set_current_player(player);
+                        }
 
                         auto reply = dbus::Message::make_method_return(msg);
                         reply->writer() << op;
@@ -280,7 +293,8 @@ struct media::ServiceSkeleton::Private
                 // the session is no longer usable.
                 uuid_player_map.erase(uuid);
 
-                request_context_resolver->resolve_context_for_dbus_name_async(msg->sender(), [this, msg, key](const media::apparmor::ubuntu::Context& context)
+                request_context_resolver->resolve_context_for_dbus_name_async(msg->sender(),
+                        [this, msg, key](const media::apparmor::ubuntu::Context& context)
                 {
                     auto info = player_owner_map.at(key);
                     fprintf(stderr, "%s():%d -- Destroying app_name='%s', info='%s', '%s'\n", __func__, __LINE__, context.str().c_str(), std::get<0>(info).c_str(), std::get<2>(info).c_str());
@@ -424,9 +438,18 @@ struct media::ServiceSkeleton::Private
         }
     }
 
+    void handle_set_current_player(const core::dbus::Message::Ptr& msg)
+    {
+        Player::PlayerKey key;
+        msg->reader() >> key;
+        impl->set_current_player(key);
+
+        auto reply = dbus::Message::make_method_return(msg);
+        impl->access_bus()->send(reply);
+    }
+
     void handle_pause_other_sessions(const core::dbus::Message::Ptr& msg)
     {
-        std::cout << __PRETTY_FUNCTION__ << std::endl;
         Player::PlayerKey key;
         msg->reader() >> key;
         impl->pause_other_sessions(key);
@@ -469,45 +492,33 @@ struct media::ServiceSkeleton::Private
         {
             mpris::Player::Skeleton::Configuration::Defaults defaults;
 
-            // Disabled as track list is not fully implemented yet.
-            defaults.can_go_next = false;
-            // Disabled as track list is not fully implemented yet.
-            defaults.can_go_previous = false;
-
             return defaults;
         }
 
-        static std::string service_name()
-        {
-            static const bool export_to_indicator_sound_via_mpris
-            {
-                core::posix::this_process::env::get("UBUNTU_MEDIA_HUB_EXPORT_TO_INDICATOR_VIA_MPRIS", "0") == "1"
-            };
-
-            return export_to_indicator_sound_via_mpris ? "org.mpris.MediaPlayer2.MediaHub" :
-                                                         "hidden.org.mpris.MediaPlayer2.MediaHub";
-        }
-
-        explicit Exported(const dbus::Bus::Ptr& bus, const media::CoverArtResolver& cover_art_resolver)
+        explicit Exported(const dbus::Bus::Ptr& bus, const media::CoverArtResolver& cover_art_resolver,
+                media::ServiceSkeleton* impl)
             : bus{bus},
-              service{dbus::Service::add_service(bus, service_name())},
+              /* Export MediaHub service interface on dbus */
+              service{dbus::Service::add_service(bus, "org.mpris.MediaPlayer2.MediaHub")},
               object{service->add_object_for_path(dbus::types::ObjectPath{"/org/mpris/MediaPlayer2"})},
               media_player{mpris::MediaPlayer2::Skeleton::Configuration{bus, object, media_player_defaults()}},
               player{mpris::Player::Skeleton::Configuration{bus, object, player_defaults()}},
               playlists{mpris::Playlists::Skeleton::Configuration{bus, object, mpris::Playlists::Skeleton::Configuration::Defaults{}}},
-              cover_art_resolver{cover_art_resolver}
+              cover_art_resolver{cover_art_resolver},
+              impl{impl}
         {
             object->install_method_handler<core::dbus::interfaces::Properties::GetAll>([this](const core::dbus::Message::Ptr& msg)
             {
                 // Extract the interface
-                std::string itf; msg->reader() >> itf;
+                std::string interface;
+                msg->reader() >> interface;
                 core::dbus::Message::Ptr reply = core::dbus::Message::make_method_return(msg);
 
-                if (itf == mpris::Player::name())
+                if (interface == mpris::Player::name())
                     reply->writer() << player.get_all_properties();
-                else if (itf == mpris::MediaPlayer2::name())
+                else if (interface == mpris::MediaPlayer2::name())
                     reply->writer() << media_player.get_all_properties();
-                else if (itf == mpris::Playlists::name())
+                else if (interface == mpris::Playlists::name())
                     reply->writer() << playlists.get_all_properties();
 
                 Exported::bus->send(reply);
@@ -516,9 +527,9 @@ struct media::ServiceSkeleton::Private
             // Setup method handlers for mpris::Player methods.
             auto next = [this](const core::dbus::Message::Ptr& msg)
             {
-                auto sp = current_player.lock();
+                const auto sp = current_player.lock();
 
-                if (sp)
+                if (is_multimedia_role())
                     sp->next();
 
                 Exported::bus->send(core::dbus::Message::make_method_return(msg));
@@ -527,9 +538,9 @@ struct media::ServiceSkeleton::Private
 
             auto previous = [this](const core::dbus::Message::Ptr& msg)
             {
-                auto sp = current_player.lock();
+                const auto sp = current_player.lock();
 
-                if (sp)
+                if (is_multimedia_role())
                     sp->previous();
 
                 Exported::bus->send(core::dbus::Message::make_method_return(msg));
@@ -538,9 +549,9 @@ struct media::ServiceSkeleton::Private
 
             auto pause = [this](const core::dbus::Message::Ptr& msg)
             {
-                auto sp = current_player.lock();
+                const auto sp = current_player.lock();
 
-                if (sp)
+                if (is_multimedia_role() and sp->can_pause())
                     sp->pause();
 
                 Exported::bus->send(core::dbus::Message::make_method_return(msg));
@@ -549,36 +560,52 @@ struct media::ServiceSkeleton::Private
 
             auto stop = [this](const core::dbus::Message::Ptr& msg)
             {
-                auto sp = current_player.lock();
+                const auto sp = current_player.lock();
 
-                if (sp)
+                if (is_multimedia_role())
                     sp->stop();
 
                 Exported::bus->send(core::dbus::Message::make_method_return(msg));
             };
             object->install_method_handler<mpris::Player::Stop>(stop);
 
-            auto play = [this](const core::dbus::Message::Ptr& msg)
+            auto play = [this, impl](const core::dbus::Message::Ptr& msg)
             {
-                auto sp = current_player.lock();
+                const auto sp = current_player.lock();
 
-                if (sp)
+                if (is_multimedia_role() and sp->can_play())
+                {
+                    // Make sure other player sessions that are already playing
+                    // are paused before triggering new player (sp) to play
+                    if (impl)
+                        impl->pause_other_sessions(sp->key());
+
                     sp->play();
+                }
 
                 Exported::bus->send(core::dbus::Message::make_method_return(msg));
             };
             object->install_method_handler<mpris::Player::Play>(play);
 
-            auto play_pause = [this](const core::dbus::Message::Ptr& msg)
+            auto play_pause = [this, impl](const core::dbus::Message::Ptr& msg)
             {
-                auto sp = current_player.lock();
+                const auto sp = current_player.lock();
 
-                if (sp)
+                if (is_multimedia_role())
                 {
-                    if (sp->playback_status() == media::Player::PlaybackStatus::playing)
+                    if (sp->playback_status() == media::Player::PlaybackStatus::playing
+                            and sp->can_pause())
                         sp->pause();
-                    else if (sp->playback_status() != media::Player::PlaybackStatus::null)
+                    else if (sp->playback_status() != media::Player::PlaybackStatus::null
+                                and sp->can_play())
+                    {
+                        // Make sure other player sessions that are already playing
+                        // are paused before triggering new player (sp) to play
+                        if (impl)
+                            impl->pause_other_sessions(sp->key());
+
                         sp->play();
+                    }
                 }
 
                 Exported::bus->send(core::dbus::Message::make_method_return(msg));
@@ -586,15 +613,21 @@ struct media::ServiceSkeleton::Private
             object->install_method_handler<mpris::Player::PlayPause>(play_pause);
         }
 
+        inline bool is_multimedia_role()
+        {
+            const auto sp = current_player.lock();
+
+            return (sp ? sp->audio_stream_role() == media::Player::AudioStreamRole::multimedia : false);
+        }
+
         void set_current_player(const std::shared_ptr<media::Player>& cp)
         {
-            unset_current_player();
-
+            std::cout << "*** " << __PRETTY_FUNCTION__ << std::endl;
             // We will not keep the object alive.
             current_player = cp;
 
             // And announce that we can be controlled again.
-            player.properties.can_control->set(false);
+            player.properties.can_control->set(true);
 
             // We wire up player state changes
             connections.seeked_to = cp->seeked_to().connect([this](std::uint64_t position)
@@ -612,68 +645,103 @@ struct media::ServiceSkeleton::Private
                 player.properties.position->set(position);
             });
 
-            connections.playback_status_changed = cp->playback_status().changed().connect([this](core::ubuntu::media::Player::PlaybackStatus status)
+            connections.playback_status_changed = cp->playback_status().changed().connect(
+                [this](core::ubuntu::media::Player::PlaybackStatus status)
             {
                 player.properties.playback_status->set(mpris::Player::PlaybackStatus::from(status));
             });
 
-            connections.loop_status_changed = cp->loop_status().changed().connect([this](core::ubuntu::media::Player::LoopStatus status)
+            connections.loop_status_changed = cp->loop_status().changed().connect(
+                [this](core::ubuntu::media::Player::LoopStatus status)
             {
                 player.properties.loop_status->set(mpris::Player::LoopStatus::from(status));
             });
 
-            connections.meta_data_changed = cp->meta_data_for_current_track().changed().connect([this](const core::ubuntu::media::Track::MetaData& md)
+            connections.can_play_changed = cp->can_play().changed().connect(
+                [this](bool can_play)
             {
-                mpris::Player::Dictionary dict;
-
-                bool has_title = md.count(xesam::Title::name) > 0;
-                bool has_album_name = md.count(xesam::Album::name) > 0;
-                bool has_artist_name = md.count(xesam::Artist::name) > 0;
-
-                if (has_title)
-                    dict[xesam::Title::name] = dbus::types::Variant::encode(md.get(xesam::Title::name));
-                if (has_album_name)
-                    dict[xesam::Album::name] = dbus::types::Variant::encode(md.get(xesam::Album::name));
-                if (has_artist_name)
-                    dict[xesam::Artist::name] = dbus::types::Variant::encode(md.get(xesam::Artist::name));
-
-                dict[mpris::metadata::ArtUrl::name] = dbus::types::Variant::encode(
-                            cover_art_resolver(
-                                has_title ? md.get(xesam::Title::name) : "",
-                                has_album_name ? md.get(xesam::Album::name) : "",
-                                has_artist_name ? md.get(xesam::Artist::name) : ""));
-
-                mpris::Player::Dictionary wrap;
-                wrap[mpris::Player::Properties::Metadata::name()] = dbus::types::Variant::encode(dict);
-
-                player.signals.properties_changed->emit(
-                            std::make_tuple(
-                                dbus::traits::Service<mpris::Player::Properties::Metadata::Interface>::interface_name(),
-                                wrap,
-                                std::vector<std::string>()));
+                player.properties.can_play->set(can_play);
             });
+
+            connections.can_pause_changed = cp->can_pause().changed().connect(
+                [this](bool can_pause)
+            {
+                player.properties.can_pause->set(can_pause);
+            });
+
+            connections.can_go_previous_changed = cp->can_go_previous().changed().connect(
+                [this](bool can_go_previous)
+            {
+                player.properties.can_go_previous->set(can_go_previous);
+            });
+
+            connections.can_go_next_changed = cp->can_go_next().changed().connect(
+                [this](bool can_go_next)
+            {
+                player.properties.can_go_next->set(can_go_next);
+            });
+
+            // Sync property values between session and player mpris::Player instances
+            // TODO Getters from media::Player actually return values from a
+            // mpris::Player::Skeleton instance different from "player". Each of them use
+            // different DBus object paths, /core/ubuntu/media/Service/sessions/<n>
+            // and /org/mpris/MediaPlayer2 (this is the one enforced by the MPRIS spec).
+            // Discuss why this is needed with tvoss.
+            player.properties.duration->set(cp->duration().get());
+            player.properties.position->set(cp->position().get());
+            player.properties.playback_status->set(mpris::Player::PlaybackStatus::from(
+                                                       cp->playback_status().get()));
+            player.properties.loop_status->set(mpris::Player::LoopStatus::from(
+                                                   cp->loop_status().get()));
+            player.properties.can_play->set(cp->can_play().get());
+            player.properties.can_pause->set(cp->can_pause().get());
+            player.properties.can_go_previous->set(cp->can_go_previous().get());
+            player.properties.can_go_next->set(cp->can_go_next().get());
+
+#if 0
+            // TODO cover_art_resolver() is not implemented yet
+            connections.meta_data_changed = cp->meta_data_for_current_track().changed().connect(
+                [this](const core::ubuntu::media::Track::MetaData& md)
+                {
+                    mpris::Player::Dictionary dict;
+
+                    bool has_title = md.count(xesam::Title::name) > 0;
+                    bool has_album_name = md.count(xesam::Album::name) > 0;
+                    bool has_artist_name = md.count(xesam::Artist::name) > 0;
+
+                    if (has_title)
+                        dict[xesam::Title::name] = dbus::types::Variant::encode(md.get(xesam::Title::name));
+                    if (has_album_name)
+                        dict[xesam::Album::name] = dbus::types::Variant::encode(md.get(xesam::Album::name));
+                    if (has_artist_name)
+                        dict[xesam::Artist::name] = dbus::types::Variant::encode(md.get(xesam::Artist::name));
+
+                    dict[mpris::metadata::ArtUrl::name] = dbus::types::Variant::encode(
+                        cover_art_resolver(
+                            has_title ? md.get(xesam::Title::name) : "",
+                            has_album_name ? md.get(xesam::Album::name) : "",
+                            has_artist_name ? md.get(xesam::Artist::name) : ""));
+
+                    mpris::Player::Dictionary wrap;
+                    wrap[mpris::Player::Properties::Metadata::name()] = dbus::types::Variant::encode(dict);
+
+                    player.signals.properties_changed->emit(
+                        std::make_tuple(
+                            dbus::traits::Service<
+                            mpris::Player::Properties::Metadata::Interface>
+                            ::interface_name(),
+                            wrap,
+                            std::vector<std::string>()));
+                });
+#endif
         }
 
-        void unset_current_player()
+        void reset_current_player()
         {
-            current_player.reset();
-
-            // We disconnect all previous event connections.
-            connections.seeked_to.disconnect();
-            connections.duration_changed.disconnect();
-            connections.position_changed.disconnect();
-            connections.playback_status_changed.disconnect();
-            connections.loop_status_changed.disconnect();
-            connections.meta_data_changed.disconnect();
-
-            // And announce that we cannot be controlled anymore.
+            std::cout << __PRETTY_FUNCTION__ << std::endl;
+            // And announce that we can no longer be controlled.
             player.properties.can_control->set(false);
-        }
-
-        void unset_if_current(const std::shared_ptr<media::Player>& cp)
-        {
-            if (cp == current_player.lock())
-                unset_current_player();
+            current_player.reset();
         }
 
         dbus::Bus::Ptr bus;
@@ -688,6 +756,9 @@ struct media::ServiceSkeleton::Private
         media::CoverArtResolver cover_art_resolver;
         // The actual player instance.
         std::weak_ptr<media::Player> current_player;
+
+        media::ServiceSkeleton* impl;
+
         // We track event connections.
         struct
         {
@@ -708,6 +779,22 @@ struct media::ServiceSkeleton::Private
                 the_empty_signal.connect([](){})
             };
             core::Connection loop_status_changed
+            {
+                the_empty_signal.connect([](){})
+            };
+            core::Connection can_play_changed
+            {
+                the_empty_signal.connect([](){})
+            };
+            core::Connection can_pause_changed
+            {
+                the_empty_signal.connect([](){})
+            };
+            core::Connection can_go_previous_changed
+            {
+                the_empty_signal.connect([](){})
+            };
+            core::Connection can_go_next_changed
             {
                 the_empty_signal.connect([](){})
             };
@@ -757,6 +844,14 @@ std::shared_ptr<media::Player> media::ServiceSkeleton::create_fixed_session(cons
 std::shared_ptr<media::Player> media::ServiceSkeleton::resume_session(media::Player::PlayerKey key)
 {
     return d->configuration.impl->resume_session(key);
+}
+
+void media::ServiceSkeleton::set_current_player(media::Player::PlayerKey key)
+{
+    const auto player = d->configuration.player_store->player_for_key(key);
+    // We only care to allow the MPRIS controls to apply to multimedia player (i.e. audio, video)
+    if (player->audio_stream_role() == media::Player::AudioStreamRole::multimedia)
+        d->exported.set_current_player(player);
 }
 
 void media::ServiceSkeleton::pause_other_sessions(media::Player::PlayerKey key)

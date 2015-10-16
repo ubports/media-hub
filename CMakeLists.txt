@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.8)
 project(ubuntu-media-hub)
 
 set(UBUNTU_MEDIA_HUB_VERSION_MAJOR 4)
-set(UBUNTU_MEDIA_HUB_VERSION_MINOR 0)
+set(UBUNTU_MEDIA_HUB_VERSION_MINOR 1)
 set(UBUNTU_MEDIA_HUB_VERSION_PATCH 0)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -fPIC -pthread")

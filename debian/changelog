@@ -1,3 +1,25 @@
+media-hub (4.1.0+15.10.20151016-0ubuntu1) UNRELEASED; urgency=medium
+
+  [ Simon Fels ]
+  * Prevent us from leaking file descriptors and memory due to not releasing
+    gstreamer elements correctly.
+
+  [ Alfonso Sanchez-Beato ]
+  * Avoid getting additional references for audio_sink, which were not
+    being freed. Also, remove unneeded unrefs that must be performed in
+    gstreamer instead.
+  * Emit CanPlay, CanPause, and CanGo[Next|Previous] in the mpris object path
+
+  [ Jim Hodapp ]
+  * Make sure the correct player is set as the current player controled by
+    MPRIS.
+  * Improved the can_go_next() and can_go_previous() logic to always return
+    true if the loop_status is currently set to loop over the entire
+    playlist.
+
+
+ -- Alfonso Sanchez-Beato (email Canonical) <alfonso.sanchez-beato@canonical.com>  Fri, 16 Oct 2015 10:28:38 +0200
+
 media-hub (4.0.0+15.10.20150907-0ubuntu1) wily; urgency=medium
 
   * Gather information about missing codecs and selected streams from
