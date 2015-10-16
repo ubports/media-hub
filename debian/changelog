@@ -1,4 +1,4 @@
-media-hub (4.1.0+15.10.20151016-0ubuntu1) UNRELEASED; urgency=medium
+media-hub (4.1.0+15.10.20151016.1-0ubuntu1) wily; urgency=medium
 
   [ Simon Fels ]
   * Prevent us from leaking file descriptors and memory due to not releasing
@@ -18,7 +18,10 @@ media-hub (4.1.0+15.10.20151016-0ubuntu1) UNRELEASED; urgency=medium
     playlist.
 
 
- -- Alfonso Sanchez-Beato (email Canonical) <alfonso.sanchez-beato@canonical.com>  Fri, 16 Oct 2015 10:28:38 +0200
+  [ CI Train Bot ]
+  * No-change rebuild.
+
+ -- Alfonso Sanchez-Beato <alfonso.sanchez-beato@canonical.com>  Fri, 16 Oct 2015 08:42:28 +0000
 
 media-hub (4.0.0+15.10.20150907-0ubuntu1) wily; urgency=medium
 
