@@ -78,8 +78,7 @@ struct TrackList
         (
             TracksAdded,
             TrackList,
-            BOOST_IDENTITY_TYPE((std::vector<core::ubuntu::media::Track::Id>))
-            //core::ubuntu::media::TrackList::ContainerURI
+            core::ubuntu::media::TrackList::ContainerURI
         )
 
         DBUS_CPP_SIGNAL_DEF
