@@ -20,6 +20,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <tuple>
+#include <unistd.h>
+
+#include <dbus/dbus.h>
 
 #include "track_list_implementation.h"
 
@@ -39,6 +42,69 @@ struct media::TrackListImplementation::Private
     // Used for caching the original tracklist order to be used to restore the order
     // to the live TrackList after shuffle is turned off
     media::TrackList::Container original_tracklist;
+
+    void signal_on_track_added(const media::Track::Id& id)
+    {
+        DBusMessage* msg;
+        DBusMessageIter args;
+        DBusConnection* conn;
+        DBusError err;
+        int ret;
+        dbus_uint32_t serial = 0;
+        const char* sigvalue = "/core/ubuntu/media/Service/sessions/1/TrackList/0";
+
+        // initialise the error value
+        dbus_error_init(&err);
+
+        // connect to the DBUS system bus, and check for errors
+        conn = dbus_bus_get(DBUS_BUS_SESSION, &err);
+        if (dbus_error_is_set(&err)) {
+            fprintf(stderr, "Connection Error (%s)\n", err.message);
+            dbus_error_free(&err);
+        }
+        if (NULL == conn) {
+            return;
+        }
+
+        // register our name on the bus, and check for errors
+        ret = dbus_bus_request_name(conn, "test.signal.source", DBUS_NAME_FLAG_REPLACE_EXISTING , &err);
+        if (dbus_error_is_set(&err)) {
+            fprintf(stderr, "Name Error (%s)\n", err.message);
+            dbus_error_free(&err);
+        }
+        if (DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER != ret) {
+            return;
+        }
+
+        // create a signal & check for errors
+        msg = dbus_message_new_signal("/test/signal/Object", // object name of the signal
+                "test.signal.Type", // interface name of the signal
+                "Test"); // name of the signal
+        if (NULL == msg)
+        {
+            fprintf(stderr, "Message Null\n");
+            return;
+        }
+
+        // append arguments onto signal
+        dbus_message_iter_init_append(msg, &args);
+        if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &sigvalue)) {
+            fprintf(stderr, "Out Of Memory!\n");
+            return;
+        }
+
+        // send the message and flush the connection
+        if (!dbus_connection_send(conn, msg, &serial)) {
+            fprintf(stderr, "Out Of Memory!\n");
+            return;
+        }
+        dbus_connection_flush(conn);
+
+        printf("Signal Sent\n");
+
+        // free the message and close the connection
+        dbus_message_unref(msg);
+    }
 };
 
 media::TrackListImplementation::TrackListImplementation(
@@ -137,9 +203,77 @@ void media::TrackListImplementation::add_track_with_uri_at(
 
         std::cout << "Signaling that we just added track id: " << id << std::endl;
         // Signal to the client that a track was added to the TrackList
+#if 1
         on_track_added()(id);
+#else
+        d->signal_on_track_added(id);
+#endif
         std::cout << "Signaled that we just added track id: " << id << std::endl;
     }
+}
+
+void media::TrackListImplementation::add_tracks_with_uri_at(const ContainerURI& uris, const Track::Id& position)
+{
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+
+    ContainerURI tmp = {"item1", "item2", "item3"};
+    for (const auto uri : uris)
+    {
+        // TODO: Refactor this code to use a smaller common function shared with add_track_with_uri_at()
+        std::stringstream ss; ss << d->object->path().as_string() << "/" << d->track_counter++;
+        Track::Id id{ss.str()};
+        std::cout << "Adding Track::Id: " << id << std::endl;
+        std::cout << "\tURI: " << uri << std::endl;
+
+        //tmp.push_back(id);
+
+        Track::Id insert_position = position;
+
+        auto it = std::find(tracks().get().begin(), tracks().get().end(), insert_position);
+        auto result = tracks().update([this, id, position, it, &insert_position](TrackList::Container& container)
+        {
+            std::cout << "About to insert track: " << id << std::endl;
+            container.insert(it, id);
+            // Make sure the next insert position is after the current insert position
+            std::cout << "container.size(): " << container.size() << std::endl;
+            // Update the Track::Id after which to insert the next one from uris
+            insert_position = id;
+
+            return true;
+        });
+
+        if (result)
+        {
+            if (d->meta_data_cache.count(id) == 0)
+            {
+                // FIXME: This code seems to conflict badly when called multiple times in a row: causes segfaults
+#if 0
+                try {
+                    d->meta_data_cache[id] = std::make_tuple(
+                            uri,
+                            d->extractor->meta_data_for_track_with_uri(uri));
+                } catch (const std::runtime_error &e) {
+                    std::cerr << "Failed to retrieve metadata for track '" << uri << "' (" << e.what() << ")" << std::endl;
+                }
+#else
+                d->meta_data_cache[id] = std::make_tuple(
+                        uri,
+                        core::ubuntu::media::Track::MetaData{});
+#endif
+            } else
+            {
+                std::get<0>(d->meta_data_cache[id]) = uri;
+            }
+
+            // Signal to the client that the current track has changed for the first track added to the TrackList
+            if (tracks().get().size() == 1)
+                on_track_changed()(id);
+
+        }
+    }
+
+    std::cout << "Signaling that we just added " << tmp.size() << " tracks" << std::endl;
+    on_tracks_added()(tmp);
 }
 
 void media::TrackListImplementation::remove_track(const media::Track::Id& id)
