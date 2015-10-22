@@ -104,11 +104,6 @@ struct media::TrackListStub::Private
             dbus.on_tracks_added->connect([this](const media::TrackList::ContainerURI& tracks)
             {
                 std::cout << "OnTracksAdded signal arrived via the bus." << std::endl;
-                std::cout << "OnTracksAdded tracks.size(): " << tracks.size() << std::endl;
-                for (auto track : tracks)
-                {
-                    std::cout << "Track: " << track << std::endl;
-                }
                 on_tracks_added(tracks);
             });
 
