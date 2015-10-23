@@ -206,7 +206,13 @@ void media::TrackListStub::add_track_with_uri_at(
                 make_current);
 
     if (op.is_error())
-        throw std::runtime_error("Problem adding track: " + op.error());
+    {
+        if (op.error().name() ==
+                mpris::TrackList::Error::InsufficientPermissionsToAddTrack::name)
+            throw media::TrackList::Errors::InsufficientPermissionsToAddTrack{};
+        else
+            throw std::runtime_error{op.error().print()};
+    }
 }
 
 void media::TrackListStub::add_tracks_with_uri_at(const ContainerURI& uris, const Track::Id& position)
@@ -216,7 +222,13 @@ void media::TrackListStub::add_tracks_with_uri_at(const ContainerURI& uris, cons
                 position);
 
     if (op.is_error())
-        throw std::runtime_error("Problem adding tracks: " + op.error());
+    {
+        if (op.error().name() ==
+                mpris::TrackList::Error::InsufficientPermissionsToAddTrack::name)
+            throw media::TrackList::Errors::InsufficientPermissionsToAddTrack{};
+        else
+            throw std::runtime_error{op.error().print()};
+    }
 }
 
 void media::TrackListStub::remove_track(const media::Track::Id& track)

@@ -48,6 +48,17 @@ struct TrackList
         return s;
     }
 
+    struct Error
+    {
+        struct InsufficientPermissionsToAddTrack
+        {
+            static constexpr const char* name
+            {
+                "mpris.TrackList.Error.InsufficientPermissionsToAddTrack"
+            };
+        };
+    };
+
     DBUS_CPP_METHOD_DEF(GetTracksMetadata, TrackList)
     DBUS_CPP_METHOD_DEF(GetTracksUri, TrackList)
     DBUS_CPP_METHOD_DEF(AddTrack, TrackList)

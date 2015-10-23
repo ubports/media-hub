@@ -94,9 +94,12 @@ struct media::TrackListSkeleton::Private
     void handle_add_track_with_uri_at(const core::dbus::Message::Ptr& msg)
     {
         std::cout << "*** " << __PRETTY_FUNCTION__ << std::endl;
-        request_context_resolver->resolve_context_for_dbus_name_async(msg->sender(), [this, msg](const media::apparmor::ubuntu::Context& context)
+        request_context_resolver->resolve_context_for_dbus_name_async
+            (msg->sender(), [this, msg](const media::apparmor::ubuntu::Context& context)
         {
-            Track::UriType uri; media::Track::Id after; bool make_current;
+            Track::UriType uri;
+            media::Track::Id after;
+            bool make_current;
             msg->reader() >> uri >> after >> make_current;
 
             // Make sure the client has adequate apparmor permissions to open the URI
@@ -105,10 +108,19 @@ struct media::TrackListSkeleton::Private
             auto reply = dbus::Message::make_method_return(msg);
             // Only add the track to the TrackList if it passes the apparmor permissions check
             if (std::get<0>(result))
+            {
                 impl->add_track_with_uri_at(uri, after, make_current);
+            }
             else
-                std::cerr << "Warning: Not adding track " << uri <<
-                    " to TrackList because of inadequate client apparmor permissions." << std::endl;
+            {
+                const std::string err_str = {"Warning: Not adding track " + uri +
+                    " to TrackList because of inadequate client apparmor permissions."};
+                std::cerr << err_str << std::endl;
+                reply = dbus::Message::make_error(
+                            msg,
+                            mpris::TrackList::Error::InsufficientPermissionsToAddTrack::name,
+                            err_str);
+            }
 
             bus->send(reply);
         });
@@ -117,20 +129,23 @@ struct media::TrackListSkeleton::Private
     void handle_add_tracks_with_uri_at(const core::dbus::Message::Ptr& msg)
     {
         std::cout << "*** " << __PRETTY_FUNCTION__ << std::endl;
-        request_context_resolver->resolve_context_for_dbus_name_async(msg->sender(), [this, msg](const media::apparmor::ubuntu::Context& context)
+        request_context_resolver->resolve_context_for_dbus_name_async
+            (msg->sender(), [this, msg](const media::apparmor::ubuntu::Context& context)
         {
-            ContainerURI uris; media::Track::Id after;
+            ContainerURI uris;
+            media::Track::Id after;
             msg->reader() >> uris >> after;
 
             media::apparmor::ubuntu::RequestAuthenticator::Result result;
+            std::string err_str;
             for (const auto uri : uris)
             {
                 // Make sure the client has adequate apparmor permissions to open the URI
                 result = request_authenticator->authenticate_open_uri_request(context, uri);
                 if (not std::get<0>(result))
                 {
-                    std::cerr << "Warning: Not adding track " << uri <<
-                        " to TrackList because of inadequate client apparmor permissions." << std::endl;
+                    err_str = {"Warning: Not adding track " + uri +
+                        " to TrackList because of inadequate client apparmor permissions."};
                     break;
                 }
             }
@@ -139,6 +154,14 @@ struct media::TrackListSkeleton::Private
             // Only add the track to the TrackList if it passes the apparmor permissions check
             if (std::get<0>(result))
                 impl->add_tracks_with_uri_at(uris, after);
+            else
+            {
+                std::cerr << err_str << std::endl;
+                reply = dbus::Message::make_error(
+                            msg,
+                            mpris::TrackList::Error::InsufficientPermissionsToAddTrack::name,
+                            err_str);
+            }
 
             bus->send(reply);
         });

@@ -46,6 +46,16 @@ class TrackList : public std::enable_shared_from_this<TrackList>
     typedef Container::iterator Iterator;
     typedef Container::const_iterator ConstIterator;
 
+    struct Errors
+    {
+        Errors() = delete;
+
+        struct InsufficientPermissionsToAddTrack : public std::runtime_error
+        {
+            InsufficientPermissionsToAddTrack();
+        };
+    };
+
     static const Track::Id& after_empty_track();
 
     TrackList(const TrackList&) = delete;

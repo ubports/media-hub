@@ -111,7 +111,8 @@ void media::TrackListImplementation::add_track_with_uri_at(
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
 
-    std::stringstream ss; ss << d->object->path().as_string() << "/" << d->track_counter++;
+    std::stringstream ss;
+    ss << d->object->path().as_string() << "/" << d->track_counter++;
     Track::Id id{ss.str()};
 
     std::cout << "Adding Track::Id: " << id << std::endl;
@@ -157,7 +158,8 @@ void media::TrackListImplementation::add_tracks_with_uri_at(const ContainerURI& 
     for (const auto uri : uris)
     {
         // TODO: Refactor this code to use a smaller common function shared with add_track_with_uri_at()
-        std::stringstream ss; ss << d->object->path().as_string() << "/" << d->track_counter++;
+        std::stringstream ss;
+        ss << d->object->path().as_string() << "/" << d->track_counter++;
         Track::Id id{ss.str()};
         std::cout << "Adding Track::Id: " << id << std::endl;
         std::cout << "\tURI: " << uri << std::endl;
