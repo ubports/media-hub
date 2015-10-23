@@ -20,6 +20,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <tuple>
+#include <unistd.h>
+
+#include <dbus/dbus.h>
 
 #include "track_list_implementation.h"
 
@@ -39,6 +42,30 @@ struct media::TrackListImplementation::Private
     // Used for caching the original tracklist order to be used to restore the order
     // to the live TrackList after shuffle is turned off
     media::TrackList::Container original_tracklist;
+
+    void updateCachedTrackMetadata(const media::Track::Id& id, const media::Track::UriType& uri)
+    {
+        if (meta_data_cache.count(id) == 0)
+        {
+            // FIXME: This code seems to conflict badly when called multiple times in a row: causes segfaults
+#if 0
+            try {
+                meta_data_cache[id] = std::make_tuple(
+                            uri,
+                            extractor->meta_data_for_track_with_uri(uri));
+            } catch (const std::runtime_error &e) {
+                std::cerr << "Failed to retrieve metadata for track '" << uri << "' (" << e.what() << ")" << std::endl;
+            }
+#else
+            meta_data_cache[id] = std::make_tuple(
+                    uri,
+                    core::ubuntu::media::Track::MetaData{});
+#endif
+        } else
+        {
+            std::get<0>(meta_data_cache[id]) = uri;
+        }
+    }
 };
 
 media::TrackListImplementation::TrackListImplementation(
@@ -84,7 +111,8 @@ void media::TrackListImplementation::add_track_with_uri_at(
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
 
-    std::stringstream ss; ss << d->object->path().as_string() << "/" << d->track_counter++;
+    std::stringstream ss;
+    ss << d->object->path().as_string() << "/" << d->track_counter++;
     Track::Id id{ss.str()};
 
     std::cout << "Adding Track::Id: " << id << std::endl;
@@ -101,26 +129,7 @@ void media::TrackListImplementation::add_track_with_uri_at(
 
     if (result)
     {
-        if (d->meta_data_cache.count(id) == 0)
-        {
-            // FIXME: This code seems to conflict badly when called multiple times in a row: causes segfaults
-#if 0
-            try {
-                d->meta_data_cache[id] = std::make_tuple(
-                            uri,
-                            d->extractor->meta_data_for_track_with_uri(uri));
-            } catch (const std::runtime_error &e) {
-                std::cerr << "Failed to retrieve metadata for track '" << uri << "' (" << e.what() << ")" << std::endl;
-            }
-#else
-            d->meta_data_cache[id] = std::make_tuple(
-                    uri,
-                    core::ubuntu::media::Track::MetaData{});
-#endif
-        } else
-        {
-            std::get<0>(d->meta_data_cache[id]) = uri;
-        }
+        d->updateCachedTrackMetadata(id, uri);
 
         if (make_current)
         {
@@ -138,8 +147,50 @@ void media::TrackListImplementation::add_track_with_uri_at(
         std::cout << "Signaling that we just added track id: " << id << std::endl;
         // Signal to the client that a track was added to the TrackList
         on_track_added()(id);
-        std::cout << "Signaled that we just added track id: " << id << std::endl;
     }
+}
+
+void media::TrackListImplementation::add_tracks_with_uri_at(const ContainerURI& uris, const Track::Id& position)
+{
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+
+    ContainerURI tmp;
+    for (const auto uri : uris)
+    {
+        // TODO: Refactor this code to use a smaller common function shared with add_track_with_uri_at()
+        std::stringstream ss;
+        ss << d->object->path().as_string() << "/" << d->track_counter++;
+        Track::Id id{ss.str()};
+        std::cout << "Adding Track::Id: " << id << std::endl;
+        std::cout << "\tURI: " << uri << std::endl;
+
+        tmp.push_back(id);
+
+        Track::Id insert_position = position;
+
+        auto it = std::find(tracks().get().begin(), tracks().get().end(), insert_position);
+        auto result = tracks().update([this, id, position, it, &insert_position](TrackList::Container& container)
+        {
+            container.insert(it, id);
+            // Make sure the next insert position is after the current insert position
+            // Update the Track::Id after which to insert the next one from uris
+            insert_position = id;
+
+            return true;
+        });
+
+        if (result)
+        {
+            d->updateCachedTrackMetadata(id, uri);
+
+            // Signal to the client that the current track has changed for the first track added to the TrackList
+            if (tracks().get().size() == 1)
+                on_track_changed()(id);
+        }
+    }
+
+    std::cout << "Signaling that we just added " << tmp.size() << " tracks to the TrackList" << std::endl;
+    on_tracks_added()(tmp);
 }
 
 void media::TrackListImplementation::remove_track(const media::Track::Id& id)

@@ -48,9 +48,21 @@ struct TrackList
         return s;
     }
 
+    struct Error
+    {
+        struct InsufficientPermissionsToAddTrack
+        {
+            static constexpr const char* name
+            {
+                "mpris.TrackList.Error.InsufficientPermissionsToAddTrack"
+            };
+        };
+    };
+
     DBUS_CPP_METHOD_DEF(GetTracksMetadata, TrackList)
     DBUS_CPP_METHOD_DEF(GetTracksUri, TrackList)
     DBUS_CPP_METHOD_DEF(AddTrack, TrackList)
+    DBUS_CPP_METHOD_DEF(AddTracks, TrackList)
     DBUS_CPP_METHOD_DEF(RemoveTrack, TrackList)
     DBUS_CPP_METHOD_DEF(GoTo, TrackList)
     DBUS_CPP_METHOD_DEF(Reset, TrackList)
@@ -71,6 +83,13 @@ struct TrackList
             TrackAdded,
             TrackList,
             core::ubuntu::media::Track::Id
+        )
+
+        DBUS_CPP_SIGNAL_DEF
+        (
+            TracksAdded,
+            TrackList,
+            core::ubuntu::media::TrackList::ContainerURI
         )
 
         DBUS_CPP_SIGNAL_DEF
@@ -134,6 +153,7 @@ struct TrackList
               {
                   configuration.object->template get_signal<Signals::TrackListReplaced>(),
                   configuration.object->template get_signal<Signals::TrackAdded>(),
+                  configuration.object->template get_signal<Signals::TracksAdded>(),
                   configuration.object->template get_signal<Signals::TrackRemoved>(),
                   configuration.object->template get_signal<Signals::TrackChanged>(),
                   configuration.object->template get_signal<Signals::TrackMetadataChanged>(),
@@ -178,6 +198,7 @@ struct TrackList
         {
             core::dbus::Signal<Signals::TrackListReplaced, Signals::TrackListReplaced::ArgumentType>::Ptr tracklist_replaced;
             core::dbus::Signal<Signals::TrackAdded, Signals::TrackAdded::ArgumentType>::Ptr track_added;
+            core::dbus::Signal<Signals::TracksAdded, Signals::TracksAdded::ArgumentType>::Ptr tracks_added;
             core::dbus::Signal<Signals::TrackRemoved, Signals::TrackRemoved::ArgumentType>::Ptr track_removed;
             core::dbus::Signal<Signals::TrackChanged, Signals::TrackChanged::ArgumentType>::Ptr track_changed;
             core::dbus::Signal<Signals::TrackMetadataChanged, Signals::TrackMetadataChanged::ArgumentType>::Ptr track_metadata_changed;

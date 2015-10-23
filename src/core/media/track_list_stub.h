@@ -48,6 +48,7 @@ public:
     Track::UriType query_uri_for_track(const Track::Id& id);
 
     void add_track_with_uri_at(const Track::UriType& uri, const Track::Id& position, bool make_current);
+    void add_tracks_with_uri_at(const ContainerURI& uris, const Track::Id& position);
     void remove_track(const Track::Id& id);
 
     void go_to(const Track::Id& track, bool toggle_player_state);
@@ -62,6 +63,7 @@ public:
 
     const core::Signal<ContainerTrackIdTuple>& on_track_list_replaced() const;
     const core::Signal<Track::Id>& on_track_added() const;
+    const core::Signal<ContainerURI>& on_tracks_added() const;
     const core::Signal<Track::Id>& on_track_removed() const;
     const core::Signal<Track::Id>& on_track_changed() const;
     const core::Signal<std::pair<Track::Id, bool>>& on_go_to_track() const;
