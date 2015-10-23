@@ -150,10 +150,13 @@ struct media::TrackListSkeleton::Private
                 }
             }
 
-            auto reply = dbus::Message::make_method_return(msg);
+            core::dbus::Message::Ptr reply;
             // Only add the track to the TrackList if it passes the apparmor permissions check
             if (std::get<0>(result))
+            {
+                reply = dbus::Message::make_method_return(msg);
                 impl->add_tracks_with_uri_at(uris, after);
+            }
             else
             {
                 std::cerr << err_str << std::endl;
