@@ -1,8 +1,12 @@
-media-hub (3.3.0+15.04.20151022-0ubuntu1) UNRELEASED; urgency=medium
+media-hub (3.3.0+15.04.20151023.3-0ubuntu1) vivid; urgency=medium
 
+  [ Jim Hodapp ]
   * Add batch adding of tracks to the TrackList.
 
- -- Jim Hodapp <jim.hodapp@canonical.com>  Thu, 22 Oct 2015 15:04:57 -0400
+  [ CI Train Bot ]
+  * New rebuild forced.
+
+ -- Jim Hodapp <ci-train-bot@canonical.com>  Fri, 23 Oct 2015 19:07:52 +0000
 
 media-hub (3.2.0+15.04.20151014-0ubuntu1) vivid; urgency=medium
 
