@@ -42,6 +42,8 @@
 namespace dbus = core::dbus;
 namespace media = core::ubuntu::media;
 
+using namespace std;
+
 struct media::TrackListSkeleton::Private
 {
     Private(media::TrackListSkeleton* impl, const dbus::Bus::Ptr& bus, const dbus::Object::Ptr& object,
@@ -399,6 +401,7 @@ media::Track::Id media::TrackListSkeleton::next()
 
     if (do_go_to_next_track)
     {
+        cout << "next track id is " << *(current_iterator()) << endl;
         on_track_changed()(*(current_iterator()));
         // Don't automatically call stop() and play() in player_implementation.cpp on_go_to_track()
         // since this breaks video playback when using open_uri() (stop() and play() are unwanted in
@@ -526,21 +529,23 @@ media::Player::LoopStatus media::TrackListSkeleton::loop_status() const
 
 void media::TrackListSkeleton::on_shuffle_changed(bool shuffle)
 {
+    if (tracks().get().empty())
+        return;
+
+    const media::Track::Id current_id = *(current_iterator());
+
+    cout << __PRETTY_FUNCTION__ << " " << shuffle
+         << " current track: " << current_id << endl;
+
     if (shuffle)
         shuffle_tracks();
     else
-    {
-        // Save the current Track::Id of what's currently playing to restore after unshuffle
-        const media::Track::Id current_id = *(current_iterator());
-
         unshuffle_tracks();
 
-        // Since we use assign() in unshuffle_tracks, which invalidates existing iterators, we need
-        // to make sure that current is pointing to the right place
-        auto it = std::find(tracks().get().begin(), tracks().get().end(), current_id);
-        if (it != tracks().get().end())
-            d->current_track = it;
-    }
+    // Shuffling and unshuffling invalidates iterators, so we re-create current_track
+    auto it = find(tracks().get().begin(), tracks().get().end(), current_id);
+    if (it != tracks().get().end())
+        d->current_track = it;
 }
 
 const core::Property<media::TrackList::Container>& media::TrackListSkeleton::tracks() const
