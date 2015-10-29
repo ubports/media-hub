@@ -107,6 +107,18 @@ struct Service
                 return s;
             }
         };
+
+        struct SettingCurrentPlayer
+        {
+            static const std::string& name()
+            {
+                static const std::string s
+                {
+                    "core.ubuntu.media.Service.Error.SettingCurrentPlayer"
+                };
+                return s;
+            }
+        };
     };
 
     DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(CreateSession, Service, 1000)
