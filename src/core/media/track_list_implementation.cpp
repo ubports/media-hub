@@ -241,7 +241,7 @@ void media::TrackListImplementation::move_track(const media::Track::Id& id,
             {
                 std::cout << track << std::endl;
             }
-            // TODO: emit new on_track_moved signal here
+            on_track_moved()(id);
         }
     }
 }

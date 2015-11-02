@@ -60,6 +60,7 @@ struct media::TrackListSkeleton::Private
           {
               skeleton.signals.track_added,
               skeleton.signals.tracks_added,
+              skeleton.signals.track_moved,
               skeleton.signals.track_removed,
               skeleton.signals.track_changed,
               skeleton.signals.tracklist_replaced
@@ -229,12 +230,14 @@ struct media::TrackListSkeleton::Private
     {
         typedef core::dbus::Signal<mpris::TrackList::Signals::TrackAdded, mpris::TrackList::Signals::TrackAdded::ArgumentType> DBusTrackAddedSignal;
         typedef core::dbus::Signal<mpris::TrackList::Signals::TracksAdded, mpris::TrackList::Signals::TracksAdded::ArgumentType> DBusTracksAddedSignal;
+        typedef core::dbus::Signal<mpris::TrackList::Signals::TrackMoved, mpris::TrackList::Signals::TrackMoved::ArgumentType> DBusTrackMovedSignal;
         typedef core::dbus::Signal<mpris::TrackList::Signals::TrackRemoved, mpris::TrackList::Signals::TrackRemoved::ArgumentType> DBusTrackRemovedSignal;
         typedef core::dbus::Signal<mpris::TrackList::Signals::TrackChanged, mpris::TrackList::Signals::TrackChanged::ArgumentType> DBusTrackChangedSignal;
         typedef core::dbus::Signal<mpris::TrackList::Signals::TrackListReplaced, mpris::TrackList::Signals::TrackListReplaced::ArgumentType> DBusTrackListReplacedSignal;
 
         Signals(const std::shared_ptr<DBusTrackAddedSignal>& remote_track_added,
                 const std::shared_ptr<DBusTracksAddedSignal>& remote_tracks_added,
+                const std::shared_ptr<DBusTrackMovedSignal>& remote_track_moved,
                 const std::shared_ptr<DBusTrackRemovedSignal>& remote_track_removed,
                 const std::shared_ptr<DBusTrackChangedSignal>& remote_track_changed,
                 const std::shared_ptr<DBusTrackListReplacedSignal>& remote_track_list_replaced)
@@ -248,6 +251,11 @@ struct media::TrackListSkeleton::Private
             on_tracks_added.connect([remote_tracks_added](const media::TrackList::ContainerURI &tracks)
             {
                 remote_tracks_added->emit(tracks);
+            });
+
+            on_track_moved.connect([remote_track_moved](const media::Track::Id &id)
+            {
+                remote_track_moved->emit(id);
             });
 
             on_track_removed.connect([remote_track_removed](const media::Track::Id &id)
@@ -268,6 +276,7 @@ struct media::TrackListSkeleton::Private
 
         core::Signal<Track::Id> on_track_added;
         core::Signal<TrackList::ContainerURI> on_tracks_added;
+        core::Signal<Track::Id> on_track_moved;
         core::Signal<Track::Id> on_track_removed;
         core::Signal<Track::Id> on_track_changed;
         core::Signal<TrackList::ContainerTrackIdTuple> on_track_list_replaced;
@@ -582,6 +591,11 @@ const core::Signal<media::TrackList::ContainerURI>& media::TrackListSkeleton::on
     return d->signals.on_tracks_added;
 }
 
+const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_moved() const
+{
+    return d->signals.on_track_moved;
+}
+
 const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_removed() const
 {
     return d->signals.on_track_removed;
@@ -615,6 +629,11 @@ core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_added()
 core::Signal<media::TrackList::ContainerURI>& media::TrackListSkeleton::on_tracks_added()
 {
     return d->signals.on_tracks_added;
+}
+
+core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_moved()
+{
+    return d->signals.on_track_moved;
 }
 
 core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_removed()

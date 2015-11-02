@@ -122,6 +122,9 @@ class TrackList : public std::enable_shared_from_this<TrackList>
     /** Indicates that one or more tracks have been added to the track list. */
     virtual const core::Signal<ContainerURI>& on_tracks_added() const = 0;
 
+    /** Indicates that a track has been moved within the track list. */
+    virtual const core::Signal<Track::Id>& on_track_moved() const = 0;
+
     /** Indicates that a track has been removed from the track list. */
     virtual const core::Signal<Track::Id>& on_track_removed() const = 0;
 
