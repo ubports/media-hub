@@ -82,6 +82,9 @@ class TrackList : public std::enable_shared_from_this<TrackList>
     /** Adds a list of URIs into the TrackList. */
     virtual void add_tracks_with_uri_at(const ContainerURI& uris, const Track::Id& position) = 0;
 
+    /** Moves track 'id' from its old position in the TrackList to new position. */
+    virtual void move_track(const Track::Id& id, const Track::Id& to) = 0;
+
     /** Removes a Track from the TrackList. */
     virtual void remove_track(const Track::Id& id) = 0;
 
@@ -99,7 +102,6 @@ class TrackList : public std::enable_shared_from_this<TrackList>
 
     /** Skip to the previous Track in the TrackList if there is one. */
     virtual Track::Id previous() = 0;
-
 
     /** Reorders the tracks such that they are in a random order. */
     virtual void shuffle_tracks() = 0;

@@ -170,6 +170,18 @@ struct media::TrackListSkeleton::Private
         });
     }
 
+    void handle_move_track(const core::dbus::Message::Ptr& msg)
+    {
+        media::Track::Id id;
+        media::Track::Id to;
+        msg->reader() >> id >> to;
+
+        impl->move_track(id, to);
+
+        auto reply = dbus::Message::make_method_return(msg);
+        bus->send(reply);
+    }
+
     void handle_remove_track(const core::dbus::Message::Ptr& msg)
     {
         media::Track::Id track;
@@ -286,6 +298,11 @@ media::TrackListSkeleton::TrackListSkeleton(const core::dbus::Bus::Ptr& bus, con
 
     d->object->install_method_handler<mpris::TrackList::AddTracks>(
         std::bind(&Private::handle_add_tracks_with_uri_at,
+                  std::ref(d),
+                  std::placeholders::_1));
+
+    d->object->install_method_handler<mpris::TrackList::MoveTrack>(
+        std::bind(&Private::handle_move_track,
                   std::ref(d),
                   std::placeholders::_1));
 

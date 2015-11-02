@@ -169,7 +169,7 @@ void media::TrackListImplementation::add_tracks_with_uri_at(const ContainerURI& 
         Track::Id insert_position = position;
 
         auto it = std::find(tracks().get().begin(), tracks().get().end(), insert_position);
-        auto result = tracks().update([this, id, position, it, &insert_position](TrackList::Container& container)
+        const auto result = tracks().update([this, id, position, it, &insert_position](TrackList::Container& container)
         {
             container.insert(it, id);
             // Make sure the next insert position is after the current insert position
@@ -193,9 +193,62 @@ void media::TrackListImplementation::add_tracks_with_uri_at(const ContainerURI& 
     on_tracks_added()(tmp);
 }
 
+void media::TrackListImplementation::move_track(const media::Track::Id& id,
+                                                const media::Track::Id& to)
+{
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+
+    if (id.empty() or to.empty())
+    {
+        std::cerr << "Can't move track since 'id' or 'to' are empty" << std::endl;
+        return;
+    }
+
+    if (id == to)
+    {
+        std::cerr << "Can't move track to it's same position" << std::endl;
+        return;
+    }
+
+    if (tracks().get().size() == 1)
+    {
+        std::cerr << "Can't move track since TrackList contains only one track" << std::endl;
+        return;
+    }
+
+    // Get an iterator that points to the track that is the insertion point
+    auto insert_point_it = std::find(tracks().get().begin(), tracks().get().end(), to);
+    if (insert_point_it != tracks().get().end())
+    {
+        const auto result = tracks().update([this, id, to, &insert_point_it]
+                (TrackList::Container& container)
+        {
+            auto to_move_it = std::find(tracks().get().begin(), tracks().get().end(), id);
+            std::cout << "Erasing old track position: " << *to_move_it << std::endl;
+            if (to_move_it != tracks().get().end())
+                container.erase(to_move_it);
+
+            // Insert id at the location just before insert_point_it
+            container.insert(insert_point_it, id);
+
+            return true;
+        });
+
+        if (result)
+        {
+            std::cout << "TrackList after move" << std::endl;
+            for(auto track : tracks().get())
+            {
+                std::cout << track << std::endl;
+            }
+            // TODO: emit new on_track_moved signal here
+        }
+    }
+}
+
 void media::TrackListImplementation::remove_track(const media::Track::Id& id)
 {
-    auto result = tracks().update([id](TrackList::Container& container)
+    const auto result = tracks().update([id](TrackList::Container& container)
     {
         container.erase(std::find(container.begin(), container.end(), id));
         return true;

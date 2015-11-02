@@ -63,6 +63,7 @@ struct TrackList
     DBUS_CPP_METHOD_DEF(GetTracksUri, TrackList)
     DBUS_CPP_METHOD_DEF(AddTrack, TrackList)
     DBUS_CPP_METHOD_DEF(AddTracks, TrackList)
+    DBUS_CPP_METHOD_DEF(MoveTrack, TrackList)
     DBUS_CPP_METHOD_DEF(RemoveTrack, TrackList)
     DBUS_CPP_METHOD_DEF(GoTo, TrackList)
     DBUS_CPP_METHOD_DEF(Reset, TrackList)

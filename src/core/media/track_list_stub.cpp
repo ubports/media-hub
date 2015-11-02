@@ -231,6 +231,14 @@ void media::TrackListStub::add_tracks_with_uri_at(const ContainerURI& uris, cons
     }
 }
 
+void media::TrackListStub::move_track(const media::Track::Id& id, const media::Track::Id& to)
+{
+    auto op = d->object->invoke_method_synchronously<mpris::TrackList::MoveTrack, void>(id, to);
+
+    if (op.is_error())
+        throw std::runtime_error("Problem moving track: " + op.error());
+}
+
 void media::TrackListStub::remove_track(const media::Track::Id& track)
 {
     auto op = d->object->invoke_method_synchronously<mpris::TrackList::RemoveTrack, void>(
