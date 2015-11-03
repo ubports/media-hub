@@ -452,7 +452,7 @@ struct media::ServiceSkeleton::Private
             cerr <<  __PRETTY_FUNCTION__ << " player key not found - " << key << endl;
             reply = dbus::Message::make_error(
                             msg,
-                            mpris::Service::Errors::SettingCurrentPlayer::name(),
+                            mpris::Service::Errors::PlayerKeyNotFound::name(),
                             "Player key not found");
         } else {
             impl->set_current_player(key);

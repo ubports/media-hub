@@ -108,7 +108,7 @@ struct Service
             }
         };
 
-        struct SettingCurrentPlayer
+        struct PlayerKeyNotFound
         {
             static const std::string& name()
             {

@@ -679,8 +679,8 @@ bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri)
 
     // If empty uri, give the same meaning as QMediaPlayer::setMedia("")
     if (uri.empty()) {
-        cout << __PRETTY_FUNCTION__ << ": cleaning current media" << endl;
-        return TRUE;
+        cout << __PRETTY_FUNCTION__ << ": resetting current media" << endl;
+        return true;
     }
 
     const bool ret = d->engine->open_resource_for_uri(uri, false);
