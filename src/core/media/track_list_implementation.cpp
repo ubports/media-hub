@@ -140,13 +140,14 @@ void media::TrackListImplementation::add_track_with_uri_at(
             go_to(id, toggle_player_state);
         }
 
-        // Signal to the client that the current track has changed for the first track added to the TrackList
-        if (tracks().get().size() == 1)
-            on_track_changed()(id);
-
         std::cout << "Signaling that we just added track id: " << id << std::endl;
         // Signal to the client that a track was added to the TrackList
         on_track_added()(id);
+
+        // Signal to the client that the current track has changed for the first
+        // track added to the TrackList
+        if (tracks().get().size() == 1)
+            on_track_changed()(id);
     }
 }
 
@@ -154,6 +155,7 @@ void media::TrackListImplementation::add_tracks_with_uri_at(const ContainerURI& 
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
 
+    Track::Id current_id;
     ContainerURI tmp;
     for (const auto uri : uris)
     {
@@ -185,12 +187,15 @@ void media::TrackListImplementation::add_tracks_with_uri_at(const ContainerURI& 
 
             // Signal to the client that the current track has changed for the first track added to the TrackList
             if (tracks().get().size() == 1)
-                on_track_changed()(id);
+                current_id = id;
         }
     }
 
     std::cout << "Signaling that we just added " << tmp.size() << " tracks to the TrackList" << std::endl;
     on_tracks_added()(tmp);
+
+    if (!current_id.empty())
+        on_track_changed()(current_id);
 }
 
 void media::TrackListImplementation::move_track(const media::Track::Id& id,
@@ -262,7 +267,6 @@ void media::TrackListImplementation::remove_track(const media::Track::Id& id)
 
         on_track_removed()(id);
     }
-
 }
 
 void media::TrackListImplementation::go_to(const media::Track::Id& track, bool toggle_player_state)

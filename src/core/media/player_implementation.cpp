@@ -676,6 +676,13 @@ template<typename Parent>
 bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri)
 {
     d->track_list->reset();
+
+    // If empty uri, give the same meaning as QMediaPlayer::setMedia("")
+    if (uri.empty()) {
+        cout << __PRETTY_FUNCTION__ << ": resetting current media" << endl;
+        return true;
+    }
+
     const bool ret = d->engine->open_resource_for_uri(uri, false);
     // Don't set new track as the current track to play since we're calling open_resource_for_uri above
     static const bool make_current = false;

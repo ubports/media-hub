@@ -46,6 +46,8 @@
 namespace dbus = core::dbus;
 namespace media = core::ubuntu::media;
 
+using namespace std;
+
 namespace
 {
 core::Signal<void> the_empty_signal;
@@ -132,7 +134,9 @@ struct media::ServiceSkeleton::Private
             impl->access_service()->add_object_for_path(op)
         };
 
-        std::cout << "Session created by request of: " << msg->sender() << ", uuid: " << uuid << ", path:" << op << std::endl;
+        cout << "Session created by request of: " << msg->sender()
+             << ", key: " << key << ", uuid: " << uuid
+             << ", path:" << op << std::endl;
 
         try
         {
@@ -442,9 +446,19 @@ struct media::ServiceSkeleton::Private
     {
         Player::PlayerKey key;
         msg->reader() >> key;
-        impl->set_current_player(key);
 
-        auto reply = dbus::Message::make_method_return(msg);
+        core::dbus::Message::Ptr reply;
+        if (not configuration.player_store->has_player_for_key(key)) {
+            cerr <<  __PRETTY_FUNCTION__ << " player key not found - " << key << endl;
+            reply = dbus::Message::make_error(
+                            msg,
+                            mpris::Service::Errors::PlayerKeyNotFound::name(),
+                            "Player key not found");
+        } else {
+            impl->set_current_player(key);
+            reply = dbus::Message::make_method_return(msg);
+        }
+
         impl->access_bus()->send(reply);
     }
 
