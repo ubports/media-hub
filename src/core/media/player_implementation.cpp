@@ -375,6 +375,11 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
     };
     Parent::position().install(position_getter);
 
+    d->engine->position().changed().connect([this](uint64_t position)
+    {
+        d->track_list->on_position_changed(position);
+    });
+
     // Make sure that the Duration property gets updated from the Engine
     // every time the client requests duration
     std::function<uint64_t()> duration_getter = [this]()

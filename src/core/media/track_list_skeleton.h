@@ -69,6 +69,8 @@ public:
     void on_loop_status_changed(const core::ubuntu::media::Player::LoopStatus& loop_status);
     core::ubuntu::media::Player::LoopStatus loop_status() const;
 
+    void on_position_changed(uint64_t position);
+
     /** Gets called when the shuffle property on the Player interface is changed
      * by the client */
     void on_shuffle_changed(bool shuffle);
