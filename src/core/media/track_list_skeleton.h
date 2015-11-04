@@ -79,6 +79,7 @@ protected:
     inline bool is_first_track(const ConstIterator &it);
     inline bool is_last_track(const ConstIterator &it);
     inline const TrackList::ConstIterator& current_iterator();
+    bool update_current_iterator(const TrackList::ConstIterator &it);
     void reset_current_iterator_if_needed();
 
     core::Property<bool>& can_edit_tracks();

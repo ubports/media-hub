@@ -179,9 +179,40 @@ struct media::TrackListSkeleton::Private
         media::Track::Id to;
         msg->reader() >> id >> to;
 
-        impl->move_track(id, to);
+        core::dbus::Message::Ptr reply;
+        try {
+            const bool ret = impl->move_track(id, to);
+            if (!ret)
+            {
+                const std::string err_str = {"Error: Not moving track " + id +
+                    " to destination " + to};
+                std::cerr << err_str << std::endl;
+                reply = dbus::Message::make_error(
+                        msg,
+                        mpris::TrackList::Error::FailedToMoveTrack::name,
+                        err_str);
+            }
+            else
+            {
+                reply = dbus::Message::make_method_return(msg);
+            }
+        } catch(media::TrackList::Errors::FailedToMoveTrack& e) {
+            reply = dbus::Message::make_error(
+                    msg,
+                    mpris::TrackList::Error::FailedToFindMoveTrackSource::name,
+                    e.what());
+        } catch(media::TrackList::Errors::FailedToFindMoveTrackSource& e) {
+            reply = dbus::Message::make_error(
+                    msg,
+                    mpris::TrackList::Error::FailedToFindMoveTrackSource::name,
+                    e.what());
+        } catch(media::TrackList::Errors::FailedToFindMoveTrackDest& e) {
+            reply = dbus::Message::make_error(
+                    msg,
+                    mpris::TrackList::Error::FailedToFindMoveTrackDest::name,
+                    e.what());
+        }
 
-        auto reply = dbus::Message::make_method_return(msg);
         bus->send(reply);
     }
 
@@ -518,6 +549,18 @@ const media::TrackList::ConstIterator& media::TrackListSkeleton::current_iterato
     }
 
     return d->current_track;
+}
+
+bool media::TrackListSkeleton::update_current_iterator(const TrackList::ConstIterator &it)
+{
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    if (it == tracks().get().end())
+        return false;
+
+    std::cout << "Updating current_track iterator" << std::endl;
+    d->current_track = it;
+
+    return true;
 }
 
 void media::TrackListSkeleton::reset_current_iterator_if_needed()

@@ -54,6 +54,21 @@ class TrackList : public std::enable_shared_from_this<TrackList>
         {
             InsufficientPermissionsToAddTrack();
         };
+
+        struct FailedToMoveTrack : public std::runtime_error
+        {
+            FailedToMoveTrack();
+        };
+
+        struct FailedToFindMoveTrackSource : public std::runtime_error
+        {
+            FailedToFindMoveTrackSource(const std::string& err);
+        };
+
+        struct FailedToFindMoveTrackDest : public std::runtime_error
+        {
+            FailedToFindMoveTrackDest(const std::string& err);
+        };
     };
 
     static const Track::Id& after_empty_track();
@@ -83,7 +98,7 @@ class TrackList : public std::enable_shared_from_this<TrackList>
     virtual void add_tracks_with_uri_at(const ContainerURI& uris, const Track::Id& position) = 0;
 
     /** Moves track 'id' from its old position in the TrackList to new position. */
-    virtual void move_track(const Track::Id& id, const Track::Id& to) = 0;
+    virtual bool move_track(const Track::Id& id, const Track::Id& to) = 0;
 
     /** Removes a Track from the TrackList. */
     virtual void remove_track(const Track::Id& id) = 0;

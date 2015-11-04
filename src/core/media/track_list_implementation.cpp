@@ -198,7 +198,7 @@ void media::TrackListImplementation::add_tracks_with_uri_at(const ContainerURI& 
         on_track_changed()(current_id);
 }
 
-void media::TrackListImplementation::move_track(const media::Track::Id& id,
+bool media::TrackListImplementation::move_track(const media::Track::Id& id,
                                                 const media::Track::Id& to)
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
@@ -206,21 +206,22 @@ void media::TrackListImplementation::move_track(const media::Track::Id& id,
     if (id.empty() or to.empty())
     {
         std::cerr << "Can't move track since 'id' or 'to' are empty" << std::endl;
-        return;
+        return false;
     }
 
     if (id == to)
     {
         std::cerr << "Can't move track to it's same position" << std::endl;
-        return;
+        return false;
     }
 
     if (tracks().get().size() == 1)
     {
         std::cerr << "Can't move track since TrackList contains only one track" << std::endl;
-        return;
+        return false;
     }
 
+    bool ret = false;
     // Get an iterator that points to the track that is the insertion point
     auto insert_point_it = std::find(tracks().get().begin(), tracks().get().end(), to);
     if (insert_point_it != tracks().get().end())
@@ -228,13 +229,33 @@ void media::TrackListImplementation::move_track(const media::Track::Id& id,
         const auto result = tracks().update([this, id, to, &insert_point_it]
                 (TrackList::Container& container)
         {
+            // Get an iterator that points to the track to move within the TrackList
             auto to_move_it = std::find(tracks().get().begin(), tracks().get().end(), id);
             std::cout << "Erasing old track position: " << *to_move_it << std::endl;
             if (to_move_it != tracks().get().end())
+            {
                 container.erase(to_move_it);
+            }
+            else
+            {
+                throw media::TrackList::Errors::FailedToFindMoveTrackDest
+                        ("Failed to find destination track " + to);
+                return false;
+            }
 
             // Insert id at the location just before insert_point_it
             container.insert(insert_point_it, id);
+
+            // Make sure the current track is still valid
+            if (to_move_it == current_iterator())
+            {
+                const bool r = update_current_iterator(insert_point_it);
+                if (!r)
+                {
+                    throw media::TrackList::Errors::FailedToMoveTrack();
+                    return false;
+                }
+            }
 
             return true;
         });
@@ -246,9 +267,16 @@ void media::TrackListImplementation::move_track(const media::Track::Id& id,
             {
                 std::cout << track << std::endl;
             }
+            // Signal to the client that track 'id' was moved within the TrackList
             on_track_moved()(id);
+            ret = true;
         }
     }
+    else
+        throw media::TrackList::Errors::FailedToFindMoveTrackSource
+                ("Failed to find source track " + id);
+
+    return ret;
 }
 
 void media::TrackListImplementation::remove_track(const media::Track::Id& id)

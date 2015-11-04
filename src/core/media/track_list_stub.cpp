@@ -244,12 +244,28 @@ void media::TrackListStub::add_tracks_with_uri_at(const ContainerURI& uris, cons
     }
 }
 
-void media::TrackListStub::move_track(const media::Track::Id& id, const media::Track::Id& to)
+bool media::TrackListStub::move_track(const media::Track::Id& id, const media::Track::Id& to)
 {
     auto op = d->object->invoke_method_synchronously<mpris::TrackList::MoveTrack, void>(id, to);
 
     if (op.is_error())
-        throw std::runtime_error("Problem moving track: " + op.error());
+    {
+        if (op.error().name() ==
+                mpris::TrackList::Error::FailedToMoveTrack::name)
+            throw media::TrackList::Errors::FailedToMoveTrack{};
+        else if (op.error().name() ==
+                mpris::TrackList::Error::FailedToFindMoveTrackSource::name)
+            throw media::TrackList::Errors::FailedToFindMoveTrackSource{op.error().print()};
+        else if (op.error().name() ==
+                mpris::TrackList::Error::FailedToFindMoveTrackDest::name)
+            throw media::TrackList::Errors::FailedToFindMoveTrackDest{op.error().print()};
+        else
+            throw std::runtime_error{op.error().print()};
+
+        return false;
+    }
+
+    return true;
 }
 
 void media::TrackListStub::remove_track(const media::Track::Id& track)

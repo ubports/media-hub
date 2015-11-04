@@ -44,7 +44,7 @@ public:
 
     void add_track_with_uri_at(const Track::UriType& uri, const Track::Id& position, bool make_current);
     void add_tracks_with_uri_at(const ContainerURI& uris, const Track::Id& position);
-    void move_track(const Track::Id& id, const Track::Id& to);
+    bool move_track(const Track::Id& id, const Track::Id& to);
     void remove_track(const Track::Id& id);
 
     void go_to(const Track::Id& track, bool toggle_player_state);
