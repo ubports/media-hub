@@ -38,6 +38,7 @@
 
 #include <iostream>
 #include <limits>
+#include <cstdint>
 
 namespace dbus = core::dbus;
 namespace media = core::ubuntu::media;
@@ -428,15 +429,15 @@ media::Track::Id media::TrackListSkeleton::previous()
     }
 
     bool do_go_to_previous_track = false;
-    bool repeat_current_track = false;
-    const uint64_t max_position = 4 * 1000;
+    // Position is measured in nanoseconds
+    const uint64_t max_position = 5 * UINT64_C(1000000000);
 
-    // If we're playing the current already for some time we will
+    // If we're playing the current track for > max_position time then
     // repeat it from the beginning
     if (d->current_position > max_position)
     {
         std::cout << "Repeating current track..." << std::endl;
-        repeat_current_track = true;
+        do_go_to_previous_track = true;
     }
     // Loop on the current track forever
     else if (d->loop_status == media::Player::LoopStatus::track)
@@ -468,7 +469,7 @@ media::Track::Id media::TrackListSkeleton::previous()
         }
     }
 
-    if (do_go_to_previous_track && !repeat_current_track)
+    if (do_go_to_previous_track)
     {
         on_track_changed()(*(current_iterator()));
         // Don't automatically call stop() and play() in player_implementation.cpp on_go_to_track()
@@ -530,7 +531,6 @@ core::Property<media::TrackList::Container>& media::TrackListSkeleton::tracks()
 
 void media::TrackListSkeleton::on_position_changed(uint64_t position)
 {
-    std::cout << "TrackListSkeleton::on_position_changed: position = " << position << std::endl;
     d->current_position = position;
 }
 
