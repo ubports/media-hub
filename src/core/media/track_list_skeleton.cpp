@@ -286,9 +286,9 @@ struct media::TrackListSkeleton::Private
                 remote_tracks_added->emit(tracks);
             });
 
-            on_track_moved.connect([remote_track_moved](const media::Track::Id &id)
+            on_track_moved.connect([remote_track_moved](const media::TrackList::TrackIdTuple &ids)
             {
-                remote_track_moved->emit(id);
+                remote_track_moved->emit(ids);
             });
 
             on_track_removed.connect([remote_track_removed](const media::Track::Id &id)
@@ -309,7 +309,7 @@ struct media::TrackListSkeleton::Private
 
         core::Signal<Track::Id> on_track_added;
         core::Signal<TrackList::ContainerURI> on_tracks_added;
-        core::Signal<Track::Id> on_track_moved;
+        core::Signal<TrackList::TrackIdTuple> on_track_moved;
         core::Signal<Track::Id> on_track_removed;
         core::Signal<Track::Id> on_track_changed;
         core::Signal<TrackList::ContainerTrackIdTuple> on_track_list_replaced;
@@ -639,7 +639,7 @@ const core::Signal<media::TrackList::ContainerURI>& media::TrackListSkeleton::on
     return d->signals.on_tracks_added;
 }
 
-const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_moved() const
+const core::Signal<media::TrackList::TrackIdTuple>& media::TrackListSkeleton::on_track_moved() const
 {
     return d->signals.on_track_moved;
 }
@@ -679,7 +679,7 @@ core::Signal<media::TrackList::ContainerURI>& media::TrackListSkeleton::on_track
     return d->signals.on_tracks_added;
 }
 
-core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_moved()
+core::Signal<media::TrackList::TrackIdTuple>& media::TrackListSkeleton::on_track_moved()
 {
     return d->signals.on_track_moved;
 }

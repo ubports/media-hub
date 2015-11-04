@@ -121,7 +121,7 @@ struct TrackList
         (
             TrackMoved,
             TrackList,
-            core::ubuntu::media::Track::Id
+            BOOST_IDENTITY_TYPE((std::tuple<core::ubuntu::media::Track::Id, core::ubuntu::media::Track::Id>))
         )
 
         DBUS_CPP_SIGNAL_DEF

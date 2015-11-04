@@ -112,10 +112,10 @@ struct media::TrackListStub::Private
                 on_tracks_added(tracks);
             });
 
-            dbus.on_track_moved->connect([this](const Track::Id& id)
+            dbus.on_track_moved->connect([this](const media::TrackList::TrackIdTuple& ids)
             {
                 std::cout << "OnTrackMoved signal arrived via the bus." << std::endl;
-                on_track_moved(id);
+                on_track_moved(ids);
             });
 
             dbus.on_track_removed->connect([this](const Track::Id& id)
@@ -139,7 +139,7 @@ struct media::TrackListStub::Private
 
         core::Signal<Track::Id> on_track_added;
         core::Signal<media::TrackList::ContainerURI> on_tracks_added;
-        core::Signal<Track::Id> on_track_moved;
+        core::Signal<media::TrackList::TrackIdTuple> on_track_moved;
         core::Signal<Track::Id> on_track_removed;
         core::Signal<media::TrackList::ContainerTrackIdTuple> on_track_list_replaced;
         core::Signal<Track::Id> on_track_changed;
@@ -332,7 +332,7 @@ const core::Signal<media::TrackList::ContainerURI>& media::TrackListStub::on_tra
     return d->signals.on_tracks_added;
 }
 
-const core::Signal<media::Track::Id>& media::TrackListStub::on_track_moved() const
+const core::Signal<media::TrackList::TrackIdTuple>& media::TrackListStub::on_track_moved() const
 {
     return d->signals.on_track_moved;
 }

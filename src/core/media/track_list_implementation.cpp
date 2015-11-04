@@ -267,8 +267,9 @@ bool media::TrackListImplementation::move_track(const media::Track::Id& id,
             {
                 std::cout << track << std::endl;
             }
+            const media::TrackList::TrackIdTuple ids = std::make_tuple(id, to);
             // Signal to the client that track 'id' was moved within the TrackList
-            on_track_moved()(id);
+            on_track_moved()(ids);
             ret = true;
         }
     }

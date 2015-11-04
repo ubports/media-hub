@@ -43,6 +43,7 @@ class TrackList : public std::enable_shared_from_this<TrackList>
     typedef std::vector<Track::Id> Container;
     typedef std::vector<Track::UriType> ContainerURI;
     typedef std::tuple<std::vector<Track::Id>, Track::Id> ContainerTrackIdTuple;
+    typedef std::tuple<Track::Id, Track::Id> TrackIdTuple;
     typedef Container::iterator Iterator;
     typedef Container::const_iterator ConstIterator;
 
@@ -127,7 +128,6 @@ class TrackList : public std::enable_shared_from_this<TrackList>
     /** Clears and resets the TrackList to the same as a newly constructed instance. */
     virtual void reset() = 0;
 
-
     /** Indicates that the entire tracklist has been replaced. */
     virtual const core::Signal<ContainerTrackIdTuple>& on_track_list_replaced() const = 0;
 
@@ -137,8 +137,10 @@ class TrackList : public std::enable_shared_from_this<TrackList>
     /** Indicates that one or more tracks have been added to the track list. */
     virtual const core::Signal<ContainerURI>& on_tracks_added() const = 0;
 
-    /** Indicates that a track has been moved within the track list. */
-    virtual const core::Signal<Track::Id>& on_track_moved() const = 0;
+    /** Indicates that a track has been moved within the track list. First template param
+     *  holds the id of the track being moved. Second param holds the id of the track of the
+     *  position to move the track to in the TrackList. */
+    virtual const core::Signal<TrackIdTuple>& on_track_moved() const = 0;
 
     /** Indicates that a track has been removed from the track list. */
     virtual const core::Signal<Track::Id>& on_track_removed() const = 0;
