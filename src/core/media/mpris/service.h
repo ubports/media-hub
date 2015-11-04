@@ -114,7 +114,7 @@ struct Service
             {
                 static const std::string s
                 {
-                    "core.ubuntu.media.Service.Error.SettingCurrentPlayer"
+                    "core.ubuntu.media.Service.Error.PlayerKeyNotFound"
                 };
                 return s;
             }
