@@ -38,6 +38,7 @@
 
 #include <iostream>
 #include <limits>
+#include <cstdint>
 
 namespace dbus = core::dbus;
 namespace media = core::ubuntu::media;
@@ -58,6 +59,7 @@ struct media::TrackListSkeleton::Private
           current_track(skeleton.properties.tracks->get().begin()),
           empty_iterator(skeleton.properties.tracks->get().begin()),
           loop_status(media::Player::LoopStatus::none),
+          current_position(0),
           signals
           {
               skeleton.signals.track_added,
@@ -258,6 +260,7 @@ struct media::TrackListSkeleton::Private
     TrackList::ConstIterator current_track;
     TrackList::ConstIterator empty_iterator;
     media::Player::LoopStatus loop_status;
+    uint64_t current_position;
 
     struct Signals
     {
@@ -483,9 +486,18 @@ media::Track::Id media::TrackListSkeleton::previous()
     }
 
     bool do_go_to_previous_track = false;
+    // Position is measured in nanoseconds
+    const uint64_t max_position = 5 * UINT64_C(1000000000);
 
+    // If we're playing the current track for > max_position time then
+    // repeat it from the beginning
+    if (d->current_position > max_position)
+    {
+        std::cout << "Repeating current track..." << std::endl;
+        do_go_to_previous_track = true;
+    }
     // Loop on the current track forever
-    if (d->loop_status == media::Player::LoopStatus::track)
+    else if (d->loop_status == media::Player::LoopStatus::track)
     {
         std::cout << "Looping on the current track..." << std::endl;
         do_go_to_previous_track = true;
@@ -584,6 +596,11 @@ core::Property<bool>& media::TrackListSkeleton::can_edit_tracks()
 core::Property<media::TrackList::Container>& media::TrackListSkeleton::tracks()
 {
     return *d->skeleton.properties.tracks;
+}
+
+void media::TrackListSkeleton::on_position_changed(uint64_t position)
+{
+    d->current_position = position;
 }
 
 void media::TrackListSkeleton::on_loop_status_changed(const media::Player::LoopStatus& loop_status)
