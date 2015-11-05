@@ -203,6 +203,7 @@ bool media::TrackListImplementation::move_track(const media::Track::Id& id,
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
 
+    std::cout << "-----------------------------------------------------" << std::endl;
     if (id.empty() or to.empty())
     {
         std::cerr << "Can't move track since 'id' or 'to' are empty" << std::endl;
@@ -222,11 +223,13 @@ bool media::TrackListImplementation::move_track(const media::Track::Id& id,
     }
 
     bool ret = false;
+    const media::Track::Id current_id = *current_iterator();
+    std::cout << "current_track id: " << current_id << std::endl;
     // Get an iterator that points to the track that is the insertion point
     auto insert_point_it = std::find(tracks().get().begin(), tracks().get().end(), to);
     if (insert_point_it != tracks().get().end())
     {
-        const auto result = tracks().update([this, id, to, &insert_point_it]
+        const auto result = tracks().update([this, id, to, current_id, &insert_point_it]
                 (TrackList::Container& container)
         {
             // Get an iterator that points to the track to move within the TrackList
@@ -246,15 +249,22 @@ bool media::TrackListImplementation::move_track(const media::Track::Id& id,
             // Insert id at the location just before insert_point_it
             container.insert(insert_point_it, id);
 
-            // Make sure the current track is still valid
-            if (to_move_it == current_iterator())
+            const auto new_current_track_it = std::find(tracks().get().begin(), tracks().get().end(), current_id);
+            if (new_current_track_it != tracks().get().end())
             {
-                const bool r = update_current_iterator(insert_point_it);
+                const bool r = update_current_iterator(new_current_track_it);
                 if (!r)
                 {
                     throw media::TrackList::Errors::FailedToMoveTrack();
                     return false;
                 }
+                std::cout << "*** Updated current_iterator, id: " << *current_iterator() << std::endl;
+            }
+            else
+            {
+                std::cerr << "Can't update current_iterator - failed to find track after move" << std::endl;
+                throw media::TrackList::Errors::FailedToMoveTrack();
+                return false;
             }
 
             return true;
@@ -276,6 +286,8 @@ bool media::TrackListImplementation::move_track(const media::Track::Id& id,
     else
         throw media::TrackList::Errors::FailedToFindMoveTrackSource
                 ("Failed to find source track " + id);
+
+    std::cout << "-----------------------------------------------------" << std::endl;
 
     return ret;
 }
