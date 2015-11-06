@@ -569,6 +569,11 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         d->update_mpris_properties();
     });
 
+    d->track_list->on_track_list_reset().connect([this](void)
+    {
+        d->update_mpris_properties();
+    });
+
     d->track_list->on_track_changed().connect([this](const media::Track::Id&)
     {
         d->update_mpris_properties();

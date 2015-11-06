@@ -270,26 +270,20 @@ void media::TrackListImplementation::unshuffle_tracks()
 
 void media::TrackListImplementation::reset()
 {
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+
     // Make sure playback stops
     on_end_of_tracklist()();
     // And make sure there is no "current" track
     media::TrackListSkeleton::reset();
 
-    auto result = tracks().update([this](TrackList::Container& container)
+    tracks().update([this](TrackList::Container& container)
     {
-        TrackList::Container ids = container;
+        container.clear();
+        on_track_list_reset()();
 
-        for (auto it = container.begin(); it != container.end(); ) {
-            auto id = *it;
-            it = container.erase(it);
-            on_track_removed()(id);
-        }
-
-        container.resize(0);
         d->track_counter = 0;
 
         return true;
     });
-
-    (void) result;
 }

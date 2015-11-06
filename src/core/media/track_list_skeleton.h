@@ -57,6 +57,7 @@ public:
     const core::Signal<ContainerURI>& on_tracks_added() const;
     core::Signal<ContainerURI>& on_tracks_added();
     const core::Signal<Track::Id>& on_track_removed() const;
+    const core::Signal<void>& on_track_list_reset() const;
     const core::Signal<Track::Id>& on_track_changed() const;
     core::Signal<Track::Id>& on_track_changed();
     const core::Signal<std::pair<Track::Id, bool>>& on_go_to_track() const;
@@ -64,6 +65,7 @@ public:
     const core::Signal<void>& on_end_of_tracklist() const;
     core::Signal<void>& on_end_of_tracklist();
     core::Signal<Track::Id>& on_track_removed();
+    core::Signal<void>& on_track_list_reset();
 
     core::Property<Container>& tracks();
     void on_loop_status_changed(const core::ubuntu::media::Player::LoopStatus& loop_status);
