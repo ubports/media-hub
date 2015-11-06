@@ -243,7 +243,6 @@ bool media::TrackListImplementation::move_track(const media::Track::Id& id,
             {
                 throw media::TrackList::Errors::FailedToFindMoveTrackDest
                         ("Failed to find destination track " + to);
-                return false;
             }
 
             // Insert id at the location just before insert_point_it
@@ -256,7 +255,6 @@ bool media::TrackListImplementation::move_track(const media::Track::Id& id,
                 if (!r)
                 {
                     throw media::TrackList::Errors::FailedToMoveTrack();
-                    return false;
                 }
                 std::cout << "*** Updated current_iterator, id: " << *current_iterator() << std::endl;
             }
@@ -264,7 +262,6 @@ bool media::TrackListImplementation::move_track(const media::Track::Id& id,
             {
                 std::cerr << "Can't update current_iterator - failed to find track after move" << std::endl;
                 throw media::TrackList::Errors::FailedToMoveTrack();
-                return false;
             }
 
             return true;
@@ -284,8 +281,10 @@ bool media::TrackListImplementation::move_track(const media::Track::Id& id,
         }
     }
     else
+    {
         throw media::TrackList::Errors::FailedToFindMoveTrackSource
                 ("Failed to find source track " + id);
+    }
 
     std::cout << "-----------------------------------------------------" << std::endl;
 
