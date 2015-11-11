@@ -54,6 +54,11 @@ class TrackList : public std::enable_shared_from_this<TrackList>
         {
             InsufficientPermissionsToAddTrack();
         };
+
+        struct TrackNotFound : public std::runtime_error
+        {
+            TrackNotFound();
+        };
     };
 
     static const Track::Id& after_empty_track();

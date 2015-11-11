@@ -57,6 +57,14 @@ struct TrackList
                 "mpris.TrackList.Error.InsufficientPermissionsToAddTrack"
             };
         };
+
+        struct TrackNotFound
+        {
+            static constexpr const char* name
+            {
+                "mpris.TrackList.Error.TrackNotFound"
+            };
+        };
     };
 
     DBUS_CPP_METHOD_DEF(GetTracksMetadata, TrackList)

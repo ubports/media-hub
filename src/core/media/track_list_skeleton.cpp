@@ -38,6 +38,7 @@
 
 #include <iostream>
 #include <limits>
+#include <sstream>
 #include <cstdint>
 
 namespace dbus = core::dbus;
@@ -114,6 +115,8 @@ struct media::TrackListSkeleton::Private
             // Only add the track to the TrackList if it passes the apparmor permissions check
             if (std::get<0>(result))
             {
+                media::Track::Id next;
+                //if (make_current)
                 impl->add_track_with_uri_at(uri, after, make_current);
             }
             else
@@ -180,7 +183,52 @@ struct media::TrackListSkeleton::Private
         media::Track::Id track;
         msg->reader() >> track;
 
+        auto id_it = find(impl->tracks().get().begin(), impl->tracks().get().end(), track);
+        if (id_it == impl->tracks().get().end()) {
+            ostringstream err_str;
+            err_str << "Track " << track << " not found in play list";
+            cout << __PRETTY_FUNCTION__ << " WARNING " << err_str.str() << endl;
+            auto reply = dbus::Message::make_error(
+                            msg,
+                            mpris::TrackList::Error::TrackNotFound::name,
+                            err_str.str());
+            bus->send(reply);
+            return;
+        }
+
+        media::Track::Id next;
+        bool deleting_current = false;
+
+        if (id_it == impl->current_iterator()) {
+            cout << "Removing current track" << endl;
+            deleting_current = true;
+
+            if (current_track != empty_iterator) {
+                ++current_track;
+
+                if (   current_track == impl->tracks().get().end()
+                    && loop_status == media::Player::LoopStatus::playlist)
+                        current_track = impl->tracks().get().begin();
+
+                if (current_track == impl->tracks().get().end())
+                    current_track = empty_iterator;
+                else
+                    next = *current_track;
+            }
+        } else if (current_track != empty_iterator) {
+            next = *current_track;
+        }
+
         impl->remove_track(track);
+
+        if (not next.empty()) {
+            current_track = find(impl->tracks().get().begin(), impl->tracks().get().end(), next);
+
+            if (deleting_current) {
+                const bool toggle_player_state = true;
+                impl->go_to(next, toggle_player_state);
+            }
+        }
 
         auto reply = dbus::Message::make_method_return(msg);
         bus->send(reply);
@@ -524,6 +572,21 @@ void media::TrackListSkeleton::reset_current_iterator_if_needed()
     // iterator for further use.
     if (tracks().get().empty())
         d->current_track = d->empty_iterator;
+}
+
+media::Track::Id media::TrackListSkeleton::get_current_track(void)
+{
+    if (d->current_track == d->empty_iterator || tracks().get().empty())
+        return media::Track::Id{};
+
+    return *(current_iterator());
+}
+
+void media::TrackListSkeleton::set_current_track(const media::Track::Id& id)
+{
+    auto id_it = find(tracks().get().begin(), tracks().get().end(), id);
+    if (id_it != tracks().get().end())
+        d->current_track = id_it;
 }
 
 const core::Property<bool>& media::TrackListSkeleton::can_edit_tracks() const

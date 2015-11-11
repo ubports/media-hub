@@ -118,6 +118,8 @@ void media::TrackListImplementation::add_track_with_uri_at(
     std::cout << "Adding Track::Id: " << id << std::endl;
     std::cout << "\tURI: " << uri << std::endl;
 
+    auto current = get_current_track();
+
     auto result = tracks().update([this, id, position, make_current](TrackList::Container& container)
     {
         auto it = std::find(container.begin(), container.end(), position);
@@ -133,11 +135,14 @@ void media::TrackListImplementation::add_track_with_uri_at(
 
         if (make_current)
         {
+            set_current_track(id);
             // Don't automatically call stop() and play() in player_implementation.cpp on_go_to_track()
             // since this breaks video playback when using open_uri() (stop() and play() are unwanted in
             // this scenario since the qtubuntu-media will handle this automatically)
             const bool toggle_player_state = false;
             go_to(id, toggle_player_state);
+        } else {
+            set_current_track(current);
         }
 
         std::cout << "Signaling that we just added track id: " << id << std::endl;
@@ -154,6 +159,8 @@ void media::TrackListImplementation::add_track_with_uri_at(
 void media::TrackListImplementation::add_tracks_with_uri_at(const ContainerURI& uris, const Track::Id& position)
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
+
+    auto current = get_current_track();
 
     Track::Id current_id;
     ContainerURI tmp;
@@ -190,6 +197,8 @@ void media::TrackListImplementation::add_tracks_with_uri_at(const ContainerURI& 
                 current_id = id;
         }
     }
+
+    set_current_track(current);
 
     std::cout << "Signaling that we just added " << tmp.size() << " tracks to the TrackList" << std::endl;
     on_tracks_added()(tmp);

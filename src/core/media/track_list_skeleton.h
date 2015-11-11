@@ -82,6 +82,8 @@ protected:
     inline bool is_last_track(const ConstIterator &it);
     inline const TrackList::ConstIterator& current_iterator();
     void reset_current_iterator_if_needed();
+    media::Track::Id get_current_track(void);
+    void set_current_track(const media::Track::Id& id);
 
     core::Property<bool>& can_edit_tracks();
 

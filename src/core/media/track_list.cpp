@@ -25,6 +25,11 @@ media::TrackList::Errors::InsufficientPermissionsToAddTrack::InsufficientPermiss
 {
 }
 
+media::TrackList::Errors::TrackNotFound::TrackNotFound()
+    : std::runtime_error{"Track not found in TrackList"}
+{
+}
+
 const media::Track::Id& media::TrackList::after_empty_track()
 {
     static const media::Track::Id id{"/org/mpris/MediaPlayer2/TrackList/NoTrack"};

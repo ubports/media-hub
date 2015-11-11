@@ -253,7 +253,13 @@ void media::TrackListStub::remove_track(const media::Track::Id& track)
                 track);
 
     if (op.is_error())
-        throw std::runtime_error("Problem removing track: " + op.error());
+    {
+        if (op.error().name() ==
+                mpris::TrackList::Error::TrackNotFound::name)
+            throw media::TrackList::Errors::TrackNotFound{};
+        else
+            throw std::runtime_error{"Problem removing track: " + op.error().print()};
+    }
 }
 
 void media::TrackListStub::go_to(const media::Track::Id& track, bool toggle_player_state)
