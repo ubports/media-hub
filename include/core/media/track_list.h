@@ -56,6 +56,11 @@ class TrackList : public std::enable_shared_from_this<TrackList>
             InsufficientPermissionsToAddTrack();
         };
 
+        struct TrackNotFound : public std::runtime_error
+        {
+            TrackNotFound();
+        };
+
         struct FailedToMoveTrack : public std::runtime_error
         {
             FailedToMoveTrack();
@@ -144,6 +149,9 @@ class TrackList : public std::enable_shared_from_this<TrackList>
 
     /** Indicates that a track has been removed from the track list. */
     virtual const core::Signal<Track::Id>& on_track_removed() const = 0;
+
+    /** Indicates that the track list has been reset and there are no tracks now */
+    virtual const core::Signal<void>& on_track_list_reset() const = 0;
 
     /** Indicates that the track list advanced from one track to another. */
     virtual const core::Signal<Track::Id>& on_track_changed() const = 0;

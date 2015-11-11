@@ -59,6 +59,7 @@ public:
     const core::Signal<TrackIdTuple>& on_track_moved() const;
     core::Signal<TrackIdTuple>& on_track_moved();
     const core::Signal<Track::Id>& on_track_removed() const;
+    const core::Signal<void>& on_track_list_reset() const;
     const core::Signal<Track::Id>& on_track_changed() const;
     core::Signal<Track::Id>& on_track_changed();
     const core::Signal<std::pair<Track::Id, bool>>& on_go_to_track() const;
@@ -66,6 +67,7 @@ public:
     const core::Signal<void>& on_end_of_tracklist() const;
     core::Signal<void>& on_end_of_tracklist();
     core::Signal<Track::Id>& on_track_removed();
+    core::Signal<void>& on_track_list_reset();
 
     core::Property<Container>& tracks();
     void on_loop_status_changed(const core::ubuntu::media::Player::LoopStatus& loop_status);
@@ -83,6 +85,8 @@ protected:
     inline const TrackList::ConstIterator& current_iterator();
     bool update_current_iterator(const TrackList::ConstIterator &it);
     void reset_current_iterator_if_needed();
+    media::Track::Id get_current_track(void);
+    void set_current_track(const media::Track::Id& id);
 
     core::Property<bool>& can_edit_tracks();
 
