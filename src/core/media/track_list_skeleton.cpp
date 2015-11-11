@@ -624,7 +624,7 @@ void media::TrackListSkeleton::on_shuffle_changed(bool shuffle)
     if (tracks().get().empty())
         return;
 
-    const media::Track::Id current_id = *(current_iterator());
+    const auto current_id = get_current_track();
 
     cout << __PRETTY_FUNCTION__ << " " << shuffle
          << " current track: " << current_id << endl;
@@ -635,9 +635,7 @@ void media::TrackListSkeleton::on_shuffle_changed(bool shuffle)
         unshuffle_tracks();
 
     // Shuffling and unshuffling invalidates iterators, so we re-create current_track
-    auto it = find(tracks().get().begin(), tracks().get().end(), current_id);
-    if (it != tracks().get().end())
-        d->current_track = it;
+    set_current_track(current_id);
 }
 
 const core::Property<media::TrackList::Container>& media::TrackListSkeleton::tracks() const
