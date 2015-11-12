@@ -25,7 +25,6 @@ media::TrackList::Errors::InsufficientPermissionsToAddTrack::InsufficientPermiss
 {
 }
 
-<<<<<<< TREE
 media::TrackList::Errors::FailedToMoveTrack::FailedToMoveTrack()
     : std::runtime_error{"Failed to move track within TrackList"}
 {

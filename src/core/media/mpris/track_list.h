@@ -58,7 +58,6 @@ struct TrackList
             };
         };
 
-<<<<<<< TREE
         struct FailedToMoveTrack
         {
             static constexpr const char* name
