@@ -58,6 +58,7 @@ struct TrackList
             };
         };
 
+<<<<<<< TREE
         struct FailedToMoveTrack
         {
             static constexpr const char* name
@@ -79,6 +80,14 @@ struct TrackList
             static constexpr const char* name
             {
                 "mpris.TrackList.Error.FailedToFindMoveTrackDest"
+	    };
+	};
+
+        struct TrackNotFound
+        {
+            static constexpr const char* name
+            {
+                "mpris.TrackList.Error.TrackNotFound"
             };
         };
     };
@@ -140,6 +149,13 @@ struct TrackList
 
         DBUS_CPP_SIGNAL_DEF
         (
+            TrackListReset,
+            TrackList,
+            void
+        )
+
+        DBUS_CPP_SIGNAL_DEF
+        (
             TrackMetadataChanged,
             TrackList,
             BOOST_IDENTITY_TYPE((std::tuple<std::map<std::string, dbus::types::Variant>, dbus::types::ObjectPath>))
@@ -189,6 +205,7 @@ struct TrackList
                   configuration.object->template get_signal<Signals::TrackMoved>(),
                   configuration.object->template get_signal<Signals::TrackRemoved>(),
                   configuration.object->template get_signal<Signals::TrackChanged>(),
+                  configuration.object->template get_signal<Signals::TrackListReset>(),
                   configuration.object->template get_signal<Signals::TrackMetadataChanged>(),
                   configuration.object->template get_signal<core::dbus::interfaces::Properties::Signals::PropertiesChanged>()
               }
@@ -235,6 +252,7 @@ struct TrackList
             core::dbus::Signal<Signals::TrackMoved, Signals::TrackMoved::ArgumentType>::Ptr track_moved;
             core::dbus::Signal<Signals::TrackRemoved, Signals::TrackRemoved::ArgumentType>::Ptr track_removed;
             core::dbus::Signal<Signals::TrackChanged, Signals::TrackChanged::ArgumentType>::Ptr track_changed;
+            core::dbus::Signal<Signals::TrackListReset, Signals::TrackListReset::ArgumentType>::Ptr track_list_reset;
             core::dbus::Signal<Signals::TrackMetadataChanged, Signals::TrackMetadataChanged::ArgumentType>::Ptr track_metadata_changed;
 
             dbus::Signal <core::dbus::interfaces::Properties::Signals::PropertiesChanged,
