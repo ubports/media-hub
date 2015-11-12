@@ -227,6 +227,9 @@ struct media::TrackListSkeleton::Private
             if (deleting_current) {
                 const bool toggle_player_state = true;
                 impl->go_to(next, toggle_player_state);
+            } else {
+                // To force an index update in the client
+                impl->on_track_changed()(next);
             }
         }
 
@@ -585,8 +588,11 @@ media::Track::Id media::TrackListSkeleton::get_current_track(void)
 void media::TrackListSkeleton::set_current_track(const media::Track::Id& id)
 {
     auto id_it = find(tracks().get().begin(), tracks().get().end(), id);
-    if (id_it != tracks().get().end())
+    if (id_it != tracks().get().end()) {
         d->current_track = id_it;
+        // To force an index update in the client
+        on_track_changed()(id);
+    }
 }
 
 const core::Property<bool>& media::TrackListSkeleton::can_edit_tracks() const
