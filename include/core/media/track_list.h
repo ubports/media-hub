@@ -69,7 +69,7 @@ class TrackList : public std::enable_shared_from_this<TrackList>
         struct FailedToFindMoveTrackDest : public std::runtime_error
         {
             FailedToFindMoveTrackDest(const std::string& err);
-	};
+        };
 
         struct TrackNotFound : public std::runtime_error
         {

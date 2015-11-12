@@ -79,8 +79,8 @@ struct TrackList
             static constexpr const char* name
             {
                 "mpris.TrackList.Error.FailedToFindMoveTrackDest"
-	    };
-	};
+            };
+        };
 
         struct TrackNotFound
         {

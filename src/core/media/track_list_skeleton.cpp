@@ -116,6 +116,8 @@ struct media::TrackListSkeleton::Private
             // Only add the track to the TrackList if it passes the apparmor permissions check
             if (std::get<0>(result))
             {
+                media::Track::Id next;
+                //if (make_current)
                 impl->add_track_with_uri_at(uri, after, make_current);
             }
             else
