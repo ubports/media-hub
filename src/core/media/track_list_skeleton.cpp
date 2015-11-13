@@ -230,7 +230,7 @@ struct media::TrackListSkeleton::Private
         auto id_it = find(impl->tracks().get().begin(), impl->tracks().get().end(), track);
         if (id_it == impl->tracks().get().end()) {
             ostringstream err_str;
-            err_str << "Track " << track << " not found in play list";
+            err_str << "Track " << track << " not found in track list";
             cout << __PRETTY_FUNCTION__ << " WARNING " << err_str.str() << endl;
             auto reply = dbus::Message::make_error(
                             msg,
@@ -653,7 +653,7 @@ media::Track::Id media::TrackListSkeleton::get_current_track(void)
 
 void media::TrackListSkeleton::set_current_track(const media::Track::Id& id)
 {
-    auto id_it = find(tracks().get().begin(), tracks().get().end(), id);
+    const auto id_it = find(tracks().get().begin(), tracks().get().end(), id);
     if (id_it != tracks().get().end())
         d->current_track = id_it;
 }
