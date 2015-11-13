@@ -118,7 +118,7 @@ void media::TrackListImplementation::add_track_with_uri_at(
     std::cout << "Adding Track::Id: " << id << std::endl;
     std::cout << "\tURI: " << uri << std::endl;
 
-    auto current = get_current_track();
+    const auto current = get_current_track();
 
     auto result = tracks().update([this, id, position, make_current](TrackList::Container& container)
     {
@@ -160,7 +160,7 @@ void media::TrackListImplementation::add_tracks_with_uri_at(const ContainerURI& 
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
 
-    auto current = get_current_track();
+    const auto current = get_current_track();
 
     Track::Id current_id;
     ContainerURI tmp;

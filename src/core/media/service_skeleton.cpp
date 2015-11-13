@@ -209,9 +209,11 @@ struct media::ServiceSkeleton::Private
             std::string uuid;
             msg->reader() >> uuid;
 
-            if (uuid_player_map.count(uuid) != 0) {
+            if (uuid_player_map.count(uuid) != 0)
+            {
                 auto key = uuid_player_map.at(uuid);
-                if (not configuration.player_store->has_player_for_key(key)) {
+                if (not configuration.player_store->has_player_for_key(key))
+                {
                     auto reply = dbus::Message::make_error(
                                 msg,
                                 mpris::Service::Errors::ReattachingSession::name(),
