@@ -538,7 +538,10 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         }
 
         if (toggle_player_state)
+        {
+            std::cout << "Toggling player state to play in on_go_to_track" << std::endl;
             d->engine->play();
+        }
 
         d->doing_go_to_track.unlock();
     });

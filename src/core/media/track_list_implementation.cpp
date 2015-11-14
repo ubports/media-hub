@@ -320,7 +320,7 @@ void media::TrackListImplementation::remove_track(const media::Track::Id& id)
 
 void media::TrackListImplementation::go_to(const media::Track::Id& track, bool toggle_player_state)
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    std::cout << __PRETTY_FUNCTION__ << " toggle_player_state: " << toggle_player_state << std::endl;
     std::pair<const media::Track::Id, bool> p = std::make_pair(track, toggle_player_state);
     // Signal the Player instance to go to a specific track for playback
     on_go_to_track()(p);

@@ -281,10 +281,10 @@ struct media::TrackListSkeleton::Private
     void handle_go_to(const core::dbus::Message::Ptr& msg)
     {
         media::Track::Id track;
-        msg->reader() >> track;
+        bool toggle_player_state;
+        msg->reader() >> track >> toggle_player_state;
 
         current_track = std::find(skeleton.properties.tracks->get().begin(), skeleton.properties.tracks->get().end(), track);
-        const bool toggle_player_state = true;
         impl->go_to(track, toggle_player_state);
 
         auto reply = dbus::Message::make_method_return(msg);

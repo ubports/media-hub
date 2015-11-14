@@ -301,9 +301,8 @@ void media::TrackListStub::remove_track(const media::Track::Id& track)
 
 void media::TrackListStub::go_to(const media::Track::Id& track, bool toggle_player_state)
 {
-    (void) toggle_player_state;
     auto op = d->object->invoke_method_synchronously<mpris::TrackList::GoTo, void>(
-                track);
+                track, toggle_player_state);
 
     if (op.is_error())
         throw std::runtime_error("Problem adding track: " + op.error());
