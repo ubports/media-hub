@@ -52,7 +52,7 @@ public:
     bool move_track(const Track::Id& id, const Track::Id& to);
     void remove_track(const Track::Id& id);
 
-    void go_to(const Track::Id& track, bool toggle_player_state);
+    void go_to(const Track::Id& track);
 
     Track::Id next();
     Track::Id previous();
@@ -69,7 +69,7 @@ public:
     const core::Signal<Track::Id>& on_track_removed() const;
     const core::Signal<void>& on_track_list_reset() const;
     const core::Signal<Track::Id>& on_track_changed() const;
-    const core::Signal<std::pair<Track::Id, bool>>& on_go_to_track() const;
+    const core::Signal<Track::Id>& on_go_to_track() const;
     const core::Signal<void>& on_end_of_tracklist() const;
 
 private:

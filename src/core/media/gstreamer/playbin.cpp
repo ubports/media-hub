@@ -207,6 +207,8 @@ void gstreamer::Playbin::reset_pipeline()
     is_missing_video_codec = false;
     audio_stream_id = -1;
     video_stream_id = -1;
+    // Set the uri to be NULL
+    g_object_set(pipeline, "uri", NULL, NULL);
 }
 
 void gstreamer::Playbin::process_message_element(GstMessage *message)
@@ -448,7 +450,13 @@ void gstreamer::Playbin::set_uri(
     const core::ubuntu::media::Player::HeadersType& headers = core::ubuntu::media::Player::HeadersType(),
     bool do_pipeline_reset)
 {
-    if (do_pipeline_reset)
+    gchar *current_uri = nullptr;
+    g_object_get(pipeline, "current-uri", &current_uri, NULL);
+
+    // Checking for a current_uri being set and not resetting the pipeline
+    // if there isn't a current_uri causes the first play to start playback
+    // sooner since reset_pipeline won't be called
+    if (current_uri and do_pipeline_reset)
         reset_pipeline();
 
     g_object_set(pipeline, "uri", uri.c_str(), NULL);
@@ -458,6 +466,8 @@ void gstreamer::Playbin::set_uri(
         file_type = MEDIA_FILE_TYPE_AUDIO;
 
     request_headers = headers;
+
+    g_free(current_uri);
 }
 
 void gstreamer::Playbin::setup_source(GstElement *source)

@@ -158,7 +158,7 @@ struct media::TrackListStub::Private
         core::Signal<void> on_track_list_reset;
         core::Signal<media::TrackList::ContainerTrackIdTuple> on_track_list_replaced;
         core::Signal<Track::Id> on_track_changed;
-        core::Signal<std::pair<Track::Id, bool>> on_go_to_track;
+        core::Signal<Track::Id> on_go_to_track;
         core::Signal<void> on_end_of_tracklist;
 
         struct DBus
@@ -299,10 +299,9 @@ void media::TrackListStub::remove_track(const media::Track::Id& track)
     }
 }
 
-void media::TrackListStub::go_to(const media::Track::Id& track, bool toggle_player_state)
+void media::TrackListStub::go_to(const media::Track::Id& track)
 {
-    auto op = d->object->invoke_method_synchronously<mpris::TrackList::GoTo, void>(
-                track, toggle_player_state);
+    auto op = d->object->invoke_method_synchronously<mpris::TrackList::GoTo, void>(track);
 
     if (op.is_error())
         throw std::runtime_error("Problem adding track: " + op.error());
@@ -373,7 +372,7 @@ const core::Signal<media::Track::Id>& media::TrackListStub::on_track_changed() c
     return d->signals.on_track_changed;
 }
 
-const core::Signal<std::pair<media::Track::Id, bool>>& media::TrackListStub::on_go_to_track() const
+const core::Signal<media::Track::Id>& media::TrackListStub::on_go_to_track() const
 {
     return d->signals.on_go_to_track;
 }

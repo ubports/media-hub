@@ -512,8 +512,7 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         }
     });
 
-
-    d->track_list->on_go_to_track().connect([this](std::pair<const media::Track::Id, bool> p)
+    d->track_list->on_go_to_track().connect([this](const media::Track::Id& id)
     {
         // This lambda needs to be mutually exclusive with the about_to_finish lambda above
         const bool locked = d->doing_go_to_track.try_lock();
@@ -522,11 +521,8 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         if (!locked)
             return;
 
-        const media::Track::Id id = p.first;
-        const bool toggle_player_state = p.second;
-
-        if (toggle_player_state)
-            d->engine->stop();
+        // Store whether we should restore the current playing state after loading the new uri
+        const bool auto_play = Parent::playback_status().get() == media::Player::playing;
 
         const Track::UriType uri = d->track_list->query_uri_for_track(id);
         if (!uri.empty())
@@ -537,9 +533,9 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
             d->engine->open_resource_for_uri(uri, do_pipeline_reset);
         }
 
-        if (toggle_player_state)
+        if (auto_play)
         {
-            std::cout << "Toggling player state to play in on_go_to_track" << std::endl;
+            std::cout << "Restoring playing state in on_go_to_track()" << std::endl;
             d->engine->play();
         }
 
@@ -696,7 +692,8 @@ bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri)
         return true;
     }
 
-    const bool ret = d->engine->open_resource_for_uri(uri, false);
+    static const bool do_pipeline_reset = false;
+    const bool ret = d->engine->open_resource_for_uri(uri, do_pipeline_reset);
     // Don't set new track as the current track to play since we're calling open_resource_for_uri above
     static const bool make_current = false;
     d->track_list->add_track_with_uri_at(uri, media::TrackList::after_empty_track(), make_current);

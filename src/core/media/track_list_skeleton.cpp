@@ -269,8 +269,7 @@ struct media::TrackListSkeleton::Private
             current_track = find(impl->tracks().get().begin(), impl->tracks().get().end(), next);
 
             if (deleting_current) {
-                const bool toggle_player_state = true;
-                impl->go_to(next, toggle_player_state);
+                impl->go_to(next);
             }
         }
 
@@ -281,11 +280,10 @@ struct media::TrackListSkeleton::Private
     void handle_go_to(const core::dbus::Message::Ptr& msg)
     {
         media::Track::Id track;
-        bool toggle_player_state;
-        msg->reader() >> track >> toggle_player_state;
+        msg->reader() >> track;
 
         current_track = std::find(skeleton.properties.tracks->get().begin(), skeleton.properties.tracks->get().end(), track);
-        impl->go_to(track, toggle_player_state);
+        impl->go_to(track);
 
         auto reply = dbus::Message::make_method_return(msg);
         bus->send(reply);
@@ -376,7 +374,7 @@ struct media::TrackListSkeleton::Private
         core::Signal<void> on_track_list_reset;
         core::Signal<Track::Id> on_track_changed;
         core::Signal<TrackList::ContainerTrackIdTuple> on_track_list_replaced;
-        core::Signal<std::pair<Track::Id, bool>> on_go_to_track;
+        core::Signal<Track::Id> on_go_to_track;
         core::Signal<void> on_end_of_tracklist;
     } signals;
 };
@@ -523,14 +521,9 @@ media::Track::Id media::TrackListSkeleton::next()
     {
         cout << "next track id is " << *(current_iterator()) << endl;
         on_track_changed()(*(current_iterator()));
-        // Don't automatically call stop() and play() in player_implementation.cpp on_go_to_track()
-        // since this breaks video playback when using open_uri() (stop() and play() are unwanted in
-        // this scenario since the qtubuntu-media will handle this automatically)
-        const bool toggle_player_state = false;
         const media::Track::Id id = *(current_iterator());
-        const std::pair<const media::Track::Id, bool> p = std::make_pair(id, toggle_player_state);
         // Signal the PlayerImplementation to play the next track
-        on_go_to_track()(p);
+        on_go_to_track()(id);
     }
 
     return *(current_iterator());
@@ -589,13 +582,8 @@ media::Track::Id media::TrackListSkeleton::previous()
     if (do_go_to_previous_track)
     {
         on_track_changed()(*(current_iterator()));
-        // Don't automatically call stop() and play() in player_implementation.cpp on_go_to_track()
-        // since this breaks video playback when using open_uri() (stop() and play() are unwanted in
-        // this scenario since the qtubuntu-media will handle this automatically)
-        const bool toggle_player_state = false;
         const media::Track::Id id = *(current_iterator());
-        const std::pair<const media::Track::Id, bool> p = std::make_pair(id, toggle_player_state);
-        on_go_to_track()(p);
+        on_go_to_track()(id);
     }
 
     return *(current_iterator());
@@ -749,7 +737,7 @@ const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_changed
     return d->signals.on_track_changed;
 }
 
-const core::Signal<std::pair<media::Track::Id, bool>>& media::TrackListSkeleton::on_go_to_track() const
+const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_go_to_track() const
 {
     return d->signals.on_go_to_track;
 }
@@ -794,7 +782,7 @@ core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_changed()
     return d->signals.on_track_changed;
 }
 
-core::Signal<std::pair<media::Track::Id, bool>>& media::TrackListSkeleton::on_go_to_track()
+core::Signal<media::Track::Id>& media::TrackListSkeleton::on_go_to_track()
 {
     return d->signals.on_go_to_track;
 }

@@ -62,8 +62,8 @@ public:
     const core::Signal<void>& on_track_list_reset() const;
     const core::Signal<Track::Id>& on_track_changed() const;
     core::Signal<Track::Id>& on_track_changed();
-    const core::Signal<std::pair<Track::Id, bool>>& on_go_to_track() const;
-    core::Signal<std::pair<Track::Id, bool>>& on_go_to_track();
+    const core::Signal<Track::Id>& on_go_to_track() const;
+    core::Signal<Track::Id>& on_go_to_track();
     const core::Signal<void>& on_end_of_tracklist() const;
     core::Signal<void>& on_end_of_tracklist();
     core::Signal<Track::Id>& on_track_removed();
