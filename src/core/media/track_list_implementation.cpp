@@ -311,6 +311,10 @@ void media::TrackListImplementation::remove_track(const media::Track::Id& id)
         d->meta_data_cache.erase(id);
 
         on_track_removed()(id);
+
+        // Make sure playback stops if all tracks were removed
+        if (tracks().get().empty())
+            on_end_of_tracklist()();
     }
 }
 
