@@ -258,7 +258,6 @@ struct media::TrackListSkeleton::Private
                     // Removed the last track, current is the first track and make sure that
                     // the player starts playing it
                     current_track = impl->tracks().get().begin();
-                    impl->go_to(*current_track);
                 }
 
                 if (current_track == impl->tracks().get().end())
