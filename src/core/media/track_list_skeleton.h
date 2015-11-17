@@ -80,9 +80,11 @@ public:
     void on_shuffle_changed(bool shuffle);
 
 protected:
-    inline bool is_first_track(const ConstIterator &it);
-    inline bool is_last_track(const ConstIterator &it);
-    inline const TrackList::ConstIterator& current_iterator();
+    inline bool is_first_track(const ConstIterator &it)
+    { return it == std::begin(tracks().get()); }
+    inline bool is_last_track(const ConstIterator &it)
+    { return it == std::end(tracks().get()); }
+    const TrackList::ConstIterator& current_iterator();
     bool update_current_iterator(const TrackList::ConstIterator &it);
     void reset_current_iterator_if_needed();
     media::Track::Id get_current_track(void);

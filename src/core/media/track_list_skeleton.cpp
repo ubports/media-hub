@@ -465,16 +465,6 @@ bool media::TrackListSkeleton::has_previous()
     return d->current_track != std::begin(tracks().get());
 }
 
-bool media::TrackListSkeleton::is_first_track(const ConstIterator &it)
-{
-    return it == std::begin(tracks().get());
-}
-
-bool media::TrackListSkeleton::is_last_track(const TrackList::ConstIterator &it)
-{
-    return it == std::end(tracks().get());
-}
-
 media::Track::Id media::TrackListSkeleton::next()
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
