@@ -92,6 +92,8 @@ protected:
 
     core::Property<bool>& can_edit_tracks();
 
+    void emit_on_end_of_tracklist();
+
     void reset();
 
 private:

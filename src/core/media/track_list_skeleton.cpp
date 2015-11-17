@@ -243,23 +243,38 @@ struct media::TrackListSkeleton::Private
         media::Track::Id next;
         bool deleting_current = false;
 
-        if (id_it == impl->current_iterator()) {
+        if (id_it == impl->current_iterator())
+        {
             cout << "Removing current track" << endl;
             deleting_current = true;
 
-            if (current_track != empty_iterator) {
+            if (current_track != empty_iterator)
+            {
                 ++current_track;
 
                 if (current_track == impl->tracks().get().end()
                             && loop_status == media::Player::LoopStatus::playlist)
-                        current_track = impl->tracks().get().begin();
+                {
+                    // Removed the last track, current is the first track and make sure that
+                    // the player starts playing it
+                    current_track = impl->tracks().get().begin();
+                    impl->go_to(*current_track);
+                }
 
                 if (current_track == impl->tracks().get().end())
+                {
                     current_track = empty_iterator;
+                    // Nothing else to play, stop playback
+                    impl->emit_on_end_of_tracklist();
+                }
                 else
+                {
                     next = *current_track;
+                }
             }
-        } else if (current_track != empty_iterator) {
+        }
+        else if (current_track != empty_iterator)
+        {
             next = *current_track;
         }
 
@@ -634,6 +649,11 @@ void media::TrackListSkeleton::set_current_track(const media::Track::Id& id)
     const auto id_it = find(tracks().get().begin(), tracks().get().end(), id);
     if (id_it != tracks().get().end())
         d->current_track = id_it;
+}
+
+void media::TrackListSkeleton::emit_on_end_of_tracklist()
+{
+    on_end_of_tracklist()();
 }
 
 const core::Property<bool>& media::TrackListSkeleton::can_edit_tracks() const
