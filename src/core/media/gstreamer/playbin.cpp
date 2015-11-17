@@ -207,8 +207,6 @@ void gstreamer::Playbin::reset_pipeline()
     is_missing_video_codec = false;
     audio_stream_id = -1;
     video_stream_id = -1;
-    // Set the uri to be NULL
-    g_object_set(pipeline, "uri", NULL, NULL);
 }
 
 void gstreamer::Playbin::process_message_element(GstMessage *message)
