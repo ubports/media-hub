@@ -61,6 +61,7 @@ struct media::TrackListSkeleton::Private
           empty_iterator(skeleton.properties.tracks->get().begin()),
           loop_status(media::Player::LoopStatus::none),
           current_position(0),
+          id_after_remove(),
           signals
           {
               skeleton.signals.track_added,
@@ -116,8 +117,6 @@ struct media::TrackListSkeleton::Private
             // Only add the track to the TrackList if it passes the apparmor permissions check
             if (std::get<0>(result))
             {
-                media::Track::Id next;
-                //if (make_current)
                 impl->add_track_with_uri_at(uri, after, make_current);
             }
             else
@@ -276,16 +275,13 @@ struct media::TrackListSkeleton::Private
         {
             next = *current_track;
         }
+        id_after_remove = next;
 
+        // Calls reset_current_iterator_if_needed(), which updates the iterator
         impl->remove_track(track);
 
-        if (not next.empty()) {
-            current_track = find(impl->tracks().get().begin(), impl->tracks().get().end(), next);
-
-            if (deleting_current) {
-                impl->go_to(next);
-            }
-        }
+        if ((not next.empty()) and deleting_current)
+            impl->go_to(next);
 
         auto reply = dbus::Message::make_method_return(msg);
         bus->send(reply);
@@ -322,6 +318,7 @@ struct media::TrackListSkeleton::Private
     TrackList::ConstIterator empty_iterator;
     media::Player::LoopStatus loop_status;
     uint64_t current_position;
+    media::Track::Id id_after_remove;
 
     struct Signals
     {
@@ -443,6 +440,10 @@ media::TrackListSkeleton::~TrackListSkeleton()
 {
 }
 
+/*
+ * NOTE We do not consider the loop status in this function due to the use of it
+ * we do in TrackListSkeleton::next()
+ */
 bool media::TrackListSkeleton::has_next()
 {
     const auto n_tracks = tracks().get().size();
@@ -456,27 +457,48 @@ bool media::TrackListSkeleton::has_next()
     // changed in player_implementation.cpp.
     // To avoid the crash we consider that current_track will be eventually
     // initialized to the first track when current_iterator() gets called.
-    if (d->current_track == d->empty_iterator) {
+    if (d->current_track == d->empty_iterator)
+    {
         if (n_tracks < 2)
             return false;
         else
             return true;
     }
 
-    const auto next_track = std::next(current_iterator());
-    return !is_last_track(next_track);
+    if (shuffle())
+    {
+        auto it = get_current_shuffled();
+        return ++it != shuffled_tracks().end();
+    }
+    else
+    {
+        const auto next_track = std::next(current_iterator());
+        return !is_last_track(next_track);
+    }
 }
 
+/*
+ * NOTE We do not consider the loop status in this function due to the use of it
+ * we do in TrackListSkeleton::previous()
+ */
 bool media::TrackListSkeleton::has_previous()
 {
     if (tracks().get().empty() || d->current_track == d->empty_iterator)
         return false;
 
-    // If we are looping over the entire list, then there is always a previous track
-    if (d->loop_status == media::Player::LoopStatus::playlist)
-        return true;
+    if (shuffle())
+        return get_current_shuffled() != shuffled_tracks().begin();
+    else
+        return d->current_track != std::begin(tracks().get());
+}
 
-    return d->current_track != std::begin(tracks().get());
+media::TrackList::ConstIterator media::TrackListSkeleton::get_current_shuffled()
+{
+    auto current_id = *current_iterator();
+    TrackList::ConstIterator it = find(shuffled_tracks().begin(),
+                                       shuffled_tracks().end(), current_id);
+
+    return it;
 }
 
 media::Track::Id media::TrackListSkeleton::next()
@@ -488,46 +510,67 @@ media::Track::Id media::TrackListSkeleton::next()
         return media::Track::Id{};
     }
 
-    const auto next_track = std::next(current_iterator());
-    bool do_go_to_next_track = false;
+    bool set_track = false;
 
     // End of the track reached so loop around to the beginning of the track
     if (d->loop_status == media::Player::LoopStatus::track)
     {
         std::cout << "Looping on the current track since LoopStatus is set to track" << std::endl;
-        do_go_to_next_track = true;
+        set_track = true;
     }
     // End of the tracklist reached so loop around to the beginning of the tracklist
     else if (d->loop_status == media::Player::LoopStatus::playlist && not has_next())
     {
         std::cout << "Looping on the tracklist since LoopStatus is set to playlist" << std::endl;
-        d->current_track = tracks().get().begin();
-        do_go_to_next_track = true;
+
+        if (shuffle())
+        {
+            auto id = *shuffled_tracks().begin();
+            set_current_track(id);
+        }
+        else
+        {
+            d->current_track = tracks().get().begin();
+        }
+        set_track = true;
     }
     else
     {
-        // Next track is not the last track
-        if (not is_last_track(next_track))
+        if (shuffle())
         {
-            std::cout << "Advancing to next track: " << *(next_track) << std::endl;
-            d->current_track = next_track;
-            do_go_to_next_track = true;
+            auto it = get_current_shuffled();
+            if (++it != shuffled_tracks().end()) {
+                cout << "Advancing to next track: " << *it << endl;
+                set_current_track(*it);
+                set_track = true;
+            }
         }
-        // At the end of the tracklist and not set to loop, so we stop advancing the tracklist
         else
         {
-            std::cout << "End of tracklist reached, not advancing to next since LoopStatus is set to none" << std::endl;
-            on_end_of_tracklist()();
+            auto it = std::next(current_iterator());
+            if (not is_last_track(it))
+            {
+                cout << "Advancing to next track: " << *it << endl;
+                d->current_track = it;
+                set_track = true;
+            }
         }
+
     }
 
-    if (do_go_to_next_track)
+    if (set_track)
     {
         cout << "next track id is " << *(current_iterator()) << endl;
         on_track_changed()(*(current_iterator()));
         const media::Track::Id id = *(current_iterator());
         // Signal the PlayerImplementation to play the next track
         on_go_to_track()(id);
+    }
+    else
+    {
+        // At the end of the tracklist and not set to loop
+        cout << "End of tracklist reached" << endl;
+        on_end_of_tracklist()();
     }
 
     return *(current_iterator());
@@ -542,7 +585,7 @@ media::Track::Id media::TrackListSkeleton::previous()
         return media::Track::Id{};
     }
 
-    bool do_go_to_previous_track = false;
+    bool set_track = false;
     // Position is measured in nanoseconds
     const uint64_t max_position = 5 * UINT64_C(1000000000);
 
@@ -551,43 +594,60 @@ media::Track::Id media::TrackListSkeleton::previous()
     if (d->current_position > max_position)
     {
         std::cout << "Repeating current track..." << std::endl;
-        do_go_to_previous_track = true;
+        set_track = true;
     }
     // Loop on the current track forever
     else if (d->loop_status == media::Player::LoopStatus::track)
     {
         std::cout << "Looping on the current track..." << std::endl;
-        do_go_to_previous_track = true;
+        set_track = true;
     }
     // Loop over the whole playlist and repeat
-    else if (d->loop_status == media::Player::LoopStatus::playlist && is_first_track(current_iterator()))
+    else if (d->loop_status == media::Player::LoopStatus::playlist && not has_previous())
     {
         std::cout << "Looping on the entire TrackList..." << std::endl;
-        d->current_track = std::prev(tracks().get().end());
-        do_go_to_previous_track = true;
+
+        if (shuffle())
+        {
+            auto id = *std::prev(shuffled_tracks().end());
+            set_current_track(id);
+        }
+        else
+        {
+            d->current_track = std::prev(tracks().get().end());
+        }
+
+        set_track = true;
     }
     else
     {
-        // Current track is not the first track
-        if (not is_first_track(current_iterator()))
+        if (shuffle())
+        {
+            auto it = get_current_shuffled();
+            if (it != shuffled_tracks().begin()) {
+                set_current_track(*(--it));
+                set_track = true;
+            }
+        }
+        else if (not is_first_track(current_iterator()))
         {
             // Keep returning the previous track until the first track is reached
             d->current_track = std::prev(current_iterator());
-            do_go_to_previous_track = true;
-        }
-        // At the beginning of the tracklist and not set to loop, so we stop advancing the tracklist
-        else
-        {
-            std::cout << "Beginning of tracklist reached, not advancing to previous since LoopStatus is set to none" << std::endl;
-            on_end_of_tracklist()();
+            set_track = true;
         }
     }
 
-    if (do_go_to_previous_track)
+    if (set_track)
     {
         on_track_changed()(*(current_iterator()));
         const media::Track::Id id = *(current_iterator());
         on_go_to_track()(id);
+    }
+    else
+    {
+        // At the beginning of the tracklist and not set to loop
+        cout << "Beginning of tracklist reached" << endl;
+        on_end_of_tracklist()();
     }
 
     return *(current_iterator());
@@ -629,9 +689,8 @@ bool media::TrackListSkeleton::update_current_iterator(const TrackList::ConstIte
 
 void media::TrackListSkeleton::reset_current_iterator_if_needed()
 {
-    // If all tracks got removed then we need to keep a sane current
-    // iterator for further use.
-    if (tracks().get().empty())
+    d->current_track = find(tracks().get().begin(), tracks().get().end(), d->id_after_remove);
+    if (d->current_track == tracks().get().end())
         d->current_track = d->empty_iterator;
 }
 
@@ -687,21 +746,9 @@ media::Player::LoopStatus media::TrackListSkeleton::loop_status() const
 
 void media::TrackListSkeleton::on_shuffle_changed(bool shuffle)
 {
-    if (tracks().get().empty())
-        return;
+    cout << __PRETTY_FUNCTION__ << endl;
 
-    const auto current_id = get_current_track();
-
-    cout << __PRETTY_FUNCTION__ << " " << shuffle
-         << " current track: " << current_id << endl;
-
-    if (shuffle)
-        shuffle_tracks();
-    else
-        unshuffle_tracks();
-
-    // Shuffling and unshuffling invalidates iterators, so we re-create current_track
-    set_current_track(current_id);
+    set_shuffle(shuffle);
 }
 
 const core::Property<media::TrackList::Container>& media::TrackListSkeleton::tracks() const

@@ -48,8 +48,9 @@ public:
     void remove_track(const Track::Id& id);
 
     void go_to(const Track::Id& track);
-    void shuffle_tracks();
-    void unshuffle_tracks();
+    void set_shuffle(bool shuffle);
+    bool shuffle();
+    const media::TrackList::Container& shuffled_tracks();
     void reset();
 
 private:

@@ -17,6 +17,7 @@
  */
 
 #include <algorithm>
+#include <random>
 #include <stdio.h>
 #include <stdlib.h>
 #include <tuple>
@@ -31,6 +32,8 @@
 namespace dbus = core::dbus;
 namespace media = core::ubuntu::media;
 
+using namespace std;
+
 struct media::TrackListImplementation::Private
 {
     typedef std::map<Track::Id, std::tuple<Track::UriType, Track::MetaData>> MetaDataCache;
@@ -41,7 +44,8 @@ struct media::TrackListImplementation::Private
     std::shared_ptr<media::Engine::MetaDataExtractor> extractor;
     // Used for caching the original tracklist order to be used to restore the order
     // to the live TrackList after shuffle is turned off
-    media::TrackList::Container original_tracklist;
+    media::TrackList::Container shuffled_tracks;
+    bool shuffle;
 
     void updateCachedTrackMetadata(const media::Track::Id& id, const media::Track::UriType& uri)
     {
@@ -66,6 +70,19 @@ struct media::TrackListImplementation::Private
             std::get<0>(meta_data_cache[id]) = uri;
         }
     }
+
+    media::TrackList::Container::iterator get_shuffled_insert_it()
+    {
+        media::TrackList::Container::iterator rand_it = shuffled_tracks.begin();
+        if (rand_it == shuffled_tracks.end())
+            return rand_it;
+
+        // This is slightly biased, but not much, as RAND_MAX >= 32767, which is
+        // much more than the average number of tracks.
+        // Note that for N tracks we have N + 1 possible insertion positions.
+        advance(rand_it, rand() % (shuffled_tracks.size() + 1));
+        return rand_it;
+    }
 };
 
 media::TrackListImplementation::TrackListImplementation(
@@ -75,7 +92,8 @@ media::TrackListImplementation::TrackListImplementation(
         const media::apparmor::ubuntu::RequestContextResolver::Ptr& request_context_resolver,
         const media::apparmor::ubuntu::RequestAuthenticator::Ptr& request_authenticator)
     : media::TrackListSkeleton(bus, object, request_context_resolver, request_authenticator),
-      d(new Private{object, 0, Private::MetaDataCache{}, extractor, media::TrackList::Container{}})
+      d(new Private{object, 0, Private::MetaDataCache{},
+                    extractor, media::TrackList::Container{}, false})
 {
     can_edit_tracks().set(true);
 }
@@ -109,22 +127,22 @@ void media::TrackListImplementation::add_track_with_uri_at(
         const media::Track::Id& position,
         bool make_current)
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    cout << __PRETTY_FUNCTION__ << endl;
 
-    std::stringstream ss;
+    stringstream ss;
     ss << d->object->path().as_string() << "/" << d->track_counter++;
     Track::Id id{ss.str()};
 
-    std::cout << "Adding Track::Id: " << id << std::endl;
-    std::cout << "\tURI: " << uri << std::endl;
+    cout << "Adding Track::Id: " << id << endl;
+    cout << "\tURI: " << uri << endl;
 
     const auto current = get_current_track();
 
     auto result = tracks().update([this, id, position, make_current](TrackList::Container& container)
     {
-        auto it = std::find(container.begin(), container.end(), position);
+        auto it = find(container.begin(), container.end(), position);
         container.insert(it, id);
-        std::cout << "container.size(): " << container.size() << std::endl;
+        cout << "container.size(): " << container.size() << endl;
 
         return true;
     });
@@ -132,6 +150,9 @@ void media::TrackListImplementation::add_track_with_uri_at(
     if (result)
     {
         d->updateCachedTrackMetadata(id, uri);
+
+        if (d->shuffle)
+            d->shuffled_tracks.insert(d->get_shuffled_insert_it(), id);
 
         if (make_current)
         {
@@ -141,7 +162,7 @@ void media::TrackListImplementation::add_track_with_uri_at(
             set_current_track(current);
         }
 
-        std::cout << "Signaling that we just added track id: " << id << std::endl;
+        cout << "Signaling that we just added track id: " << id << endl;
         // Signal to the client that a track was added to the TrackList
         on_track_added()(id);
 
@@ -154,7 +175,7 @@ void media::TrackListImplementation::add_track_with_uri_at(
 
 void media::TrackListImplementation::add_tracks_with_uri_at(const ContainerURI& uris, const Track::Id& position)
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    cout << __PRETTY_FUNCTION__ << endl;
 
     const auto current = get_current_track();
 
@@ -163,17 +184,17 @@ void media::TrackListImplementation::add_tracks_with_uri_at(const ContainerURI& 
     for (const auto uri : uris)
     {
         // TODO: Refactor this code to use a smaller common function shared with add_track_with_uri_at()
-        std::stringstream ss;
+        stringstream ss;
         ss << d->object->path().as_string() << "/" << d->track_counter++;
         Track::Id id{ss.str()};
-        std::cout << "Adding Track::Id: " << id << std::endl;
-        std::cout << "\tURI: " << uri << std::endl;
+        cout << "Adding Track::Id: " << id << endl;
+        cout << "\tURI: " << uri << endl;
 
         tmp.push_back(id);
 
         Track::Id insert_position = position;
 
-        auto it = std::find(tracks().get().begin(), tracks().get().end(), insert_position);
+        auto it = find(tracks().get().begin(), tracks().get().end(), insert_position);
         const auto result = tracks().update([this, id, position, it, &insert_position](TrackList::Container& container)
         {
             container.insert(it, id);
@@ -188,6 +209,9 @@ void media::TrackListImplementation::add_tracks_with_uri_at(const ContainerURI& 
         {
             d->updateCachedTrackMetadata(id, uri);
 
+            if (d->shuffle)
+                d->shuffled_tracks.insert(d->get_shuffled_insert_it(), id);
+
             // Signal to the client that the current track has changed for the first track added to the TrackList
             if (tracks().get().size() == 1)
                 current_id = id;
@@ -196,7 +220,7 @@ void media::TrackListImplementation::add_tracks_with_uri_at(const ContainerURI& 
 
     set_current_track(current);
 
-    std::cout << "Signaling that we just added " << tmp.size() << " tracks to the TrackList" << std::endl;
+    cout << "Signaling that we just added " << tmp.size() << " tracks to the TrackList" << endl;
     on_tracks_added()(tmp);
 
     if (!current_id.empty())
@@ -310,6 +334,10 @@ void media::TrackListImplementation::remove_track(const media::Track::Id& id)
     {
         d->meta_data_cache.erase(id);
 
+        if (d->shuffle)
+            d->shuffled_tracks.erase(find(d->shuffled_tracks.begin(),
+                                          d->shuffled_tracks.end(), id));
+
         on_track_removed()(id);
 
         // Make sure playback stops if all tracks were removed
@@ -326,47 +354,24 @@ void media::TrackListImplementation::go_to(const media::Track::Id& track)
     on_track_changed()(track);
 }
 
-void media::TrackListImplementation::shuffle_tracks()
+void media::TrackListImplementation::set_shuffle(bool shuffle)
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    d->shuffle = shuffle;
 
-    if (tracks().get().empty())
-        return;
-
-    auto result = tracks().update([this](TrackList::Container& container)
-    {
-        // Save off the original TrackList ordering
-        d->original_tracklist.assign(container.begin(), container.end());
-        std::random_shuffle(container.begin(), container.end());
-        return true;
-    });
-
-    if (result)
-    {
-        media::TrackList::ContainerTrackIdTuple t{std::make_tuple(tracks().get(), current())};
-        on_track_list_replaced()(t);
+    if (shuffle) {
+        d->shuffled_tracks = tracks().get();
+        random_shuffle(d->shuffled_tracks.begin(), d->shuffled_tracks.end());
     }
 }
 
-void media::TrackListImplementation::unshuffle_tracks()
+bool media::TrackListImplementation::shuffle()
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    return d->shuffle;
+}
 
-    if (tracks().get().empty() or d->original_tracklist.empty())
-        return;
-
-    auto result = tracks().update([this](TrackList::Container& container)
-    {
-        // Restore the original TrackList ordering
-        container.assign(d->original_tracklist.begin(), d->original_tracklist.end());
-        return true;
-    });
-
-    if (result)
-    {
-        media::TrackList::ContainerTrackIdTuple t{std::make_tuple(tracks().get(), current())};
-        on_track_list_replaced()(t);
-    }
+const media::TrackList::Container& media::TrackListImplementation::shuffled_tracks()
+{
+    return d->shuffled_tracks;
 }
 
 void media::TrackListImplementation::reset()
@@ -384,6 +389,8 @@ void media::TrackListImplementation::reset()
         on_track_list_reset()();
 
         d->track_counter = 0;
+        d->shuffled_tracks.clear();
+        d->shuffle = false;
 
         return true;
     });

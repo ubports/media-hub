@@ -124,12 +124,6 @@ class TrackList : public std::enable_shared_from_this<TrackList>
     /** Skip to the previous Track in the TrackList if there is one. */
     virtual Track::Id previous() = 0;
 
-    /** Reorders the tracks such that they are in a random order. */
-    virtual void shuffle_tracks() = 0;
-
-    /** Restores the original order of tracks before shuffle mode was turned on. */
-    virtual void unshuffle_tracks() = 0;
-
     /** Clears and resets the TrackList to the same as a newly constructed instance. */
     virtual void reset() = 0;
 

@@ -294,7 +294,8 @@ struct media::PlayerImplementation<Parent>::Private :
         {
             // Using a TrackList for playback, added tracks via add_track(), but open_uri hasn't been called yet
             // to load a media resource
-            std::cout << "Calling d->engine->open_resource_for_uri() for first track added only: " << uri << std::endl;
+            std::cout << "Calling d->engine->open_resource_for_uri() for first track added only: "
+                      << uri << std::endl;
             std::cout << "\twith a Track::Id: " << id << std::endl;
             static const bool do_pipeline_reset = false;
             engine->open_resource_for_uri(uri, do_pipeline_reset);

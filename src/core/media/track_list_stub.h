@@ -57,9 +57,6 @@ public:
     Track::Id next();
     Track::Id previous();
 
-    void shuffle_tracks();
-    void unshuffle_tracks();
-
     void reset();
 
     const core::Signal<ContainerTrackIdTuple>& on_track_list_replaced() const;

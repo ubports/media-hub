@@ -79,6 +79,10 @@ public:
      * by the client */
     void on_shuffle_changed(bool shuffle);
 
+    virtual void set_shuffle(bool shuffle) = 0;
+    virtual bool shuffle() = 0;
+    virtual const media::TrackList::Container& shuffled_tracks() = 0;
+
 protected:
     inline bool is_first_track(const ConstIterator &it)
     { return it == std::begin(tracks().get()); }
@@ -89,6 +93,7 @@ protected:
     void reset_current_iterator_if_needed();
     media::Track::Id get_current_track(void);
     void set_current_track(const media::Track::Id& id);
+    TrackList::ConstIterator get_current_shuffled();
 
     core::Property<bool>& can_edit_tracks();
 
