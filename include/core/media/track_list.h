@@ -43,6 +43,7 @@ class TrackList : public std::enable_shared_from_this<TrackList>
     typedef std::vector<Track::Id> Container;
     typedef std::vector<Track::UriType> ContainerURI;
     typedef std::tuple<std::vector<Track::Id>, Track::Id> ContainerTrackIdTuple;
+    typedef std::tuple<Track::Id, Track::Id> TrackIdTuple;
     typedef Container::iterator Iterator;
     typedef Container::const_iterator ConstIterator;
 
@@ -53,6 +54,21 @@ class TrackList : public std::enable_shared_from_this<TrackList>
         struct InsufficientPermissionsToAddTrack : public std::runtime_error
         {
             InsufficientPermissionsToAddTrack();
+        };
+
+        struct FailedToMoveTrack : public std::runtime_error
+        {
+            FailedToMoveTrack();
+        };
+
+        struct FailedToFindMoveTrackSource : public std::runtime_error
+        {
+            FailedToFindMoveTrackSource(const std::string& err);
+        };
+
+        struct FailedToFindMoveTrackDest : public std::runtime_error
+        {
+            FailedToFindMoveTrackDest(const std::string& err);
         };
 
         struct TrackNotFound : public std::runtime_error
@@ -87,11 +103,14 @@ class TrackList : public std::enable_shared_from_this<TrackList>
     /** Adds a list of URIs into the TrackList. */
     virtual void add_tracks_with_uri_at(const ContainerURI& uris, const Track::Id& position) = 0;
 
+    /** Moves track 'id' from its old position in the TrackList to new position. */
+    virtual bool move_track(const Track::Id& id, const Track::Id& to) = 0;
+
     /** Removes a Track from the TrackList. */
     virtual void remove_track(const Track::Id& id) = 0;
 
-    /** Skip to the specified TrackId. Calls stop() and play() on the player if toggle_player_state is true. */
-    virtual void go_to(const Track::Id& track, bool toggle_player_state) = 0;
+    /** Skip to the specified TrackId. */
+    virtual void go_to(const Track::Id& track) = 0;
 
     /** Returns true if there is a next track in the TrackList after the current one playing */
     bool has_next() const;
@@ -105,16 +124,8 @@ class TrackList : public std::enable_shared_from_this<TrackList>
     /** Skip to the previous Track in the TrackList if there is one. */
     virtual Track::Id previous() = 0;
 
-
-    /** Reorders the tracks such that they are in a random order. */
-    virtual void shuffle_tracks() = 0;
-
-    /** Restores the original order of tracks before shuffle mode was turned on. */
-    virtual void unshuffle_tracks() = 0;
-
     /** Clears and resets the TrackList to the same as a newly constructed instance. */
     virtual void reset() = 0;
-
 
     /** Indicates that the entire tracklist has been replaced. */
     virtual const core::Signal<ContainerTrackIdTuple>& on_track_list_replaced() const = 0;
@@ -124,6 +135,11 @@ class TrackList : public std::enable_shared_from_this<TrackList>
 
     /** Indicates that one or more tracks have been added to the track list. */
     virtual const core::Signal<ContainerURI>& on_tracks_added() const = 0;
+
+    /** Indicates that a track has been moved within the track list. First template param
+     *  holds the id of the track being moved. Second param holds the id of the track of the
+     *  position to move the track to in the TrackList. */
+    virtual const core::Signal<TrackIdTuple>& on_track_moved() const = 0;
 
     /** Indicates that a track has been removed from the track list. */
     virtual const core::Signal<Track::Id>& on_track_removed() const = 0;
@@ -135,7 +151,7 @@ class TrackList : public std::enable_shared_from_this<TrackList>
     virtual const core::Signal<Track::Id>& on_track_changed() const = 0;
 
     /** Used to notify the Player of when the client requested that the Player should immediately play a new track. */
-    virtual const core::Signal<std::pair<Track::Id, bool>>& on_go_to_track() const = 0;
+    virtual const core::Signal<Track::Id>& on_go_to_track() const = 0;
 
     /** Used to notify the Player of when the end of the tracklist has been reached. */
     virtual const core::Signal<void>& on_end_of_tracklist() const = 0;

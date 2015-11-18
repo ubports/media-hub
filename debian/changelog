@@ -1,3 +1,10 @@
+media-hub (4.0.0+15.04.20151023-0ubuntu1) UNRELEASED; urgency=medium
+
+  * Added move_track and various fixes for TrackList. 
+  * Major bump for new TrackList API changes.
+
+ -- Jim Hodapp <jim.hoapp@canonical.com>  Fri, 06 Nov 2015 12:06:36 -0500
+
 media-hub (3.3.0+15.04.20151023.3-0ubuntu1) vivid; urgency=medium
 
   [ Jim Hodapp ]

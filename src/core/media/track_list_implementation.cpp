@@ -17,6 +17,7 @@
  */
 
 #include <algorithm>
+#include <random>
 #include <stdio.h>
 #include <stdlib.h>
 #include <tuple>
@@ -41,7 +42,8 @@ struct media::TrackListImplementation::Private
     std::shared_ptr<media::Engine::MetaDataExtractor> extractor;
     // Used for caching the original tracklist order to be used to restore the order
     // to the live TrackList after shuffle is turned off
-    media::TrackList::Container original_tracklist;
+    media::TrackList::Container shuffled_tracks;
+    bool shuffle;
 
     void updateCachedTrackMetadata(const media::Track::Id& id, const media::Track::UriType& uri)
     {
@@ -66,6 +68,19 @@ struct media::TrackListImplementation::Private
             std::get<0>(meta_data_cache[id]) = uri;
         }
     }
+
+    media::TrackList::Container::iterator get_shuffled_insert_it()
+    {
+        media::TrackList::Container::iterator random_it = shuffled_tracks.begin();
+        if (random_it == shuffled_tracks.end())
+            return random_it;
+
+        // This is slightly biased, but not much, as RAND_MAX >= 32767, which is
+        // much more than the average number of tracks.
+        // Note that for N tracks we have N + 1 possible insertion positions.
+        std::advance(random_it, rand() % (shuffled_tracks.size() + 1));
+        return random_it;
+    }
 };
 
 media::TrackListImplementation::TrackListImplementation(
@@ -75,7 +90,8 @@ media::TrackListImplementation::TrackListImplementation(
         const media::apparmor::ubuntu::RequestContextResolver::Ptr& request_context_resolver,
         const media::apparmor::ubuntu::RequestAuthenticator::Ptr& request_authenticator)
     : media::TrackListSkeleton(bus, object, request_context_resolver, request_authenticator),
-      d(new Private{object, 0, Private::MetaDataCache{}, extractor, media::TrackList::Container{}})
+      d(new Private{object, 0, Private::MetaDataCache{},
+                    extractor, media::TrackList::Container{}, false})
 {
     can_edit_tracks().set(true);
 }
@@ -133,14 +149,13 @@ void media::TrackListImplementation::add_track_with_uri_at(
     {
         d->updateCachedTrackMetadata(id, uri);
 
+        if (d->shuffle)
+            d->shuffled_tracks.insert(d->get_shuffled_insert_it(), id);
+
         if (make_current)
         {
             set_current_track(id);
-            // Don't automatically call stop() and play() in player_implementation.cpp on_go_to_track()
-            // since this breaks video playback when using open_uri() (stop() and play() are unwanted in
-            // this scenario since the qtubuntu-media will handle this automatically)
-            const bool toggle_player_state = false;
-            go_to(id, toggle_player_state);
+            go_to(id);
         } else {
             set_current_track(current);
         }
@@ -178,7 +193,7 @@ void media::TrackListImplementation::add_tracks_with_uri_at(const ContainerURI& 
         Track::Id insert_position = position;
 
         auto it = std::find(tracks().get().begin(), tracks().get().end(), insert_position);
-        auto result = tracks().update([this, id, position, it, &insert_position](TrackList::Container& container)
+        const auto result = tracks().update([this, id, position, it, &insert_position](TrackList::Container& container)
         {
             container.insert(it, id);
             // Make sure the next insert position is after the current insert position
@@ -191,6 +206,9 @@ void media::TrackListImplementation::add_tracks_with_uri_at(const ContainerURI& 
         if (result)
         {
             d->updateCachedTrackMetadata(id, uri);
+
+            if (d->shuffle)
+                d->shuffled_tracks.insert(d->get_shuffled_insert_it(), id);
 
             // Signal to the client that the current track has changed for the first track added to the TrackList
             if (tracks().get().size() == 1)
@@ -207,9 +225,102 @@ void media::TrackListImplementation::add_tracks_with_uri_at(const ContainerURI& 
         on_track_changed()(current_id);
 }
 
+bool media::TrackListImplementation::move_track(const media::Track::Id& id,
+                                                const media::Track::Id& to)
+{
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+
+    std::cout << "-----------------------------------------------------" << std::endl;
+    if (id.empty() or to.empty())
+    {
+        std::cerr << "Can't move track since 'id' or 'to' are empty" << std::endl;
+        return false;
+    }
+
+    if (id == to)
+    {
+        std::cerr << "Can't move track to it's same position" << std::endl;
+        return false;
+    }
+
+    if (tracks().get().size() == 1)
+    {
+        std::cerr << "Can't move track since TrackList contains only one track" << std::endl;
+        return false;
+    }
+
+    bool ret = false;
+    const media::Track::Id current_id = *current_iterator();
+    std::cout << "current_track id: " << current_id << std::endl;
+    // Get an iterator that points to the track that is the insertion point
+    auto insert_point_it = std::find(tracks().get().begin(), tracks().get().end(), to);
+    if (insert_point_it != tracks().get().end())
+    {
+        const auto result = tracks().update([this, id, to, current_id, &insert_point_it]
+                (TrackList::Container& container)
+        {
+            // Get an iterator that points to the track to move within the TrackList
+            auto to_move_it = std::find(tracks().get().begin(), tracks().get().end(), id);
+            std::cout << "Erasing old track position: " << *to_move_it << std::endl;
+            if (to_move_it != tracks().get().end())
+            {
+                container.erase(to_move_it);
+            }
+            else
+            {
+                throw media::TrackList::Errors::FailedToFindMoveTrackDest
+                        ("Failed to find destination track " + to);
+            }
+
+            // Insert id at the location just before insert_point_it
+            container.insert(insert_point_it, id);
+
+            const auto new_current_track_it = std::find(tracks().get().begin(), tracks().get().end(), current_id);
+            if (new_current_track_it != tracks().get().end())
+            {
+                const bool r = update_current_iterator(new_current_track_it);
+                if (!r)
+                {
+                    throw media::TrackList::Errors::FailedToMoveTrack();
+                }
+                std::cout << "*** Updated current_iterator, id: " << *current_iterator() << std::endl;
+            }
+            else
+            {
+                std::cerr << "Can't update current_iterator - failed to find track after move" << std::endl;
+                throw media::TrackList::Errors::FailedToMoveTrack();
+            }
+
+            return true;
+        });
+
+        if (result)
+        {
+            std::cout << "TrackList after move" << std::endl;
+            for(auto track : tracks().get())
+            {
+                std::cout << track << std::endl;
+            }
+            const media::TrackList::TrackIdTuple ids = std::make_tuple(id, to);
+            // Signal to the client that track 'id' was moved within the TrackList
+            on_track_moved()(ids);
+            ret = true;
+        }
+    }
+    else
+    {
+        throw media::TrackList::Errors::FailedToFindMoveTrackSource
+                ("Failed to find source track " + id);
+    }
+
+    std::cout << "-----------------------------------------------------" << std::endl;
+
+    return ret;
+}
+
 void media::TrackListImplementation::remove_track(const media::Track::Id& id)
 {
-    auto result = tracks().update([id](TrackList::Container& container)
+    const auto result = tracks().update([id](TrackList::Container& container)
     {
         container.erase(std::find(container.begin(), container.end(), id));
         return true;
@@ -221,60 +332,44 @@ void media::TrackListImplementation::remove_track(const media::Track::Id& id)
     {
         d->meta_data_cache.erase(id);
 
+        if (d->shuffle)
+            d->shuffled_tracks.erase(find(d->shuffled_tracks.begin(),
+                                          d->shuffled_tracks.end(), id));
+
         on_track_removed()(id);
+
+        // Make sure playback stops if all tracks were removed
+        if (tracks().get().empty())
+            on_end_of_tracklist()();
     }
 }
 
-void media::TrackListImplementation::go_to(const media::Track::Id& track, bool toggle_player_state)
+void media::TrackListImplementation::go_to(const media::Track::Id& track)
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
-    std::pair<const media::Track::Id, bool> p = std::make_pair(track, toggle_player_state);
     // Signal the Player instance to go to a specific track for playback
-    on_go_to_track()(p);
+    on_go_to_track()(track);
     on_track_changed()(track);
 }
 
-void media::TrackListImplementation::shuffle_tracks()
+void media::TrackListImplementation::set_shuffle(bool shuffle)
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    d->shuffle = shuffle;
 
-    if (tracks().get().empty())
-        return;
-
-    auto result = tracks().update([this](TrackList::Container& container)
-    {
-        // Save off the original TrackList ordering
-        d->original_tracklist.assign(container.begin(), container.end());
-        std::random_shuffle(container.begin(), container.end());
-        return true;
-    });
-
-    if (result)
-    {
-        media::TrackList::ContainerTrackIdTuple t{std::make_tuple(tracks().get(), current())};
-        on_track_list_replaced()(t);
+    if (shuffle) {
+        d->shuffled_tracks = tracks().get();
+        random_shuffle(d->shuffled_tracks.begin(), d->shuffled_tracks.end());
     }
 }
 
-void media::TrackListImplementation::unshuffle_tracks()
+bool media::TrackListImplementation::shuffle()
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    return d->shuffle;
+}
 
-    if (tracks().get().empty() or d->original_tracklist.empty())
-        return;
-
-    auto result = tracks().update([this](TrackList::Container& container)
-    {
-        // Restore the original TrackList ordering
-        container.assign(d->original_tracklist.begin(), d->original_tracklist.end());
-        return true;
-    });
-
-    if (result)
-    {
-        media::TrackList::ContainerTrackIdTuple t{std::make_tuple(tracks().get(), current())};
-        on_track_list_replaced()(t);
-    }
+const media::TrackList::Container& media::TrackListImplementation::shuffled_tracks()
+{
+    return d->shuffled_tracks;
 }
 
 void media::TrackListImplementation::reset()
@@ -292,6 +387,7 @@ void media::TrackListImplementation::reset()
         on_track_list_reset()();
 
         d->track_counter = 0;
+        d->shuffled_tracks.clear();
 
         return true;
     });

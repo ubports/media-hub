@@ -56,12 +56,14 @@ public:
     core::Signal<Track::Id>& on_track_added();
     const core::Signal<ContainerURI>& on_tracks_added() const;
     core::Signal<ContainerURI>& on_tracks_added();
+    const core::Signal<TrackIdTuple>& on_track_moved() const;
+    core::Signal<TrackIdTuple>& on_track_moved();
     const core::Signal<Track::Id>& on_track_removed() const;
     const core::Signal<void>& on_track_list_reset() const;
     const core::Signal<Track::Id>& on_track_changed() const;
     core::Signal<Track::Id>& on_track_changed();
-    const core::Signal<std::pair<Track::Id, bool>>& on_go_to_track() const;
-    core::Signal<std::pair<Track::Id, bool>>& on_go_to_track();
+    const core::Signal<Track::Id>& on_go_to_track() const;
+    core::Signal<Track::Id>& on_go_to_track();
     const core::Signal<void>& on_end_of_tracklist() const;
     core::Signal<void>& on_end_of_tracklist();
     core::Signal<Track::Id>& on_track_removed();
@@ -77,15 +79,25 @@ public:
      * by the client */
     void on_shuffle_changed(bool shuffle);
 
+    virtual void set_shuffle(bool shuffle) = 0;
+    virtual bool shuffle() = 0;
+    virtual const media::TrackList::Container& shuffled_tracks() = 0;
+
 protected:
-    inline bool is_first_track(const ConstIterator &it);
-    inline bool is_last_track(const ConstIterator &it);
-    inline const TrackList::ConstIterator& current_iterator();
+    inline bool is_first_track(const ConstIterator &it)
+    { return it == std::begin(tracks().get()); }
+    inline bool is_last_track(const ConstIterator &it)
+    { return it == std::end(tracks().get()); }
+    const TrackList::ConstIterator& current_iterator();
+    bool update_current_iterator(const TrackList::ConstIterator &it);
     void reset_current_iterator_if_needed();
     media::Track::Id get_current_track(void);
     void set_current_track(const media::Track::Id& id);
+    TrackList::ConstIterator get_current_shuffled();
 
     core::Property<bool>& can_edit_tracks();
+
+    void emit_on_end_of_tracklist();
 
     void reset();
 
