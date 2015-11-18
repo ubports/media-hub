@@ -1,9 +1,17 @@
-media-hub (4.0.0+15.04.20151023-0ubuntu1) UNRELEASED; urgency=medium
+media-hub (4.0.0+15.04.20151118.1-0ubuntu1) vivid; urgency=medium
 
+  [ Jim Hodapp ]
   * Added move_track and various fixes for TrackList. 
   * Major bump for new TrackList API changes.
 
- -- Jim Hodapp <jim.hoapp@canonical.com>  Fri, 06 Nov 2015 12:06:36 -0500
+  [ Alfonso Sanchez-Beato ]
+  * Make sure our iterator for the current track points to the right
+    place when (un)shuffling (LP #1510219). Fix crash when client tries
+    to set the player for a non-existing key. Do not add empty URIs to
+    the list (LP: #1511029). (LP: #1511073, #1511385, #1510219,
+    #1510227, #1511029)
+
+ -- Jim Hodapp <ci-train-bot@canonical.com>  Wed, 18 Nov 2015 18:36:18 +0000
 
 media-hub (3.3.0+15.04.20151023.3-0ubuntu1) vivid; urgency=medium
 
