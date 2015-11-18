@@ -32,8 +32,6 @@
 namespace dbus = core::dbus;
 namespace media = core::ubuntu::media;
 
-using namespace std;
-
 struct media::TrackListImplementation::Private
 {
     typedef std::map<Track::Id, std::tuple<Track::UriType, Track::MetaData>> MetaDataCache;
@@ -73,15 +71,15 @@ struct media::TrackListImplementation::Private
 
     media::TrackList::Container::iterator get_shuffled_insert_it()
     {
-        media::TrackList::Container::iterator rand_it = shuffled_tracks.begin();
-        if (rand_it == shuffled_tracks.end())
-            return rand_it;
+        media::TrackList::Container::iterator random_it = shuffled_tracks.begin();
+        if (random_it == shuffled_tracks.end())
+            return random_it;
 
         // This is slightly biased, but not much, as RAND_MAX >= 32767, which is
         // much more than the average number of tracks.
         // Note that for N tracks we have N + 1 possible insertion positions.
-        advance(rand_it, rand() % (shuffled_tracks.size() + 1));
-        return rand_it;
+        std::advance(random_it, rand() % (shuffled_tracks.size() + 1));
+        return random_it;
     }
 };
 
@@ -127,22 +125,22 @@ void media::TrackListImplementation::add_track_with_uri_at(
         const media::Track::Id& position,
         bool make_current)
 {
-    cout << __PRETTY_FUNCTION__ << endl;
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
 
-    stringstream ss;
+    std::stringstream ss;
     ss << d->object->path().as_string() << "/" << d->track_counter++;
     Track::Id id{ss.str()};
 
-    cout << "Adding Track::Id: " << id << endl;
-    cout << "\tURI: " << uri << endl;
+    std::cout << "Adding Track::Id: " << id << std::endl;
+    std::cout << "\tURI: " << uri << std::endl;
 
     const auto current = get_current_track();
 
     auto result = tracks().update([this, id, position, make_current](TrackList::Container& container)
     {
-        auto it = find(container.begin(), container.end(), position);
+        auto it = std::find(container.begin(), container.end(), position);
         container.insert(it, id);
-        cout << "container.size(): " << container.size() << endl;
+        std::cout << "container.size(): " << container.size() << std::endl;
 
         return true;
     });
@@ -162,7 +160,7 @@ void media::TrackListImplementation::add_track_with_uri_at(
             set_current_track(current);
         }
 
-        cout << "Signaling that we just added track id: " << id << endl;
+        std::cout << "Signaling that we just added track id: " << id << std::endl;
         // Signal to the client that a track was added to the TrackList
         on_track_added()(id);
 
@@ -175,7 +173,7 @@ void media::TrackListImplementation::add_track_with_uri_at(
 
 void media::TrackListImplementation::add_tracks_with_uri_at(const ContainerURI& uris, const Track::Id& position)
 {
-    cout << __PRETTY_FUNCTION__ << endl;
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
 
     const auto current = get_current_track();
 
@@ -184,17 +182,17 @@ void media::TrackListImplementation::add_tracks_with_uri_at(const ContainerURI& 
     for (const auto uri : uris)
     {
         // TODO: Refactor this code to use a smaller common function shared with add_track_with_uri_at()
-        stringstream ss;
+        std::stringstream ss;
         ss << d->object->path().as_string() << "/" << d->track_counter++;
         Track::Id id{ss.str()};
-        cout << "Adding Track::Id: " << id << endl;
-        cout << "\tURI: " << uri << endl;
+        std::cout << "Adding Track::Id: " << id << std::endl;
+        std::cout << "\tURI: " << uri << std::endl;
 
         tmp.push_back(id);
 
         Track::Id insert_position = position;
 
-        auto it = find(tracks().get().begin(), tracks().get().end(), insert_position);
+        auto it = std::find(tracks().get().begin(), tracks().get().end(), insert_position);
         const auto result = tracks().update([this, id, position, it, &insert_position](TrackList::Container& container)
         {
             container.insert(it, id);
@@ -220,7 +218,7 @@ void media::TrackListImplementation::add_tracks_with_uri_at(const ContainerURI& 
 
     set_current_track(current);
 
-    cout << "Signaling that we just added " << tmp.size() << " tracks to the TrackList" << endl;
+    std::cout << "Signaling that we just added " << tmp.size() << " tracks to the TrackList" << std::endl;
     on_tracks_added()(tmp);
 
     if (!current_id.empty())
@@ -390,7 +388,6 @@ void media::TrackListImplementation::reset()
 
         d->track_counter = 0;
         d->shuffled_tracks.clear();
-        d->shuffle = false;
 
         return true;
     });

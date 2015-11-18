@@ -442,7 +442,8 @@ media::TrackListSkeleton::~TrackListSkeleton()
 
 /*
  * NOTE We do not consider the loop status in this function due to the use of it
- * we do in TrackListSkeleton::next()
+ * we do in TrackListSkeleton::next() (the function is used to know whether we
+ * need to wrap when looping is active).
  */
 bool media::TrackListSkeleton::has_next()
 {
@@ -479,7 +480,8 @@ bool media::TrackListSkeleton::has_next()
 
 /*
  * NOTE We do not consider the loop status in this function due to the use of it
- * we do in TrackListSkeleton::previous()
+ * we do in TrackListSkeleton::previous() (the function is used to know whether we
+ * need to wrap when looping is active).
  */
 bool media::TrackListSkeleton::has_previous()
 {
@@ -495,10 +497,7 @@ bool media::TrackListSkeleton::has_previous()
 media::TrackList::ConstIterator media::TrackListSkeleton::get_current_shuffled()
 {
     auto current_id = *current_iterator();
-    TrackList::ConstIterator it = find(shuffled_tracks().begin(),
-                                       shuffled_tracks().end(), current_id);
-
-    return it;
+    return find(shuffled_tracks().begin(), shuffled_tracks().end(), current_id);
 }
 
 media::Track::Id media::TrackListSkeleton::next()
@@ -510,13 +509,13 @@ media::Track::Id media::TrackListSkeleton::next()
         return media::Track::Id{};
     }
 
-    bool set_track = false;
+    bool go_to_track = false;
 
     // End of the track reached so loop around to the beginning of the track
     if (d->loop_status == media::Player::LoopStatus::track)
     {
         std::cout << "Looping on the current track since LoopStatus is set to track" << std::endl;
-        set_track = true;
+        go_to_track = true;
     }
     // End of the tracklist reached so loop around to the beginning of the tracklist
     else if (d->loop_status == media::Player::LoopStatus::playlist && not has_next())
@@ -525,14 +524,14 @@ media::Track::Id media::TrackListSkeleton::next()
 
         if (shuffle())
         {
-            auto id = *shuffled_tracks().begin();
+            const auto id = *shuffled_tracks().begin();
             set_current_track(id);
         }
         else
         {
             d->current_track = tracks().get().begin();
         }
-        set_track = true;
+        go_to_track = true;
     }
     else
     {
@@ -542,23 +541,23 @@ media::Track::Id media::TrackListSkeleton::next()
             if (++it != shuffled_tracks().end()) {
                 cout << "Advancing to next track: " << *it << endl;
                 set_current_track(*it);
-                set_track = true;
+                go_to_track = true;
             }
         }
         else
         {
-            auto it = std::next(current_iterator());
+            const auto it = std::next(current_iterator());
             if (not is_last_track(it))
             {
                 cout << "Advancing to next track: " << *it << endl;
                 d->current_track = it;
-                set_track = true;
+                go_to_track = true;
             }
         }
 
     }
 
-    if (set_track)
+    if (go_to_track)
     {
         cout << "next track id is " << *(current_iterator()) << endl;
         on_track_changed()(*(current_iterator()));
@@ -585,7 +584,7 @@ media::Track::Id media::TrackListSkeleton::previous()
         return media::Track::Id{};
     }
 
-    bool set_track = false;
+    bool go_to_track = false;
     // Position is measured in nanoseconds
     const uint64_t max_position = 5 * UINT64_C(1000000000);
 
@@ -594,13 +593,13 @@ media::Track::Id media::TrackListSkeleton::previous()
     if (d->current_position > max_position)
     {
         std::cout << "Repeating current track..." << std::endl;
-        set_track = true;
+        go_to_track = true;
     }
     // Loop on the current track forever
     else if (d->loop_status == media::Player::LoopStatus::track)
     {
         std::cout << "Looping on the current track..." << std::endl;
-        set_track = true;
+        go_to_track = true;
     }
     // Loop over the whole playlist and repeat
     else if (d->loop_status == media::Player::LoopStatus::playlist && not has_previous())
@@ -609,7 +608,7 @@ media::Track::Id media::TrackListSkeleton::previous()
 
         if (shuffle())
         {
-            auto id = *std::prev(shuffled_tracks().end());
+            const auto id = *std::prev(shuffled_tracks().end());
             set_current_track(id);
         }
         else
@@ -617,7 +616,7 @@ media::Track::Id media::TrackListSkeleton::previous()
             d->current_track = std::prev(tracks().get().end());
         }
 
-        set_track = true;
+        go_to_track = true;
     }
     else
     {
@@ -626,18 +625,18 @@ media::Track::Id media::TrackListSkeleton::previous()
             auto it = get_current_shuffled();
             if (it != shuffled_tracks().begin()) {
                 set_current_track(*(--it));
-                set_track = true;
+                go_to_track = true;
             }
         }
         else if (not is_first_track(current_iterator()))
         {
             // Keep returning the previous track until the first track is reached
             d->current_track = std::prev(current_iterator());
-            set_track = true;
+            go_to_track = true;
         }
     }
 
-    if (set_track)
+    if (go_to_track)
     {
         on_track_changed()(*(current_iterator()));
         const media::Track::Id id = *(current_iterator());
