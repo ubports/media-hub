@@ -118,6 +118,8 @@ void media::TrackListImplementation::add_track_with_uri_at(
     std::cout << "Adding Track::Id: " << id << std::endl;
     std::cout << "\tURI: " << uri << std::endl;
 
+    const auto current = get_current_track();
+
     auto result = tracks().update([this, id, position, make_current](TrackList::Container& container)
     {
         auto it = std::find(container.begin(), container.end(), position);
@@ -133,20 +135,24 @@ void media::TrackListImplementation::add_track_with_uri_at(
 
         if (make_current)
         {
+            set_current_track(id);
             // Don't automatically call stop() and play() in player_implementation.cpp on_go_to_track()
             // since this breaks video playback when using open_uri() (stop() and play() are unwanted in
             // this scenario since the qtubuntu-media will handle this automatically)
             const bool toggle_player_state = false;
             go_to(id, toggle_player_state);
+        } else {
+            set_current_track(current);
         }
-
-        // Signal to the client that the current track has changed for the first track added to the TrackList
-        if (tracks().get().size() == 1)
-            on_track_changed()(id);
 
         std::cout << "Signaling that we just added track id: " << id << std::endl;
         // Signal to the client that a track was added to the TrackList
         on_track_added()(id);
+
+        // Signal to the client that the current track has changed for the first
+        // track added to the TrackList
+        if (tracks().get().size() == 1)
+            on_track_changed()(id);
     }
 }
 
@@ -154,6 +160,9 @@ void media::TrackListImplementation::add_tracks_with_uri_at(const ContainerURI& 
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
 
+    const auto current = get_current_track();
+
+    Track::Id current_id;
     ContainerURI tmp;
     for (const auto uri : uris)
     {
@@ -185,12 +194,17 @@ void media::TrackListImplementation::add_tracks_with_uri_at(const ContainerURI& 
 
             // Signal to the client that the current track has changed for the first track added to the TrackList
             if (tracks().get().size() == 1)
-                on_track_changed()(id);
+                current_id = id;
         }
     }
 
+    set_current_track(current);
+
     std::cout << "Signaling that we just added " << tmp.size() << " tracks to the TrackList" << std::endl;
     on_tracks_added()(tmp);
+
+    if (!current_id.empty())
+        on_track_changed()(current_id);
 }
 
 void media::TrackListImplementation::remove_track(const media::Track::Id& id)
@@ -209,7 +223,6 @@ void media::TrackListImplementation::remove_track(const media::Track::Id& id)
 
         on_track_removed()(id);
     }
-
 }
 
 void media::TrackListImplementation::go_to(const media::Track::Id& track, bool toggle_player_state)
@@ -266,26 +279,20 @@ void media::TrackListImplementation::unshuffle_tracks()
 
 void media::TrackListImplementation::reset()
 {
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+
     // Make sure playback stops
     on_end_of_tracklist()();
     // And make sure there is no "current" track
     media::TrackListSkeleton::reset();
 
-    auto result = tracks().update([this](TrackList::Container& container)
+    tracks().update([this](TrackList::Container& container)
     {
-        TrackList::Container ids = container;
+        container.clear();
+        on_track_list_reset()();
 
-        for (auto it = container.begin(); it != container.end(); ) {
-            auto id = *it;
-            it = container.erase(it);
-            on_track_removed()(id);
-        }
-
-        container.resize(0);
         d->track_counter = 0;
 
         return true;
     });
-
-    (void) result;
 }

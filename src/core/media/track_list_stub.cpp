@@ -54,6 +54,7 @@ struct media::TrackListStub::Private
               object->get_signal<mpris::TrackList::Signals::TrackAdded>(),
               object->get_signal<mpris::TrackList::Signals::TracksAdded>(),
               object->get_signal<mpris::TrackList::Signals::TrackRemoved>(),
+              object->get_signal<mpris::TrackList::Signals::TrackListReset>(),
               object->get_signal<mpris::TrackList::Signals::TrackListReplaced>(),
               object->get_signal<mpris::TrackList::Signals::TrackChanged>()
           }
@@ -73,17 +74,23 @@ struct media::TrackListStub::Private
         typedef core::dbus::Signal<mpris::TrackList::Signals::TrackAdded, mpris::TrackList::Signals::TrackAdded::ArgumentType> DBusTrackAddedSignal;
         typedef core::dbus::Signal<mpris::TrackList::Signals::TracksAdded, mpris::TrackList::Signals::TracksAdded::ArgumentType> DBusTracksAddedSignal;
         typedef core::dbus::Signal<mpris::TrackList::Signals::TrackRemoved, mpris::TrackList::Signals::TrackRemoved::ArgumentType> DBusTrackRemovedSignal;
+        typedef core::dbus::Signal<
+            mpris::TrackList::Signals::TrackListReset,
+            mpris::TrackList::Signals::TrackListReset::ArgumentType>
+                DBusTrackListResetSignal;
         typedef core::dbus::Signal<mpris::TrackList::Signals::TrackListReplaced, mpris::TrackList::Signals::TrackListReplaced::ArgumentType> DBusTrackListReplacedSignal;
         typedef core::dbus::Signal<mpris::TrackList::Signals::TrackChanged, mpris::TrackList::Signals::TrackChanged::ArgumentType> DBusTrackChangedSignal;
 
         Signals(const std::shared_ptr<DBusTrackAddedSignal>& track_added,
                 const std::shared_ptr<DBusTracksAddedSignal>& tracks_added,
                 const std::shared_ptr<DBusTrackRemovedSignal>& track_removed,
+                const std::shared_ptr<DBusTrackListResetSignal>& track_list_reset,
                 const std::shared_ptr<DBusTrackListReplacedSignal>& track_list_replaced,
                 const std::shared_ptr<DBusTrackChangedSignal>& track_changed)
             : on_track_added(),
               on_tracks_added(),
               on_track_removed(),
+              on_track_list_reset(),
               on_track_list_replaced(),
               on_track_changed(),
               dbus
@@ -91,6 +98,7 @@ struct media::TrackListStub::Private
                   track_added,
                   tracks_added,
                   track_removed,
+                  track_list_reset,
                   track_list_replaced,
                   track_changed,
               }
@@ -113,9 +121,15 @@ struct media::TrackListStub::Private
                 on_track_removed(id);
             });
 
+            dbus.on_track_list_reset->connect([this](void)
+            {
+                std::cout << "OnTrackListReset signal arrived via the bus." << std::endl;
+                on_track_list_reset();
+            });
+
             dbus.on_track_list_replaced->connect([this](const media::TrackList::ContainerTrackIdTuple& list)
             {
-                std::cout << "OnTrackListRemoved signal arrived via the bus." << std::endl;
+                std::cout << "OnTrackListReplaced signal arrived via the bus." << std::endl;
                 on_track_list_replaced(list);
             });
 
@@ -129,6 +143,7 @@ struct media::TrackListStub::Private
         core::Signal<Track::Id> on_track_added;
         core::Signal<media::TrackList::ContainerURI> on_tracks_added;
         core::Signal<Track::Id> on_track_removed;
+        core::Signal<void> on_track_list_reset;
         core::Signal<media::TrackList::ContainerTrackIdTuple> on_track_list_replaced;
         core::Signal<Track::Id> on_track_changed;
         core::Signal<std::pair<Track::Id, bool>> on_go_to_track;
@@ -139,6 +154,7 @@ struct media::TrackListStub::Private
             std::shared_ptr<DBusTrackAddedSignal> on_track_added;
             std::shared_ptr<DBusTracksAddedSignal> on_tracks_added;
             std::shared_ptr<DBusTrackRemovedSignal> on_track_removed;
+            std::shared_ptr<DBusTrackListResetSignal> on_track_list_reset;
             std::shared_ptr<DBusTrackListReplacedSignal> on_track_list_replaced;
             std::shared_ptr<DBusTrackChangedSignal> on_track_changed;
         } dbus;
@@ -237,7 +253,13 @@ void media::TrackListStub::remove_track(const media::Track::Id& track)
                 track);
 
     if (op.is_error())
-        throw std::runtime_error("Problem removing track: " + op.error());
+    {
+        if (op.error().name() ==
+                mpris::TrackList::Error::TrackNotFound::name)
+            throw media::TrackList::Errors::TrackNotFound{};
+        else
+            throw std::runtime_error{"Problem removing track: " + op.error().print()};
+    }
 }
 
 void media::TrackListStub::go_to(const media::Track::Id& track, bool toggle_player_state)
@@ -298,6 +320,11 @@ const core::Signal<media::TrackList::ContainerURI>& media::TrackListStub::on_tra
 const core::Signal<media::Track::Id>& media::TrackListStub::on_track_removed() const
 {
     return d->signals.on_track_removed;
+}
+
+const core::Signal<void>& media::TrackListStub::on_track_list_reset() const
+{
+    return d->signals.on_track_list_reset;
 }
 
 const core::Signal<media::Track::Id>& media::TrackListStub::on_track_changed() const

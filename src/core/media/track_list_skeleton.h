@@ -57,6 +57,7 @@ public:
     const core::Signal<ContainerURI>& on_tracks_added() const;
     core::Signal<ContainerURI>& on_tracks_added();
     const core::Signal<Track::Id>& on_track_removed() const;
+    const core::Signal<void>& on_track_list_reset() const;
     const core::Signal<Track::Id>& on_track_changed() const;
     core::Signal<Track::Id>& on_track_changed();
     const core::Signal<std::pair<Track::Id, bool>>& on_go_to_track() const;
@@ -64,10 +65,13 @@ public:
     const core::Signal<void>& on_end_of_tracklist() const;
     core::Signal<void>& on_end_of_tracklist();
     core::Signal<Track::Id>& on_track_removed();
+    core::Signal<void>& on_track_list_reset();
 
     core::Property<Container>& tracks();
     void on_loop_status_changed(const core::ubuntu::media::Player::LoopStatus& loop_status);
     core::ubuntu::media::Player::LoopStatus loop_status() const;
+
+    void on_position_changed(uint64_t position);
 
     /** Gets called when the shuffle property on the Player interface is changed
      * by the client */
@@ -78,6 +82,8 @@ protected:
     inline bool is_last_track(const ConstIterator &it);
     inline const TrackList::ConstIterator& current_iterator();
     void reset_current_iterator_if_needed();
+    media::Track::Id get_current_track(void);
+    void set_current_track(const media::Track::Id& id);
 
     core::Property<bool>& can_edit_tracks();
 
