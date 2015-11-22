@@ -20,6 +20,11 @@
 
 namespace media = core::ubuntu::media;
 
+media::TrackList::Errors::InsufficientPermissionsToAddTrack::InsufficientPermissionsToAddTrack()
+    : std::runtime_error{"Insufficient client permissions for adding track to TrackList"}
+{
+}
+
 const media::Track::Id& media::TrackList::after_empty_track()
 {
     static const media::Track::Id id{"/org/mpris/MediaPlayer2/TrackList/NoTrack"};

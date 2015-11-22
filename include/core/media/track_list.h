@@ -41,9 +41,20 @@ class TrackList : public std::enable_shared_from_this<TrackList>
 {
   public:
     typedef std::vector<Track::Id> Container;
+    typedef std::vector<Track::UriType> ContainerURI;
     typedef std::tuple<std::vector<Track::Id>, Track::Id> ContainerTrackIdTuple;
     typedef Container::iterator Iterator;
     typedef Container::const_iterator ConstIterator;
+
+    struct Errors
+    {
+        Errors() = delete;
+
+        struct InsufficientPermissionsToAddTrack : public std::runtime_error
+        {
+            InsufficientPermissionsToAddTrack();
+        };
+    };
 
     static const Track::Id& after_empty_track();
 
@@ -65,8 +76,11 @@ class TrackList : public std::enable_shared_from_this<TrackList>
     /** Gets the URI for a given Track. */
     virtual Track::UriType query_uri_for_track(const Track::Id& id) = 0;
 
-    /** Adds a URI in the TrackList. */
+    /** Adds a URI into the TrackList. */
     virtual void add_track_with_uri_at(const Track::UriType& uri, const Track::Id& position, bool make_current) = 0;
+
+    /** Adds a list of URIs into the TrackList. */
+    virtual void add_tracks_with_uri_at(const ContainerURI& uris, const Track::Id& position) = 0;
 
     /** Removes a Track from the TrackList. */
     virtual void remove_track(const Track::Id& id) = 0;
@@ -102,6 +116,9 @@ class TrackList : public std::enable_shared_from_this<TrackList>
 
     /** Indicates that a track has been added to the track list. */
     virtual const core::Signal<Track::Id>& on_track_added() const = 0;
+
+    /** Indicates that one or more tracks have been added to the track list. */
+    virtual const core::Signal<ContainerURI>& on_tracks_added() const = 0;
 
     /** Indicates that a track has been removed from the track list. */
     virtual const core::Signal<Track::Id>& on_track_removed() const = 0;

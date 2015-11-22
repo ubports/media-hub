@@ -547,6 +547,18 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         d->update_mpris_properties();
     });
 
+    d->track_list->on_tracks_added().connect([this](const media::TrackList::ContainerURI& tracks)
+    {
+        std::cout << "** Track was added, handling in PlayerImplementation" << std::endl;
+        // If the two sizes are the same, that means the TrackList was previously empty and we need
+        // to open the first track in the TrackList so that is_audio_source() and is_video_source()
+        // will function correctly.
+        if (tracks.size() >= 1 and d->track_list->tracks()->size() == tracks.size())
+            d->open_first_track_from_tracklist(tracks.front());
+
+        d->update_mpris_properties();
+    });
+
     d->track_list->on_track_removed().connect([this](const media::Track::Id&)
     {
         d->update_mpris_properties();

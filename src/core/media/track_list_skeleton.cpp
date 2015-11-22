@@ -59,6 +59,7 @@ struct media::TrackListSkeleton::Private
           signals
           {
               skeleton.signals.track_added,
+              skeleton.signals.tracks_added,
               skeleton.signals.track_removed,
               skeleton.signals.track_changed,
               skeleton.signals.tracklist_replaced
@@ -93,9 +94,12 @@ struct media::TrackListSkeleton::Private
     void handle_add_track_with_uri_at(const core::dbus::Message::Ptr& msg)
     {
         std::cout << "*** " << __PRETTY_FUNCTION__ << std::endl;
-        request_context_resolver->resolve_context_for_dbus_name_async(msg->sender(), [this, msg](const media::apparmor::ubuntu::Context& context)
+        request_context_resolver->resolve_context_for_dbus_name_async
+            (msg->sender(), [this, msg](const media::apparmor::ubuntu::Context& context)
         {
-            Track::UriType uri; media::Track::Id after; bool make_current;
+            Track::UriType uri;
+            media::Track::Id after;
+            bool make_current;
             msg->reader() >> uri >> after >> make_current;
 
             // Make sure the client has adequate apparmor permissions to open the URI
@@ -104,10 +108,63 @@ struct media::TrackListSkeleton::Private
             auto reply = dbus::Message::make_method_return(msg);
             // Only add the track to the TrackList if it passes the apparmor permissions check
             if (std::get<0>(result))
+            {
                 impl->add_track_with_uri_at(uri, after, make_current);
+            }
             else
-                std::cerr << "Warning: Not adding track " << uri <<
-                    " to TrackList because of inadequate client apparmor permissions." << std::endl;
+            {
+                const std::string err_str = {"Warning: Not adding track " + uri +
+                    " to TrackList because of inadequate client apparmor permissions."};
+                std::cerr << err_str << std::endl;
+                reply = dbus::Message::make_error(
+                            msg,
+                            mpris::TrackList::Error::InsufficientPermissionsToAddTrack::name,
+                            err_str);
+            }
+
+            bus->send(reply);
+        });
+    }
+
+    void handle_add_tracks_with_uri_at(const core::dbus::Message::Ptr& msg)
+    {
+        std::cout << "*** " << __PRETTY_FUNCTION__ << std::endl;
+        request_context_resolver->resolve_context_for_dbus_name_async
+            (msg->sender(), [this, msg](const media::apparmor::ubuntu::Context& context)
+        {
+            ContainerURI uris;
+            media::Track::Id after;
+            msg->reader() >> uris >> after;
+
+            media::apparmor::ubuntu::RequestAuthenticator::Result result;
+            std::string err_str;
+            for (const auto uri : uris)
+            {
+                // Make sure the client has adequate apparmor permissions to open the URI
+                result = request_authenticator->authenticate_open_uri_request(context, uri);
+                if (not std::get<0>(result))
+                {
+                    err_str = {"Warning: Not adding track " + uri +
+                        " to TrackList because of inadequate client apparmor permissions."};
+                    break;
+                }
+            }
+
+            core::dbus::Message::Ptr reply;
+            // Only add the track to the TrackList if it passes the apparmor permissions check
+            if (std::get<0>(result))
+            {
+                reply = dbus::Message::make_method_return(msg);
+                impl->add_tracks_with_uri_at(uris, after);
+            }
+            else
+            {
+                std::cerr << err_str << std::endl;
+                reply = dbus::Message::make_error(
+                            msg,
+                            mpris::TrackList::Error::InsufficientPermissionsToAddTrack::name,
+                            err_str);
+            }
 
             bus->send(reply);
         });
@@ -159,11 +216,13 @@ struct media::TrackListSkeleton::Private
     struct Signals
     {
         typedef core::dbus::Signal<mpris::TrackList::Signals::TrackAdded, mpris::TrackList::Signals::TrackAdded::ArgumentType> DBusTrackAddedSignal;
+        typedef core::dbus::Signal<mpris::TrackList::Signals::TracksAdded, mpris::TrackList::Signals::TracksAdded::ArgumentType> DBusTracksAddedSignal;
         typedef core::dbus::Signal<mpris::TrackList::Signals::TrackRemoved, mpris::TrackList::Signals::TrackRemoved::ArgumentType> DBusTrackRemovedSignal;
         typedef core::dbus::Signal<mpris::TrackList::Signals::TrackChanged, mpris::TrackList::Signals::TrackChanged::ArgumentType> DBusTrackChangedSignal;
         typedef core::dbus::Signal<mpris::TrackList::Signals::TrackListReplaced, mpris::TrackList::Signals::TrackListReplaced::ArgumentType> DBusTrackListReplacedSignal;
 
         Signals(const std::shared_ptr<DBusTrackAddedSignal>& remote_track_added,
+                const std::shared_ptr<DBusTracksAddedSignal>& remote_tracks_added,
                 const std::shared_ptr<DBusTrackRemovedSignal>& remote_track_removed,
                 const std::shared_ptr<DBusTrackChangedSignal>& remote_track_changed,
                 const std::shared_ptr<DBusTrackListReplacedSignal>& remote_track_list_replaced)
@@ -172,6 +231,11 @@ struct media::TrackListSkeleton::Private
             on_track_added.connect([remote_track_added](const media::Track::Id &id)
             {
                 remote_track_added->emit(id);
+            });
+
+            on_tracks_added.connect([remote_tracks_added](const media::TrackList::ContainerURI &tracks)
+            {
+                remote_tracks_added->emit(tracks);
             });
 
             on_track_removed.connect([remote_track_removed](const media::Track::Id &id)
@@ -191,6 +255,7 @@ struct media::TrackListSkeleton::Private
         }
 
         core::Signal<Track::Id> on_track_added;
+        core::Signal<TrackList::ContainerURI> on_tracks_added;
         core::Signal<Track::Id> on_track_removed;
         core::Signal<Track::Id> on_track_changed;
         core::Signal<TrackList::ContainerTrackIdTuple> on_track_list_replaced;
@@ -216,6 +281,11 @@ media::TrackListSkeleton::TrackListSkeleton(const core::dbus::Bus::Ptr& bus, con
 
     d->object->install_method_handler<mpris::TrackList::AddTrack>(
         std::bind(&Private::handle_add_track_with_uri_at,
+                  std::ref(d),
+                  std::placeholders::_1));
+
+    d->object->install_method_handler<mpris::TrackList::AddTracks>(
+        std::bind(&Private::handle_add_tracks_with_uri_at,
                   std::ref(d),
                   std::placeholders::_1));
 
@@ -490,6 +560,11 @@ const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_added()
     return d->signals.on_track_added;
 }
 
+const core::Signal<media::TrackList::ContainerURI>& media::TrackListSkeleton::on_tracks_added() const
+{
+    return d->signals.on_tracks_added;
+}
+
 const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_removed() const
 {
     return d->signals.on_track_removed;
@@ -518,6 +593,11 @@ core::Signal<media::TrackList::ContainerTrackIdTuple>& media::TrackListSkeleton:
 core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_added()
 {
     return d->signals.on_track_added;
+}
+
+core::Signal<media::TrackList::ContainerURI>& media::TrackListSkeleton::on_tracks_added()
+{
+    return d->signals.on_tracks_added;
 }
 
 core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_removed()

@@ -8,8 +8,23 @@ export DPKG_GENSYMBOLS_CHECK_LEVEL=4
 
 include /usr/share/dpkg/default.mk
 
+distro=$(shell lsb_release -c -s)
+
+ifeq ($(distro),vivid)
+	full_version=$(shell cat $(CURDIR)/debian/VERSION.vivid)
+else
+	full_version=$(shell cat $(CURDIR)/debian/VERSION)
+endif
+
+major=$(shell echo $(full_version) | cut -d'.' -f1)
+minor=$(shell echo $(full_version) | cut -d'.' -f2)
+patch=$(shell echo $(full_version) | cut -d'.' -f3)
+
 %:
 	dh $@ --fail-missing --parallel -- -B build 
+
+override_dh_auto_configure:
+	dh_auto_configure -- -DUBUNTU_MEDIA_HUB_VERSION_MAJOR=$(major) -DUBUNTU_MEDIA_HUB_VERSION_MINOR=$(minor) -DUBUNTU_MEDIA_HUB_VERSION_PATCH=$(patch)
 
 override_dh_auto_test:
 	env -u LD_PRELOAD dh_auto_test
@@ -17,3 +32,7 @@ override_dh_auto_test:
 override_dh_installdeb:
 	dh_apparmor --profile-name=usr.bin.media-hub-server -pmedia-hub
 	dh_installdeb
+
+override_dh_auto_clean:
+	/bin/sh $(CURDIR)/debian/gen-debian-files.sh $(CURDIR)/debian
+	dh_auto_clean
