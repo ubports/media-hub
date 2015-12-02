@@ -13,6 +13,12 @@ media-hub (4.0.0+15.04.20151118.1-0ubuntu1) vivid; urgency=medium
 
  -- Jim Hodapp <ci-train-bot@canonical.com>  Wed, 18 Nov 2015 18:36:18 +0000
 
+media-hub (3.3.0+15.04.20151023.3-0ubuntu2) UNRELEASED; urgency=medium
+
+  * Force rebuild against dbus-cpp. 
+
+ -- Thomas Voß <thomas.voss@canonical.com>  Tue, 17 Nov 2015 09:37:46 +0100
+
 media-hub (3.3.0+15.04.20151023.3-0ubuntu1) vivid; urgency=medium
 
   [ Jim Hodapp ]
