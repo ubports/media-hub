@@ -1,3 +1,10 @@
+media-hub (4.0.0+15.04.20151209-0ubuntu1) vivid; urgency=medium
+
+  * Set gstreamer context directly instead of using gobject to
+    communicate with the video sink
+
+ -- Alfonso Sanchez-Beato <alfonso.sanchez-beato@canonical.com>  Wed, 09 Dec 2015 06:49:28 +0000
+
 media-hub (4.0.0+15.04.20151202-0ubuntu1) vivid; urgency=medium
 
   [ CI Train Bot ]
