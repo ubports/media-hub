@@ -1,5 +1,5 @@
 /*
- * Copyright © 2013-2014 Canonical Ltd.
+ * Copyright © 2013-2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -26,15 +26,13 @@
 
 #include "test_data.h"
 
-#include <core/testing/cross_process_sync.h>
-#include <core/testing/fork_and_run.h>
-
 #include <gtest/gtest.h>
 
 #include <cstdio>
 
 #include <condition_variable>
 #include <functional>
+#include <iostream>
 #include <thread>
 
 namespace media = core::ubuntu::media;
@@ -70,382 +68,121 @@ void sleep_for(const std::chrono::milliseconds& ms)
 }
 }
 
-TEST(MusicService, DISABLED_accessing_and_creating_a_session_works)
+TEST(MediaService, move_track_in_tracklist_works)
 {
-    core::testing::CrossProcessSync sync_service_start;
+    auto service = media::Service::Client::instance();
+    auto session = service->create_session(media::Player::Client::default_configuration());
+    EXPECT_TRUE(session != nullptr);
 
-    auto service = [this, &sync_service_start]()
+    std::vector<media::Track::Id> ids;
+
+    auto tracklist = session->track_list();
+
+    // Catch the new track Ids that are assigned each track that's added
+    core::Connection c = tracklist->on_track_added().connect([&ids](const media::Track::Id &new_id)
     {
-        SigTermCatcher sc;
+        std::cout << "track added: " << new_id << std::endl;
+        ids.push_back(new_id);
+    });
 
-        auto service = std::make_shared<media::ServiceImplementation>();
-        std::thread t([&service](){service->run();});
+    const media::Track::UriType uri1{"file:///tmp/test-audio.ogg"};
+    const media::Track::UriType uri2{"file:///tmp/test-audio1.ogg"};
+    const media::Track::UriType uri3{"file:///tmp/test.mp3"};
+    const media::Track::UriType uri4{"file:///tmp/test-video.ogg"};
 
-        sync_service_start.try_signal_ready_for(std::chrono::milliseconds{500});
+    tracklist->add_track_with_uri_at(uri1, media::TrackList::after_empty_track(), false);
+    tracklist->add_track_with_uri_at(uri2, media::TrackList::after_empty_track(), false);
+    tracklist->add_track_with_uri_at(uri3, media::TrackList::after_empty_track(), false);
+    tracklist->add_track_with_uri_at(uri4, media::TrackList::after_empty_track(), false);
+    EXPECT_EQ(std::uint32_t{4}, tracklist->tracks()->size());
 
-        sc.wait_for_signal(); service->stop();
+    std::cout << "ids.at(0): " << ids.at(1) << std::endl;
+    std::cout << "ids.at(2): " << ids.at(2) << std::endl;
+    // Move track 3 into the second position in the TrackList
+    tracklist->move_track(ids.at(2), ids.at(1));
 
-        if (t.joinable())
-            t.join();
-
-        return ::testing::Test::HasFailure() ? core::posix::exit::Status::failure : core::posix::exit::Status::success;
-    };
-
-    auto client = [this, &sync_service_start]()
-    {
-        sync_service_start.wait_for_signal_ready_for(std::chrono::milliseconds{500});
-
-        auto service = media::Service::Client::instance();
-        auto session = service->create_session(media::Player::Client::default_configuration());
-
-        EXPECT_TRUE(session != nullptr);
-
-        return ::testing::Test::HasFailure() ? core::posix::exit::Status::failure : core::posix::exit::Status::success;
-    };
-
-    EXPECT_EQ(core::testing::ForkAndRunResult::empty,
-              core::testing::fork_and_run(service, client));
+    // Original list order and current order should be different
+    EXPECT_NE(ids, tracklist->tracks().get());
+    EXPECT_EQ(ids[1], tracklist->tracks()->at(2));
+    EXPECT_EQ(ids[2], tracklist->tracks()->at(1));
 }
 
-TEST(MusicService, DISABLED_accessing_and_creating_a_fixed_session_works)
+TEST(MediaService, move_track_to_first_position_in_tracklist_works)
 {
-    core::testing::CrossProcessSync sync_service_start;
+    auto service = media::Service::Client::instance();
+    auto session = service->create_session(media::Player::Client::default_configuration());
+    EXPECT_TRUE(session != nullptr);
 
-    auto service = [this, &sync_service_start]()
+    std::vector<media::Track::Id> ids;
+
+    auto tracklist = session->track_list();
+
+    // Catch the new track Ids that are assigned each track that's added
+    core::Connection c = tracklist->on_track_added().connect([&ids](const media::Track::Id &new_id)
     {
-        SigTermCatcher sc;
+        std::cout << "track added: " << new_id << std::endl;
+        ids.push_back(new_id);
+    });
 
-        auto service = std::make_shared<media::ServiceImplementation>();
-        std::thread t([&service](){service->run();});
+    const media::Track::UriType uri1{"file:///tmp/test-audio.ogg"};
+    const media::Track::UriType uri2{"file:///tmp/test-audio1.ogg"};
+    const media::Track::UriType uri3{"file:///tmp/test.mp3"};
+    const media::Track::UriType uri4{"file:///tmp/test-video.ogg"};
 
-        sync_service_start.try_signal_ready_for(std::chrono::milliseconds{500});
+    tracklist->add_track_with_uri_at(uri1, media::TrackList::after_empty_track(), false);
+    tracklist->add_track_with_uri_at(uri2, media::TrackList::after_empty_track(), false);
+    tracklist->add_track_with_uri_at(uri3, media::TrackList::after_empty_track(), false);
+    tracklist->add_track_with_uri_at(uri4, media::TrackList::after_empty_track(), false);
+    EXPECT_EQ(std::uint32_t{4}, tracklist->tracks()->size());
 
-        sc.wait_for_signal(); service->stop();
+    std::cout << "ids.at(0): " << ids.at(0) << std::endl;
+    std::cout << "ids.at(2): " << ids.at(2) << std::endl;
+    // Move track 3 into the first position in the TrackList
+    tracklist->move_track(ids.at(2), ids.at(0));
 
-        if (t.joinable())
-            t.join();
-
-        return ::testing::Test::HasFailure() ? core::posix::exit::Status::failure : core::posix::exit::Status::success;
-    };
-
-    auto client = [this, &sync_service_start]()
-    {
-        sync_service_start.wait_for_signal_ready_for(std::chrono::milliseconds{500});
-
-        auto service = media::Service::Client::instance();
-        auto session = service->create_fixed_session("com.ubuntu.test-session", media::Player::Client::default_configuration());
-
-        EXPECT_TRUE(session != nullptr);
-
-        return ::testing::Test::HasFailure() ? core::posix::exit::Status::failure : core::posix::exit::Status::success;
-    };
-
-    EXPECT_EQ(core::testing::ForkAndRunResult::empty,
-              core::testing::fork_and_run(service, client));
+    // Original list order and current order should be different
+    EXPECT_NE(ids, tracklist->tracks().get());
+    EXPECT_EQ(ids[2], tracklist->tracks()->at(0));
+    EXPECT_EQ(ids[0], tracklist->tracks()->at(1));
 }
 
-TEST(MusicService, DISABLED_resuming_a_session_works)
+TEST(MediaService, move_track_to_last_position_in_tracklist_works)
 {
-    core::testing::CrossProcessSync sync_service_start;
+    auto service = media::Service::Client::instance();
+    auto session = service->create_session(media::Player::Client::default_configuration());
+    EXPECT_TRUE(session != nullptr);
 
-    auto service = [this, &sync_service_start]()
+    std::vector<media::Track::Id> ids;
+
+    auto tracklist = session->track_list();
+
+    // Catch the new track Ids that are assigned each track that's added
+    core::Connection c = tracklist->on_track_added().connect([&ids](const media::Track::Id &new_id)
     {
-        SigTermCatcher sc;
-
-        auto service = std::make_shared<media::ServiceImplementation>();
-        std::thread t([&service](){service->run();});
-
-        sync_service_start.try_signal_ready_for(std::chrono::milliseconds{500});
-
-        sc.wait_for_signal(); service->stop();
-
-        if (t.joinable())
-            t.join();
-
-        return ::testing::Test::HasFailure() ? core::posix::exit::Status::failure : core::posix::exit::Status::success;
-    };
-
-    auto client = [this, &sync_service_start]()
-    {
-        sync_service_start.wait_for_signal_ready_for(std::chrono::milliseconds{500});
-
-        auto service = media::Service::Client::instance();
-        auto session = service->create_session(media::Player::Client::default_configuration());
-
-        EXPECT_TRUE(session != nullptr);
-
-        auto resumed_session = service->resume_session(session->key());
-
-        EXPECT_TRUE(resumed_session != nullptr);
-
-        return ::testing::Test::HasFailure() ? core::posix::exit::Status::failure : core::posix::exit::Status::success;
-    };
-
-    EXPECT_EQ(core::testing::ForkAndRunResult::empty,
-              core::testing::fork_and_run(service, client));
-}
-
-TEST(MusicService, DISABLED_remotely_querying_track_meta_data_works)
-{
-    const std::string test_file{"/tmp/test-audio.ogg"};
-    const std::string test_file_uri{"file:///tmp/test-audio.ogg"};
-    std::remove(test_file.c_str());
-    ASSERT_TRUE(test::copy_test_media_file_to("test-audio.ogg", test_file));
-
-    core::testing::CrossProcessSync sync_service_start;
-
-    auto service = [this, &sync_service_start]()
-    {
-        SigTermCatcher sc;
-
-        auto service = std::make_shared<media::ServiceImplementation>();
-        std::thread t([&service](){service->run();});
-
-        sync_service_start.try_signal_ready_for(std::chrono::milliseconds{500});
-
-        sc.wait_for_signal(); service->stop();
-
-        if (t.joinable())
-            t.join();
-
-        return ::testing::Test::HasFailure() ? core::posix::exit::Status::failure : core::posix::exit::Status::success;
-    };
-
-    auto client = [this, &sync_service_start]()
-    {
-        sync_service_start.wait_for_signal_ready_for(std::chrono::milliseconds{500});
-
-        static const media::Track::UriType uri{"file:///tmp/test-audio.ogg"};
-
-        auto service = media::Service::Client::instance();
-        auto session = service->create_session(media::Player::Client::default_configuration());
-        auto track_list = session->track_list();
-
-        track_list->add_track_with_uri_at(uri, media::TrackList::after_empty_track(), false);
-
-        EXPECT_EQ(std::uint32_t{1}, track_list->tracks()->size());
-
-        auto md = track_list->query_meta_data_for_track(track_list->tracks()->front());
-
-        for (auto pair : *md)
-        {
-            std::cout << pair.first << " -> " << pair.second << std::endl;
-        }
-
-        return ::testing::Test::HasFailure() ? core::posix::exit::Status::failure : core::posix::exit::Status::success;
-    };
-
-    EXPECT_EQ(core::testing::ForkAndRunResult::empty,
-              core::testing::fork_and_run(service, client));
-}
-
-TEST(MusicService, DISABLED_play_pause_seek_after_open_uri_works)
-{
-    const std::string test_file{"/tmp/test-audio-1.ogg"};
-    std::remove(test_file.c_str());
-    ASSERT_TRUE(test::copy_test_media_file_to("test-audio-1.ogg", test_file));
-
-    core::testing::CrossProcessSync sync_service_start;
-
-    auto service = [this, &sync_service_start]()
-    {
-        SigTermCatcher sc;
-
-        auto service = std::make_shared<media::ServiceImplementation>();
-        std::thread t([&service](){service->run();});
-
-        sync_service_start.try_signal_ready_for(std::chrono::milliseconds{500});
-
-        sc.wait_for_signal(); service->stop();
-
-        if (t.joinable())
-            t.join();
-
-        return ::testing::Test::HasFailure() ? core::posix::exit::Status::failure : core::posix::exit::Status::success;
-    };
-
-    auto client = [this, &sync_service_start]()
-    {
-        sync_service_start.wait_for_signal_ready_for(std::chrono::milliseconds{500});
-
-        static const media::Track::UriType uri{"file:///tmp/test-audio-1.ogg"};
-
-        auto service = media::Service::Client::instance();
-        auto session = service->create_session(media::Player::Client::default_configuration());
-
-        EXPECT_EQ(true, session->can_play().get());
-        EXPECT_EQ(true, session->can_pause().get());
-        EXPECT_EQ(true, session->can_seek().get());
-        EXPECT_EQ(true, session->can_go_previous().get());
-        EXPECT_EQ(true, session->can_go_next().get());
-        EXPECT_EQ(media::Player::PlaybackStatus::null, session->playback_status());
-        EXPECT_EQ(media::Player::LoopStatus::none, session->loop_status());
-        EXPECT_NEAR(1.f, session->playback_rate().get(), 1E-5);
-        EXPECT_EQ(true, session->is_shuffle());
-        EXPECT_EQ(true, session->track_list()->can_edit_tracks().get());
-
-        EXPECT_TRUE(session->open_uri(uri));
-
-        core::testing::WaitableStateTransition<media::Player::PlaybackStatus>
-                state_transition(
-                    media::Player::stopped);
-
-        session->playback_status().changed().connect(
-            std::bind(&core::testing::WaitableStateTransition<media::Player::PlaybackStatus>::trigger,
-                      std::ref(state_transition),
-                      std::placeholders::_1));
-
-        session->play();
-        sleep_for(std::chrono::seconds{1});
-        EXPECT_EQ(media::Player::PlaybackStatus::playing, session->playback_status());
-        session->stop();
-        sleep_for(std::chrono::seconds{1});
-        EXPECT_EQ(media::Player::PlaybackStatus::stopped, session->playback_status());
-        session->play();
-        sleep_for(std::chrono::seconds{1});
-        EXPECT_EQ(media::Player::PlaybackStatus::playing, session->playback_status());
-        session->pause();
-        sleep_for(std::chrono::seconds{1});
-        EXPECT_EQ(media::Player::PlaybackStatus::paused, session->playback_status());
-        session->stop();
-        sleep_for(std::chrono::seconds{1});
-        EXPECT_EQ(media::Player::PlaybackStatus::stopped, session->playback_status());
-
-        return ::testing::Test::HasFailure() ? core::posix::exit::Status::failure : core::posix::exit::Status::success;
-    };
-
-    EXPECT_EQ(core::testing::ForkAndRunResult::empty,
-              core::testing::fork_and_run(service, client));
-}
-
-TEST(MusicService, DISABLED_get_position_duration_work)
-{
-    const std::string test_file{"/tmp/test-audio-1.ogg"};
-    std::remove(test_file.c_str());
-    ASSERT_TRUE(test::copy_test_media_file_to("test-audio-1.ogg", test_file));
-
-    core::testing::CrossProcessSync sync_service_start;
-
-    auto service = [this, &sync_service_start]()
-    {
-        SigTermCatcher sc;
-
-        auto service = std::make_shared<media::ServiceImplementation>();
-        std::thread t([&service](){service->run();});
-
-        sync_service_start.try_signal_ready_for(std::chrono::milliseconds{500});
-
-        sc.wait_for_signal(); service->stop();
-
-        if (t.joinable())
-            t.join();
-
-        return ::testing::Test::HasFailure() ? core::posix::exit::Status::failure : core::posix::exit::Status::success;
-    };
-
-    auto client = [this, &sync_service_start]()
-    {
-        sync_service_start.wait_for_signal_ready_for(std::chrono::milliseconds{500});
-
-        static const media::Track::UriType uri{"file:///tmp/test-audio-1.ogg"};
-
-        auto service = media::Service::Client::instance();
-        auto session = service->create_session(media::Player::Client::default_configuration());
-
-        EXPECT_TRUE(session->open_uri(uri));
-
-        core::testing::WaitableStateTransition<media::Player::PlaybackStatus>
-                state_transition(
-                    media::Player::stopped);
-
-        session->playback_status().changed().connect(
-            std::bind(&core::testing::WaitableStateTransition<media::Player::PlaybackStatus>::trigger,
-                      std::ref(state_transition),
-                      std::placeholders::_1));
-
-        session->play();
-        sleep_for(std::chrono::seconds{1});
-        EXPECT_EQ(media::Player::PlaybackStatus::playing, session->playback_status());
-        sleep_for(std::chrono::seconds{1});
-        EXPECT_TRUE(session->position() > 1e9);
-        EXPECT_TRUE(session->duration() > 1e9);
-
-        return ::testing::Test::HasFailure() ? core::posix::exit::Status::failure : core::posix::exit::Status::success;
-    };
-
-    EXPECT_EQ(core::testing::ForkAndRunResult::empty,
-              core::testing::fork_and_run(service, client));
-}
-
-TEST(MusicService, DISABLED_starting_playback_on_non_empty_playqueue_works)
-{
-    const std::string test_file{"/tmp/test-audio-1.ogg"};
-    std::remove(test_file.c_str());
-    ASSERT_TRUE(test::copy_test_media_file_to("test-audio-1.ogg", test_file));
-
-    core::testing::CrossProcessSync sync_service_start;
-
-    auto service = [this, &sync_service_start]()
-    {
-        SigTermCatcher sc;
-
-        auto service = std::make_shared<media::ServiceImplementation>();
-        std::thread t([&service](){service->run();});
-
-        sync_service_start.try_signal_ready_for(std::chrono::milliseconds{500});
-
-        sc.wait_for_signal(); service->stop();
-
-        if (t.joinable())
-            t.join();
-
-        return ::testing::Test::HasFailure() ? core::posix::exit::Status::failure : core::posix::exit::Status::success;
-    };
-
-    auto client = [this, &sync_service_start]()
-    {
-        sync_service_start.wait_for_signal_ready_for(std::chrono::milliseconds{500});
-
-        static const media::Track::UriType uri{"file:///tmp/test-audio-1.ogg"};
-        static const bool dont_make_current{false};
-
-        auto service = media::Service::Client::instance();
-        auto session = service->create_session(media::Player::Client::default_configuration());
-
-        EXPECT_EQ(true, session->can_play().get());
-        EXPECT_EQ(true, session->can_play().get());
-        EXPECT_EQ(true, session->can_pause().get());
-        EXPECT_EQ(true, session->can_seek().get());
-        EXPECT_EQ(true, session->can_go_previous().get());
-        EXPECT_EQ(true, session->can_go_next().get());
-        EXPECT_EQ(media::Player::PlaybackStatus::null, session->playback_status());
-        EXPECT_EQ(media::Player::LoopStatus::none, session->loop_status());
-        EXPECT_NEAR(1.f, session->playback_rate().get(), 1E-5);
-        EXPECT_EQ(true, session->is_shuffle());
-        EXPECT_EQ(true, session->track_list()->can_edit_tracks().get());
-
-        session->track_list()->add_track_with_uri_at(uri, media::TrackList::after_empty_track(), dont_make_current);
-
-        EXPECT_EQ(std::uint32_t{1}, session->track_list()->tracks()->size());
-
-        core::testing::WaitableStateTransition<media::Player::PlaybackStatus>
-                state_transition(
-                    media::Player::stopped);
-
-        session->playback_status().changed().connect(
-            std::bind(&core::testing::WaitableStateTransition<media::Player::PlaybackStatus>::trigger,
-                      std::ref(state_transition),
-                      std::placeholders::_1));
-
-        session->play();
-
-        EXPECT_TRUE(state_transition.wait_for_state_for(
-                        media::Player::playing,
-                        std::chrono::milliseconds{2000}));
-
-        return ::testing::Test::HasFailure() ? core::posix::exit::Status::failure : core::posix::exit::Status::success;
-    };
-
-    EXPECT_EQ(core::testing::ForkAndRunResult::empty,
-              core::testing::fork_and_run(service, client));
+        std::cout << "track added: " << new_id << std::endl;
+        ids.push_back(new_id);
+    });
+
+    const media::Track::UriType uri1{"file:///tmp/test-audio.ogg"};
+    const media::Track::UriType uri2{"file:///tmp/test-audio1.ogg"};
+    const media::Track::UriType uri3{"file:///tmp/test.mp3"};
+    const media::Track::UriType uri4{"file:///tmp/test-video.ogg"};
+
+    tracklist->add_track_with_uri_at(uri1, media::TrackList::after_empty_track(), false);
+    tracklist->add_track_with_uri_at(uri2, media::TrackList::after_empty_track(), false);
+    tracklist->add_track_with_uri_at(uri3, media::TrackList::after_empty_track(), false);
+    tracklist->add_track_with_uri_at(uri4, media::TrackList::after_empty_track(), false);
+    EXPECT_EQ(std::uint32_t{4}, tracklist->tracks()->size());
+
+    sleep(1);
+
+    std::cout << "ids.at(0): " << ids.at(0) << std::endl;
+    std::cout << "ids.at(3): " << ids.at(3) << std::endl;
+    // Move track 3 into the first position in the TrackList
+    tracklist->move_track(ids.at(0), ids.at(3));
+
+    // Original list order and current order should be different
+    EXPECT_NE(ids, tracklist->tracks().get());
+    EXPECT_EQ(ids[1], tracklist->tracks()->at(0));
+    EXPECT_EQ(ids[0], tracklist->tracks()->at(3));
 }

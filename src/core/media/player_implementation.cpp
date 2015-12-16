@@ -294,7 +294,8 @@ struct media::PlayerImplementation<Parent>::Private :
         {
             // Using a TrackList for playback, added tracks via add_track(), but open_uri hasn't been called yet
             // to load a media resource
-            std::cout << "Calling d->engine->open_resource_for_uri() for first track added only: " << uri << std::endl;
+            std::cout << "Calling d->engine->open_resource_for_uri() for first track added only: "
+                      << uri << std::endl;
             std::cout << "\twith a Track::Id: " << id << std::endl;
             static const bool do_pipeline_reset = false;
             engine->open_resource_for_uri(uri, do_pipeline_reset);
@@ -374,6 +375,11 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         return d->engine->position().get();
     };
     Parent::position().install(position_getter);
+
+    d->engine->position().changed().connect([this](uint64_t position)
+    {
+        d->track_list->on_position_changed(position);
+    });
 
     // Make sure that the Duration property gets updated from the Engine
     // every time the client requests duration
@@ -507,8 +513,7 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         }
     });
 
-
-    d->track_list->on_go_to_track().connect([this](std::pair<const media::Track::Id, bool> p)
+    d->track_list->on_go_to_track().connect([this](const media::Track::Id& id)
     {
         // This lambda needs to be mutually exclusive with the about_to_finish lambda above
         const bool locked = d->doing_go_to_track.try_lock();
@@ -517,11 +522,8 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         if (!locked)
             return;
 
-        const media::Track::Id id = p.first;
-        const bool toggle_player_state = p.second;
-
-        if (toggle_player_state)
-            d->engine->stop();
+        // Store whether we should restore the current playing state after loading the new uri
+        const bool auto_play = Parent::playback_status().get() == media::Player::playing;
 
         const Track::UriType uri = d->track_list->query_uri_for_track(id);
         if (!uri.empty())
@@ -532,8 +534,11 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
             d->engine->open_resource_for_uri(uri, do_pipeline_reset);
         }
 
-        if (toggle_player_state)
+        if (auto_play)
+        {
+            std::cout << "Restoring playing state in on_go_to_track()" << std::endl;
             d->engine->play();
+        }
 
         d->doing_go_to_track.unlock();
     });
@@ -560,6 +565,11 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
     });
 
     d->track_list->on_track_removed().connect([this](const media::Track::Id&)
+    {
+        d->update_mpris_properties();
+    });
+
+    d->track_list->on_track_list_reset().connect([this](void)
     {
         d->update_mpris_properties();
     });
@@ -676,7 +686,15 @@ template<typename Parent>
 bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri)
 {
     d->track_list->reset();
-    const bool ret = d->engine->open_resource_for_uri(uri, false);
+
+    // If empty uri, give the same meaning as QMediaPlayer::setMedia("")
+    if (uri.empty()) {
+        cout << __PRETTY_FUNCTION__ << ": resetting current media" << endl;
+        return true;
+    }
+
+    static const bool do_pipeline_reset = false;
+    const bool ret = d->engine->open_resource_for_uri(uri, do_pipeline_reset);
     // Don't set new track as the current track to play since we're calling open_resource_for_uri above
     static const bool make_current = false;
     d->track_list->add_track_with_uri_at(uri, media::TrackList::after_empty_track(), make_current);

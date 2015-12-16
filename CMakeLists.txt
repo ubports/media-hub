@@ -17,14 +17,14 @@ if (NOT DEFINED UBUNTU_MEDIA_HUB_VERSION_MAJOR)
   #   - releases other than vivid
   #   - other distros
   #   - errors
-  # we define the version to be 2.0.0
+  # we define the version to be 5.0.0
   if (${DISTRO_CODENAME} STREQUAL "vivid")
-    set(UBUNTU_MEDIA_HUB_VERSION_MAJOR 3)
-    set(UBUNTU_MEDIA_HUB_VERSION_MINOR 3)
+    set(UBUNTU_MEDIA_HUB_VERSION_MAJOR 4)
+    set(UBUNTU_MEDIA_HUB_VERSION_MINOR 0)
     set(UBUNTU_MEDIA_HUB_VERSION_PATCH 0)
   else ()
-    set(UBUNTU_MEDIA_HUB_VERSION_MAJOR 4)
-    set(UBUNTU_MEDIA_HUB_VERSION_MINOR 1)
+    set(UBUNTU_MEDIA_HUB_VERSION_MAJOR 5)
+    set(UBUNTU_MEDIA_HUB_VERSION_MINOR 0)
     set(UBUNTU_MEDIA_HUB_VERSION_PATCH 0)
   endif()
 endif()

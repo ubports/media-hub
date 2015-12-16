@@ -57,12 +57,45 @@ struct TrackList
                 "mpris.TrackList.Error.InsufficientPermissionsToAddTrack"
             };
         };
+
+        struct FailedToMoveTrack
+        {
+            static constexpr const char* name
+            {
+                "mpris.TrackList.Error.FailedToMoveTrack"
+            };
+        };
+
+        struct FailedToFindMoveTrackSource
+        {
+            static constexpr const char* name
+            {
+                "mpris.TrackList.Error.FailedToFindMoveTrackSource"
+            };
+        };
+
+        struct FailedToFindMoveTrackDest
+        {
+            static constexpr const char* name
+            {
+                "mpris.TrackList.Error.FailedToFindMoveTrackDest"
+            };
+        };
+
+        struct TrackNotFound
+        {
+            static constexpr const char* name
+            {
+                "mpris.TrackList.Error.TrackNotFound"
+            };
+        };
     };
 
     DBUS_CPP_METHOD_DEF(GetTracksMetadata, TrackList)
     DBUS_CPP_METHOD_DEF(GetTracksUri, TrackList)
     DBUS_CPP_METHOD_DEF(AddTrack, TrackList)
     DBUS_CPP_METHOD_DEF(AddTracks, TrackList)
+    DBUS_CPP_METHOD_DEF(MoveTrack, TrackList)
     DBUS_CPP_METHOD_DEF(RemoveTrack, TrackList)
     DBUS_CPP_METHOD_DEF(GoTo, TrackList)
     DBUS_CPP_METHOD_DEF(Reset, TrackList)
@@ -94,6 +127,13 @@ struct TrackList
 
         DBUS_CPP_SIGNAL_DEF
         (
+            TrackMoved,
+            TrackList,
+            BOOST_IDENTITY_TYPE((std::tuple<core::ubuntu::media::Track::Id, core::ubuntu::media::Track::Id>))
+        )
+
+        DBUS_CPP_SIGNAL_DEF
+        (
             TrackRemoved,
             TrackList,
             core::ubuntu::media::Track::Id
@@ -104,6 +144,13 @@ struct TrackList
             TrackChanged,
             TrackList,
             core::ubuntu::media::Track::Id
+        )
+
+        DBUS_CPP_SIGNAL_DEF
+        (
+            TrackListReset,
+            TrackList,
+            void
         )
 
         DBUS_CPP_SIGNAL_DEF
@@ -154,8 +201,10 @@ struct TrackList
                   configuration.object->template get_signal<Signals::TrackListReplaced>(),
                   configuration.object->template get_signal<Signals::TrackAdded>(),
                   configuration.object->template get_signal<Signals::TracksAdded>(),
+                  configuration.object->template get_signal<Signals::TrackMoved>(),
                   configuration.object->template get_signal<Signals::TrackRemoved>(),
                   configuration.object->template get_signal<Signals::TrackChanged>(),
+                  configuration.object->template get_signal<Signals::TrackListReset>(),
                   configuration.object->template get_signal<Signals::TrackMetadataChanged>(),
                   configuration.object->template get_signal<core::dbus::interfaces::Properties::Signals::PropertiesChanged>()
               }
@@ -199,8 +248,10 @@ struct TrackList
             core::dbus::Signal<Signals::TrackListReplaced, Signals::TrackListReplaced::ArgumentType>::Ptr tracklist_replaced;
             core::dbus::Signal<Signals::TrackAdded, Signals::TrackAdded::ArgumentType>::Ptr track_added;
             core::dbus::Signal<Signals::TracksAdded, Signals::TracksAdded::ArgumentType>::Ptr tracks_added;
+            core::dbus::Signal<Signals::TrackMoved, Signals::TrackMoved::ArgumentType>::Ptr track_moved;
             core::dbus::Signal<Signals::TrackRemoved, Signals::TrackRemoved::ArgumentType>::Ptr track_removed;
             core::dbus::Signal<Signals::TrackChanged, Signals::TrackChanged::ArgumentType>::Ptr track_changed;
+            core::dbus::Signal<Signals::TrackListReset, Signals::TrackListReset::ArgumentType>::Ptr track_list_reset;
             core::dbus::Signal<Signals::TrackMetadataChanged, Signals::TrackMetadataChanged::ArgumentType>::Ptr track_metadata_changed;
 
             dbus::Signal <core::dbus::interfaces::Properties::Signals::PropertiesChanged,
