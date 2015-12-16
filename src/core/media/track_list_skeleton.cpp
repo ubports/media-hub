@@ -38,9 +38,13 @@
 
 #include <iostream>
 #include <limits>
+#include <sstream>
+#include <cstdint>
 
 namespace dbus = core::dbus;
 namespace media = core::ubuntu::media;
+
+using namespace std;
 
 struct media::TrackListSkeleton::Private
 {
@@ -56,11 +60,16 @@ struct media::TrackListSkeleton::Private
           current_track(skeleton.properties.tracks->get().begin()),
           empty_iterator(skeleton.properties.tracks->get().begin()),
           loop_status(media::Player::LoopStatus::none),
+          current_position(0),
+          id_after_remove(),
           signals
           {
               skeleton.signals.track_added,
+              skeleton.signals.tracks_added,
+              skeleton.signals.track_moved,
               skeleton.signals.track_removed,
               skeleton.signals.track_changed,
+              skeleton.signals.track_list_reset,
               skeleton.signals.tracklist_replaced
           }
     {
@@ -93,9 +102,12 @@ struct media::TrackListSkeleton::Private
     void handle_add_track_with_uri_at(const core::dbus::Message::Ptr& msg)
     {
         std::cout << "*** " << __PRETTY_FUNCTION__ << std::endl;
-        request_context_resolver->resolve_context_for_dbus_name_async(msg->sender(), [this, msg](const media::apparmor::ubuntu::Context& context)
+        request_context_resolver->resolve_context_for_dbus_name_async
+            (msg->sender(), [this, msg](const media::apparmor::ubuntu::Context& context)
         {
-            Track::UriType uri; media::Track::Id after; bool make_current;
+            Track::UriType uri;
+            media::Track::Id after;
+            bool make_current;
             msg->reader() >> uri >> after >> make_current;
 
             // Make sure the client has adequate apparmor permissions to open the URI
@@ -104,13 +116,109 @@ struct media::TrackListSkeleton::Private
             auto reply = dbus::Message::make_method_return(msg);
             // Only add the track to the TrackList if it passes the apparmor permissions check
             if (std::get<0>(result))
+            {
                 impl->add_track_with_uri_at(uri, after, make_current);
+            }
             else
-                std::cerr << "Warning: Not adding track " << uri <<
-                    " to TrackList because of inadequate client apparmor permissions." << std::endl;
+            {
+                const std::string err_str = {"Warning: Not adding track " + uri +
+                    " to TrackList because of inadequate client apparmor permissions."};
+                std::cerr << err_str << std::endl;
+                reply = dbus::Message::make_error(
+                            msg,
+                            mpris::TrackList::Error::InsufficientPermissionsToAddTrack::name,
+                            err_str);
+            }
 
             bus->send(reply);
         });
+    }
+
+    void handle_add_tracks_with_uri_at(const core::dbus::Message::Ptr& msg)
+    {
+        std::cout << "*** " << __PRETTY_FUNCTION__ << std::endl;
+        request_context_resolver->resolve_context_for_dbus_name_async
+            (msg->sender(), [this, msg](const media::apparmor::ubuntu::Context& context)
+        {
+            ContainerURI uris;
+            media::Track::Id after;
+            msg->reader() >> uris >> after;
+
+            media::apparmor::ubuntu::RequestAuthenticator::Result result;
+            std::string err_str;
+            for (const auto uri : uris)
+            {
+                // Make sure the client has adequate apparmor permissions to open the URI
+                result = request_authenticator->authenticate_open_uri_request(context, uri);
+                if (not std::get<0>(result))
+                {
+                    err_str = {"Warning: Not adding track " + uri +
+                        " to TrackList because of inadequate client apparmor permissions."};
+                    break;
+                }
+            }
+
+            core::dbus::Message::Ptr reply;
+            // Only add the track to the TrackList if it passes the apparmor permissions check
+            if (std::get<0>(result))
+            {
+                reply = dbus::Message::make_method_return(msg);
+                impl->add_tracks_with_uri_at(uris, after);
+            }
+            else
+            {
+                std::cerr << err_str << std::endl;
+                reply = dbus::Message::make_error(
+                            msg,
+                            mpris::TrackList::Error::InsufficientPermissionsToAddTrack::name,
+                            err_str);
+            }
+
+            bus->send(reply);
+        });
+    }
+
+    void handle_move_track(const core::dbus::Message::Ptr& msg)
+    {
+        media::Track::Id id;
+        media::Track::Id to;
+        msg->reader() >> id >> to;
+
+        core::dbus::Message::Ptr reply;
+        try {
+            const bool ret = impl->move_track(id, to);
+            if (!ret)
+            {
+                const std::string err_str = {"Error: Not moving track " + id +
+                    " to destination " + to};
+                std::cerr << err_str << std::endl;
+                reply = dbus::Message::make_error(
+                        msg,
+                        mpris::TrackList::Error::FailedToMoveTrack::name,
+                        err_str);
+            }
+            else
+            {
+                reply = dbus::Message::make_method_return(msg);
+            }
+        } catch(media::TrackList::Errors::FailedToMoveTrack& e) {
+            reply = dbus::Message::make_error(
+                    msg,
+                    mpris::TrackList::Error::FailedToFindMoveTrackSource::name,
+                    e.what());
+        } catch(media::TrackList::Errors::FailedToFindMoveTrackSource& e) {
+            reply = dbus::Message::make_error(
+                    msg,
+                    mpris::TrackList::Error::FailedToFindMoveTrackSource::name,
+                    e.what());
+        } catch(media::TrackList::Errors::FailedToFindMoveTrackDest& e) {
+            reply = dbus::Message::make_error(
+                    msg,
+                    mpris::TrackList::Error::FailedToFindMoveTrackDest::name,
+                    e.what());
+        }
+
+        bus->send(reply);
     }
 
     void handle_remove_track(const core::dbus::Message::Ptr& msg)
@@ -118,7 +226,62 @@ struct media::TrackListSkeleton::Private
         media::Track::Id track;
         msg->reader() >> track;
 
+        auto id_it = find(impl->tracks().get().begin(), impl->tracks().get().end(), track);
+        if (id_it == impl->tracks().get().end()) {
+            ostringstream err_str;
+            err_str << "Track " << track << " not found in track list";
+            cout << __PRETTY_FUNCTION__ << " WARNING " << err_str.str() << endl;
+            auto reply = dbus::Message::make_error(
+                            msg,
+                            mpris::TrackList::Error::TrackNotFound::name,
+                            err_str.str());
+            bus->send(reply);
+            return;
+        }
+
+        media::Track::Id next;
+        bool deleting_current = false;
+
+        if (id_it == impl->current_iterator())
+        {
+            cout << "Removing current track" << endl;
+            deleting_current = true;
+
+            if (current_track != empty_iterator)
+            {
+                ++current_track;
+
+                if (current_track == impl->tracks().get().end()
+                            && loop_status == media::Player::LoopStatus::playlist)
+                {
+                    // Removed the last track, current is the first track and make sure that
+                    // the player starts playing it
+                    current_track = impl->tracks().get().begin();
+                }
+
+                if (current_track == impl->tracks().get().end())
+                {
+                    current_track = empty_iterator;
+                    // Nothing else to play, stop playback
+                    impl->emit_on_end_of_tracklist();
+                }
+                else
+                {
+                    next = *current_track;
+                }
+            }
+        }
+        else if (current_track != empty_iterator)
+        {
+            next = *current_track;
+        }
+        id_after_remove = next;
+
+        // Calls reset_current_iterator_if_needed(), which updates the iterator
         impl->remove_track(track);
+
+        if ((not next.empty()) and deleting_current)
+            impl->go_to(next);
 
         auto reply = dbus::Message::make_method_return(msg);
         bus->send(reply);
@@ -130,8 +293,7 @@ struct media::TrackListSkeleton::Private
         msg->reader() >> track;
 
         current_track = std::find(skeleton.properties.tracks->get().begin(), skeleton.properties.tracks->get().end(), track);
-        const bool toggle_player_state = true;
-        impl->go_to(track, toggle_player_state);
+        impl->go_to(track);
 
         auto reply = dbus::Message::make_method_return(msg);
         bus->send(reply);
@@ -155,17 +317,28 @@ struct media::TrackListSkeleton::Private
     TrackList::ConstIterator current_track;
     TrackList::ConstIterator empty_iterator;
     media::Player::LoopStatus loop_status;
+    uint64_t current_position;
+    media::Track::Id id_after_remove;
 
     struct Signals
     {
         typedef core::dbus::Signal<mpris::TrackList::Signals::TrackAdded, mpris::TrackList::Signals::TrackAdded::ArgumentType> DBusTrackAddedSignal;
+        typedef core::dbus::Signal<mpris::TrackList::Signals::TracksAdded, mpris::TrackList::Signals::TracksAdded::ArgumentType> DBusTracksAddedSignal;
+        typedef core::dbus::Signal<mpris::TrackList::Signals::TrackMoved, mpris::TrackList::Signals::TrackMoved::ArgumentType> DBusTrackMovedSignal;
         typedef core::dbus::Signal<mpris::TrackList::Signals::TrackRemoved, mpris::TrackList::Signals::TrackRemoved::ArgumentType> DBusTrackRemovedSignal;
         typedef core::dbus::Signal<mpris::TrackList::Signals::TrackChanged, mpris::TrackList::Signals::TrackChanged::ArgumentType> DBusTrackChangedSignal;
+        typedef core::dbus::Signal<
+            mpris::TrackList::Signals::TrackListReset,
+            mpris::TrackList::Signals::TrackListReset::ArgumentType>
+                DBusTrackListResetSignal;
         typedef core::dbus::Signal<mpris::TrackList::Signals::TrackListReplaced, mpris::TrackList::Signals::TrackListReplaced::ArgumentType> DBusTrackListReplacedSignal;
 
         Signals(const std::shared_ptr<DBusTrackAddedSignal>& remote_track_added,
+                const std::shared_ptr<DBusTracksAddedSignal>& remote_tracks_added,
+                const std::shared_ptr<DBusTrackMovedSignal>& remote_track_moved,
                 const std::shared_ptr<DBusTrackRemovedSignal>& remote_track_removed,
                 const std::shared_ptr<DBusTrackChangedSignal>& remote_track_changed,
+                const std::shared_ptr<DBusTrackListResetSignal>& remote_track_list_reset,
                 const std::shared_ptr<DBusTrackListReplacedSignal>& remote_track_list_replaced)
         {
             // Connect all of the MPRIS interface signals to be emitted over dbus
@@ -174,9 +347,24 @@ struct media::TrackListSkeleton::Private
                 remote_track_added->emit(id);
             });
 
+            on_tracks_added.connect([remote_tracks_added](const media::TrackList::ContainerURI &tracks)
+            {
+                remote_tracks_added->emit(tracks);
+            });
+
+            on_track_moved.connect([remote_track_moved](const media::TrackList::TrackIdTuple &ids)
+            {
+                remote_track_moved->emit(ids);
+            });
+
             on_track_removed.connect([remote_track_removed](const media::Track::Id &id)
             {
                 remote_track_removed->emit(id);
+            });
+
+            on_track_list_reset.connect([remote_track_list_reset]()
+            {
+                remote_track_list_reset->emit();
             });
 
             on_track_changed.connect([remote_track_changed](const media::Track::Id &id)
@@ -191,10 +379,13 @@ struct media::TrackListSkeleton::Private
         }
 
         core::Signal<Track::Id> on_track_added;
+        core::Signal<TrackList::ContainerURI> on_tracks_added;
+        core::Signal<TrackList::TrackIdTuple> on_track_moved;
         core::Signal<Track::Id> on_track_removed;
+        core::Signal<void> on_track_list_reset;
         core::Signal<Track::Id> on_track_changed;
         core::Signal<TrackList::ContainerTrackIdTuple> on_track_list_replaced;
-        core::Signal<std::pair<Track::Id, bool>> on_go_to_track;
+        core::Signal<Track::Id> on_go_to_track;
         core::Signal<void> on_end_of_tracklist;
     } signals;
 };
@@ -219,6 +410,16 @@ media::TrackListSkeleton::TrackListSkeleton(const core::dbus::Bus::Ptr& bus, con
                   std::ref(d),
                   std::placeholders::_1));
 
+    d->object->install_method_handler<mpris::TrackList::AddTracks>(
+        std::bind(&Private::handle_add_tracks_with_uri_at,
+                  std::ref(d),
+                  std::placeholders::_1));
+
+    d->object->install_method_handler<mpris::TrackList::MoveTrack>(
+        std::bind(&Private::handle_move_track,
+                  std::ref(d),
+                  std::placeholders::_1));
+
     d->object->install_method_handler<mpris::TrackList::RemoveTrack>(
         std::bind(&Private::handle_remove_track,
                   std::ref(d),
@@ -239,6 +440,11 @@ media::TrackListSkeleton::~TrackListSkeleton()
 {
 }
 
+/*
+ * NOTE We do not consider the loop status in this function due to the use of it
+ * we do in TrackListSkeleton::next() (the function is used to know whether we
+ * need to wrap when looping is active).
+ */
 bool media::TrackListSkeleton::has_next()
 {
     const auto n_tracks = tracks().get().size();
@@ -252,37 +458,46 @@ bool media::TrackListSkeleton::has_next()
     // changed in player_implementation.cpp.
     // To avoid the crash we consider that current_track will be eventually
     // initialized to the first track when current_iterator() gets called.
-    if (d->current_track == d->empty_iterator) {
+    if (d->current_track == d->empty_iterator)
+    {
         if (n_tracks < 2)
             return false;
         else
             return true;
     }
 
-    const auto next_track = std::next(current_iterator());
-    return !is_last_track(next_track);
+    if (shuffle())
+    {
+        auto it = get_current_shuffled();
+        return ++it != shuffled_tracks().end();
+    }
+    else
+    {
+        const auto next_track = std::next(current_iterator());
+        return !is_last_track(next_track);
+    }
 }
 
+/*
+ * NOTE We do not consider the loop status in this function due to the use of it
+ * we do in TrackListSkeleton::previous() (the function is used to know whether we
+ * need to wrap when looping is active).
+ */
 bool media::TrackListSkeleton::has_previous()
 {
     if (tracks().get().empty() || d->current_track == d->empty_iterator)
         return false;
 
-    // If we are looping over the entire list, then there is always a previous track
-    if (d->loop_status == media::Player::LoopStatus::playlist)
-        return true;
-
-    return d->current_track != std::begin(tracks().get());
+    if (shuffle())
+        return get_current_shuffled() != shuffled_tracks().begin();
+    else
+        return d->current_track != std::begin(tracks().get());
 }
 
-bool media::TrackListSkeleton::is_first_track(const ConstIterator &it)
+media::TrackList::ConstIterator media::TrackListSkeleton::get_current_shuffled()
 {
-    return it == std::begin(tracks().get());
-}
-
-bool media::TrackListSkeleton::is_last_track(const TrackList::ConstIterator &it)
-{
-    return it == std::end(tracks().get());
+    auto current_id = *current_iterator();
+    return find(shuffled_tracks().begin(), shuffled_tracks().end(), current_id);
 }
 
 media::Track::Id media::TrackListSkeleton::next()
@@ -294,50 +509,67 @@ media::Track::Id media::TrackListSkeleton::next()
         return media::Track::Id{};
     }
 
-    const auto next_track = std::next(current_iterator());
-    bool do_go_to_next_track = false;
+    bool go_to_track = false;
 
     // End of the track reached so loop around to the beginning of the track
     if (d->loop_status == media::Player::LoopStatus::track)
     {
         std::cout << "Looping on the current track since LoopStatus is set to track" << std::endl;
-        do_go_to_next_track = true;
+        go_to_track = true;
     }
     // End of the tracklist reached so loop around to the beginning of the tracklist
     else if (d->loop_status == media::Player::LoopStatus::playlist && not has_next())
     {
         std::cout << "Looping on the tracklist since LoopStatus is set to playlist" << std::endl;
-        d->current_track = tracks().get().begin();
-        do_go_to_next_track = true;
+
+        if (shuffle())
+        {
+            const auto id = *shuffled_tracks().begin();
+            set_current_track(id);
+        }
+        else
+        {
+            d->current_track = tracks().get().begin();
+        }
+        go_to_track = true;
     }
     else
     {
-        // Next track is not the last track
-        if (not is_last_track(next_track))
+        if (shuffle())
         {
-            std::cout << "Advancing to next track: " << *(next_track) << std::endl;
-            d->current_track = next_track;
-            do_go_to_next_track = true;
+            auto it = get_current_shuffled();
+            if (++it != shuffled_tracks().end()) {
+                cout << "Advancing to next track: " << *it << endl;
+                set_current_track(*it);
+                go_to_track = true;
+            }
         }
-        // At the end of the tracklist and not set to loop, so we stop advancing the tracklist
         else
         {
-            std::cout << "End of tracklist reached, not advancing to next since LoopStatus is set to none" << std::endl;
-            on_end_of_tracklist()();
+            const auto it = std::next(current_iterator());
+            if (not is_last_track(it))
+            {
+                cout << "Advancing to next track: " << *it << endl;
+                d->current_track = it;
+                go_to_track = true;
+            }
         }
+
     }
 
-    if (do_go_to_next_track)
+    if (go_to_track)
     {
+        cout << "next track id is " << *(current_iterator()) << endl;
         on_track_changed()(*(current_iterator()));
-        // Don't automatically call stop() and play() in player_implementation.cpp on_go_to_track()
-        // since this breaks video playback when using open_uri() (stop() and play() are unwanted in
-        // this scenario since the qtubuntu-media will handle this automatically)
-        const bool toggle_player_state = false;
         const media::Track::Id id = *(current_iterator());
-        const std::pair<const media::Track::Id, bool> p = std::make_pair(id, toggle_player_state);
         // Signal the PlayerImplementation to play the next track
-        on_go_to_track()(p);
+        on_go_to_track()(id);
+    }
+    else
+    {
+        // At the end of the tracklist and not set to loop
+        cout << "End of tracklist reached" << endl;
+        on_end_of_tracklist()();
     }
 
     return *(current_iterator());
@@ -352,48 +584,69 @@ media::Track::Id media::TrackListSkeleton::previous()
         return media::Track::Id{};
     }
 
-    bool do_go_to_previous_track = false;
+    bool go_to_track = false;
+    // Position is measured in nanoseconds
+    const uint64_t max_position = 5 * UINT64_C(1000000000);
 
+    // If we're playing the current track for > max_position time then
+    // repeat it from the beginning
+    if (d->current_position > max_position)
+    {
+        std::cout << "Repeating current track..." << std::endl;
+        go_to_track = true;
+    }
     // Loop on the current track forever
-    if (d->loop_status == media::Player::LoopStatus::track)
+    else if (d->loop_status == media::Player::LoopStatus::track)
     {
         std::cout << "Looping on the current track..." << std::endl;
-        do_go_to_previous_track = true;
+        go_to_track = true;
     }
     // Loop over the whole playlist and repeat
-    else if (d->loop_status == media::Player::LoopStatus::playlist && is_first_track(current_iterator()))
+    else if (d->loop_status == media::Player::LoopStatus::playlist && not has_previous())
     {
         std::cout << "Looping on the entire TrackList..." << std::endl;
-        d->current_track = std::prev(tracks().get().end());
-        do_go_to_previous_track = true;
+
+        if (shuffle())
+        {
+            const auto id = *std::prev(shuffled_tracks().end());
+            set_current_track(id);
+        }
+        else
+        {
+            d->current_track = std::prev(tracks().get().end());
+        }
+
+        go_to_track = true;
     }
     else
     {
-        // Current track is not the first track
-        if (not is_first_track(current_iterator()))
+        if (shuffle())
+        {
+            auto it = get_current_shuffled();
+            if (it != shuffled_tracks().begin()) {
+                set_current_track(*(--it));
+                go_to_track = true;
+            }
+        }
+        else if (not is_first_track(current_iterator()))
         {
             // Keep returning the previous track until the first track is reached
             d->current_track = std::prev(current_iterator());
-            do_go_to_previous_track = true;
-        }
-        // At the beginning of the tracklist and not set to loop, so we stop advancing the tracklist
-        else
-        {
-            std::cout << "Beginning of tracklist reached, not advancing to previous since LoopStatus is set to none" << std::endl;
-            on_end_of_tracklist()();
+            go_to_track = true;
         }
     }
 
-    if (do_go_to_previous_track)
+    if (go_to_track)
     {
         on_track_changed()(*(current_iterator()));
-        // Don't automatically call stop() and play() in player_implementation.cpp on_go_to_track()
-        // since this breaks video playback when using open_uri() (stop() and play() are unwanted in
-        // this scenario since the qtubuntu-media will handle this automatically)
-        const bool toggle_player_state = false;
         const media::Track::Id id = *(current_iterator());
-        const std::pair<const media::Track::Id, bool> p = std::make_pair(id, toggle_player_state);
-        on_go_to_track()(p);
+        on_go_to_track()(id);
+    }
+    else
+    {
+        // At the beginning of the tracklist and not set to loop
+        cout << "Beginning of tracklist reached" << endl;
+        on_end_of_tracklist()();
     }
 
     return *(current_iterator());
@@ -421,12 +674,43 @@ const media::TrackList::ConstIterator& media::TrackListSkeleton::current_iterato
     return d->current_track;
 }
 
+bool media::TrackListSkeleton::update_current_iterator(const TrackList::ConstIterator &it)
+{
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    if (it == tracks().get().end())
+        return false;
+
+    std::cout << "Updating current_track iterator" << std::endl;
+    d->current_track = it;
+
+    return true;
+}
+
 void media::TrackListSkeleton::reset_current_iterator_if_needed()
 {
-    // If all tracks got removed then we need to keep a sane current
-    // iterator for further use.
-    if (tracks().get().empty())
+    d->current_track = find(tracks().get().begin(), tracks().get().end(), d->id_after_remove);
+    if (d->current_track == tracks().get().end())
         d->current_track = d->empty_iterator;
+}
+
+media::Track::Id media::TrackListSkeleton::get_current_track(void)
+{
+    if (d->current_track == d->empty_iterator || tracks().get().empty())
+        return media::Track::Id{};
+
+    return *(current_iterator());
+}
+
+void media::TrackListSkeleton::set_current_track(const media::Track::Id& id)
+{
+    const auto id_it = find(tracks().get().begin(), tracks().get().end(), id);
+    if (id_it != tracks().get().end())
+        d->current_track = id_it;
+}
+
+void media::TrackListSkeleton::emit_on_end_of_tracklist()
+{
+    on_end_of_tracklist()();
 }
 
 const core::Property<bool>& media::TrackListSkeleton::can_edit_tracks() const
@@ -444,6 +728,11 @@ core::Property<media::TrackList::Container>& media::TrackListSkeleton::tracks()
     return *d->skeleton.properties.tracks;
 }
 
+void media::TrackListSkeleton::on_position_changed(uint64_t position)
+{
+    d->current_position = position;
+}
+
 void media::TrackListSkeleton::on_loop_status_changed(const media::Player::LoopStatus& loop_status)
 {
     d->loop_status = loop_status;
@@ -456,21 +745,9 @@ media::Player::LoopStatus media::TrackListSkeleton::loop_status() const
 
 void media::TrackListSkeleton::on_shuffle_changed(bool shuffle)
 {
-    if (shuffle)
-        shuffle_tracks();
-    else
-    {
-        // Save the current Track::Id of what's currently playing to restore after unshuffle
-        const media::Track::Id current_id = *(current_iterator());
+    cout << __PRETTY_FUNCTION__ << endl;
 
-        unshuffle_tracks();
-
-        // Since we use assign() in unshuffle_tracks, which invalidates existing iterators, we need
-        // to make sure that current is pointing to the right place
-        auto it = std::find(tracks().get().begin(), tracks().get().end(), current_id);
-        if (it != tracks().get().end())
-            d->current_track = it;
-    }
+    set_shuffle(shuffle);
 }
 
 const core::Property<media::TrackList::Container>& media::TrackListSkeleton::tracks() const
@@ -490,9 +767,24 @@ const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_added()
     return d->signals.on_track_added;
 }
 
+const core::Signal<media::TrackList::ContainerURI>& media::TrackListSkeleton::on_tracks_added() const
+{
+    return d->signals.on_tracks_added;
+}
+
+const core::Signal<media::TrackList::TrackIdTuple>& media::TrackListSkeleton::on_track_moved() const
+{
+    return d->signals.on_track_moved;
+}
+
 const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_removed() const
 {
     return d->signals.on_track_removed;
+}
+
+const core::Signal<void>& media::TrackListSkeleton::on_track_list_reset() const
+{
+    return d->signals.on_track_list_reset;
 }
 
 const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_changed() const
@@ -500,7 +792,7 @@ const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_changed
     return d->signals.on_track_changed;
 }
 
-const core::Signal<std::pair<media::Track::Id, bool>>& media::TrackListSkeleton::on_go_to_track() const
+const core::Signal<media::Track::Id>& media::TrackListSkeleton::on_go_to_track() const
 {
     return d->signals.on_go_to_track;
 }
@@ -520,9 +812,24 @@ core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_added()
     return d->signals.on_track_added;
 }
 
+core::Signal<media::TrackList::ContainerURI>& media::TrackListSkeleton::on_tracks_added()
+{
+    return d->signals.on_tracks_added;
+}
+
+core::Signal<media::TrackList::TrackIdTuple>& media::TrackListSkeleton::on_track_moved()
+{
+    return d->signals.on_track_moved;
+}
+
 core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_removed()
 {
     return d->signals.on_track_removed;
+}
+
+core::Signal<void>& media::TrackListSkeleton::on_track_list_reset()
+{
+    return d->signals.on_track_list_reset;
 }
 
 core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_changed()
@@ -530,7 +837,7 @@ core::Signal<media::Track::Id>& media::TrackListSkeleton::on_track_changed()
     return d->signals.on_track_changed;
 }
 
-core::Signal<std::pair<media::Track::Id, bool>>& media::TrackListSkeleton::on_go_to_track()
+core::Signal<media::Track::Id>& media::TrackListSkeleton::on_go_to_track()
 {
     return d->signals.on_go_to_track;
 }

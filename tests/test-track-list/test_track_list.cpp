@@ -257,9 +257,8 @@ void media::TestTrackList::test_shuffle(const std::string &uri1, const std::stri
 
         const media::Track::Id id{m_hubTrackList->tracks().get()[3]};
         cout << "Going straight to the Track with Id " << id << std::endl;
-        const bool toggle_player_state = true;
-        m_hubTrackList->go_to(id, toggle_player_state);
-        
+        m_hubTrackList->go_to(id);
+
         cout << "Waiting for third track to finish playing..." << endl;
         wait_for_about_to_finish();
     }
