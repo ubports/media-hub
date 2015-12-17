@@ -210,8 +210,17 @@ std::shared_ptr<media::Player> media::ServiceImplementation::create_session(
             if (!d->configuration.player_store->has_player_for_key(key))
                 return;
 
-            if (d->configuration.player_store->player_for_key(key)->lifetime() == Player::Lifetime::normal)
-                d->configuration.player_store->remove_player_for_key(key);
+            try {
+                if (d->configuration.player_store->player_for_key(key)->lifetime() == Player::Lifetime::normal)
+                    d->configuration.player_store->remove_player_for_key(key);
+            }
+            catch (const std::out_of_range &e) {
+                std::cerr << "Failed to look up Player instance for key " << key
+                << ", no valid Player instance for that key value. Removal of Player from Player store"
+                << " might not have completed. This most likely means that media-hub-server has"
+                << " crashed and restarted." << std::endl;
+                return;
+            }
         });
     });
 
@@ -261,7 +270,17 @@ void media::ServiceImplementation::pause_other_sessions(media::Player::PlayerKey
         return;
     }
 
-    auto current_player = d->configuration.player_store->player_for_key(key);
+    std::shared_ptr<media::Player> current_player;
+    try {
+        current_player = d->configuration.player_store->player_for_key(key);
+    }
+    catch (const std::out_of_range &e) {
+        std::cerr << "Failed to look up Player instance for key " << key
+            << ", no valid Player instance for that key value and cannot pause other player"
+            << " sessions. This most likely means that media-hub-server has crashed and"
+            << " restarted." << std::endl;
+        return;
+    }
 
     // We immediately make the player known as new current player.
     if (current_player->audio_stream_role() == media::Player::multimedia)
@@ -307,7 +326,17 @@ void media::ServiceImplementation::resume_paused_multimedia_sessions(bool resume
         [this, resume_video_sessions](const std::pair<media::Player::PlayerKey, bool> &paused_player_pair) {
             const media::Player::PlayerKey key = paused_player_pair.first;
             const bool resume_play_after_phonecall = paused_player_pair.second;
-            auto player = d->configuration.player_store->player_for_key(key);
+            std::shared_ptr<media::Player> player;
+            try {
+                player = d->configuration.player_store->player_for_key(key);
+            }
+            catch (const std::out_of_range &e) {
+                std::cerr << "Failed to look up Player instance for key " << key
+                    << ", no valid Player instance for that key value and cannot automatically resume"
+                    << " paused players. This most likely means that media-hub-server has crashed and"
+                    << " restarted." << std::endl;
+                return;
+            }
             // Only resume video playback if explicitly desired
             if ((resume_video_sessions || player->is_audio_source()) && resume_play_after_phonecall)
                 player->play();
@@ -323,7 +352,17 @@ void media::ServiceImplementation::resume_multimedia_session()
     if (not d->configuration.player_store->has_player_for_key(d->resume_key))
         return;
 
-    auto player = d->configuration.player_store->player_for_key(d->resume_key);
+    std::shared_ptr<media::Player> player;
+    try {
+        player = d->configuration.player_store->player_for_key(d->resume_key);
+    }
+    catch (const std::out_of_range &e) {
+        std::cerr << "Failed to look up Player instance for key " << d->resume_key
+            << ", no valid Player instance for that key value and cannot automatically resume"
+            << " paused Player. This most likely means that media-hub-server has crashed and"
+            << " restarted." << std::endl;
+        return;
+    }
 
     if (player->playback_status() == Player::paused)
     {
