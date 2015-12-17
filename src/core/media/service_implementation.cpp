@@ -270,17 +270,7 @@ void media::ServiceImplementation::pause_other_sessions(media::Player::PlayerKey
         return;
     }
 
-    std::shared_ptr<media::Player> current_player;
-    try {
-        current_player = d->configuration.player_store->player_for_key(key);
-    }
-    catch (const std::out_of_range &e) {
-        std::cerr << "Failed to look up Player instance for key " << key
-            << ", no valid Player instance for that key value and cannot pause other player"
-            << " sessions. This most likely means that media-hub-server has crashed and"
-            << " restarted." << std::endl;
-        return;
-    }
+    const std::shared_ptr<media::Player> current_player = d->configuration.player_store->player_for_key(key);
 
     // We immediately make the player known as new current player.
     if (current_player->audio_stream_role() == media::Player::multimedia)
