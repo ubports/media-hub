@@ -886,17 +886,8 @@ std::shared_ptr<media::Player> media::ServiceSkeleton::resume_session(media::Pla
 
 void media::ServiceSkeleton::set_current_player(media::Player::PlayerKey key)
 {
-    std::shared_ptr<media::Player> player;
-    try {
-        player = d->configuration.player_store->player_for_key(key);
-    }
-    catch (const std::out_of_range &e) {
-        std::cerr << "Failed to look up Player instance for key " << key
-            << ", no valid Player instance for that key value and cannot set current player."
-            << " This most likely means that media-hub-server has crashed and restarted."
-            << std::endl;
-        return;
-    }
+    const std::shared_ptr<media::Player> player =
+        d->configuration.player_store->player_for_key(key);
     // We only care to allow the MPRIS controls to apply to multimedia player (i.e. audio, video)
     if (player->audio_stream_role() == media::Player::AudioStreamRole::multimedia)
         d->exported.set_current_player(player);
