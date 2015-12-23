@@ -450,15 +450,30 @@ struct media::ServiceSkeleton::Private
         msg->reader() >> key;
 
         core::dbus::Message::Ptr reply;
-        if (not configuration.player_store->has_player_for_key(key)) {
-            cerr <<  __PRETTY_FUNCTION__ << " player key not found - " << key << endl;
+        if (not configuration.player_store->has_player_for_key(key))
+        {
+            std::cerr <<  __PRETTY_FUNCTION__ << " player key not found - " << key << std::endl;
             reply = dbus::Message::make_error(
                             msg,
                             mpris::Service::Errors::PlayerKeyNotFound::name(),
                             "Player key not found");
-        } else {
-            impl->set_current_player(key);
-            reply = dbus::Message::make_method_return(msg);
+        }
+        else
+        {
+            try {
+                impl->set_current_player(key);
+                reply = dbus::Message::make_method_return(msg);
+            }
+            catch (const std::out_of_range &e) {
+                std::cerr << "Failed to look up Player instance for key " << key
+                    << ", no valid Player instance for that key value and cannot set current player."
+                    << " This most likely means that media-hub-server has crashed and restarted."
+                    << std::endl;
+                reply = dbus::Message::make_error(
+                            msg,
+                            mpris::Service::Errors::PlayerKeyNotFound::name(),
+                            "Player key not found");
+            }
         }
 
         impl->access_bus()->send(reply);
@@ -468,9 +483,22 @@ struct media::ServiceSkeleton::Private
     {
         Player::PlayerKey key;
         msg->reader() >> key;
-        impl->pause_other_sessions(key);
+        core::dbus::Message::Ptr reply;
+        try {
+            impl->pause_other_sessions(key);
+            reply = dbus::Message::make_method_return(msg);
+        }
+        catch (const std::out_of_range &e) {
+            std::cerr << "Failed to look up Player instance for key " << key
+                << ", no valid Player instance for that key value and cannot pause other Players."
+                << " This most likely means that media-hub-server has crashed and restarted."
+                << std::endl;
+            reply = dbus::Message::make_error(
+                    msg,
+                    mpris::Service::Errors::PlayerKeyNotFound::name(),
+                    "Player key not found");
+        }
 
-        auto reply = dbus::Message::make_method_return(msg);
         impl->access_bus()->send(reply);
     }
 
@@ -864,7 +892,8 @@ std::shared_ptr<media::Player> media::ServiceSkeleton::resume_session(media::Pla
 
 void media::ServiceSkeleton::set_current_player(media::Player::PlayerKey key)
 {
-    const auto player = d->configuration.player_store->player_for_key(key);
+    const std::shared_ptr<media::Player> player =
+        d->configuration.player_store->player_for_key(key);
     // We only care to allow the MPRIS controls to apply to multimedia player (i.e. audio, video)
     if (player->audio_stream_role() == media::Player::AudioStreamRole::multimedia)
         d->exported.set_current_player(player);
