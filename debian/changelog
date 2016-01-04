@@ -1,3 +1,9 @@
+media-hub (4.1.0+16.04.20160104-0ubuntu1) xenial; urgency=medium
+
+  * Enable dual landings.
+
+ -- Thomas Voß <ci-train-bot@canonical.com>  Mon, 04 Jan 2016 08:30:37 +0000
+
 media-hub (4.1.0+16.04.20151221-0ubuntu1) xenial; urgency=medium
 
   * Fix bug #1479036 which prevents the out_of_range exception from
