@@ -2,9 +2,32 @@ cmake_minimum_required(VERSION 2.8)
 
 project(ubuntu-media-hub)
 
-set(UBUNTU_MEDIA_HUB_VERSION_MAJOR 4)
-set(UBUNTU_MEDIA_HUB_VERSION_MINOR 1)
-set(UBUNTU_MEDIA_HUB_VERSION_PATCH 0)
+# We haven't received version information via the packaging setup.
+# For that, we try to determine sensible values on our own, ensuring
+# plain old invocations to cmake still work as expected.
+if (NOT DEFINED UBUNTU_MEDIA_HUB_VERSION_MAJOR)
+  find_program(LSB_RELEASE lsb_release)
+  execute_process(
+    COMMAND ${LSB_RELEASE} -c -s
+    OUTPUT_VARIABLE DISTRO_CODENAME
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+  # We explicitly ignore errors and only check if we are building for vivid.
+  # For all other cases:
+  #   - releases other than vivid
+  #   - other distros
+  #   - errors
+  # we define the version to be 5.0.0
+  if (${DISTRO_CODENAME} STREQUAL "vivid")
+    set(UBUNTU_MEDIA_HUB_VERSION_MAJOR 4)
+    set(UBUNTU_MEDIA_HUB_VERSION_MINOR 1)
+    set(UBUNTU_MEDIA_HUB_VERSION_PATCH 0)
+  else ()
+    set(UBUNTU_MEDIA_HUB_VERSION_MAJOR 5)
+    set(UBUNTU_MEDIA_HUB_VERSION_MINOR 0)
+    set(UBUNTU_MEDIA_HUB_VERSION_PATCH 0)
+  endif()
+endif()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -fPIC -pthread")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -fno-strict-aliasing -Wextra -fPIC -pthread")
