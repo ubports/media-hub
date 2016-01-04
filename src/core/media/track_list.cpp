@@ -20,6 +20,33 @@
 
 namespace media = core::ubuntu::media;
 
+media::TrackList::Errors::InsufficientPermissionsToAddTrack::InsufficientPermissionsToAddTrack()
+    : std::runtime_error{"Insufficient client permissions for adding track to TrackList"}
+{
+}
+
+media::TrackList::Errors::FailedToMoveTrack::FailedToMoveTrack()
+    : std::runtime_error{"Failed to move track within TrackList"}
+{
+}
+
+media::TrackList::Errors::FailedToFindMoveTrackSource::FailedToFindMoveTrackSource
+        (const std::string &e)
+    : std::runtime_error{e}
+{
+}
+
+media::TrackList::Errors::FailedToFindMoveTrackDest::FailedToFindMoveTrackDest
+        (const std::string &e)
+    : std::runtime_error{e}
+{
+}
+
+media::TrackList::Errors::TrackNotFound::TrackNotFound()
+    : std::runtime_error{"Track not found in TrackList"}
+{
+}
+
 const media::Track::Id& media::TrackList::after_empty_track()
 {
     static const media::Track::Id id{"/org/mpris/MediaPlayer2/TrackList/NoTrack"};

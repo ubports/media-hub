@@ -6,6 +6,10 @@ converge on a standard from this point forward:
 
 https://google-styleguide.googlecode.com/svn/trunk/cppguide.html
 
+Deviations from the Google Style Guide above:
+
+1. We will agree to maximum of 100 characters in a single line instead of 80.
+
 
 To Build:
 ---------

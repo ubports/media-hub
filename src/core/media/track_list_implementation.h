@@ -43,11 +43,14 @@ public:
     Track::MetaData query_meta_data_for_track(const Track::Id& id);
 
     void add_track_with_uri_at(const Track::UriType& uri, const Track::Id& position, bool make_current);
+    void add_tracks_with_uri_at(const ContainerURI& uris, const Track::Id& position);
+    bool move_track(const Track::Id& id, const Track::Id& to);
     void remove_track(const Track::Id& id);
 
-    void go_to(const Track::Id& track, bool toggle_player_state);
-    void shuffle_tracks();
-    void unshuffle_tracks();
+    void go_to(const Track::Id& track);
+    void set_shuffle(bool shuffle);
+    bool shuffle();
+    const media::TrackList::Container& shuffled_tracks();
     void reset();
 
 private:

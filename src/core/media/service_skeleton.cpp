@@ -46,6 +46,8 @@
 namespace dbus = core::dbus;
 namespace media = core::ubuntu::media;
 
+using namespace std;
+
 namespace
 {
 core::Signal<void> the_empty_signal;
@@ -132,7 +134,9 @@ struct media::ServiceSkeleton::Private
             impl->access_service()->add_object_for_path(op)
         };
 
-        std::cout << "Session created by request of: " << msg->sender() << ", uuid: " << uuid << ", path:" << op << std::endl;
+        cout << "Session created by request of: " << msg->sender()
+             << ", key: " << key << ", uuid: " << uuid
+             << ", path:" << op << std::endl;
 
         try
         {
@@ -205,9 +209,11 @@ struct media::ServiceSkeleton::Private
             std::string uuid;
             msg->reader() >> uuid;
 
-            if (uuid_player_map.count(uuid) != 0) {
+            if (uuid_player_map.count(uuid) != 0)
+            {
                 auto key = uuid_player_map.at(uuid);
-                if (not configuration.player_store->has_player_for_key(key)) {
+                if (not configuration.player_store->has_player_for_key(key))
+                {
                     auto reply = dbus::Message::make_error(
                                 msg,
                                 mpris::Service::Errors::ReattachingSession::name(),
