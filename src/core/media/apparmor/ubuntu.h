@@ -73,6 +73,8 @@ public:
     // Returns the package name or throws if no package name can be found.
     virtual std::string package_name() const;
 
+    virtual std::string profile_name() const;
+
 private:
     std::smatch match_;
     const bool unconfined_;

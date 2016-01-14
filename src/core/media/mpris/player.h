@@ -116,6 +116,14 @@ struct Player
                 "mpris.Player.Error.OutOfProcessBufferStreamingNotSupported"
             };
         };
+
+        struct InsufficientAppArmorPermissions
+        {
+            static constexpr const char* name
+            {
+                "mpris.Player.Error.InsufficientAppArmorPermissions"
+            };
+        };
     };
 
     typedef std::map<std::string, core::dbus::types::Variant> Dictionary;

@@ -179,11 +179,23 @@ struct media::PlayerSkeleton::Private
             Track::UriType uri;
             in->reader() >> uri;
 
-            // Make sure the client has adequate apparmor permissions to open the URI
-            auto result = request_authenticator->authenticate_open_uri_request(context, uri);
-
             auto reply = dbus::Message::make_method_return(in);
-            reply->writer() << (std::get<0>(result) ? impl->open_uri(uri) : false);
+            // Make sure the client has adequate apparmor permissions to open the URI
+            const auto result = request_authenticator->authenticate_open_uri_request(context, uri);
+            if (std::get<0>(result))
+            {
+                reply->writer() << (std::get<0>(result) ? impl->open_uri(uri) : false);
+            }
+            else
+            {
+                const std::string err_str = {"Warning: Failed to authenticate necessary "
+                    "apparmor permissions to open uri: " + std::get<1>(result)};
+                std::cerr << err_str << std::endl;
+                reply = dbus::Message::make_error(
+                            in,
+                            mpris::Player::Error::InsufficientAppArmorPermissions::name,
+                            err_str);
+            }
 
             bus->send(reply);
         });
