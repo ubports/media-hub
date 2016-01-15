@@ -76,7 +76,7 @@ static constexpr std::size_t index_app{2};
 // Returns true if the context name is a valid Ubuntu app id.
 // If it is, out is populated with the package and app name.
 bool process_context_name(const std::string& s, std::smatch& out,
-        std::string& pkg_name, std::string& app_name)
+        std::string& pkg_name)
 {
     // See https://wiki.ubuntu.com/AppStore/Interfaces/ApplicationId.
     static const std::regex short_re{"(.*)_(.*)"};
@@ -86,14 +86,13 @@ bool process_context_name(const std::string& s, std::smatch& out,
     if (s == "messaging-app"
             and std::regex_match(s, out, trust_store_re))
     {
-        pkg_name = app_name = s;
+        pkg_name = s;
         return true;
     }
 
     if (std::regex_match(s, out, full_re) or std::regex_match(s, out, short_re))
     {
         pkg_name = out[index_package];
-        app_name = out[index_app];
         return true;
     }
 
@@ -104,7 +103,7 @@ bool process_context_name(const std::string& s, std::smatch& out,
 apparmor::ubuntu::Context::Context(const std::string& name)
     : apparmor::Context{name},
       unconfined_{str() == ubuntu::unconfined},
-      has_package_name_{process_context_name(str(), match_, pkg_name_, app_name_)}
+      has_package_name_{process_context_name(str(), match_, pkg_name_)}
 {
     std::cout << "apparmor profile name: " << name;
     std::cout << ", is_unconfined(): " << is_unconfined();
