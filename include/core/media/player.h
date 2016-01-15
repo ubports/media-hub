@@ -56,6 +56,11 @@ class Player : public std::enable_shared_from_this<Player>
         {
             OutOfProcessBufferStreamingNotSupported();
         };
+
+        struct InsufficientAppArmorPermissions : public std::runtime_error
+        {
+            InsufficientAppArmorPermissions(const std::string& err);
+        };
     };
 
     struct Configuration;

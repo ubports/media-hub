@@ -27,6 +27,12 @@ media::Player::Errors::OutOfProcessBufferStreamingNotSupported::OutOfProcessBuff
 {
 }
 
+media::Player::Errors::InsufficientAppArmorPermissions::InsufficientAppArmorPermissions
+    (const std::string &e)
+    : std::runtime_error{e}
+{
+}
+
 const media::Player::Configuration& media::Player::Client::default_configuration()
 {
     static const media::Player::Configuration config

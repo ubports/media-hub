@@ -261,7 +261,14 @@ media::Player::PlayerKey media::PlayerStub::key() const
 
 bool media::PlayerStub::open_uri(const media::Track::UriType& uri)
 {
-    auto op = d->object->transact_method<mpris::Player::OpenUri, bool>(uri);
+    const auto op = d->object->transact_method<mpris::Player::OpenUri, bool>(uri);
+    if (op.is_error())
+    {
+        if (op.error().name() == mpris::Player::Error::InsufficientAppArmorPermissions::name)
+            throw media::Player::Errors::InsufficientAppArmorPermissions{op.error().print()};
+        else
+            throw std::runtime_error{op.error().print()};
+    }
 
     return op.value();
 }
@@ -269,7 +276,14 @@ bool media::PlayerStub::open_uri(const media::Track::UriType& uri)
 
 bool media::PlayerStub::open_uri(const Track::UriType& uri, const Player::HeadersType& headers)
 {
-    auto op = d->object->transact_method<mpris::Player::OpenUriExtended, bool>(uri, headers);
+    const auto op = d->object->transact_method<mpris::Player::OpenUriExtended, bool>(uri, headers);
+    if (op.is_error())
+    {
+        if (op.error().name() == mpris::Player::Error::InsufficientAppArmorPermissions::name)
+            throw media::Player::Errors::InsufficientAppArmorPermissions{op.error().print()};
+        else
+            throw std::runtime_error{op.error().print()};
+    }
 
     return op.value();
 }
