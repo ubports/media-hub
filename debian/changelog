@@ -1,3 +1,12 @@
+media-hub (4.1.0+16.04.20160115.1-0ubuntu1) xenial; urgency=medium
+
+  * Make sure that an apparmor profile_name of the format com.ubuntu.my-
+    app is supported as well as improve the error handling and reporting
+    for when a client does not have the proper apparmor permissions to
+    play a given media URI (LP: #1533779)
+
+ -- Jim Hodapp <ci-train-bot@canonical.com>  Fri, 15 Jan 2016 15:44:54 +0000
+
 media-hub (4.1.0+16.04.20160104-0ubuntu1) xenial; urgency=medium
 
   * Enable dual landings.
