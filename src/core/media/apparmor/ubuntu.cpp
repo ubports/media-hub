@@ -75,23 +75,27 @@ static constexpr std::size_t index_app{2};
 
 // Returns true if the context name is a valid Ubuntu app id.
 // If it is, out is populated with the package and app name.
-bool process_context_name(const std::string& s, std::smatch& out)
+bool process_context_name(const std::string& s, std::smatch& out,
+        std::string& pkg_name, std::string& app_name)
 {
     // See https://wiki.ubuntu.com/AppStore/Interfaces/ApplicationId.
     static const std::regex short_re{"(.*)_(.*)"};
     static const std::regex full_re{"(.*)_(.*)_(.*)"};
     static const std::regex trust_store_re{"(.*)-(.*)"};
 
-    // Trust store compatible apparmor profile names can't have "_"
-    // chars in it while still working with the trust store
-    if (std::regex_match(s, out, trust_store_re))
+    if (s == "messaging-app"
+            and std::regex_match(s, out, trust_store_re))
+    {
+        pkg_name = app_name = s;
         return true;
+    }
 
-    if (std::regex_match(s, out, full_re))
+    if (std::regex_match(s, out, full_re) or std::regex_match(s, out, short_re))
+    {
+        pkg_name = out[index_package];
+        app_name = out[index_app];
         return true;
-
-    if (std::regex_match(s, out, short_re))
-        return true;
+    }
 
     return false;
 }
@@ -100,7 +104,7 @@ bool process_context_name(const std::string& s, std::smatch& out)
 apparmor::ubuntu::Context::Context(const std::string& name)
     : apparmor::Context{name},
       unconfined_{str() == ubuntu::unconfined},
-      has_package_name_{process_context_name(str(), match_)}
+      has_package_name_{process_context_name(str(), match_, pkg_name_, app_name_)}
 {
     std::cout << "apparmor profile name: " << name;
     std::cout << ", is_unconfined(): " << is_unconfined();
@@ -123,7 +127,7 @@ bool apparmor::ubuntu::Context::has_package_name() const
 
 std::string apparmor::ubuntu::Context::package_name() const
 {
-    return std::string{match_[index_package]};
+    return pkg_name_;
 }
 
 std::string apparmor::ubuntu::Context::profile_name() const
@@ -162,12 +166,11 @@ apparmor::ubuntu::RequestAuthenticator::Result apparmor::ubuntu::ExistingAuthent
             "Client can access content in ~/.local/share/" + context.package_name() + " or ~/.cache/" + context.package_name()
         };
     }
-    // Check for trust-store compatible path name using full profile_name
-    else if (parsed_uri.path.find(std::string(".local/share/" + context.profile_name() + "/")) != std::string::npos ||
-             parsed_uri.path.find(std::string(".cache/" + context.profile_name() + "/")) != std::string::npos ||
+    // Check for trust-store compatible path name using full messaging-app profile_name
+    else if (context.profile_name() == "messaging-app" &&
              /* Since the full APP_ID is not available yet (see aa_query_file_path()), add an exception: */
-             parsed_uri.path.find(std::string(".local/share/com.ubuntu." + context.profile_name() + "/")) != std::string::npos ||
-             parsed_uri.path.find(std::string(".cache/com.ubuntu." + context.profile_name() + "/")) != std::string::npos)
+             (parsed_uri.path.find(std::string(".local/share/com.ubuntu." + context.profile_name() + "/")) != std::string::npos ||
+             parsed_uri.path.find(std::string(".cache/com.ubuntu." + context.profile_name() + "/")) != std::string::npos))
     {
         return Result
         {

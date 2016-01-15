@@ -77,6 +77,8 @@ public:
 
 private:
     std::smatch match_;
+    std::string app_name_;
+    std::string pkg_name_;
     const bool unconfined_;
     const bool has_package_name_;
 };
