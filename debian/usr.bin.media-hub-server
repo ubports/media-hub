@@ -96,7 +96,7 @@
   # needs to also mmap its temporary files
   owner /tmp/orcexec* m,
 
-  /{,android/}system/etc/media_codecs.xml r,
+  /{,android/}system/etc/media_codecs*.xml r,
   /etc/wildmidi/wildmidi.cfg r,
 
   # Allow read on all directories
