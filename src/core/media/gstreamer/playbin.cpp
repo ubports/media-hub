@@ -612,20 +612,21 @@ std::string gstreamer::Playbin::get_file_content_type(const std::string& uri) co
     if (uri.empty())
         return std::string();
 
-    std::string filename(uri);
-    size_t pos = uri.find("file://");
-    if (pos != std::string::npos)
-        filename = uri.substr(pos + 7, std::string::npos);
-    else
+    const std::string filename(uri);
+    const size_t pos = uri.find("file://");
+    if (pos == std::string::npos)
+    {
         // Anything other than a file, for now claim that the type
         // is both audio and video.
         // FIXME: implement true net stream sampling and get the type from GstCaps
         return std::string("audio/video/");
+    }
 
-
+    // Open the URI and get the mime type from it. This will currently only work for
+    // a local file
     GError *error = nullptr;
     std::unique_ptr<GFile, void(*)(void *)> file(
-            g_file_new_for_path(filename.c_str()), g_object_unref);
+            g_file_new_for_uri(filename.c_str()), g_object_unref);
     std::unique_ptr<GFileInfo, void(*)(void *)> info(
             g_file_query_info(
                 file.get(), G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE ","
@@ -637,13 +638,14 @@ std::string gstreamer::Playbin::get_file_content_type(const std::string& uri) co
         std::string error_str(error->message);
         g_error_free(error);
 
-        std::cout << "Failed to query the URI for the presence of video content: "
+        std::cerr << "Failed to query the URI for the presence of video content: "
             << error_str << std::endl;
         return std::string();
     }
 
     std::string content_type(g_file_info_get_attribute_string(
                 info.get(), G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE));
+    std::cout << "Found content type: " << content_type << std::endl;
 
     return content_type;
 }
