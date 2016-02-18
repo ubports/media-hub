@@ -164,6 +164,9 @@ apparmor::ubuntu::RequestAuthenticator::Result apparmor::ubuntu::ExistingAuthent
 
     Uri parsed_uri = parse_uri(uri);
 
+    std::cout << "context.profile_name(): " << context.profile_name() << std::endl;
+    std::cout << "parsed_uri.path: " << parsed_uri.path << std::endl;
+
     // All confined apps can access their own files
     if (parsed_uri.path.find(std::string(".local/share/" + context.package_name() + "/")) != std::string::npos ||
         parsed_uri.path.find(std::string(".cache/" + context.package_name() + "/")) != std::string::npos)
