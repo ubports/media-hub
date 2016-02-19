@@ -17,7 +17,6 @@
  */
 
 #include <core/media/gstreamer/playbin.h>
-
 #include <core/media/gstreamer/engine.h>
 
 #include <gst/pbutils/missing-plugins.h>
@@ -26,7 +25,11 @@
 #include <hybris/media/surface_texture_client_hybris.h>
 #include <hybris/media/media_codec_layer.h>
 
+#include "../util/uri_check.h"
+
 #include <utility>
+
+//#define VERBOSE_DEBUG
 
 namespace
 {
@@ -464,10 +467,11 @@ void gstreamer::Playbin::set_uri(
     if (current_uri and do_pipeline_reset)
         reset_pipeline();
 
-    g_object_set(pipeline, "uri", uri.c_str(), NULL);
-    if (is_video_file(uri))
+    const std::string encoded_uri{encode_uri(uri)};
+    g_object_set(pipeline, "uri", encoded_uri.c_str(), NULL);
+    if (is_video_file(encoded_uri))
         file_type = MEDIA_FILE_TYPE_VIDEO;
-    else if (is_audio_file(uri))
+    else if (is_audio_file(encoded_uri))
         file_type = MEDIA_FILE_TYPE_AUDIO;
 
     request_headers = headers;
@@ -607,26 +611,13 @@ void gstreamer::Playbin::emit_video_dimensions_changed_if_changed(const core::ub
         signals.on_video_dimensions_changed(new_dimensions);
 }
 
-std::string gstreamer::Playbin::get_file_content_type(const std::string& uri) const
+std::string gstreamer::Playbin::file_info_from_uri(const std::string& uri) const
 {
-    if (uri.empty())
-        return std::string();
-
-    const std::string filename(uri);
-    const size_t pos = uri.find("file://");
-    if (pos == std::string::npos)
-    {
-        // Anything other than a file, for now claim that the type
-        // is both audio and video.
-        // FIXME: implement true net stream sampling and get the type from GstCaps
-        return std::string("audio/video/");
-    }
-
+    GError *error = nullptr;
     // Open the URI and get the mime type from it. This will currently only work for
     // a local file
-    GError *error = nullptr;
     std::unique_ptr<GFile, void(*)(void *)> file(
-            g_file_new_for_uri(filename.c_str()), g_object_unref);
+            g_file_new_for_uri(uri.c_str()), g_object_unref);
     std::unique_ptr<GFileInfo, void(*)(void *)> info(
             g_file_query_info(
                 file.get(), G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE ","
@@ -634,17 +625,82 @@ std::string gstreamer::Playbin::get_file_content_type(const std::string& uri) co
                 /* cancellable */ NULL, &error),
             g_object_unref);
     if (!info)
-    {
-        std::string error_str(error->message);
-        g_error_free(error);
-
-        std::cerr << "Failed to query the URI for the presence of video content: "
-            << error_str << std::endl;
         return std::string();
+
+    return std::string(g_file_info_get_attribute_string(
+                info.get(), G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE));
+}
+
+std::string gstreamer::Playbin::encode_uri(const std::string& uri) const
+{
+    if (uri.empty())
+        return std::string();
+
+    std::string encoded_uri;
+    media::UriCheck::Ptr uri_check{std::make_shared<media::UriCheck>(uri)};
+    const std::string uri_scheme {g_uri_parse_scheme(uri.c_str())};
+    // We have a URI and it is already percent encoded
+    if (!uri_scheme.empty() and uri_check->is_encoded())
+    {
+#ifdef VERBOSE_DEBUG
+        std::cout << "Is a URI and is already percent encoded" << std::endl;
+#endif
+        encoded_uri = uri;
+    }
+    // We have a URI but it's not already percent encoded
+    else if (!uri_scheme.empty() and !uri_check->is_encoded())
+    {
+#ifdef VERBOSE_DEBUG
+        std::cout << "Is a URI and is not already percent encoded" << std::endl;
+#endif
+        encoded_uri.assign(g_uri_escape_string(uri.c_str(),
+                                               "!$&'()*+,;=:/?[]@", // reserved chars
+                                               TRUE)); // Allow UTF-8 chars
+    }
+    else // We have a path and not a URI. Turn it into a full URI and encode it
+    {
+        GError *error = nullptr;
+#ifdef VERBOSE_DEBUG
+        std::cout << "Is a path and is not already percent encoded" << std::endl;
+#endif
+        encoded_uri.assign(g_filename_to_uri(uri.c_str(), nullptr, &error));
+        if (error != nullptr)
+        {
+            std::cerr << "Warning: failed to get actual track content type: " << error->message
+                      << std::endl;
+            g_error_free(error);
+            return std::string("audio/video/");
+        }
+        encoded_uri.assign(g_uri_escape_string(uri.c_str(),
+                                               "!$&'()*+,;=:/?[]@", // reserved chars
+                                               TRUE)); // Allow UTF-8 chars
     }
 
-    std::string content_type(g_file_info_get_attribute_string(
-                info.get(), G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE));
+    return encoded_uri;
+}
+
+std::string gstreamer::Playbin::decode_uri(const std::string& uri) const
+{
+    if (uri.empty())
+        return std::string();
+
+    return std::string(g_uri_unescape_string(uri.c_str(), nullptr));
+}
+
+std::string gstreamer::Playbin::get_file_content_type(const std::string& uri) const
+{
+    if (uri.empty())
+        return std::string();
+
+    const std::string encoded_uri{encode_uri(uri)};
+
+    const std::string content_type {file_info_from_uri(encoded_uri)};
+    if (content_type.empty())
+    {
+        std::cerr << "Warning: failed to get actual track content type" << std::endl;
+        return std::string("audio/video/");
+    }
+
     std::cout << "Found content type: " << content_type << std::endl;
 
     return content_type;

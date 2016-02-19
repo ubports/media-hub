@@ -124,6 +124,14 @@ struct Player
                 "mpris.Player.Error.InsufficientAppArmorPermissions"
             };
         };
+
+        struct UriNotFound
+        {
+            static constexpr const char* name
+            {
+                "mpris.Player.Error.UriNotFound"
+            };
+        };
     };
 
     typedef std::map<std::string, core::dbus::types::Variant> Dictionary;

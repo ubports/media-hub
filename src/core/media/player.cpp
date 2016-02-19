@@ -33,6 +33,12 @@ media::Player::Errors::InsufficientAppArmorPermissions::InsufficientAppArmorPerm
 {
 }
 
+media::Player::Errors::UriNotFound::UriNotFound
+    (const std::string &e)
+    : std::runtime_error{e}
+{
+}
+
 const media::Player::Configuration& media::Player::Client::default_configuration()
 {
     static const media::Player::Configuration config
