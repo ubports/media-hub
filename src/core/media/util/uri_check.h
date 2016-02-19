@@ -77,8 +77,6 @@ public:
             return false;
 
         const std::string unescaped_uri{g_uri_unescape_string(uri_.c_str(), nullptr)};
-        std::cout << "original uri: " << uri_ << std::endl;
-        std::cout << "unescaped uri: " << unescaped_uri << std::endl;
         return unescaped_uri.length() < uri_.length();
     }
 
