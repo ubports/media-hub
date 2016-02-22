@@ -467,7 +467,19 @@ void gstreamer::Playbin::set_uri(
     if (current_uri and do_pipeline_reset)
         reset_pipeline();
 
-    const std::string encoded_uri{encode_uri(uri)};
+    std::string encoded_uri;
+    media::UriCheck::Ptr uri_check{std::make_shared<media::UriCheck>(uri)};
+    if (uri_check->is_encoded())
+    {
+        encoded_uri = decode_uri(uri);
+#ifdef VERBOSE_DEBUG
+        std::cout << "File URI was encoded, now decoded: " << encoded_uri << std::endl;
+#endif
+        encoded_uri = encode_uri(encoded_uri);
+    }
+    else
+        encoded_uri = encode_uri(uri);
+
     g_object_set(pipeline, "uri", encoded_uri.c_str(), NULL);
     if (is_video_file(encoded_uri))
         file_type = MEDIA_FILE_TYPE_VIDEO;
@@ -638,9 +650,9 @@ std::string gstreamer::Playbin::encode_uri(const std::string& uri) const
 
     std::string encoded_uri;
     media::UriCheck::Ptr uri_check{std::make_shared<media::UriCheck>(uri)};
-    const std::string uri_scheme {g_uri_parse_scheme(uri.c_str())};
+    gchar *uri_scheme = g_uri_parse_scheme(uri.c_str());
     // We have a URI and it is already percent encoded
-    if (!uri_scheme.empty() and uri_check->is_encoded())
+    if (strlen(uri_scheme) > 0 and uri_check->is_encoded())
     {
 #ifdef VERBOSE_DEBUG
         std::cout << "Is a URI and is already percent encoded" << std::endl;
@@ -648,14 +660,16 @@ std::string gstreamer::Playbin::encode_uri(const std::string& uri) const
         encoded_uri = uri;
     }
     // We have a URI but it's not already percent encoded
-    else if (!uri_scheme.empty() and !uri_check->is_encoded())
+    else if (strlen(uri_scheme) > 0 and !uri_check->is_encoded())
     {
 #ifdef VERBOSE_DEBUG
         std::cout << "Is a URI and is not already percent encoded" << std::endl;
 #endif
-        encoded_uri.assign(g_uri_escape_string(uri.c_str(),
-                                               "!$&'()*+,;=:/?[]@", // reserved chars
-                                               TRUE)); // Allow UTF-8 chars
+        gchar *encoded = g_uri_escape_string(uri.c_str(),
+                                                   "!$&'()*+,;=:/?[]@", // reserved chars
+                                                   TRUE); // Allow UTF-8 chars
+        encoded_uri.assign(encoded);
+        g_free(encoded);
     }
     else // We have a path and not a URI. Turn it into a full URI and encode it
     {
@@ -663,18 +677,24 @@ std::string gstreamer::Playbin::encode_uri(const std::string& uri) const
 #ifdef VERBOSE_DEBUG
         std::cout << "Is a path and is not already percent encoded" << std::endl;
 #endif
-        encoded_uri.assign(g_filename_to_uri(uri.c_str(), nullptr, &error));
+        gchar *str = g_filename_to_uri(uri.c_str(), nullptr, &error);
+        encoded_uri.assign(str);
+        g_free(str);
         if (error != nullptr)
         {
             std::cerr << "Warning: failed to get actual track content type: " << error->message
                       << std::endl;
             g_error_free(error);
+            g_free(str);
+            g_free(uri_scheme);
             return std::string("audio/video/");
         }
-        encoded_uri.assign(g_uri_escape_string(uri.c_str(),
+        encoded_uri.assign(g_uri_escape_string(encoded_uri.c_str(),
                                                "!$&'()*+,;=:/?[]@", // reserved chars
                                                TRUE)); // Allow UTF-8 chars
     }
+
+    g_free(uri_scheme);
 
     return encoded_uri;
 }
@@ -684,7 +704,13 @@ std::string gstreamer::Playbin::decode_uri(const std::string& uri) const
     if (uri.empty())
         return std::string();
 
-    return std::string(g_uri_unescape_string(uri.c_str(), nullptr));
+    gchar *decoded_gchar = g_uri_unescape_string(uri.c_str(), nullptr);
+    if (!decoded_gchar)
+        return std::string();
+
+    const std::string decoded{decoded_gchar};
+    g_free(decoded_gchar);
+    return decoded;
 }
 
 std::string gstreamer::Playbin::get_file_content_type(const std::string& uri) const

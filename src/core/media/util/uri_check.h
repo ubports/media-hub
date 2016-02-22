@@ -45,9 +45,9 @@ public:
 
     UriCheck(const std::string& uri)
         : uri_(uri),
-          is_encoded_(is_encoded()),
-          is_local_file_(is_local_file()),
-          local_file_exists_(file_exists())
+          is_encoded_(determine_if_encoded()),
+          is_local_file_(determine_if_local_file()),
+          local_file_exists_(determine_if_file_exists())
     {
     }
 
@@ -61,9 +61,9 @@ public:
             return;
 
         uri_ = uri;
-        is_encoded_ = is_encoded();
-        is_local_file_ = is_local_file();
-        local_file_exists_ = file_exists();
+        is_encoded_ = determine_if_encoded();
+        is_local_file_ = determine_if_local_file();
+        local_file_exists_ = determine_if_file_exists();
     }
 
     void clear()
@@ -73,25 +73,52 @@ public:
 
     bool is_encoded() const
     {
-        if (uri_.empty())
-            return false;
-
-        const std::string unescaped_uri{g_uri_unescape_string(uri_.c_str(), nullptr)};
-        return unescaped_uri.length() < uri_.length();
+        return is_encoded_;
     }
 
     bool is_local_file() const
     {
+        return is_local_file_;
+    }
+
+    bool file_exists() const
+    {
+        return local_file_exists_;
+    }
+
+protected:
+    UriCheck(const UriCheck&) = delete;
+    UriCheck& operator=(const UriCheck&) = delete;
+
+private:
+    bool determine_if_encoded()
+    {
         if (uri_.empty())
             return false;
 
-        const std::string uri_scheme {g_uri_parse_scheme(uri_.c_str())};
+        gchar *tmp = g_uri_unescape_string(uri_.c_str(), nullptr);
+        if (!tmp)
+            return false;
+
+        const std::string unescaped_uri{tmp};
+        g_free(tmp);
+        return unescaped_uri.length() < uri_.length();
+    }
+
+    bool determine_if_local_file()
+    {
+        if (uri_.empty())
+            return false;
+
+        gchar *tmp = g_uri_parse_scheme(uri_.c_str());
+        const std::string uri_scheme{tmp};
+        g_free(tmp);
         return uri_.at(0) == '/' or
                 (uri_.at(0) == '.' and uri_.at(1) == '/') or
                 uri_scheme == "file";
     }
 
-    bool file_exists() const
+    bool determine_if_file_exists()
     {
         if (!is_local_file_)
             return false;
@@ -108,14 +135,8 @@ public:
                     /* cancellable */ NULL, &error),
                 g_object_unref);
 
-        std::cout << "File \"" << uri_ << "\" exists: " << (info.get() != nullptr) << std::endl;
-
         return info.get() != nullptr;
     }
-
-protected:
-    UriCheck(const UriCheck&) = delete;
-    UriCheck& operator=(const UriCheck&) = delete;
 
 private:
     std::string uri_;

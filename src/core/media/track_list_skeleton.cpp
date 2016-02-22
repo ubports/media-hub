@@ -166,6 +166,7 @@ struct media::TrackListSkeleton::Private
             bool valid_uri = false;
             media::apparmor::ubuntu::RequestAuthenticator::Result result;
             std::string uri_err_str, err_str;
+            core::dbus::Message::Ptr reply;
             for (const auto uri : uris)
             {
                 uri_check->set(uri);
@@ -175,7 +176,11 @@ struct media::TrackListSkeleton::Private
                 {
                     uri_err_str = {"Warning: Not adding track " + uri +
                          " to TrackList because it can't be found."};
-                    break;
+                    std::cerr << uri_err_str << std::endl;
+                    reply = dbus::Message::make_error(
+                                msg,
+                                mpris::Player::Error::UriNotFound::name,
+                                err_str);
                 }
 
                 // Make sure the client has adequate apparmor permissions to open the URI
@@ -188,31 +193,19 @@ struct media::TrackListSkeleton::Private
                 }
             }
 
-            core::dbus::Message::Ptr reply;
-            if (!valid_uri)
+            // Only add the track to the TrackList if it passes the apparmor permissions check
+            if (std::get<0>(result))
             {
-                std::cerr << uri_err_str << std::endl;
-                reply = dbus::Message::make_error(
-                            msg,
-                            mpris::Player::Error::UriNotFound::name,
-                            err_str);
+                reply = dbus::Message::make_method_return(msg);
+                impl->add_tracks_with_uri_at(uris, after);
             }
             else
             {
-                // Only add the track to the TrackList if it passes the apparmor permissions check
-                if (std::get<0>(result))
-                {
-                    reply = dbus::Message::make_method_return(msg);
-                    impl->add_tracks_with_uri_at(uris, after);
-                }
-                else
-                {
-                    std::cerr << err_str << std::endl;
-                    reply = dbus::Message::make_error(
-                                msg,
-                                mpris::TrackList::Error::InsufficientPermissionsToAddTrack::name,
-                                err_str);
-                }
+                std::cerr << err_str << std::endl;
+                reply = dbus::Message::make_error(
+                            msg,
+                            mpris::TrackList::Error::InsufficientPermissionsToAddTrack::name,
+                            err_str);
             }
 
             bus->send(reply);
