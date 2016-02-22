@@ -111,11 +111,19 @@ private:
             return false;
 
         gchar *tmp = g_uri_parse_scheme(uri_.c_str());
-        const std::string uri_scheme{tmp};
+        std::string uri_scheme;
+        if (tmp)
+            uri_scheme.assign(tmp);
         g_free(tmp);
+        try {
         return uri_.at(0) == '/' or
                 (uri_.at(0) == '.' and uri_.at(1) == '/') or
                 uri_scheme == "file";
+        }
+        catch (const std::out_of_range &e) {
+            std::cerr << "Invalid URI string provided: " << uri_ << std::endl;
+            return false;
+        }
     }
 
     bool determine_if_file_exists()

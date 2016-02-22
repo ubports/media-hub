@@ -652,7 +652,7 @@ std::string gstreamer::Playbin::encode_uri(const std::string& uri) const
     media::UriCheck::Ptr uri_check{std::make_shared<media::UriCheck>(uri)};
     gchar *uri_scheme = g_uri_parse_scheme(uri.c_str());
     // We have a URI and it is already percent encoded
-    if (strlen(uri_scheme) > 0 and uri_check->is_encoded())
+    if (uri_scheme and strlen(uri_scheme) > 0 and uri_check->is_encoded())
     {
 #ifdef VERBOSE_DEBUG
         std::cout << "Is a URI and is already percent encoded" << std::endl;
@@ -689,9 +689,11 @@ std::string gstreamer::Playbin::encode_uri(const std::string& uri) const
             g_free(uri_scheme);
             return std::string("audio/video/");
         }
-        encoded_uri.assign(g_uri_escape_string(encoded_uri.c_str(),
-                                               "!$&'()*+,;=:/?[]@", // reserved chars
-                                               TRUE)); // Allow UTF-8 chars
+        gchar *escaped = g_uri_escape_string(encoded_uri.c_str(),
+                                         "!$&'()*+,;=:/?[]@", // reserved chars
+                                         TRUE); // Allow UTF-8 chars
+        encoded_uri.assign(escaped);
+        g_free(escaped);
     }
 
     g_free(uri_scheme);
