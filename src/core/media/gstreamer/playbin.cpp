@@ -668,6 +668,11 @@ std::string gstreamer::Playbin::encode_uri(const std::string& uri) const
         gchar *encoded = g_uri_escape_string(uri.c_str(),
                                                    "!$&'()*+,;=:/?[]@", // reserved chars
                                                    TRUE); // Allow UTF-8 chars
+        if (!encoded)
+        {
+            g_free(uri_scheme);
+            return std::string();
+        }
         encoded_uri.assign(encoded);
         g_free(encoded);
     }
@@ -678,6 +683,11 @@ std::string gstreamer::Playbin::encode_uri(const std::string& uri) const
         std::cout << "Is a path and is not already percent encoded" << std::endl;
 #endif
         gchar *str = g_filename_to_uri(uri.c_str(), nullptr, &error);
+        if (!str)
+        {
+            g_free(uri_scheme);
+            return std::string();
+        }
         encoded_uri.assign(str);
         g_free(str);
         if (error != nullptr)
@@ -692,6 +702,11 @@ std::string gstreamer::Playbin::encode_uri(const std::string& uri) const
         gchar *escaped = g_uri_escape_string(encoded_uri.c_str(),
                                          "!$&'()*+,;=:/?[]@", // reserved chars
                                          TRUE); // Allow UTF-8 chars
+        if (!escaped)
+        {
+            g_free(uri_scheme);
+            return std::string();
+        }
         encoded_uri.assign(escaped);
         g_free(escaped);
     }
