@@ -266,6 +266,8 @@ bool media::PlayerStub::open_uri(const media::Track::UriType& uri)
     {
         if (op.error().name() == mpris::Player::Error::InsufficientAppArmorPermissions::name)
             throw media::Player::Errors::InsufficientAppArmorPermissions{op.error().print()};
+        else if (op.error().name() == mpris::Player::Error::UriNotFound::name)
+            throw media::Player::Errors::UriNotFound{op.error().print()};
         else
             throw std::runtime_error{op.error().print()};
     }

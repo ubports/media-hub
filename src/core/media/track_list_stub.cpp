@@ -25,6 +25,7 @@
 #include "track_list_traits.h"
 #include "the_session_bus.h"
 
+#include "mpris/player.h"
 #include "mpris/track_list.h"
 
 #include <core/dbus/property.h>
@@ -239,6 +240,8 @@ void media::TrackListStub::add_track_with_uri_at(
         if (op.error().name() ==
                 mpris::TrackList::Error::InsufficientPermissionsToAddTrack::name)
             throw media::TrackList::Errors::InsufficientPermissionsToAddTrack{};
+        else if (op.error().name() == mpris::Player::Error::UriNotFound::name)
+            throw media::Player::Errors::UriNotFound{op.error().print()};
         else
             throw std::runtime_error{op.error().print()};
     }
@@ -255,6 +258,8 @@ void media::TrackListStub::add_tracks_with_uri_at(const ContainerURI& uris, cons
         if (op.error().name() ==
                 mpris::TrackList::Error::InsufficientPermissionsToAddTrack::name)
             throw media::TrackList::Errors::InsufficientPermissionsToAddTrack{};
+        else if (op.error().name() == mpris::Player::Error::UriNotFound::name)
+            throw media::Player::Errors::UriNotFound{op.error().print()};
         else
             throw std::runtime_error{op.error().print()};
     }

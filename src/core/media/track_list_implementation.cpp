@@ -140,7 +140,6 @@ void media::TrackListImplementation::add_track_with_uri_at(
     {
         auto it = std::find(container.begin(), container.end(), position);
         container.insert(it, id);
-        std::cout << "container.size(): " << container.size() << std::endl;
 
         return true;
     });
