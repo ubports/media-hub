@@ -83,7 +83,7 @@ bool process_context_name(const std::string& s, std::smatch& out,
     static const std::regex full_re{"(.*)_(.*)_(.*)"};
     static const std::regex trust_store_re{"(.*)-(.*)"};
 
-    if (s == "messaging-app"
+    if ((s == "messaging-app" or s == "unity8-dash")
             and std::regex_match(s, out, trust_store_re))
     {
         pkg_name = s;
