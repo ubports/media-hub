@@ -1,3 +1,11 @@
+media-hub (4.1.0+16.04.20160222-0ubuntu1) xenial; urgency=medium
+
+  * Make sure to interpret the incoming path as a URI which makes sure
+    media-hub will always be able to open the track with an encoded URI
+    (LP: #1449790)
+
+ -- Jim Hodapp <ci-train-bot@canonical.com>  Mon, 22 Feb 2016 18:59:52 +0000
+
 media-hub (4.1.0+16.04.20160127-0ubuntu1) xenial; urgency=medium
 
   [ Simon Fels ]
