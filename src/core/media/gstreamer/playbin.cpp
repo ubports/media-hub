@@ -660,7 +660,7 @@ std::string gstreamer::Playbin::encode_uri(const std::string& uri) const
         encoded_uri = uri;
     }
     // We have a URI but it's not already percent encoded
-    else if (strlen(uri_scheme) > 0 and !uri_check->is_encoded())
+    else if (uri_scheme and strlen(uri_scheme) > 0 and !uri_check->is_encoded())
     {
 #ifdef VERBOSE_DEBUG
         std::cout << "Is a URI and is not already percent encoded" << std::endl;
