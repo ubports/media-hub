@@ -72,6 +72,7 @@ Uri parse_uri(const std::string& s)
 
 static constexpr std::size_t index_package{1};
 static constexpr std::size_t index_app{2};
+static const std::string unity_name{"unity8-dash"};
 
 // Returns true if the context name is a valid Ubuntu app id.
 // If it is, out is populated with the package and app name.
@@ -83,7 +84,7 @@ bool process_context_name(const std::string& s, std::smatch& out,
     static const std::regex full_re{"(.*)_(.*)_(.*)"};
     static const std::regex trust_store_re{"(.*)-(.*)"};
 
-    if ((s == "messaging-app" or s == "unity8-dash")
+    if ((s == "messaging-app" or s == unity_name)
             and std::regex_match(s, out, trust_store_re))
     {
         pkg_name = s;
@@ -99,8 +100,6 @@ bool process_context_name(const std::string& s, std::smatch& out,
     return false;
 }
 }
-
-static const std::string unity_name{"unity8-dash"};
 
 apparmor::ubuntu::Context::Context(const std::string& name)
     : apparmor::Context{name},
