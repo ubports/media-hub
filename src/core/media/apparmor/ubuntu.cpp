@@ -72,6 +72,7 @@ Uri parse_uri(const std::string& s)
 
 static constexpr std::size_t index_package{1};
 static constexpr std::size_t index_app{2};
+static const std::string unity_name{"unity8-dash"};
 
 // Returns true if the context name is a valid Ubuntu app id.
 // If it is, out is populated with the package and app name.
@@ -83,7 +84,7 @@ bool process_context_name(const std::string& s, std::smatch& out,
     static const std::regex full_re{"(.*)_(.*)_(.*)"};
     static const std::regex trust_store_re{"(.*)-(.*)"};
 
-    if (s == "messaging-app"
+    if ((s == "messaging-app" or s == unity_name)
             and std::regex_match(s, out, trust_store_re))
     {
         pkg_name = s;
@@ -103,20 +104,27 @@ bool process_context_name(const std::string& s, std::smatch& out,
 apparmor::ubuntu::Context::Context(const std::string& name)
     : apparmor::Context{name},
       unconfined_{str() == ubuntu::unconfined},
+      unity_{name == unity_name},
       has_package_name_{process_context_name(str(), match_, pkg_name_)}
 {
     std::cout << "apparmor profile name: " << name;
     std::cout << ", is_unconfined(): " << is_unconfined();
     std::cout << ", has_package_name(): " << has_package_name() << std::endl;
-    if (not is_unconfined() && not has_package_name()) throw std::logic_error
-    {
-        "apparmor::ubuntu::Context: Invalid profile name " + str()
-    };
+    if (not is_unconfined() and not is_unity() and not has_package_name())
+        throw std::logic_error
+        {
+            "apparmor::ubuntu::Context: Invalid profile name " + str()
+        };
 }
 
 bool apparmor::ubuntu::Context::is_unconfined() const
 {
     return unconfined_;
+}
+
+bool apparmor::ubuntu::Context::is_unity() const
+{
+    return unity_;
 }
 
 bool apparmor::ubuntu::Context::has_package_name() const
@@ -154,6 +162,9 @@ apparmor::ubuntu::RequestAuthenticator::Result apparmor::ubuntu::ExistingAuthent
         return Result{true, "Client allowed access since it's unconfined"};
 
     Uri parsed_uri = parse_uri(uri);
+
+    std::cout << "context.profile_name(): " << context.profile_name() << std::endl;
+    std::cout << "parsed_uri.path: " << parsed_uri.path << std::endl;
 
     // All confined apps can access their own files
     if (parsed_uri.path.find(std::string(".local/share/" + context.package_name() + "/")) != std::string::npos ||
@@ -194,7 +205,8 @@ apparmor::ubuntu::RequestAuthenticator::Result apparmor::ubuntu::ExistingAuthent
     // Check in ~/Music and ~/Videos
     // TODO: when the trust store lands, check it to see if this app can access the dirs and
     // then remove the explicit whitelist of the music-app, and gallery-app
-    else if ((context.package_name() == "com.ubuntu.music" || context.package_name() == "com.ubuntu.gallery") &&
+    else if ((context.package_name() == "com.ubuntu.music" || context.package_name() == "com.ubuntu.gallery" ||
+              context.profile_name() == unity_name) &&
             (parsed_uri.path.find(std::string("Music/")) != std::string::npos ||
              parsed_uri.path.find(std::string("Videos/")) != std::string::npos ||
              parsed_uri.path.find(std::string("/media")) != std::string::npos))

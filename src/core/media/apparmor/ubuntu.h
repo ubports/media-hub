@@ -67,6 +67,9 @@ public:
     // Returns true iff the context is unconfined.
     virtual bool is_unconfined() const;
 
+    // Returns true iff the context matches Unity.
+    virtual bool is_unity() const;
+
     // Returns true iff the context contains a package name.
     virtual bool has_package_name() const;
 
@@ -79,6 +82,7 @@ private:
     std::smatch match_;
     std::string pkg_name_;
     const bool unconfined_;
+    const bool unity_;
     const bool has_package_name_;
 };
 
