@@ -400,7 +400,8 @@ gstreamer::Engine::~Engine()
     d->state = media::Engine::State::no_media;
 }
 
-const std::shared_ptr<media::Engine::MetaDataExtractor>& gstreamer::Engine::meta_data_extractor() const
+const std::shared_ptr<media::Engine::MetaDataExtractor>&
+        gstreamer::Engine::meta_data_extractor() const
 {
     return d->meta_data_extractor;
 }
@@ -410,13 +411,15 @@ const core::Property<media::Engine::State>& gstreamer::Engine::state() const
     return d->state;
 }
 
-bool gstreamer::Engine::open_resource_for_uri(const media::Track::UriType& uri, bool do_pipeline_reset)
+bool gstreamer::Engine::open_resource_for_uri(const media::Track::UriType& uri,
+                                              bool do_pipeline_reset)
 {
     d->playbin.set_uri(uri, core::ubuntu::media::Player::HeadersType{}, do_pipeline_reset);
     return true;
 }
 
-bool gstreamer::Engine::open_resource_for_uri(const media::Track::UriType& uri, const core::ubuntu::media::Player::HeadersType& headers)
+bool gstreamer::Engine::open_resource_for_uri(const media::Track::UriType& uri,
+                                              const core::ubuntu::media::Player::HeadersType& headers)
 {
     d->playbin.set_uri(uri, headers);
     return true;

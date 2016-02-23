@@ -27,7 +27,9 @@
 #include "track_list_traits.h"
 #include "the_session_bus.h"
 
+#include "mpris/player.h"
 #include "mpris/track_list.h"
+#include "util/uri_check.h"
 
 #include <core/dbus/object.h>
 #include <core/dbus/property.h>
@@ -56,6 +58,7 @@ struct media::TrackListSkeleton::Private
           object(object),
           request_context_resolver(request_context_resolver),
           request_authenticator(request_authenticator),
+          uri_check(std::make_shared<UriCheck>()),
           skeleton(mpris::TrackList::Skeleton::Configuration{object, mpris::TrackList::Skeleton::Configuration::Defaults{}}),
           current_track(skeleton.properties.tracks->get().begin()),
           empty_iterator(skeleton.properties.tracks->get().begin()),
@@ -112,22 +115,38 @@ struct media::TrackListSkeleton::Private
 
             // Make sure the client has adequate apparmor permissions to open the URI
             const auto result = request_authenticator->authenticate_open_uri_request(context, uri);
-
             auto reply = dbus::Message::make_method_return(msg);
-            // Only add the track to the TrackList if it passes the apparmor permissions check
-            if (std::get<0>(result))
-            {
-                impl->add_track_with_uri_at(uri, after, make_current);
-            }
-            else
+
+            uri_check->set(uri);
+            const bool valid_uri = !uri_check->is_local_file() or
+                    (uri_check->is_local_file() and uri_check->file_exists());
+            if (!valid_uri)
             {
                 const std::string err_str = {"Warning: Not adding track " + uri +
-                    " to TrackList because of inadequate client apparmor permissions."};
+                     " to TrackList because it can't be found."};
                 std::cerr << err_str << std::endl;
                 reply = dbus::Message::make_error(
                             msg,
-                            mpris::TrackList::Error::InsufficientPermissionsToAddTrack::name,
+                            mpris::Player::Error::UriNotFound::name,
                             err_str);
+            }
+            else
+            {
+                // Only add the track to the TrackList if it passes the apparmor permissions check
+                if (std::get<0>(result))
+                {
+                    impl->add_track_with_uri_at(uri, after, make_current);
+                }
+                else
+                {
+                    const std::string err_str = {"Warning: Not adding track " + uri +
+                        " to TrackList because of inadequate client apparmor permissions."};
+                    std::cerr << err_str << std::endl;
+                    reply = dbus::Message::make_error(
+                                msg,
+                                mpris::TrackList::Error::InsufficientPermissionsToAddTrack::name,
+                                err_str);
+                }
             }
 
             bus->send(reply);
@@ -144,10 +163,26 @@ struct media::TrackListSkeleton::Private
             media::Track::Id after;
             msg->reader() >> uris >> after;
 
+            bool valid_uri = false;
             media::apparmor::ubuntu::RequestAuthenticator::Result result;
-            std::string err_str;
+            std::string uri_err_str, err_str;
+            core::dbus::Message::Ptr reply;
             for (const auto uri : uris)
             {
+                uri_check->set(uri);
+                valid_uri = !uri_check->is_local_file() or
+                        (uri_check->is_local_file() and uri_check->file_exists());
+                if (!valid_uri)
+                {
+                    uri_err_str = {"Warning: Not adding track " + uri +
+                         " to TrackList because it can't be found."};
+                    std::cerr << uri_err_str << std::endl;
+                    reply = dbus::Message::make_error(
+                                msg,
+                                mpris::Player::Error::UriNotFound::name,
+                                err_str);
+                }
+
                 // Make sure the client has adequate apparmor permissions to open the URI
                 result = request_authenticator->authenticate_open_uri_request(context, uri);
                 if (not std::get<0>(result))
@@ -158,7 +193,6 @@ struct media::TrackListSkeleton::Private
                 }
             }
 
-            core::dbus::Message::Ptr reply;
             // Only add the track to the TrackList if it passes the apparmor permissions check
             if (std::get<0>(result))
             {
@@ -312,6 +346,7 @@ struct media::TrackListSkeleton::Private
     dbus::Object::Ptr object;
     media::apparmor::ubuntu::RequestContextResolver::Ptr request_context_resolver;
     media::apparmor::ubuntu::RequestAuthenticator::Ptr request_authenticator;
+    media::UriCheck::Ptr uri_check;
 
     mpris::TrackList::Skeleton skeleton;
     TrackList::ConstIterator current_track;

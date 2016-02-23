@@ -31,6 +31,7 @@
 #include "mpris/metadata.h"
 #include "mpris/player.h"
 #include "mpris/playlists.h"
+#include "util/uri_check.h"
 
 #include <core/dbus/object.h>
 #include <core/dbus/property.h>
@@ -54,6 +55,7 @@ struct media::PlayerSkeleton::Private
           object(session),
           request_context_resolver{request_context_resolver},
           request_authenticator{request_authenticator},
+          uri_check(std::make_shared<UriCheck>()),
           skeleton{mpris::Player::Skeleton::Configuration{bus, session, mpris::Player::Skeleton::Configuration::Defaults{}}},
           signals
           {
@@ -180,21 +182,37 @@ struct media::PlayerSkeleton::Private
             in->reader() >> uri;
 
             auto reply = dbus::Message::make_method_return(in);
-            // Make sure the client has adequate apparmor permissions to open the URI
-            const auto result = request_authenticator->authenticate_open_uri_request(context, uri);
-            if (std::get<0>(result))
+            uri_check->set(uri);
+            const bool valid_uri = !uri_check->is_local_file() or
+                    (uri_check->is_local_file() and uri_check->file_exists());
+            if (!valid_uri)
             {
-                reply->writer() << (std::get<0>(result) ? impl->open_uri(uri) : false);
-            }
-            else
-            {
-                const std::string err_str = {"Warning: Failed to authenticate necessary "
-                    "apparmor permissions to open uri: " + std::get<1>(result)};
+                const std::string err_str = {"Warning: Failed to open uri " + uri +
+                     " because it can't be found."};
                 std::cerr << err_str << std::endl;
                 reply = dbus::Message::make_error(
                             in,
-                            mpris::Player::Error::InsufficientAppArmorPermissions::name,
+                            mpris::Player::Error::UriNotFound::name,
                             err_str);
+            }
+            else
+            {
+                // Make sure the client has adequate apparmor permissions to open the URI
+                const auto result = request_authenticator->authenticate_open_uri_request(context, uri);
+                if (std::get<0>(result))
+                {
+                    reply->writer() << (std::get<0>(result) ? impl->open_uri(uri) : false);
+                }
+                else
+                {
+                    const std::string err_str = {"Warning: Failed to authenticate necessary "
+                        "apparmor permissions to open uri: " + std::get<1>(result)};
+                    std::cerr << err_str << std::endl;
+                    reply = dbus::Message::make_error(
+                                in,
+                                mpris::Player::Error::InsufficientAppArmorPermissions::name,
+                                err_str);
+                }
             }
 
             bus->send(reply);
@@ -211,21 +229,37 @@ struct media::PlayerSkeleton::Private
             in->reader() >> uri >> headers;
 
             auto reply = dbus::Message::make_method_return(in);
-            // Make sure the client has adequate apparmor permissions to open the URI
-            const auto result = request_authenticator->authenticate_open_uri_request(context, uri);
-            if (std::get<0>(result))
+            uri_check->set(uri);
+            const bool valid_uri = !uri_check->is_local_file() or
+                    (uri_check->is_local_file() and uri_check->file_exists());
+            if (!valid_uri)
             {
-                reply->writer() << (std::get<0>(result) ? impl->open_uri(uri, headers) : false);
-            }
-            else
-            {
-                const std::string err_str = {"Warning: Failed to authenticate necessary "
-                    "apparmor permissions to open uri: " + std::get<1>(result)};
+                const std::string err_str = {"Warning: Failed to open uri " + uri +
+                     " because it can't be found."};
                 std::cerr << err_str << std::endl;
                 reply = dbus::Message::make_error(
                             in,
-                            mpris::Player::Error::InsufficientAppArmorPermissions::name,
+                            mpris::Player::Error::UriNotFound::name,
                             err_str);
+            }
+            else
+            {
+                // Make sure the client has adequate apparmor permissions to open the URI
+                const auto result = request_authenticator->authenticate_open_uri_request(context, uri);
+                if (std::get<0>(result))
+                {
+                    reply->writer() << (std::get<0>(result) ? impl->open_uri(uri, headers) : false);
+                }
+                else
+                {
+                    const std::string err_str = {"Warning: Failed to authenticate necessary "
+                        "apparmor permissions to open uri: " + std::get<1>(result)};
+                    std::cerr << err_str << std::endl;
+                    reply = dbus::Message::make_error(
+                                in,
+                                mpris::Player::Error::InsufficientAppArmorPermissions::name,
+                                err_str);
+                }
             }
 
             bus->send(reply);
@@ -258,6 +292,7 @@ struct media::PlayerSkeleton::Private
     dbus::Object::Ptr object;
     media::apparmor::ubuntu::RequestContextResolver::Ptr request_context_resolver;
     media::apparmor::ubuntu::RequestAuthenticator::Ptr request_authenticator;
+    media::UriCheck::Ptr uri_check;
 
     mpris::Player::Skeleton skeleton;
 

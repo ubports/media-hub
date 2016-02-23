@@ -61,6 +61,11 @@ class Player : public std::enable_shared_from_this<Player>
         {
             InsufficientAppArmorPermissions(const std::string& err);
         };
+
+        struct UriNotFound : public std::runtime_error
+        {
+            UriNotFound(const std::string& err);
+        };
     };
 
     struct Configuration;

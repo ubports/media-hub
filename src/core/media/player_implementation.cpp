@@ -292,8 +292,8 @@ struct media::PlayerImplementation<Parent>::Private :
         const Track::UriType uri = track_list->query_uri_for_track(id);
         if (!uri.empty())
         {
-            // Using a TrackList for playback, added tracks via add_track(), but open_uri hasn't been called yet
-            // to load a media resource
+            // Using a TrackList for playback, added tracks via add_track(), but open_uri hasn't
+            // been called yet to load a media resource
             std::cout << "Calling d->engine->open_resource_for_uri() for first track added only: "
                       << uri << std::endl;
             std::cout << "\twith a Track::Id: " << id << std::endl;

@@ -104,6 +104,9 @@ struct Playbin
     core::ubuntu::media::video::Dimensions get_video_dimensions() const;
     void emit_video_dimensions_changed_if_changed(const core::ubuntu::media::video::Dimensions &new_dimensions);
 
+    std::string file_info_from_uri(const std::string& uri) const;
+    std::string encode_uri(const std::string& uri) const;
+    std::string decode_uri(const std::string& uri) const;
     std::string get_file_content_type(const std::string& uri) const;
 
     bool is_audio_file(const std::string& uri) const;
