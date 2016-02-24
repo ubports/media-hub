@@ -243,7 +243,11 @@ struct media::ServiceSkeleton::Private
                         std::get<2>(info) = msg->sender(); // Register new owner
 
                         // Signal player reconnection
+                        std::cout << "== About to call player_for_key ("
+                                  << __FILE__ << ":" << __LINE__ << ")" << std::endl;
                         auto player = configuration.player_store->player_for_key(key);
+                        std::cout << "== Called player_for_key ("
+                                  << __FILE__ << ":" << __LINE__ << ")" << std::endl;
                         player->reconnect();
                         // We only care to allow the MPRIS controls to apply to multimedia player (i.e. audio, video)
                         if (player->audio_stream_role() == media::Player::AudioStreamRole::multimedia)

@@ -207,12 +207,30 @@ std::shared_ptr<media::Player> media::ServiceImplementation::create_session(
         // until all dispatches are done
         d->configuration.external_services.io_service.post([this, key]()
         {
+            std::cout << "== About to call has_player_for_key ("
+                      << __FILE__ << ":" << __LINE__ << ")" << std::endl;
             if (!d->configuration.player_store->has_player_for_key(key))
+            {
+                std::cout << "== Called has_player_for_key ("
+                          << __FILE__ << ":" << __LINE__ << ")" << std::endl;
                 return;
+            }
+            std::cout << "== Called has_player_for_key ("
+                      << __FILE__ << ":" << __LINE__ << ")" << std::endl;
 
             try {
+                std::cout << "== About to call player_for_key ("
+                          << __FILE__ << ":" << __LINE__ << ")" << std::endl;
                 if (d->configuration.player_store->player_for_key(key)->lifetime() == Player::Lifetime::normal)
+                {
+                    std::cout << "== Called player_for_key ("
+                              << __FILE__ << ":" << __LINE__ << ")" << std::endl;
+                    std::cout << "== About to call remove_player_for_key ("
+                              << __FILE__ << ":" << __LINE__ << ")" << std::endl;
                     d->configuration.player_store->remove_player_for_key(key);
+                    std::cout << "== Called remove_player_for_key ("
+                              << __FILE__ << ":" << __LINE__ << ")" << std::endl;
+                }
             }
             catch (const std::out_of_range &e) {
                 std::cerr << "Failed to look up Player instance for key " << key
@@ -264,20 +282,38 @@ void media::ServiceImplementation::pause_other_sessions(media::Player::PlayerKey
 {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
 
+    std::cout << "== About to call has_player_for_key ("
+              << __FILE__ << ":" << __LINE__ << ")" << std::endl;
     if (not d->configuration.player_store->has_player_for_key(key))
     {
         cerr << "Could not find Player by key: " << key << endl;
         return;
     }
+    std::cout << "== Called has_player_for_key ("
+              << __FILE__ << ":" << __LINE__ << ")" << std::endl;
 
+    std::cout << "== About to call player_for_key ("
+              << __FILE__ << ":" << __LINE__ << ")" << std::endl;
     const std::shared_ptr<media::Player> current_player = d->configuration.player_store->player_for_key(key);
+    std::cout << "== Called player_for_key ("
+              << __FILE__ << ":" << __LINE__ << ")" << std::endl;
 
     // We immediately make the player known as new current player.
     if (current_player->audio_stream_role() == media::Player::multimedia)
+    {
+        std::cout << "== About to call set_current_player_for_key ("
+                  << __FILE__ << ":" << __LINE__ << ")" << std::endl;
         d->configuration.player_store->set_current_player_for_key(key);
+        std::cout << "== Called set_current_player_for_key ("
+                  << __FILE__ << ":" << __LINE__ << ")" << std::endl;
+    }
 
+    std::cout << "== About to call enumerate_players ("
+              << __FILE__ << ":" << __LINE__ << ")" << std::endl;
     d->configuration.player_store->enumerate_players([current_player, key](const media::Player::PlayerKey& other_key, const std::shared_ptr<media::Player>& other_player)
     {
+        std::cout << "== Called enumerate_players ("
+                  << __FILE__ << ":" << __LINE__ << ")" << std::endl;
         // Only pause a Player if all of the following criteria are met:
         // 1) currently playing
         // 2) not the same player as the one passed in my key
@@ -296,8 +332,12 @@ void media::ServiceImplementation::pause_other_sessions(media::Player::PlayerKey
 
 void media::ServiceImplementation::pause_all_multimedia_sessions(bool resume_play_after_phonecall)
 {
+    std::cout << "== About to call enumerate_players ("
+              << __FILE__ << ":" << __LINE__ << ")" << std::endl;
     d->configuration.player_store->enumerate_players([this, resume_play_after_phonecall](const media::Player::PlayerKey& key, const std::shared_ptr<media::Player>& player)
     {
+        std::cout << "== Called enumerate_players ("
+                  << __FILE__ << ":" << __LINE__ << ")" << std::endl;
         if (player->playback_status() == Player::playing
             && player->audio_stream_role() == media::Player::multimedia)
         {
@@ -318,7 +358,11 @@ void media::ServiceImplementation::resume_paused_multimedia_sessions(bool resume
             const bool resume_play_after_phonecall = paused_player_pair.second;
             std::shared_ptr<media::Player> player;
             try {
+                std::cout << "== About to call player_for_key ("
+                          << __FILE__ << ":" << __LINE__ << ")" << std::endl;
                 player = d->configuration.player_store->player_for_key(key);
+                std::cout << "== Called player_for_key ("
+                          << __FILE__ << ":" << __LINE__ << ")" << std::endl;
             }
             catch (const std::out_of_range &e) {
                 std::cerr << "Failed to look up Player instance for key " << key
@@ -339,12 +383,20 @@ void media::ServiceImplementation::resume_paused_multimedia_sessions(bool resume
 
 void media::ServiceImplementation::resume_multimedia_session()
 {
+    std::cout << "== About to call has_player_for_key ("
+              << __FILE__ << ":" << __LINE__ << ")" << std::endl;
     if (not d->configuration.player_store->has_player_for_key(d->resume_key))
         return;
+    std::cout << "== Called player_for_key ("
+              << __FILE__ << ":" << __LINE__ << ")" << std::endl;
 
     std::shared_ptr<media::Player> player;
     try {
+        std::cout << "== About to call player_for_key ("
+                  << __FILE__ << ":" << __LINE__ << ")" << std::endl;
         player = d->configuration.player_store->player_for_key(d->resume_key);
+        std::cout << "== Called player_for_key ("
+                  << __FILE__ << ":" << __LINE__ << ")" << std::endl;
     }
     catch (const std::out_of_range &e) {
         std::cerr << "Failed to look up Player instance for key " << d->resume_key
