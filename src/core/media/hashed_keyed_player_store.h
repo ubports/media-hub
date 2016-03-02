@@ -66,7 +66,7 @@ public:
 
 private:
     core::Property<std::shared_ptr<Player>> prop_current_player;
-    mutable std::mutex guard;
+    mutable std::recursive_mutex guard;
     std::unordered_map<Player::PlayerKey, std::shared_ptr<Player>> map;
 };
 }

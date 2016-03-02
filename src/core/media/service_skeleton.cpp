@@ -140,14 +140,15 @@ struct media::ServiceSkeleton::Private
 
         try
         {
-            configuration.player_store->add_player_for_key(key, impl->create_session(config));
-            uuid_player_map.insert(std::make_pair(uuid, key));
+            const std::shared_ptr<media::Player> player {impl->create_session(config)};
+            configuration.player_store->add_player_for_key(key, player);
+            uuid_player_map.emplace(std::make_pair(uuid, key));
 
             request_context_resolver->resolve_context_for_dbus_name_async(msg->sender(),
                     [this, key, msg](const media::apparmor::ubuntu::Context& context)
             {
                 fprintf(stderr, "%s():%d -- app_name='%s', attached\n", __func__, __LINE__, context.str().c_str());
-                player_owner_map.insert(std::make_pair(key, std::make_tuple(context.str(), true, msg->sender())));
+                player_owner_map.emplace(std::make_pair(key, std::make_tuple(context.str(), true, msg->sender())));
             });
 
             auto reply = dbus::Message::make_method_return(msg);
@@ -183,11 +184,8 @@ struct media::ServiceSkeleton::Private
                     if (std::get<1>(info) && (std::get<2>(info) == msg->sender())) { // Player is attached
                         std::get<1>(info) = false; // Detached
                         std::get<2>(info).clear(); // Clear registered sender/peer
-                        std::cout << "== About to call player_for_key ("
-                                  << __FILE__ << ":" << __LINE__ << ")" << std::endl;
+
                         auto player = configuration.player_store->player_for_key(key);
-                        std::cout << "== Called player_for_key ("
-                                  << __FILE__ << ":" << __LINE__ << ")" << std::endl;
                         player->lifetime().set(media::Player::Lifetime::resumable);
                     }
                 }
@@ -215,9 +213,7 @@ struct media::ServiceSkeleton::Private
 
             if (uuid_player_map.count(uuid) != 0)
             {
-                auto key = uuid_player_map.at(uuid);
-                std::cout << "== About to call has_player_for_key ("
-                          << __FILE__ << ":" << __LINE__ << ")" << std::endl;
+                const auto key = uuid_player_map.at(uuid);
                 if (not configuration.player_store->has_player_for_key(key))
                 {
                     auto reply = dbus::Message::make_error(
@@ -227,8 +223,6 @@ struct media::ServiceSkeleton::Private
                     impl->access_bus()->send(reply);
                     return;
                 }
-                std::cout << "== Called has_player_for_key ("
-                          << __FILE__ << ":" << __LINE__ << ")" << std::endl;
                 std::stringstream ss;
                 ss << "/core/ubuntu/media/Service/sessions/" << key;
                 dbus::types::ObjectPath op{ss.str()};
@@ -243,11 +237,7 @@ struct media::ServiceSkeleton::Private
                         std::get<2>(info) = msg->sender(); // Register new owner
 
                         // Signal player reconnection
-                        std::cout << "== About to call player_for_key ("
-                                  << __FILE__ << ":" << __LINE__ << ")" << std::endl;
                         auto player = configuration.player_store->player_for_key(key);
-                        std::cout << "== Called player_for_key ("
-                                  << __FILE__ << ":" << __LINE__ << ")" << std::endl;
                         player->reconnect();
                         // We only care to allow the MPRIS controls to apply to multimedia player (i.e. audio, video)
                         if (player->audio_stream_role() == media::Player::AudioStreamRole::multimedia)
@@ -297,9 +287,7 @@ struct media::ServiceSkeleton::Private
             msg->reader() >> uuid;
 
             if (uuid_player_map.count(uuid) != 0) {
-                auto key = uuid_player_map.at(uuid);
-                std::cout << "== About to call has_player_for_key ("
-                          << __FILE__ << ":" << __LINE__ << ")" << std::endl;
+                const auto key = uuid_player_map.at(uuid);
                 if (not configuration.player_store->has_player_for_key(key)) {
                     auto reply = dbus::Message::make_error(
                                 msg,
@@ -308,8 +296,6 @@ struct media::ServiceSkeleton::Private
                     impl->access_bus()->send(reply);
                     return;
                 }
-                std::cout << "== Called has_player_for_key ("
-                          << __FILE__ << ":" << __LINE__ << ")" << std::endl;
 
                 // Remove control entries from the map, at this point
                 // the session is no longer usable.
@@ -386,11 +372,7 @@ struct media::ServiceSkeleton::Private
                 auto session = impl->create_session(config);
                 session->lifetime().set(media::Player::Lifetime::resumable);
 
-                std::cout << "== About to call add_player_for_key ("
-                          << __FILE__ << ":" << __LINE__ << ")" << std::endl;
                 configuration.player_store->add_player_for_key(key, session);
-                std::cout << "== Called add_player_for_key ("
-                          << __FILE__ << ":" << __LINE__ << ")" << std::endl;
 
                 named_player_map.insert(std::make_pair(name, key));
 
@@ -401,9 +383,7 @@ struct media::ServiceSkeleton::Private
             }
             else {
                 // Resume previous session
-                auto key = named_player_map.at(name);
-                std::cout << "== About to call has_player_for_key ("
-                          << __FILE__ << ":" << __LINE__ << ")" << std::endl;
+                const auto key = named_player_map.at(name);
                 if (not configuration.player_store->has_player_for_key(key)) {
                     auto reply = dbus::Message::make_error(
                                 msg,
@@ -412,8 +392,6 @@ struct media::ServiceSkeleton::Private
                     impl->access_bus()->send(reply);
                     return;
                 }
-                std::cout << "== Called has_player_for_key ("
-                          << __FILE__ << ":" << __LINE__ << ")" << std::endl;
 
                 std::stringstream ss;
                 ss << "/core/ubuntu/media/Service/sessions/" << key;
@@ -441,8 +419,6 @@ struct media::ServiceSkeleton::Private
             Player::PlayerKey key;
             msg->reader() >> key;
 
-            std::cout << "== About to call has_player_for_key ("
-                      << __FILE__ << ":" << __LINE__ << ")" << std::endl;
             if (not configuration.player_store->has_player_for_key(key)) {
                 auto reply = dbus::Message::make_error(
                             msg,
@@ -451,8 +427,6 @@ struct media::ServiceSkeleton::Private
                 impl->access_bus()->send(reply);
                 return;
             }
-            std::cout << "== Called has_player_for_key ("
-                      << __FILE__ << ":" << __LINE__ << ")" << std::endl;
 
             std::stringstream ss;
             ss << "/core/ubuntu/media/Service/sessions/" << key;
@@ -920,12 +894,8 @@ std::shared_ptr<media::Player> media::ServiceSkeleton::resume_session(media::Pla
 
 void media::ServiceSkeleton::set_current_player(media::Player::PlayerKey key)
 {
-    std::cout << "== About to call player_for_key ("
-              << __FILE__ << ":" << __LINE__ << ")" << std::endl;
     const std::shared_ptr<media::Player> player =
         d->configuration.player_store->player_for_key(key);
-    std::cout << "== Called player_for_key ("
-              << __FILE__ << ":" << __LINE__ << ")" << std::endl;
     // We only care to allow the MPRIS controls to apply to multimedia player (i.e. audio, video)
     if (player->audio_stream_role() == media::Player::AudioStreamRole::multimedia)
         d->exported.set_current_player(player);
