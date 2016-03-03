@@ -31,13 +31,13 @@ const core::Property<std::shared_ptr<media::Player>>& media::HashedKeyedPlayerSt
 
 bool media::HashedKeyedPlayerStore::has_player_for_key(const media::Player::PlayerKey& key) const
 {
-    std::lock_guard<std::recursive_mutex> lg{guard};
+    std::unique_lock<std::recursive_mutex> lg{guard};
     return map.count(key) > 0;
 }
 
 std::shared_ptr<media::Player> media::HashedKeyedPlayerStore::player_for_key(const media::Player::PlayerKey& key) const
 {
-    std::lock_guard<std::recursive_mutex> lg{guard};
+    std::unique_lock<std::recursive_mutex> lg{guard};
     auto it = map.find(key);
 
     if (it == map.end()) throw std::out_of_range
@@ -50,20 +50,30 @@ std::shared_ptr<media::Player> media::HashedKeyedPlayerStore::player_for_key(con
 
 void media::HashedKeyedPlayerStore::enumerate_players(const media::KeyedPlayerStore::PlayerEnumerator& enumerator) const
 {
-    std::lock_guard<std::recursive_mutex> lg{guard};
+    std::unique_lock<std::recursive_mutex> lg{guard};
     for (const auto& pair : map)
         enumerator(pair.first, pair.second);
 }
 
 void media::HashedKeyedPlayerStore::add_player_for_key(const media::Player::PlayerKey& key, const std::shared_ptr<media::Player>& player)
 {
-    std::lock_guard<std::recursive_mutex> lg{guard};
+    std::unique_lock<std::recursive_mutex> lg{guard, std::defer_lock};
+    size_t i = 0;
+    while (!lg.try_lock())
+    {
+        ++i;
+        std::cout << "Failed to lock guard for Player key: " << key << ", " << i << " times" << std::endl;
+    }
+
+    std::cout << "Locked guard for Player key: " << key << std::endl;
     map[key] = player;
+    if (map.size() != key)
+        std::cout << "map.size(): " << map.size() << " for Player key: " << key << std::endl;
 }
 
 void media::HashedKeyedPlayerStore::remove_player_for_key(const media::Player::PlayerKey& key)
 {
-    std::lock_guard<std::recursive_mutex> lg{guard};
+    std::unique_lock<std::recursive_mutex> lg{guard};
     auto it = map.find(key);
     if (it != map.end())
     {
@@ -72,6 +82,12 @@ void media::HashedKeyedPlayerStore::remove_player_for_key(const media::Player::P
 
         map.erase(it);
     }
+}
+
+size_t media::HashedKeyedPlayerStore::number_of_players() const
+{
+    std::unique_lock<std::recursive_mutex> lg{guard};
+    return map.size();
 }
 
 void media::HashedKeyedPlayerStore::set_current_player_for_key(const media::Player::PlayerKey& key)

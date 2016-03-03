@@ -16,7 +16,12 @@
  * Authored by: Jim Hodapp <jim.hodapp@canonical.com>
  */
 
+#include "core/media/client_death_observer.h"
 #include "core/media/hashed_keyed_player_store.h"
+#include "core/media/player_implementation.h"
+#include "core/media/player_skeleton.h"
+#include "core/media/power/state_controller.h"
+#include "core/media/apparmor/ubuntu.h"
 
 #include <core/media/service.h>
 #include <core/media/player.h>
@@ -25,6 +30,7 @@
 
 #include <condition_variable>
 #include <functional>
+#include <iostream>
 #include <thread>
 
 namespace media = core::ubuntu::media;
@@ -32,17 +38,45 @@ namespace media = core::ubuntu::media;
 TEST(PlayerStore, adding_players_from_multiple_threads_works)
 {
     media::HashedKeyedPlayerStore store;
-
     media::Player::PlayerKey key = 0;
 
     size_t i;
     std::vector<std::thread> workers;
-    for (i=0; i<2; i++)
+    for (i=0; i<3; i++)
     {
-        workers.emplace_back(std::thread([i, &key]()
+        workers.emplace_back(std::thread([&store, i, &key]()
         {
-            //std::shared_ptr<media::Player> player {new Player()};
-            //store.add_player_for_key(key, player);
+#if 0
+            const std::shared_ptr<core::dbus::Bus> bus;
+            const std::shared_ptr<core::dbus::Service> service;
+            const std::shared_ptr<core::dbus::Object> session;
+            const media::apparmor::ubuntu::RequestContextResolver::Ptr request_context_resolver;
+            const media::apparmor::ubuntu::RequestAuthenticator::Ptr request_authenticator
+            {media::apparmor::ubuntu::make_platform_default_request_authenticator()};
+            const media::ClientDeathObserver::Ptr client_death_observer
+            {media::platform_default_client_death_observer()};
+            const media::power::StateController::Ptr power_state_controller;
+
+            const auto player = std::make_shared<media::PlayerImplementation<media::PlayerSkeleton>>(media::PlayerImplementation<media::PlayerSkeleton>::Configuration
+            {
+                media::PlayerSkeleton::Configuration
+                {
+                    bus,
+                    service,
+                    session,
+                    request_context_resolver,
+                    request_authenticator
+                },
+                key,
+                client_death_observer,
+                power_state_controller
+            });
+#else
+            const std::shared_ptr<media::Player> player;
+#endif
+
+            store.add_player_for_key(key, player);
+            std::cout << "Added Player instance with key: " << key << std::endl;
             ++key;
         }));
     }
@@ -51,4 +85,15 @@ TEST(PlayerStore, adding_players_from_multiple_threads_works)
     {
         workers[i].join();
     }
+
+#if 0
+    size_t num_players = 0;
+    store.enumerate_players([&num_players](const media::Player::PlayerKey& other_key, const std::shared_ptr<media::Player>& other_player)
+    {
+        ++num_players;
+    });
+    ASSERT_EQ(num_players, workers.size());
+#else
+    ASSERT_EQ(store.number_of_players(), workers.size());
+#endif
 }

@@ -60,6 +60,9 @@ public:
     // Removes the player for the given key, and unsets it if it is the current one.
     void remove_player_for_key(const Player::PlayerKey& key) override;
 
+    // Returns the number of players in the store.
+    size_t number_of_players() const;
+
     // Makes the player known under the given key current.
     // Throws std::out_of_range if no player is known for the key.
     void set_current_player_for_key(const Player::PlayerKey& key) override;
