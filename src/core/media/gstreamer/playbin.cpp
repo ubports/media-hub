@@ -469,16 +469,23 @@ void gstreamer::Playbin::set_uri(
 
     std::string encoded_uri;
     media::UriCheck::Ptr uri_check{std::make_shared<media::UriCheck>(uri)};
-    if (uri_check->is_encoded())
+    if (uri_check->is_local_file())
     {
-        encoded_uri = decode_uri(uri);
+        if (uri_check->is_encoded())
+        {
+            encoded_uri = decode_uri(uri);
 #ifdef VERBOSE_DEBUG
-        std::cout << "File URI was encoded, now decoded: " << encoded_uri << std::endl;
+            std::cout << "File URI was encoded, now decoded: " << encoded_uri << std::endl;
 #endif
-        encoded_uri = encode_uri(encoded_uri);
+            encoded_uri = encode_uri(encoded_uri);
+        }
+        else
+            encoded_uri = encode_uri(uri);
     }
     else
-        encoded_uri = encode_uri(uri);
+    {
+        encoded_uri = uri;
+    }
 
     g_object_set(pipeline, "uri", encoded_uri.c_str(), NULL);
     if (is_video_file(encoded_uri))
