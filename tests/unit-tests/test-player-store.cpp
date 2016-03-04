@@ -46,35 +46,7 @@ TEST(PlayerStore, adding_players_from_multiple_threads_works)
     {
         workers.emplace_back(std::thread([&store, i, &key]()
         {
-#if 0
-            const std::shared_ptr<core::dbus::Bus> bus;
-            const std::shared_ptr<core::dbus::Service> service;
-            const std::shared_ptr<core::dbus::Object> session;
-            const media::apparmor::ubuntu::RequestContextResolver::Ptr request_context_resolver;
-            const media::apparmor::ubuntu::RequestAuthenticator::Ptr request_authenticator
-            {media::apparmor::ubuntu::make_platform_default_request_authenticator()};
-            const media::ClientDeathObserver::Ptr client_death_observer
-            {media::platform_default_client_death_observer()};
-            const media::power::StateController::Ptr power_state_controller;
-
-            const auto player = std::make_shared<media::PlayerImplementation<media::PlayerSkeleton>>(media::PlayerImplementation<media::PlayerSkeleton>::Configuration
-            {
-                media::PlayerSkeleton::Configuration
-                {
-                    bus,
-                    service,
-                    session,
-                    request_context_resolver,
-                    request_authenticator
-                },
-                key,
-                client_death_observer,
-                power_state_controller
-            });
-#else
             const std::shared_ptr<media::Player> player;
-#endif
-
             store.add_player_for_key(key, player);
             std::cout << "Added Player instance with key: " << key << std::endl;
             ++key;
