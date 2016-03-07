@@ -40,9 +40,10 @@ TEST(PlayerStore, adding_players_from_multiple_threads_works)
     media::HashedKeyedPlayerStore store;
     media::Player::PlayerKey key = 0;
 
+    static constexpr num_workers = 3;
     size_t i;
     std::vector<std::thread> workers;
-    for (i=0; i<3; i++)
+    for (i=0; i<num_workers; i++)
     {
         workers.emplace_back(std::thread([&store, i, &key]()
         {
@@ -53,19 +54,8 @@ TEST(PlayerStore, adding_players_from_multiple_threads_works)
         }));
     }
 
-    for (i=0; i<workers.size(); ++i)
-    {
+    for (i=0; i<workers.size(); i++)
         workers[i].join();
-    }
 
-#if 0
-    size_t num_players = 0;
-    store.enumerate_players([&num_players](const media::Player::PlayerKey& other_key, const std::shared_ptr<media::Player>& other_player)
-    {
-        ++num_players;
-    });
-    ASSERT_EQ(num_players, workers.size());
-#else
     ASSERT_EQ(store.number_of_players(), workers.size());
-#endif
 }
