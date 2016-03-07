@@ -477,10 +477,8 @@ void gstreamer::Playbin::set_uri(
 #ifdef VERBOSE_DEBUG
             std::cout << "File URI was encoded, now decoded: " << encoded_uri << std::endl;
 #endif
-            encoded_uri = encode_uri(encoded_uri);
         }
-        else
-            encoded_uri = encode_uri(uri);
+        encoded_uri = encode_uri(uri);
     }
 
     g_object_set(pipeline, "uri", encoded_uri.c_str(), NULL);
