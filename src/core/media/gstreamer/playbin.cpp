@@ -467,23 +467,25 @@ void gstreamer::Playbin::set_uri(
     if (current_uri and do_pipeline_reset)
         reset_pipeline();
 
-    std::string encoded_uri;
+    std::string tmp_uri{uri};
     media::UriCheck::Ptr uri_check{std::make_shared<media::UriCheck>(uri)};
-    if (uri_check->is_encoded())
+    if (uri_check->is_local_file())
     {
-        encoded_uri = decode_uri(uri);
+        if (uri_check->is_encoded())
+        {
+            // First decode the URI just in case it's partially encoded already
+            tmp_uri = decode_uri(uri);
 #ifdef VERBOSE_DEBUG
-        std::cout << "File URI was encoded, now decoded: " << encoded_uri << std::endl;
+            std::cout << "File URI was encoded, now decoded: " << tmp_uri << std::endl;
 #endif
-        encoded_uri = encode_uri(encoded_uri);
+        }
+        tmp_uri = encode_uri(tmp_uri);
     }
-    else
-        encoded_uri = encode_uri(uri);
 
-    g_object_set(pipeline, "uri", encoded_uri.c_str(), NULL);
-    if (is_video_file(encoded_uri))
+    g_object_set(pipeline, "uri", tmp_uri.c_str(), NULL);
+    if (is_video_file(tmp_uri))
         file_type = MEDIA_FILE_TYPE_VIDEO;
-    else if (is_audio_file(encoded_uri))
+    else if (is_audio_file(tmp_uri))
         file_type = MEDIA_FILE_TYPE_AUDIO;
 
     request_headers = headers;
