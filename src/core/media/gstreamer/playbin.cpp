@@ -473,6 +473,7 @@ void gstreamer::Playbin::set_uri(
     {
         if (uri_check->is_encoded())
         {
+            // First decode the URI just in case it's partially encoded already
             tmp_uri = decode_uri(uri);
 #ifdef VERBOSE_DEBUG
             std::cout << "File URI was encoded, now decoded: " << tmp_uri << std::endl;
