@@ -40,7 +40,7 @@ TEST(PlayerStore, adding_players_from_multiple_threads_works)
     media::HashedKeyedPlayerStore store;
     media::Player::PlayerKey key = 0;
 
-    static constexpr num_workers = 3;
+    static constexpr uint16_t num_workers = 3;
     size_t i;
     std::vector<std::thread> workers;
     for (i=0; i<num_workers; i++)
