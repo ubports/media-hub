@@ -58,10 +58,7 @@ void media::HashedKeyedPlayerStore::enumerate_players(const media::KeyedPlayerSt
 void media::HashedKeyedPlayerStore::add_player_for_key(const media::Player::PlayerKey& key, const std::shared_ptr<media::Player>& player)
 {
     std::lock_guard<std::recursive_mutex> lg{guard};
-    std::cout << "Locked guard for Player key: " << key << std::endl;
     map[key] = player;
-    if (map.size() != key)
-        std::cout << "map.size(): " << map.size() << " for Player key: " << key << std::endl;
 }
 
 void media::HashedKeyedPlayerStore::remove_player_for_key(const media::Player::PlayerKey& key)
