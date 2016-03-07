@@ -467,7 +467,7 @@ void gstreamer::Playbin::set_uri(
     if (current_uri and do_pipeline_reset)
         reset_pipeline();
 
-    std::string encoded_uri;
+    std::string encoded_uri{uri};
     media::UriCheck::Ptr uri_check{std::make_shared<media::UriCheck>(uri)};
     if (uri_check->is_local_file())
     {
@@ -481,10 +481,6 @@ void gstreamer::Playbin::set_uri(
         }
         else
             encoded_uri = encode_uri(uri);
-    }
-    else
-    {
-        encoded_uri = uri;
     }
 
     g_object_set(pipeline, "uri", encoded_uri.c_str(), NULL);
