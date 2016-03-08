@@ -45,10 +45,13 @@ TEST(PlayerStore, adding_players_from_multiple_threads_works)
     std::vector<std::thread> workers;
     for (i=0; i<num_workers; i++)
     {
-        workers.emplace_back(std::thread([&store, i, &key]()
+        workers.push_back(std::thread([&store, i, &key]()
         {
             const std::shared_ptr<media::Player> player;
-            store.add_player_for_key(key, player);
+            const size_t num_players_before_add = store.number_of_players();
+            while (store.number_of_players() == num_players_before_add)
+                store.add_player_for_key(key, player);
+
             std::cout << "Added Player instance with key: " << key << std::endl;
             ++key;
         }));
