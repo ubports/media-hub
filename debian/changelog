@@ -1,3 +1,10 @@
+media-hub (4.1.0+16.04.20160308.2-0ubuntu1) xenial; urgency=medium
+
+  * Fix deadlock issue when adding/removing Player instances from the
+    HashedKeyedPlayerStore (LP: #1542947)
+
+ -- Jim Hodapp <ci-train-bot@canonical.com>  Tue, 08 Mar 2016 19:36:07 +0000
+
 media-hub (4.1.0+16.04.20160307.1-0ubuntu1) xenial; urgency=medium
 
   * Only call encode_uri() for local files, pass everything else
