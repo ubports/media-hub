@@ -140,14 +140,15 @@ struct media::ServiceSkeleton::Private
 
         try
         {
-            configuration.player_store->add_player_for_key(key, impl->create_session(config));
-            uuid_player_map.insert(std::make_pair(uuid, key));
+            const std::shared_ptr<media::Player> player {impl->create_session(config)};
+            configuration.player_store->add_player_for_key(key, player);
+            uuid_player_map.emplace(std::make_pair(uuid, key));
 
             request_context_resolver->resolve_context_for_dbus_name_async(msg->sender(),
                     [this, key, msg](const media::apparmor::ubuntu::Context& context)
             {
                 fprintf(stderr, "%s():%d -- app_name='%s', attached\n", __func__, __LINE__, context.str().c_str());
-                player_owner_map.insert(std::make_pair(key, std::make_tuple(context.str(), true, msg->sender())));
+                player_owner_map.emplace(std::make_pair(key, std::make_tuple(context.str(), true, msg->sender())));
             });
 
             auto reply = dbus::Message::make_method_return(msg);
@@ -183,6 +184,7 @@ struct media::ServiceSkeleton::Private
                     if (std::get<1>(info) && (std::get<2>(info) == msg->sender())) { // Player is attached
                         std::get<1>(info) = false; // Detached
                         std::get<2>(info).clear(); // Clear registered sender/peer
+
                         auto player = configuration.player_store->player_for_key(key);
                         player->lifetime().set(media::Player::Lifetime::resumable);
                     }
@@ -211,7 +213,7 @@ struct media::ServiceSkeleton::Private
 
             if (uuid_player_map.count(uuid) != 0)
             {
-                auto key = uuid_player_map.at(uuid);
+                const auto key = uuid_player_map.at(uuid);
                 if (not configuration.player_store->has_player_for_key(key))
                 {
                     auto reply = dbus::Message::make_error(
@@ -285,7 +287,7 @@ struct media::ServiceSkeleton::Private
             msg->reader() >> uuid;
 
             if (uuid_player_map.count(uuid) != 0) {
-                auto key = uuid_player_map.at(uuid);
+                const auto key = uuid_player_map.at(uuid);
                 if (not configuration.player_store->has_player_for_key(key)) {
                     auto reply = dbus::Message::make_error(
                                 msg,
@@ -381,7 +383,7 @@ struct media::ServiceSkeleton::Private
             }
             else {
                 // Resume previous session
-                auto key = named_player_map.at(name);
+                const auto key = named_player_map.at(name);
                 if (not configuration.player_store->has_player_for_key(key)) {
                     auto reply = dbus::Message::make_error(
                                 msg,

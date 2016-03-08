@@ -182,7 +182,8 @@ media::ServiceImplementation::~ServiceImplementation()
 std::shared_ptr<media::Player> media::ServiceImplementation::create_session(
         const media::Player::Configuration& conf)
 {
-    auto player = std::make_shared<media::PlayerImplementation<media::PlayerSkeleton>>(media::PlayerImplementation<media::PlayerSkeleton>::Configuration
+    auto player = std::make_shared<media::PlayerImplementation<media::PlayerSkeleton>>
+                    (media::PlayerImplementation<media::PlayerSkeleton>::Configuration
     {
         media::PlayerSkeleton::Configuration
         {
@@ -198,6 +199,7 @@ std::shared_ptr<media::Player> media::ServiceImplementation::create_session(
     });
 
     auto key = conf.key;
+    // *Note: on_client_disconnected() is called from a Binder thread context
     player->on_client_disconnected().connect([this, key]()
     {
         // Call remove_player_for_key asynchronously otherwise deadlock can occur
@@ -270,7 +272,8 @@ void media::ServiceImplementation::pause_other_sessions(media::Player::PlayerKey
         return;
     }
 
-    const std::shared_ptr<media::Player> current_player = d->configuration.player_store->player_for_key(key);
+    const std::shared_ptr<media::Player> current_player =
+            d->configuration.player_store->player_for_key(key);
 
     // We immediately make the player known as new current player.
     if (current_player->audio_stream_role() == media::Player::multimedia)
