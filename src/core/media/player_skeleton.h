@@ -57,6 +57,8 @@ class PlayerSkeleton : public core::ubuntu::media::Player
         std::shared_ptr<core::dbus::Service> service;
         // The session object that we want to expose the skeleton upon.
         std::shared_ptr<core::dbus::Object> session;
+        // The Service instance that manages Player instances
+        core::ubuntu::media::Service* player_service;
         // Our functional dependencies.
         apparmor::ubuntu::RequestContextResolver::Ptr request_context_resolver;
         apparmor::ubuntu::RequestAuthenticator::Ptr request_authenticator;

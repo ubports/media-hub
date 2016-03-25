@@ -131,7 +131,8 @@ struct media::ServiceSkeleton::Private
             key,
             impl->access_bus(),
             impl->access_service(),
-            impl->access_service()->add_object_for_path(op)
+            impl->access_service()->add_object_for_path(op),
+            impl
         };
 
         cout << "Session created by request of: " << msg->sender()
@@ -366,7 +367,8 @@ struct media::ServiceSkeleton::Private
                     key,
                     impl->access_bus(),
                     impl->access_service(),
-                    impl->access_service()->add_object_for_path(op)
+                    impl->access_service()->add_object_for_path(op),
+                    impl
                 };
 
                 auto session = impl->create_session(config);
@@ -787,6 +789,10 @@ struct media::ServiceSkeleton::Private
             std::cout << __PRETTY_FUNCTION__ << std::endl;
             // And announce that we can no longer be controlled.
             player.properties.can_control->set(false);
+            player.properties.can_play->set(false);
+            player.properties.can_pause->set(false);
+            player.properties.can_go_previous->set(false);
+            player.properties.can_go_next->set(false);
             current_player.reset();
         }
 
@@ -899,6 +905,11 @@ void media::ServiceSkeleton::set_current_player(media::Player::PlayerKey key)
     // We only care to allow the MPRIS controls to apply to multimedia player (i.e. audio, video)
     if (player->audio_stream_role() == media::Player::AudioStreamRole::multimedia)
         d->exported.set_current_player(player);
+}
+
+void media::ServiceSkeleton::reset_current_player()
+{
+    d->exported.reset_current_player();
 }
 
 void media::ServiceSkeleton::pause_other_sessions(media::Player::PlayerKey key)

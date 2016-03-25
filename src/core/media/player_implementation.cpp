@@ -17,6 +17,8 @@
  *              Jim Hodapp <jim.hodapp@canonical.com>
  */
 
+#include <core/media/service.h>
+
 #include "player_implementation.h"
 #include "util/timeout.h"
 
@@ -302,14 +304,14 @@ struct media::PlayerImplementation<Parent>::Private :
         }
     }
 
-    void update_mpris_properties(void)
+    void update_mpris_properties()
     {
-        bool has_previous =    track_list->has_previous()
+        const bool has_previous = track_list->has_previous()
                             or parent->Parent::loop_status() != Player::LoopStatus::none;
-        bool has_next =    track_list->has_next()
+        const bool has_next = track_list->has_next()
                         or parent->Parent::loop_status() != Player::LoopStatus::none;
-        auto n_tracks = track_list->tracks()->size();
-        bool has_tracks = (n_tracks > 0) ? true : false;
+        const auto n_tracks = track_list->tracks()->size();
+        const bool has_tracks = (n_tracks > 0) ? true : false;
 
         std::cout << "Updating MPRIS TrackList properties"
                   << "; Tracks: " << n_tracks
@@ -321,6 +323,24 @@ struct media::PlayerImplementation<Parent>::Private :
         parent->can_pause().set(has_tracks);
         parent->can_go_previous().set(has_previous);
         parent->can_go_next().set(has_next);
+    }
+
+    bool update_current_player(const media::Player::PlayerKey& key)
+    {
+        if (not config.parent.player_service)
+            return false;
+
+        config.parent.player_service->set_current_player(key);
+        return true;
+    }
+
+    bool reset_current_player()
+    {
+        if (not config.parent.player_service)
+            return false;
+
+        config.parent.player_service->reset_current_player();
+        return true;
     }
 
     // Our link back to our parent.
@@ -479,6 +499,11 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         // are cleared
         d->clear_wakelocks();
         d->track_list->reset();
+
+        if (not d->reset_current_player())
+            std::cerr << "Failed to reset current player in "
+                << __PRETTY_FUNCTION__ << std::endl;
+
         // And tell the outside world that the client has gone away
         d->on_client_disconnected();
     });
@@ -698,12 +723,35 @@ bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri)
     // Don't set new track as the current track to play since we're calling open_resource_for_uri above
     static const bool make_current = false;
     d->track_list->add_track_with_uri_at(uri, media::TrackList::after_empty_track(), make_current);
+
+    if (Parent::audio_stream_role() == media::Player::AudioStreamRole::multimedia)
+    {
+        std::cout << "==== Updating the current player from " << __PRETTY_FUNCTION__ << std::endl;
+        // This player will begin playing so make sure it's the current player
+        if (not d->update_current_player(d->config.key))
+        {
+            std::cerr << "Failed to update current player in " << __PRETTY_FUNCTION__ << std::endl;
+            return false;
+        }
+    }
+
     return ret;
 }
 
 template<typename Parent>
 bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri, const Player::HeadersType& headers)
 {
+    if (Parent::audio_stream_role() == media::Player::AudioStreamRole::multimedia)
+    {
+        std::cout << "==== Updating the current player from " << __PRETTY_FUNCTION__ << std::endl;
+        // This player will begin playing so make sure it's the current player
+        if (not d->update_current_player(d->config.key))
+        {
+            std::cerr << "Failed to update current player in " << __PRETTY_FUNCTION__ << std::endl;
+            return false;
+        }
+    }
+
     return d->engine->open_resource_for_uri(uri, headers);
 }
 
@@ -722,6 +770,14 @@ void media::PlayerImplementation<Parent>::previous()
 template<typename Parent>
 void media::PlayerImplementation<Parent>::play()
 {
+    if (Parent::audio_stream_role() == media::Player::AudioStreamRole::multimedia)
+    {
+        std::cout << "==== Updating the current player from " << __PRETTY_FUNCTION__ << std::endl;
+        // This player will begin playing so make sure it's the current player
+        if (not d->update_current_player(d->config.key))
+            std::cerr << "Failed to update current player in " << __PRETTY_FUNCTION__ << std::endl;
+    }
+
     d->engine->play();
 }
 

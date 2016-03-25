@@ -185,11 +185,13 @@ std::shared_ptr<media::Player> media::ServiceImplementation::create_session(
     auto player = std::make_shared<media::PlayerImplementation<media::PlayerSkeleton>>
                     (media::PlayerImplementation<media::PlayerSkeleton>::Configuration
     {
+        // Derive a PlayerSkeleton-specific Configuration based on Player::Configuration
         media::PlayerSkeleton::Configuration
         {
             conf.bus,
             conf.service,
             conf.session,
+            conf.player_service,
             d->request_context_resolver,
             d->request_authenticator
         },
@@ -260,6 +262,11 @@ std::shared_ptr<media::Player> media::ServiceImplementation::resume_session(medi
 void media::ServiceImplementation::set_current_player(Player::PlayerKey)
 {
   // no impl
+}
+
+void media::ServiceImplementation::reset_current_player()
+{
+    // no impl
 }
 
 void media::ServiceImplementation::pause_other_sessions(media::Player::PlayerKey key)
