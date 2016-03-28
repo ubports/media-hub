@@ -793,6 +793,18 @@ struct media::ServiceSkeleton::Private
             player.properties.can_pause->set(false);
             player.properties.can_go_previous->set(false);
             player.properties.can_go_next->set(false);
+
+            // Reset to null event connections
+            connections.seeked_to = the_empty_signal.connect([](){});
+            connections.duration_changed = the_empty_signal.connect([](){});
+            connections.position_changed = the_empty_signal.connect([](){});
+            connections.playback_status_changed = the_empty_signal.connect([](){});
+            connections.loop_status_changed = the_empty_signal.connect([](){});
+            connections.can_play_changed = the_empty_signal.connect([](){});
+            connections.can_pause_changed = the_empty_signal.connect([](){});
+            connections.can_go_previous_changed = the_empty_signal.connect([](){});
+            connections.can_go_next_changed = the_empty_signal.connect([](){});
+
             current_player.reset();
         }
 

@@ -271,8 +271,6 @@ void media::ServiceImplementation::reset_current_player()
 
 void media::ServiceImplementation::pause_other_sessions(media::Player::PlayerKey key)
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-
     if (not d->configuration.player_store->has_player_for_key(key))
     {
         cerr << "Could not find Player by key: " << key << endl;
