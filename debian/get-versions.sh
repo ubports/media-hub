@@ -59,6 +59,8 @@ else
 fi
 [ -n "$soversion" ]
 
+echo "Using SOVERSION $soversion in $SERIES." >&2
+
 echo ${full_version} >${output_dir}/libmedia-hub.full-version
 echo ${major} >${output_dir}/libmedia-hub.major-version
 echo ${minor} >${output_dir}/libmedia-hub.minor-version

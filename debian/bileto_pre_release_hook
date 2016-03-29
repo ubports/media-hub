@@ -49,7 +49,6 @@ dir=$1
 sh ${dir}/get-versions.sh ${dir} ${version_dir}
 
 export MEDIA_HUB_SOVERSION=$(cat "$version_dir/libmedia-hub.soversion")
-export MEDIA_HUB_VIVID_SOVERSION=$(cat "$version_dir/libmedia-hub.vivid-soversion")
 
 trap "rm -fr $version_dir" 0 INT TERM QUIT
 
