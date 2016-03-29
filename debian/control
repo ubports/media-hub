@@ -20,9 +20,9 @@ Build-Depends: cmake,
                libboost-program-options-dev (>=1.53),
                libboost-system-dev (>=1.53),
                libdbus-1-dev,
-               libdbus-cpp-dev (>= 5.0.0),
+               libdbus-cpp-dev (>= 4.3.0),
                libgoogle-glog-dev,
-               libhybris-dev,
+               libhybris-dev (>=0.1.0+git20131207+e452e83-0ubuntu30),
                libprocess-cpp-dev,
                libproperties-cpp-dev,
                libgstreamer1.0-dev,
@@ -42,8 +42,8 @@ Package: libmedia-hub-dev
 Section: libdevel
 Architecture: any
 Multi-Arch: same
-Depends: libmedia-hub-common4 (= ${binary:Version}),
-         libmedia-hub-client4 (= ${binary:Version}),
+Depends: libmedia-hub-common5 (= ${binary:Version}),
+         libmedia-hub-client5 (= ${binary:Version}),
          ${misc:Depends},
          libproperties-cpp-dev,
 Suggests: libmedia-hub-doc
@@ -64,7 +64,7 @@ Description: Simple and lightweight media playback service
  .
  This package contains the runtime.
 
-Package: libmedia-hub-common4
+Package: libmedia-hub-common5
 Architecture: any
 Multi-Arch: same
 Depends: ${misc:Depends},
@@ -75,7 +75,7 @@ Description: Simple and lightweight media playback service
  .
  This package contains the common libraries.
 
-Package: libmedia-hub-client4
+Package: libmedia-hub-client5
 Architecture: any
 Multi-Arch: same
 Depends: ${misc:Depends},
