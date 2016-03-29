@@ -64,8 +64,6 @@ EOF
     perl -pe 's/@([A-Z_]+)@/$ENV{$1} or die "$1 undefined"/eg' <"$1"
 }
 
-echo "soversion: $MEDIA_HUB_SOVERSION"
-
 process "$dir/control.in" >"$dir/control"
 process "$dir/libmedia-hub-client.install.in" >"$dir/libmedia-hub-client${MEDIA_HUB_SOVERSION}.install"
 process "$dir/libmedia-hub-common.install.in" >"$dir/libmedia-hub-common${MEDIA_HUB_SOVERSION}.install"
