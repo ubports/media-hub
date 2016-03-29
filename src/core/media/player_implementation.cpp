@@ -500,6 +500,8 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         d->clear_wakelocks();
         d->track_list->reset();
 
+        // This is not a fatal error but merely a warning that should
+        // be logged
         if (not d->reset_current_player())
             std::cerr << "Failed to reset current player in "
                 << __PRETTY_FUNCTION__ << std::endl;
@@ -713,7 +715,8 @@ bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri)
     d->track_list->reset();
 
     // If empty uri, give the same meaning as QMediaPlayer::setMedia("")
-    if (uri.empty()) {
+    if (uri.empty())
+    {
         cout << __PRETTY_FUNCTION__ << ": resetting current media" << endl;
         return true;
     }
@@ -727,7 +730,8 @@ bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri)
     if (Parent::audio_stream_role() == media::Player::AudioStreamRole::multimedia)
     {
         std::cout << "==== Updating the current player from " << __PRETTY_FUNCTION__ << std::endl;
-        // This player will begin playing so make sure it's the current player
+        // This player will begin playing so make sure it's the current player. If
+        // this operation fails it is not a fatal condition but should be logged
         if (not d->update_current_player(d->config.key))
         {
             std::cerr << "Failed to update current player in " << __PRETTY_FUNCTION__ << std::endl;
@@ -744,7 +748,8 @@ bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri, co
     if (Parent::audio_stream_role() == media::Player::AudioStreamRole::multimedia)
     {
         std::cout << "==== Updating the current player from " << __PRETTY_FUNCTION__ << std::endl;
-        // This player will begin playing so make sure it's the current player
+        // This player will begin playing so make sure it's the current player. If
+        // this operation fails it is not a fatal condition but should be logged
         if (not d->update_current_player(d->config.key))
         {
             std::cerr << "Failed to update current player in " << __PRETTY_FUNCTION__ << std::endl;
@@ -773,7 +778,8 @@ void media::PlayerImplementation<Parent>::play()
     if (Parent::audio_stream_role() == media::Player::AudioStreamRole::multimedia)
     {
         std::cout << "==== Updating the current player from " << __PRETTY_FUNCTION__ << std::endl;
-        // This player will begin playing so make sure it's the current player
+        // This player will begin playing so make sure it's the current player. If
+        // this operation fails it is not a fatal condition but should be logged
         if (not d->update_current_player(d->config.key))
             std::cerr << "Failed to update current player in " << __PRETTY_FUNCTION__ << std::endl;
     }
