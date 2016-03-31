@@ -727,36 +727,12 @@ bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri)
     static const bool make_current = false;
     d->track_list->add_track_with_uri_at(uri, media::TrackList::after_empty_track(), make_current);
 
-    if (Parent::audio_stream_role() == media::Player::AudioStreamRole::multimedia)
-    {
-        std::cout << "==== Updating the current player from " << __PRETTY_FUNCTION__ << std::endl;
-        // This player will begin playing so make sure it's the current player. If
-        // this operation fails it is not a fatal condition but should be logged
-        if (not d->update_current_player(d->config.key))
-        {
-            std::cerr << "Failed to update current player in " << __PRETTY_FUNCTION__ << std::endl;
-            return false;
-        }
-    }
-
     return ret;
 }
 
 template<typename Parent>
 bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri, const Player::HeadersType& headers)
 {
-    if (Parent::audio_stream_role() == media::Player::AudioStreamRole::multimedia)
-    {
-        std::cout << "==== Updating the current player from " << __PRETTY_FUNCTION__ << std::endl;
-        // This player will begin playing so make sure it's the current player. If
-        // this operation fails it is not a fatal condition but should be logged
-        if (not d->update_current_player(d->config.key))
-        {
-            std::cerr << "Failed to update current player in " << __PRETTY_FUNCTION__ << std::endl;
-            return false;
-        }
-    }
-
     return d->engine->open_resource_for_uri(uri, headers);
 }
 
