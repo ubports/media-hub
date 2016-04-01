@@ -502,9 +502,12 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
 
         // This is not a fatal error but merely a warning that should
         // be logged
-        if (not d->reset_current_player())
-            std::cerr << "Failed to reset current player in "
-                << __PRETTY_FUNCTION__ << std::endl;
+        if (Parent::audio_stream_role() == media::Player::AudioStreamRole::multimedia)
+        {
+            if (not d->reset_current_player())
+                std::cerr << "Failed to reset current player in "
+                    << __PRETTY_FUNCTION__ << std::endl;
+        }
 
         // And tell the outside world that the client has gone away
         d->on_client_disconnected();
