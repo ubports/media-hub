@@ -9,6 +9,7 @@ pkg_check_modules(TP_QT5 REQUIRED TelepathyQt5)
 
 include_directories(
     ${TP_QT5_INCLUDE_DIRS}
+    ${PROJECT_SOURCE_DIR}/src/
 )
 
 add_library(call-monitor STATIC
