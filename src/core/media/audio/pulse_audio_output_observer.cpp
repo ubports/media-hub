@@ -21,10 +21,13 @@
 
 #include <pulse/pulseaudio.h>
 
+#include "core/media/logger/logger.h"
+
 #include <cstdint>
 
 #include <map>
 #include <regex>
+#include <sstream>
 #include <string>
 
 namespace audio = core::ubuntu::media::audio;
@@ -245,7 +248,9 @@ struct audio::PulseAudioOutputObserver::Private
             std::get<1>(outputs.back()) | properties.external_output_state;
             std::get<1>(outputs.back()).changed().connect([](media::audio::OutputState state)
             {
-                std::cout << "Connection state for port changed to: " << state << std::endl;
+                std::stringstream ss;
+                ss << "Connection state for port changed to: " << state;
+                MH_DEBUG("%s", ss.str().c_str());
             });
         }
 
