@@ -25,6 +25,8 @@
 #include "meta_data_extractor.h"
 #include "playbin.h"
 
+#include "core/media/logger/logger.h"
+
 #include <cassert>
 
 namespace media = core::ubuntu::media;
@@ -67,8 +69,8 @@ struct gstreamer::Engine::Private
     {
         if (p.second == "playbin")
         {
-            std::cout << "State changed on playbin: "
-                      << gst_element_state_get_name(p.first.new_state) << std::endl;
+            MH_INFO("State changed on playbin: %s",
+                      gst_element_state_get_name(p.first.new_state));
             const auto status = gst_state_to_player_status(p.first);
             /*
              * When state moves to "paused" the pipeline is already set. We check that we
@@ -76,7 +78,7 @@ struct gstreamer::Engine::Private
              */
             if (status == media::Player::PlaybackStatus::paused &&
                     !playbin.can_play_streams()) {
-                std::cerr << "** Cannot play: some codecs are missing" << std::endl;
+                MH_ERROR("** Cannot play: some codecs are missing");
                 playbin.reset();
                 const media::Player::Error e = media::Player::Error::format_error;
                 error(e);
@@ -96,20 +98,20 @@ struct gstreamer::Engine::Private
             switch (ewi.error->code)
             {
             case GST_CORE_ERROR_FAILED:
-                std::cerr << "** Encountered a GST_CORE_ERROR_FAILED" << std::endl;
+                MH_ERROR("** Encountered a GST_CORE_ERROR_FAILED");
                 ret_error = media::Player::Error::resource_error;
                 break;
             case GST_CORE_ERROR_NEGOTIATION:
-                std::cerr << "** Encountered a GST_CORE_ERROR_NEGOTIATION" << std::endl;
+                MH_ERROR("** Encountered a GST_CORE_ERROR_NEGOTIATION");
                 ret_error = media::Player::Error::resource_error;
                 break;
             case GST_CORE_ERROR_MISSING_PLUGIN:
-                std::cerr << "** Encountered a GST_CORE_ERROR_MISSING_PLUGIN" << std::endl;
+                MH_ERROR("** Encountered a GST_CORE_ERROR_MISSING_PLUGIN");
                 ret_error = media::Player::Error::format_error;
                 break;
             default:
-                std::cerr << "** Encountered an unhandled core error: '"
-                    << ewi.debug << "' (code: " << ewi.error->code << ")" << std::endl;
+                MH_ERROR("** Encountered an unhandled core error: '%s' (code: %d)",
+                    ewi.debug, ewi.error->code);
                 ret_error = media::Player::Error::no_error;
                 break;
             }
@@ -119,36 +121,36 @@ struct gstreamer::Engine::Private
             switch (ewi.error->code)
             {
             case GST_RESOURCE_ERROR_FAILED:
-                std::cerr << "** Encountered a GST_RESOURCE_ERROR_FAILED" << std::endl;
+                MH_ERROR("** Encountered a GST_RESOURCE_ERROR_FAILED");
                 ret_error = media::Player::Error::resource_error;
                 break;
             case GST_RESOURCE_ERROR_NOT_FOUND:
-                std::cerr << "** Encountered a GST_RESOURCE_ERROR_NOT_FOUND" << std::endl;
+                MH_ERROR("** Encountered a GST_RESOURCE_ERROR_NOT_FOUND");
                 ret_error = media::Player::Error::resource_error;
                 break;
             case GST_RESOURCE_ERROR_OPEN_READ:
-                std::cerr << "** Encountered a GST_RESOURCE_ERROR_OPEN_READ" << std::endl;
+                MH_ERROR("** Encountered a GST_RESOURCE_ERROR_OPEN_READ");
                 ret_error = media::Player::Error::resource_error;
                 break;
             case GST_RESOURCE_ERROR_OPEN_WRITE:
-                std::cerr << "** Encountered a GST_RESOURCE_ERROR_OPEN_WRITE" << std::endl;
+                MH_ERROR("** Encountered a GST_RESOURCE_ERROR_OPEN_WRITE");
                 ret_error = media::Player::Error::resource_error;
                 break;
             case GST_RESOURCE_ERROR_READ:
-                std::cerr << "** Encountered a GST_RESOURCE_ERROR_READ" << std::endl;
+                MH_ERROR("** Encountered a GST_RESOURCE_ERROR_READ");
                 ret_error = media::Player::Error::resource_error;
                 break;
             case GST_RESOURCE_ERROR_WRITE:
-                std::cerr << "** Encountered a GST_RESOURCE_ERROR_WRITE" << std::endl;
+                MH_ERROR("** Encountered a GST_RESOURCE_ERROR_WRITE");
                 ret_error = media::Player::Error::resource_error;
                 break;
             case GST_RESOURCE_ERROR_NOT_AUTHORIZED:
-                std::cerr << "** Encountered a GST_RESOURCE_ERROR_NOT_AUTHORIZED" << std::endl;
+                MH_ERROR("** Encountered a GST_RESOURCE_ERROR_NOT_AUTHORIZED");
                 ret_error = media::Player::Error::access_denied_error;
                 break;
             default:
-                std::cerr << "** Encountered an unhandled resource error: '"
-                    << ewi.debug << "' (code: " << ewi.error->code << ")" << std::endl;
+                MH_ERROR("** Encountered an unhandled resource error: '%s' (code: %d)",
+                    ewi.debug, ewi.error->code);
                 ret_error = media::Player::Error::no_error;
                 break;
             }
@@ -158,28 +160,28 @@ struct gstreamer::Engine::Private
             switch (ewi.error->code)
             {
             case GST_STREAM_ERROR_FAILED:
-                std::cerr << "** Encountered a GST_STREAM_ERROR_FAILED" << std::endl;
+                MH_ERROR("** Encountered a GST_STREAM_ERROR_FAILED");
                 ret_error = media::Player::Error::resource_error;
                 break;
             case GST_STREAM_ERROR_CODEC_NOT_FOUND:
-                std::cerr << "** Encountered a GST_STREAM_ERROR_CODEC_NOT_FOUND" << std::endl;
+                MH_ERROR("** Encountered a GST_STREAM_ERROR_CODEC_NOT_FOUND");
                 // Missing codecs are handled later, when state switches to "paused"
                 ret_error = media::Player::Error::no_error;
                 break;
             case GST_STREAM_ERROR_DECODE:
-                std::cerr << "** Encountered a GST_STREAM_ERROR_DECODE" << std::endl;
+                MH_ERROR("** Encountered a GST_STREAM_ERROR_DECODE");
                 ret_error = media::Player::Error::format_error;
                 break;
             default:
-                std::cerr << "** Encountered an unhandled stream error: '"
-                    << ewi.debug << "' (code: " << ewi.error->code << ")" << std::endl;
+                MH_ERROR("** Encountered an unhandled stream error: '%s' code(%d)",
+                    ewi.debug, ewi.error->code);
                 ret_error = media::Player::Error::no_error;
                 break;
             }
         }
 
         if (ret_error != media::Player::Error::no_error) {
-            std::cerr << "Resetting playbin pipeline after unrecoverable error" << std::endl;
+            MH_ERROR("Resetting playbin pipeline after unrecoverable error");
             playbin.reset();
         }
         return ret_error;
@@ -201,7 +203,7 @@ struct gstreamer::Engine::Private
 
     void on_playbin_info(const gstreamer::Bus::Message::Detail::ErrorWarningInfo& ewi)
     {
-        std::cerr << "Got a playbin info message (no action taken): " << ewi.debug << std::endl;
+        MH_DEBUG("Got a playbin info message (no action taken): %s", ewi.debug);
     }
 
     void on_tag_available(const gstreamer::Bus::Message::Detail::Tag& tag)
@@ -437,8 +439,7 @@ bool gstreamer::Engine::play()
     if (result)
     {
         d->state = media::Engine::State::playing;
-        cout << __PRETTY_FUNCTION__ << endl;
-        cout << "Engine: playing uri: " << d->playbin.uri() << endl;
+        MH_INFO("Engine: playing uri: %s", d->playbin.uri().c_str());
         d->playback_status_changed(media::Player::PlaybackStatus::playing);
     }
 
@@ -450,7 +451,7 @@ bool gstreamer::Engine::stop()
     // No need to wait, and we can immediately return.
     if (d->state == media::Engine::State::stopped)
     {
-        std::cerr << "Current player state is already stopped - no need to change state to stopped" << std::endl;
+        MH_DEBUG("Current player state is already stopped - no need to change state to stopped");
         return true;
     }
 
@@ -458,7 +459,7 @@ bool gstreamer::Engine::stop()
     if (result)
     {
         d->state = media::Engine::State::stopped;
-        cout << __PRETTY_FUNCTION__ << endl;
+        MH_TRACE("");
         d->playback_status_changed(media::Player::PlaybackStatus::stopped);
     }
 
@@ -472,7 +473,7 @@ bool gstreamer::Engine::pause()
     if (result)
     {
         d->state = media::Engine::State::paused;
-        cout << __PRETTY_FUNCTION__ << endl;
+        MH_TRACE("");
         d->playback_status_changed(media::Player::PlaybackStatus::paused);
     }
 
