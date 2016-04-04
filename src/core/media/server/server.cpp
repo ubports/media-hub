@@ -21,6 +21,7 @@
 #include <core/media/track_list.h>
 
 #include "core/media/hashed_keyed_player_store.h"
+#include "core/media/logger/logger.h"
 #include "core/media/service_implementation.h"
 
 #include <core/posix/signal.h>
@@ -36,6 +37,38 @@ using namespace std;
 
 namespace
 {
+void logger_init()
+{
+    const char *level = ::getenv("MH_LOG_LEVEL");
+    // Default leve is kInfo
+    media::Logger::Severity severity{media::Logger::Severity::kInfo};
+    if (level)
+    {
+        if (strcmp(level, "trace") == 0)
+            severity = media::Logger::Severity::kTrace;
+        else if (strcmp(level, "debug") == 0)
+            severity = media::Logger::Severity::kDebug;
+        else if (strcmp(level, "info") == 0)
+            severity = media::Logger::Severity::kInfo;
+        else if (strcmp(level, "warning") == 0)
+            severity = media::Logger::Severity::kWarning;
+        else if (strcmp(level, "error") == 0)
+            severity = media::Logger::Severity::kError;
+        else if (strcmp(level, "fatal") == 0)
+            severity = media::Logger::Severity::kFatal;
+        else
+            std::cerr << "Invalid log level \"" << level
+                << "\", setting to info. Valid options: [trace, debug, info, warning, error, fatal]. "
+                << std::endl;
+    }
+    else
+        std::cout << "Using default log level: info" << std::endl;
+
+    media::Log().Init(severity);
+    cout << "Log level: " << severity << std::endl;
+    MH_INFO("Log (server.cpp): %p", &media::Log());
+}
+
 // All platform-specific initialization routines go here.
 void platform_init()
 {
@@ -65,6 +98,8 @@ int main()
     {
         trap->stop();
     });
+
+    logger_init();
 
     // Init platform-specific functionality.
     platform_init();
