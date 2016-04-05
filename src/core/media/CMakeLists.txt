@@ -43,6 +43,8 @@ add_library(
 
   ${MEDIA_HUB_HEADERS}
 
+  logger/logger.cpp
+
   player.cpp
   service.cpp
   track.cpp
@@ -71,6 +73,8 @@ target_link_libraries(
 
   media-hub-common
 
+  ${Boost_LDFLAGS}
+  ${Boost_LIBRARIES}
   ${DBUS_LIBRARIES}
   ${DBUS_CPP_LDFLAGS}
   ${GLog_LIBRARY}
