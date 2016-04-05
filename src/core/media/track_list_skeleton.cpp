@@ -578,7 +578,7 @@ media::Track::Id media::TrackListSkeleton::next()
             if (++it != shuffled_tracks().end()) {
                 std::stringstream ss;
                 ss << *it;
-                MH_INFO("Advancing to next track: ", ss.str().c_str());
+                MH_INFO("Advancing to next track: %s", ss.str().c_str());
                 set_current_track(*it);
                 go_to_track = true;
             }
@@ -590,7 +590,7 @@ media::Track::Id media::TrackListSkeleton::next()
             {
                 std::stringstream ss;
                 ss << *it;
-                MH_INFO("Advancing to next track: ", ss.str().c_str());
+                MH_INFO("Advancing to next track: %s", ss.str().c_str());
                 d->current_track = it;
                 go_to_track = true;
             }
@@ -602,7 +602,7 @@ media::Track::Id media::TrackListSkeleton::next()
     {
         std::stringstream ss;
         ss << *(current_iterator());
-        MH_DEBUG("next track id is ", ss.str().c_str());
+        MH_DEBUG("next track id is %s", ss.str().c_str());
         on_track_changed()(*(current_iterator()));
         const media::Track::Id id = *(current_iterator());
         // Signal the PlayerImplementation to play the next track
@@ -787,8 +787,7 @@ media::Player::LoopStatus media::TrackListSkeleton::loop_status() const
 
 void media::TrackListSkeleton::on_shuffle_changed(bool shuffle)
 {
-    cout << __PRETTY_FUNCTION__ << endl;
-
+    MH_TRACE("");
     set_shuffle(shuffle);
 }
 

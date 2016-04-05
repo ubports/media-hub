@@ -133,7 +133,7 @@ struct media::PlayerImplementation<Parent>::Private :
         {
             std::stringstream ss;
             ss << parent;
-            MH_INFO("Setting state for parent: %s", ss.str().c_str());
+            MH_DEBUG("Setting state for parent: %s", ss.str().c_str());
             switch(state)
             {
             case Engine::State::ready:
@@ -196,7 +196,7 @@ struct media::PlayerImplementation<Parent>::Private :
 
     void request_power_state()
     {
-        std::cout << __PRETTY_FUNCTION__ << std::endl;
+        MH_TRACE("");
         try
         {
             if (parent->is_video_source())
