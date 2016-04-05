@@ -40,7 +40,7 @@ namespace
 void logger_init()
 {
     const char *level = ::getenv("MH_LOG_LEVEL");
-    // Default leve is kInfo
+    // Default level is kInfo
     media::Logger::Severity severity{media::Logger::Severity::kInfo};
     if (level)
     {
@@ -66,7 +66,6 @@ void logger_init()
 
     media::Log().Init(severity);
     cout << "Log level: " << severity << std::endl;
-    MH_INFO("Log (server.cpp): %p", &media::Log());
 }
 
 // All platform-specific initialization routines go here.
