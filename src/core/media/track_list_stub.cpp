@@ -28,6 +28,8 @@
 #include "mpris/player.h"
 #include "mpris/track_list.h"
 
+#include "core/media/logger/logger.h"
+
 #include <core/dbus/property.h>
 #include <core/dbus/types/object_path.h>
 #include <core/dbus/types/variant.h>
@@ -111,43 +113,43 @@ struct media::TrackListStub::Private
         {
             dbus.on_track_added->connect([this](const Track::Id& id)
             {
-                std::cout << "OnTrackAdded signal arrived via the bus." << std::endl;
+                MH_DEBUG("OnTrackAdded signal arrived via the bus.");
                 on_track_added(id);
             });
 
             dbus.on_tracks_added->connect([this](const media::TrackList::ContainerURI& tracks)
             {
-                std::cout << "OnTracksAdded signal arrived via the bus." << std::endl;
+                MH_DEBUG("OnTracksAdded signal arrived via the bus.");
                 on_tracks_added(tracks);
             });
 
             dbus.on_track_moved->connect([this](const media::TrackList::TrackIdTuple& ids)
             {
-                std::cout << "OnTrackMoved signal arrived via the bus." << std::endl;
+                MH_DEBUG("OnTrackMoved signal arrived via the bus.");
                 on_track_moved(ids);
             });
 
             dbus.on_track_removed->connect([this](const Track::Id& id)
             {
-                std::cout << "OnTrackRemoved signal arrived via the bus." << std::endl;
+                MH_DEBUG("OnTrackRemoved signal arrived via the bus.");
                 on_track_removed(id);
             });
 
             dbus.on_track_list_reset->connect([this](void)
             {
-                std::cout << "OnTrackListReset signal arrived via the bus." << std::endl;
+                MH_DEBUG("OnTrackListReset signal arrived via the bus.");
                 on_track_list_reset();
             });
 
             dbus.on_track_list_replaced->connect([this](const media::TrackList::ContainerTrackIdTuple& list)
             {
-                std::cout << "OnTrackListReplaced signal arrived via the bus." << std::endl;
+                MH_DEBUG("OnTrackListReplaced signal arrived via the bus.");
                 on_track_list_replaced(list);
             });
 
             dbus.on_track_changed->connect([this](const Track::Id& id)
             {
-                std::cout << "OnTrackChanged signal arrived via the bus." << std::endl;
+                MH_DEBUG("OnTrackChanged signal arrived via the bus.");
                 on_track_changed(id);
             });
         }
