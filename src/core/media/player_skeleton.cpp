@@ -31,6 +31,8 @@
 #include "mpris/metadata.h"
 #include "mpris/player.h"
 #include "mpris/playlists.h"
+
+#include "core/media/logger/logger.h"
 #include "util/uri_check.h"
 
 #include <core/dbus/object.h>
@@ -189,7 +191,7 @@ struct media::PlayerSkeleton::Private
             {
                 const std::string err_str = {"Warning: Failed to open uri " + uri +
                      " because it can't be found."};
-                std::cerr << err_str << std::endl;
+                MH_ERROR("%s", err_str.c_str());
                 reply = dbus::Message::make_error(
                             in,
                             mpris::Player::Error::UriNotFound::name,
@@ -207,7 +209,7 @@ struct media::PlayerSkeleton::Private
                 {
                     const std::string err_str = {"Warning: Failed to authenticate necessary "
                         "apparmor permissions to open uri: " + std::get<1>(result)};
-                    std::cerr << err_str << std::endl;
+                    MH_ERROR("%s", err_str.c_str());
                     reply = dbus::Message::make_error(
                                 in,
                                 mpris::Player::Error::InsufficientAppArmorPermissions::name,
@@ -236,7 +238,7 @@ struct media::PlayerSkeleton::Private
             {
                 const std::string err_str = {"Warning: Failed to open uri " + uri +
                      " because it can't be found."};
-                std::cerr << err_str << std::endl;
+                MH_ERROR("%s", err_str.c_str());
                 reply = dbus::Message::make_error(
                             in,
                             mpris::Player::Error::UriNotFound::name,
@@ -254,7 +256,7 @@ struct media::PlayerSkeleton::Private
                 {
                     const std::string err_str = {"Warning: Failed to authenticate necessary "
                         "apparmor permissions to open uri: " + std::get<1>(result)};
-                    std::cerr << err_str << std::endl;
+                    MH_ERROR("%s", err_str.c_str());
                     reply = dbus::Message::make_error(
                                 in,
                                 mpris::Player::Error::InsufficientAppArmorPermissions::name,

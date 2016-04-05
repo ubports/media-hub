@@ -18,13 +18,15 @@
 
 #include <core/media/service.h>
 
+#include "core/media/logger/logger.h"
+
 #include "service_stub.h"
 
 namespace media = core::ubuntu::media;
 
 const std::shared_ptr<media::Service> media::Service::Client::instance()
 {
-    std::cout << "Creating a new static Service instance" << std::endl;
+    MH_TRACE("");
     static std::shared_ptr<media::Service> instance{new media::ServiceStub()};
     return instance;
 }

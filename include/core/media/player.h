@@ -229,6 +229,27 @@ inline std::ostream& operator<<(std::ostream& out, Player::LoopStatus loop_statu
     return out;
 }
 
+inline std::ostream& operator<<(std::ostream& out, Player::Error e)
+{
+    switch (e)
+    {
+        case Player::Error::no_error:
+            return out << "Error::no_error";
+        case Player::Error::resource_error:
+            return out << "Error::resource_error";
+        case Player::Error::format_error:
+            return out << "Error::format_error";
+        case Player::Error::network_error:
+            return out << "Error::network_error";
+        case Player::Error::access_denied_error:
+            return out << "Error::access_denied_error";
+        case Player::Error::service_missing_error:
+            return out << "Error::service_missing_error";
+    }
+
+    return out;
+}
+
 }
 }
 }
