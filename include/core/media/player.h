@@ -245,6 +245,8 @@ inline std::ostream& operator<<(std::ostream& out, Player::Error e)
             return out << "Error::access_denied_error";
         case Player::Error::service_missing_error:
             return out << "Error::service_missing_error";
+        default:
+            return out << "Unsupported Player error: " << e;
     }
 
     return out;

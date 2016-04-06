@@ -109,8 +109,8 @@ apparmor::ubuntu::Context::Context(const std::string& name)
       has_package_name_{process_context_name(str(), match_, pkg_name_)}
 {
     MH_DEBUG("apparmor profile name: %s", name);
-    MH_DEBUG("is_unconfined(): %d", is_unconfined());
-    MH_DEBUG("has_package_name(): %s", has_package_name());
+    MH_DEBUG("is_unconfined(): %s", (is_unconfined() ? "true" : "false"));
+    MH_DEBUG("has_package_name(): %s", (has_package_name() ? "true" : "false"));
     if (not is_unconfined() and not is_unity() and not has_package_name())
         throw std::logic_error
         {
