@@ -22,7 +22,6 @@
 
 #include "core/media/logger/logger.h"
 
-#include <iostream>
 #include <regex>
 
 namespace apparmor = core::ubuntu::media::apparmor;
@@ -109,7 +108,7 @@ apparmor::ubuntu::Context::Context(const std::string& name)
       unity_{name == unity_name},
       has_package_name_{process_context_name(str(), match_, pkg_name_)}
 {
-    MH_DEBUG("apparmor profile name: %s", name.c_str());
+    MH_DEBUG("apparmor profile name: %s", name);
     MH_DEBUG("is_unconfined(): %d", is_unconfined());
     MH_DEBUG("has_package_name(): %s", has_package_name());
     if (not is_unconfined() and not is_unity() and not has_package_name())
@@ -165,8 +164,8 @@ apparmor::ubuntu::RequestAuthenticator::Result apparmor::ubuntu::ExistingAuthent
 
     Uri parsed_uri = parse_uri(uri);
 
-    MH_DEBUG("context.profile_name(): %s", context.profile_name().c_str());
-    MH_DEBUG("parsed_uri.path: %s", parsed_uri.path.c_str());
+    MH_DEBUG("context.profile_name(): %s", context.profile_name());
+    MH_DEBUG("parsed_uri.path: %s", parsed_uri.path);
 
     // All confined apps can access their own files
     if (parsed_uri.path.find(std::string(".local/share/" + context.package_name() + "/")) != std::string::npos ||

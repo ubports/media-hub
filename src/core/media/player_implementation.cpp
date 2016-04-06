@@ -32,9 +32,7 @@
 
 #include <memory>
 #include <exception>
-#include <iostream>
 #include <mutex>
-#include <sstream>
 
 #define UNUSED __attribute__((unused))
 
@@ -78,30 +76,22 @@ struct media::PlayerImplementation<Parent>::Private :
         // Poor man's logging of release/acquire events.
         display_state_lock->acquired().connect([](media::power::DisplayState state)
         {
-            std::stringstream ss;
-            ss << state;
-            MH_INFO("Acquired new display state: %s", ss.str().c_str());
+            MH_INFO("Acquired new display state: %s", state);
         });
 
         display_state_lock->released().connect([](media::power::DisplayState state)
         {
-            std::stringstream ss;
-            ss << state;
-            MH_INFO("Released display state: %s", ss.str().c_str());
+            MH_INFO("Released display state: %s", state);
         });
 
         system_state_lock->acquired().connect([](media::power::SystemState state)
         {
-            std::stringstream ss;
-            ss << state;
-            MH_INFO("Acquired new system state: %s", ss.str().c_str());
+            MH_INFO("Acquired new system state: %s", state);
         });
 
         system_state_lock->released().connect([](media::power::SystemState state)
         {
-            std::stringstream ss;
-            ss << state;
-            MH_INFO("Released system state: %s", ss.str().c_str());
+            MH_INFO("Released system state: %s", state);
         });
     }
 
@@ -131,9 +121,7 @@ struct media::PlayerImplementation<Parent>::Private :
          */
         return [this](const Engine::State& state)
         {
-            std::stringstream ss;
-            ss << parent;
-            MH_DEBUG("Setting state for parent: %s", ss.str().c_str());
+            MH_DEBUG("Setting state for parent: %s", parent);
             switch(state)
             {
             case Engine::State::ready:
@@ -187,9 +175,7 @@ struct media::PlayerImplementation<Parent>::Private :
     {
         return [this](const media::Player::PlaybackStatus& status)
         {
-            std::stringstream ss;
-            ss << status;
-            MH_INFO("Emiting playback_status_changed signal: %s", ss.str().c_str());
+            MH_INFO("Emiting playback_status_changed signal: %s", status);
             parent->emit_playback_status_changed(status);
         };
     }
@@ -226,7 +212,7 @@ struct media::PlayerImplementation<Parent>::Private :
 
     void clear_wakelock(const wakelock_clear_t &wakelock)
     {
-        cout << __PRETTY_FUNCTION__ << endl;
+        MH_TRACE("");
         try
         {
             switch (wakelock)
@@ -308,8 +294,8 @@ struct media::PlayerImplementation<Parent>::Private :
             // Using a TrackList for playback, added tracks via add_track(), but open_uri hasn't
             // been called yet to load a media resource
             MH_INFO("Calling d->engine->open_resource_for_uri() for first track added only: %s",
-                      uri.c_str());
-            MH_INFO("\twith a Track::Id: %s", id.c_str());
+                      uri);
+            MH_INFO("\twith a Track::Id: %s", id);
             static const bool do_pipeline_reset = false;
             engine->open_resource_for_uri(uri, do_pipeline_reset);
         }
@@ -431,9 +417,7 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
     // When the client changes the loop status, make sure to update the TrackList
     Parent::loop_status().changed().connect([this](media::Player::LoopStatus loop_status)
     {
-        std::stringstream ss;
-        ss << loop_status;
-        MH_INFO("LoopStatus: %s", ss.str().c_str());
+        MH_INFO("LoopStatus: %s", loop_status);
         d->track_list->on_loop_status_changed(loop_status);
     });
 
@@ -480,7 +464,7 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         const Track::UriType uri = d->track_list->query_uri_for_track(d->track_list->next());
         if (prev_track_id != d->track_list->current() && !uri.empty())
         {
-            MH_INFO("Advancing to next track on playbin: %s", uri.c_str());
+            MH_INFO("Advancing to next track on playbin: %s", uri);
             static const bool do_pipeline_reset = false;
             d->engine->open_resource_for_uri(uri, do_pipeline_reset);
         }
@@ -543,8 +527,8 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         const Track::UriType uri = d->track_list->query_uri_for_track(id);
         if (!uri.empty())
         {
-            MH_INFO("Setting next track on playbin (on_go_to_track signal): %s", uri.c_str());
-            MH_INFO("\twith a Track::Id: %s", id.c_str());
+            MH_INFO("Setting next track on playbin (on_go_to_track signal): %s", uri);
+            MH_INFO("\twith a Track::Id: %s", id);
             static const bool do_pipeline_reset = true;
             d->engine->open_resource_for_uri(uri, do_pipeline_reset);
         }
@@ -737,19 +721,21 @@ void media::PlayerImplementation<Parent>::previous()
 template<typename Parent>
 void media::PlayerImplementation<Parent>::play()
 {
+    MH_TRACE("");
     d->engine->play();
 }
 
 template<typename Parent>
 void media::PlayerImplementation<Parent>::pause()
 {
+    MH_TRACE("");
     d->engine->pause();
 }
 
 template<typename Parent>
 void media::PlayerImplementation<Parent>::stop()
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    MH_TRACE("");
     d->engine->stop();
 }
 

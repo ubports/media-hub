@@ -35,35 +35,13 @@ struct Utils
     // Merely used as a namespace.
     Utils() = delete;
 
-    // StringStartsWith returns true iff text[0:prefix.size()-1] == prefix.
-    static bool StringStartsWith(const std::string &text, const std::string &prefix);
-    // ParseHex parses an integer with base 16 from str.
-    static int ParseHex(const std::string &str);
-    // StringSplit splits text up for the given separator sep and returns a vector of all tokens.
-    static std::vector<std::string> StringSplit(const std::string &text, char sep);
     // Sprintf - much like what you would expect :)
     template<typename... Types>
     static std::string Sprintf(const std::string& fmt_str, Types&&... args);
     // GetEnv - returns a variable value from the environment
-    static std::string GetEnvValue(const std::string &name, const std::string &default_value = "");
-    // CreateFile - create an empty file at the specified path
-    static bool CreateFile(const std::string &file_path);
-    // IsEnvSet - check if an environment variable is set or not
-    static bool IsEnvSet(const std::string &name);
-    // GetNowNs - get a timestamp in nanoseconds
     static uint64_t GetNowNs();
     // GetNowUs - get a timestamp in microseconds
     static uint64_t GetNowUs();
-    // Hexdump - dump a byte array as string
-    static std::string Hexdump(const uint8_t *data, uint32_t size);
-    // SetThreadName - set the name thread this is running in
-    static void SetThreadName(const std::string &name);
-
-    // CreateUniquePtrWithDeleter - create a std::unique_ptr with a custom deleter
-    template <typename Owned, typename Deleter>
-    inline std::unique_ptr<Owned, Deleter> CreateUniquePtrWithDeleter(Owned* owned, Deleter&& deleter) {
-        return {owned, deleter};
-    }
 };
 
 namespace impl {

@@ -136,10 +136,8 @@ struct media::ServiceSkeleton::Private
             impl->access_service()->add_object_for_path(op)
         };
 
-        std::stringstream ss;
-        ss << op;
         MH_DEBUG("Session created by request of: %s, key: %d, uuid: %d, path: %s",
-                msg->sender().c_str(), key, uuid, ss.str().c_str());
+                msg->sender(), key, uuid, op);
 
         try
         {
@@ -150,7 +148,7 @@ struct media::ServiceSkeleton::Private
             request_context_resolver->resolve_context_for_dbus_name_async(msg->sender(),
                     [this, key, msg](const media::apparmor::ubuntu::Context& context)
             {
-                MH_DEBUG(" -- app_name='%s', attached", context.str().c_str());
+                MH_DEBUG(" -- app_name='%s', attached", context.str());
                 player_owner_map.emplace(std::make_pair(key, std::make_tuple(context.str(), true, msg->sender())));
             });
 
@@ -235,7 +233,7 @@ struct media::ServiceSkeleton::Private
                 {
                     auto info = player_owner_map.at(key);
                     MH_DEBUG(" -- reattach app_name='%s', info='%s', '%s'",
-                            context.str().c_str(), std::get<0>(info).c_str(), std::get<2>(info).c_str());
+                            context.str(), std::get<0>(info), std::get<2>(info));
                     if (std::get<0>(info) == context.str()) {
                         std::get<1>(info) = true; // Set to Attached
                         std::get<2>(info) = msg->sender(); // Register new owner
@@ -310,7 +308,7 @@ struct media::ServiceSkeleton::Private
                 {
                     auto info = player_owner_map.at(key);
                     MH_DEBUG(" -- Destroying app_name='%s', info='%s', '%s'",
-                            context.str().c_str(), std::get<0>(info).c_str(), std::get<2>(info).c_str());
+                            context.str(), std::get<0>(info), std::get<2>(info));
                     if (std::get<0>(info) == context.str()) {
                         player_owner_map.erase(key);
 

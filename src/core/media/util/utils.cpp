@@ -29,44 +29,6 @@
 
 namespace media = core::ubuntu::media;
 
-bool media::Utils::StringStartsWith(const std::string &text, const std::string &prefix) {
-    return text.compare(0, prefix.size(), prefix) == 0;
-}
-
-int media::Utils::ParseHex(const std::string &str) {
-    // No need to manually skip hex indicating prefix, see:
-    //   http://en.cppreference.com/w/cpp/string/basic_string/stol
-    return std::stoi(str, nullptr, 16);
-}
-
-std::vector<std::string> media::Utils::StringSplit(const std::string &text, char sep) {
-  std::vector<std::string> tokens;
-  return boost::algorithm::split(tokens, text, boost::is_from_range(sep, sep), boost::algorithm::token_compress_on);
-}
-
-std::string media::Utils::GetEnvValue(const std::string &name, const std::string &default_value) {
-    char *value = getenv(name.c_str());
-    if (!value)
-        return default_value;
-    return std::string(value);
-}
-
-bool media::Utils::IsEnvSet(const std::string &name) {
-    return getenv(name.c_str()) != nullptr;
-}
-
-bool media::Utils::CreateFile(const std::string &file_path) {
-    boost::filesystem::path p(file_path);
-    if (boost::filesystem::exists(p))
-        return false;
-
-    std::ofstream of;
-    of.open(file_path, std::ofstream::out);
-    of << "";
-    of.close();
-    return true;
-}
-
 uint64_t media::Utils::GetNowNs() {
    struct timespec ts;
    memset(&ts, 0, sizeof(ts));
@@ -76,46 +38,4 @@ uint64_t media::Utils::GetNowNs() {
 
 uint64_t media::Utils::GetNowUs() {
     return GetNowNs() / 1000;
-}
-
-std::string media::Utils::Hexdump(const uint8_t *data, uint32_t size) {
-    unsigned char buff[17];
-    const uint8_t *pc = data;
-    std::stringstream buffer;
-
-    if (size == 0) {
-        buffer << "NULL" << std::endl;
-        return buffer.str();
-    }
-
-    uint32_t i;
-    for (i = 0; i < size; i++) {
-        if ((i % 16) == 0) {
-            if (i != 0)
-                buffer << media::Utils::Sprintf("  %s", buff) << std::endl;
-
-            buffer << media::Utils::Sprintf("%02x   ", i);
-        }
-
-        buffer << media::Utils::Sprintf(" %02x", static_cast<int>(pc[i]));
-
-        if ((pc[i] < 0x20) || (pc[i] > 0x7e))
-            buff[i % 16] = '.';
-        else
-            buff[i % 16] = pc[i];
-        buff[(i % 16) + 1] = '\0';
-    }
-
-    while ((i % 16) != 0) {
-        buffer << "   ";
-        i++;
-    }
-
-    buffer << media::Utils::Sprintf("  %s", buff) << std::endl;
-
-    return buffer.str();
-}
-
-void media::Utils::SetThreadName(const std::string &name) {
-    pthread_setname_np(pthread_self(), name.c_str());
 }

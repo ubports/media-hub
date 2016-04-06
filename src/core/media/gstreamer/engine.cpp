@@ -439,7 +439,7 @@ bool gstreamer::Engine::play()
     if (result)
     {
         d->state = media::Engine::State::playing;
-        MH_INFO("Engine: playing uri: %s", d->playbin.uri().c_str());
+        MH_INFO("Engine: playing uri: %s", d->playbin.uri());
         d->playback_status_changed(media::Player::PlaybackStatus::playing);
     }
 

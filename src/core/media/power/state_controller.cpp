@@ -23,8 +23,6 @@
 #include <core/dbus/macros.h>
 #include <core/dbus/object.h>
 
-#include <iostream>
-
 namespace media = core::ubuntu::media;
 
 namespace com { namespace canonical {
@@ -112,7 +110,7 @@ struct DisplayStateLock : public media::power::StateController::Lock<media::powe
                     {
                         if (result.is_error())
                         {
-                            MH_ERROR("%s", result.error().print().c_str());
+                            MH_ERROR("%s", result.error().print());
                             return;
                         }
 
@@ -151,7 +149,7 @@ struct DisplayStateLock : public media::power::StateController::Lock<media::powe
                         {
                             if (result.is_error())
                             {
-                                MH_ERROR("%s", result.error().print().c_str());
+                                MH_ERROR("%s", result.error().print());
                                 return;
                             }
 
@@ -238,7 +236,7 @@ struct SystemStateLock : public media::power::StateController::Lock<media::power
         {
             if (result.is_error())
             {
-                MH_ERROR("%s", result.error().print().c_str());
+                MH_ERROR("%s", result.error().print());
                 return;
             }
 
@@ -289,7 +287,7 @@ struct SystemStateLock : public media::power::StateController::Lock<media::power
         object->invoke_method_asynchronously_with_callback<com::canonical::powerd::Interface::clearSysState, void>([this, wp, state](const core::dbus::Result<void>& result)
         {
             if (result.is_error())
-                MH_ERROR("%s", result.error().print().c_str());
+                MH_ERROR("%s", result.error().print());
 
             if (auto sp = wp.lock())
             {

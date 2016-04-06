@@ -42,7 +42,6 @@
 
 #include <iostream>
 #include <limits>
-#include <sstream>
 #include <cstdint>
 
 namespace dbus = core::dbus;
@@ -264,9 +263,9 @@ struct media::TrackListSkeleton::Private
 
         auto id_it = find(impl->tracks().get().begin(), impl->tracks().get().end(), track);
         if (id_it == impl->tracks().get().end()) {
-            ostringstream err_str;
+            stringstream err_str;
             err_str << "Track " << track << " not found in track list";
-            MH_WARNING("%s", err_str.str().c_str());
+            MH_WARNING("%s", err_str.str());
             auto reply = dbus::Message::make_error(
                             msg,
                             mpris::TrackList::Error::TrackNotFound::name,
@@ -576,9 +575,7 @@ media::Track::Id media::TrackListSkeleton::next()
         {
             auto it = get_current_shuffled();
             if (++it != shuffled_tracks().end()) {
-                std::stringstream ss;
-                ss << *it;
-                MH_INFO("Advancing to next track: %s", ss.str().c_str());
+                MH_INFO("Advancing to next track: %s", *it);
                 set_current_track(*it);
                 go_to_track = true;
             }
@@ -588,9 +585,7 @@ media::Track::Id media::TrackListSkeleton::next()
             const auto it = std::next(current_iterator());
             if (not is_last_track(it))
             {
-                std::stringstream ss;
-                ss << *it;
-                MH_INFO("Advancing to next track: %s", ss.str().c_str());
+                MH_INFO("Advancing to next track: %s", *it);
                 d->current_track = it;
                 go_to_track = true;
             }
@@ -600,9 +595,7 @@ media::Track::Id media::TrackListSkeleton::next()
 
     if (go_to_track)
     {
-        std::stringstream ss;
-        ss << *(current_iterator());
-        MH_DEBUG("next track id is %s", ss.str().c_str());
+        MH_DEBUG("next track id is %s", *(current_iterator()));
         on_track_changed()(*(current_iterator()));
         const media::Track::Id id = *(current_iterator());
         // Signal the PlayerImplementation to play the next track
@@ -799,9 +792,7 @@ const core::Property<media::TrackList::Container>& media::TrackListSkeleton::tra
 const core::Signal<media::TrackList::ContainerTrackIdTuple>& media::TrackListSkeleton::on_track_list_replaced() const
 {
     // Print the TrackList instance
-    std::stringstream ss;
-    ss << *this;
-    MH_DEBUG("%s", ss.str().c_str());
+    MH_DEBUG("%s", *this);
     return d->signals.on_track_list_replaced;
 }
 

@@ -191,7 +191,7 @@ struct media::PlayerSkeleton::Private
             {
                 const std::string err_str = {"Warning: Failed to open uri " + uri +
                      " because it can't be found."};
-                MH_ERROR("%s", err_str.c_str());
+                MH_ERROR("%s", err_str);
                 reply = dbus::Message::make_error(
                             in,
                             mpris::Player::Error::UriNotFound::name,
@@ -209,7 +209,7 @@ struct media::PlayerSkeleton::Private
                 {
                     const std::string err_str = {"Warning: Failed to authenticate necessary "
                         "apparmor permissions to open uri: " + std::get<1>(result)};
-                    MH_ERROR("%s", err_str.c_str());
+                    MH_ERROR("%s", err_str);
                     reply = dbus::Message::make_error(
                                 in,
                                 mpris::Player::Error::InsufficientAppArmorPermissions::name,
@@ -238,7 +238,7 @@ struct media::PlayerSkeleton::Private
             {
                 const std::string err_str = {"Warning: Failed to open uri " + uri +
                      " because it can't be found."};
-                MH_ERROR("%s", err_str.c_str());
+                MH_ERROR("%s", err_str);
                 reply = dbus::Message::make_error(
                             in,
                             mpris::Player::Error::UriNotFound::name,
@@ -256,7 +256,7 @@ struct media::PlayerSkeleton::Private
                 {
                     const std::string err_str = {"Warning: Failed to authenticate necessary "
                         "apparmor permissions to open uri: " + std::get<1>(result)};
-                    MH_ERROR("%s", err_str.c_str());
+                    MH_ERROR("%s", err_str);
                     reply = dbus::Message::make_error(
                                 in,
                                 mpris::Player::Error::InsufficientAppArmorPermissions::name,

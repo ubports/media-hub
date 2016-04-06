@@ -27,7 +27,6 @@
 
 #include <map>
 #include <regex>
-#include <sstream>
 #include <string>
 
 namespace audio = core::ubuntu::media::audio;
@@ -248,9 +247,7 @@ struct audio::PulseAudioOutputObserver::Private
             std::get<1>(outputs.back()) | properties.external_output_state;
             std::get<1>(outputs.back()).changed().connect([](media::audio::OutputState state)
             {
-                std::stringstream ss;
-                ss << "Connection state for port changed to: " << state;
-                MH_DEBUG("%s", ss.str().c_str());
+                MH_DEBUG("Connection state for port changed to: %s", state);
             });
         }
 
@@ -322,11 +319,9 @@ struct audio::PulseAudioOutputObserver::Private
             if (std::get<0>(active_sink) != info->index)
                 continue;
 
-            std::stringstream ss;
-            ss << std::boolalpha << pa::is_port_available_on_sink(info, std::get<0>(element));
-            MH_INFO("Checking if port is available ->  %s", ss.str().c_str());
-            bool available = pa::is_port_available_on_sink(info, std::get<0>(element));
-
+            MH_INFO("Checking if port is available -> %s",
+                    pa::is_port_available_on_sink(info, std::get<0>(element)));
+            const bool available = pa::is_port_available_on_sink(info, std::get<0>(element));
             if (available)
             {
                 std::get<1>(element) = audio::OutputState::Earpiece;

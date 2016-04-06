@@ -180,10 +180,8 @@ struct media::PlayerStub::Private
 
             dbus.playback_status_changed->connect([this](const media::Player::PlaybackStatus& status)
             {
-                std::stringstream ss;
-                ss << status;
                 MH_DEBUG("PlaybackStatusChanged signal arrived via the bus (status: %s)",
-                        ss.str().c_str());
+                        status);
                 playback_status_changed(status);
             });
 
@@ -195,9 +193,7 @@ struct media::PlayerStub::Private
 
             dbus.error->connect([this](const media::Player::Error& e)
             {
-                std::stringstream ss;
-                ss << e;
-                MH_DEBUG("Error signal arrived via the bus (error: %s)", ss.str().c_str());
+                MH_DEBUG("Error signal arrived via the bus (error: %s)", e);
                 error(e);
             });
         }

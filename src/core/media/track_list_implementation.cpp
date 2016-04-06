@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <random>
+#include <sstream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <tuple>
@@ -127,14 +128,14 @@ void media::TrackListImplementation::add_track_with_uri_at(
         const media::Track::Id& position,
         bool make_current)
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    MH_TRACE("");
 
     std::stringstream ss;
     ss << d->object->path().as_string() << "/" << d->track_counter++;
     Track::Id id{ss.str()};
 
-    MH_DEBUG("Adding Track::Id: %s", id.c_str());
-    MH_DEBUG("\tURI: %s", uri.c_str());
+    MH_DEBUG("Adding Track::Id: %s", id);
+    MH_DEBUG("\tURI: %s", uri);
 
     const auto current = get_current_track();
 
@@ -161,7 +162,7 @@ void media::TrackListImplementation::add_track_with_uri_at(
             set_current_track(current);
         }
 
-        MH_DEBUG("Signaling that we just added track id: %s", id.c_str());
+        MH_DEBUG("Signaling that we just added track id: %s", id);
         // Signal to the client that a track was added to the TrackList
         on_track_added()(id);
 
@@ -186,8 +187,8 @@ void media::TrackListImplementation::add_tracks_with_uri_at(const ContainerURI& 
         std::stringstream ss;
         ss << d->object->path().as_string() << "/" << d->track_counter++;
         Track::Id id{ss.str()};
-        MH_DEBUG("Adding Track::Id: %s", id.c_str());
-        MH_DEBUG("\tURI: %s", uri.c_str());
+        MH_DEBUG("Adding Track::Id: %s", id);
+        MH_DEBUG("\tURI: %s", uri);
 
         tmp.push_back(id);
 
@@ -231,7 +232,7 @@ bool media::TrackListImplementation::move_track(const media::Track::Id& id,
 {
     MH_TRACE("");
 
-    std::cout << "-----------------------------------------------------" << std::endl;
+    MH_DEBUG("-----------------------------------------------------");
     if (id.empty() or to.empty())
     {
         MH_ERROR("Can't move track since 'id' or 'to' are empty");
@@ -283,9 +284,7 @@ bool media::TrackListImplementation::move_track(const media::Track::Id& id,
                 {
                     throw media::TrackList::Errors::FailedToMoveTrack();
                 }
-                std::stringstream ss;
-                ss << *current_iterator();
-                MH_DEBUG("*** Updated current_iterator, id: %s", ss.str().c_str());
+                MH_DEBUG("*** Updated current_iterator, id: %s", *current_iterator());
             }
             else
             {
@@ -301,9 +300,7 @@ bool media::TrackListImplementation::move_track(const media::Track::Id& id,
             MH_DEBUG("TrackList after move");
             for(const auto track : tracks().get())
             {
-                std::stringstream ss;
-                ss << track;
-                MH_DEBUG("%s", ss.str().c_str());
+                MH_DEBUG("%s", track);
             }
             const media::TrackList::TrackIdTuple ids = std::make_tuple(id, to);
             // Signal to the client that track 'id' was moved within the TrackList
@@ -350,7 +347,7 @@ void media::TrackListImplementation::remove_track(const media::Track::Id& id)
 
 void media::TrackListImplementation::go_to(const media::Track::Id& track)
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    MH_TRACE("");
     // Signal the Player instance to go to a specific track for playback
     on_go_to_track()(track);
     on_track_changed()(track);

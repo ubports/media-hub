@@ -155,7 +155,6 @@ static void print_refs(const gstreamer::Playbin &pb, const char *func)
 {
     using namespace std;
 
-    cout << "Log (playbin.cpp): " << &media::Log() << std::endl;
     MH_DEBUG("%s", func);
     if (pb.pipeline)
         MH_DEBUG("pipeline:   %d", GST_OBJECT_REFCOUNT(pb.pipeline));
@@ -406,8 +405,8 @@ media::Player::Orientation gstreamer::Playbin::orientation_lut(const gchar *orie
 /** Sets the new audio stream role on the pulsesink in playbin */
 void gstreamer::Playbin::set_audio_stream_role(media::Player::AudioStreamRole new_audio_role)
 {
-    std::string role_str("props,media.role=" + get_audio_role_str(new_audio_role));
-    MH_INFO("Audio stream role: %s", role_str.c_str());
+    const std::string role_str("props,media.role=" + get_audio_role_str(new_audio_role));
+    MH_INFO("Audio stream role: %s", role_str);
 
     GstStructure *props = gst_structure_from_string (role_str.c_str(), NULL);
     if (audio_sink != nullptr && props != nullptr)
@@ -478,7 +477,7 @@ void gstreamer::Playbin::set_uri(
         {
             // First decode the URI just in case it's partially encoded already
             tmp_uri = decode_uri(uri);
-            MH_DEBUG("File URI was encoded, now decoded: %s", tmp_uri.c_str());
+            MH_DEBUG("File URI was encoded, now decoded: %s", tmp_uri);
         }
         tmp_uri = encode_uri(tmp_uri);
     }
@@ -740,7 +739,7 @@ std::string gstreamer::Playbin::get_file_content_type(const std::string& uri) co
         return std::string("audio/video/");
     }
 
-    MH_INFO("Found content type: %s", content_type.c_str());
+    MH_INFO("Found content type: %s", content_type);
 
     return content_type;
 }
