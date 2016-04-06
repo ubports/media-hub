@@ -48,7 +48,7 @@ struct BoostLogLogger : public media::Logger {
 
         boost::log::formatter formatter = boost::log::expressions::stream
             << "[" << attrs::Severity << " "
-            << boost::log::expressions::format_date_time< boost::posix_time::ptime >("Timestamp", "%Y-%m-%d %H:%M:%S")
+            << boost::log::expressions::format_date_time< boost::posix_time::ptime >("Timestamp", "%Y-%m-%d %H:%M:%S.%f")
             << "] "
             << boost::log::expressions::if_(boost::log::expressions::has_attr(attrs::Location))
                [
