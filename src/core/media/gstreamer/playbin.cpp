@@ -25,7 +25,8 @@
 #include <hybris/media/surface_texture_client_hybris.h>
 #include <hybris/media/media_codec_layer.h>
 
-#include "../util/uri_check.h"
+#include "core/media/logger/logger.h"
+#include "core/media/util/uri_check.h"
 
 #include <utility>
 
@@ -154,13 +155,13 @@ static void print_refs(const gstreamer::Playbin &pb, const char *func)
 {
     using namespace std;
 
-    cout << func << endl;
+    MH_DEBUG("%s", func);
     if (pb.pipeline)
-        cout << "pipeline:   " << GST_OBJECT_REFCOUNT(pb.pipeline) << endl;
+        MH_DEBUG("pipeline:   %d", GST_OBJECT_REFCOUNT(pb.pipeline));
     if (pb.video_sink)
-        cout << "video_sink: " << GST_OBJECT_REFCOUNT(pb.video_sink) << endl;
+        MH_DEBUG("video_sink: %d", GST_OBJECT_REFCOUNT(pb.video_sink));
     if (pb.audio_sink)
-        cout << "audio_sink: " << GST_OBJECT_REFCOUNT(pb.audio_sink) << endl;
+        MH_DEBUG("audio_sink: %d", GST_OBJECT_REFCOUNT(pb.audio_sink));
 }
 #endif
 
@@ -183,7 +184,7 @@ gstreamer::Playbin::~Playbin()
 
 void gstreamer::Playbin::reset()
 {
-    std::cout << "Client died, resetting pipeline" << std::endl;
+    MH_INFO("Client died, resetting pipeline");
     // When the client dies, tear down the current pipeline and get it
     // in a state that is ready for the next client that connects to the
     // service
@@ -198,19 +199,19 @@ void gstreamer::Playbin::reset()
 
 void gstreamer::Playbin::reset_pipeline()
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-    auto ret = gst_element_set_state(pipeline, GST_STATE_NULL);
-    switch(ret)
+    MH_TRACE("");
+    const auto ret = gst_element_set_state(pipeline, GST_STATE_NULL);
+    switch (ret)
     {
     case GST_STATE_CHANGE_FAILURE:
-        std::cout << "Failed to reset the pipeline state. Client reconnect may not function properly." << std::endl;
+        MH_WARNING("Failed to reset the pipeline state. Client reconnect may not function properly.");
         break;
     case GST_STATE_CHANGE_NO_PREROLL:
     case GST_STATE_CHANGE_SUCCESS:
     case GST_STATE_CHANGE_ASYNC:
         break;
     default:
-        std::cout << "Failed to reset the pipeline state. Client reconnect may not function properly." << std::endl;
+        MH_WARNING("Failed to reset the pipeline state. Client reconnect may not function properly.");
     }
     file_type = MEDIA_FILE_TYPE_NONE;
     is_missing_audio_codec = false;
@@ -225,7 +226,7 @@ void gstreamer::Playbin::process_message_element(GstMessage *message)
       return;
 
     gchar *desc = gst_missing_plugin_message_get_description(message);
-    std::cerr << "Missing plugin: " << desc << std::endl;
+    MH_WARNING("Missing plugin: %s", desc);
     g_free(desc);
 
     const GstStructure *msg_data = gst_message_get_structure(message);
@@ -234,13 +235,13 @@ void gstreamer::Playbin::process_message_element(GstMessage *message)
 
     GstCaps *caps;
     if (!gst_structure_get(msg_data, "detail", GST_TYPE_CAPS, &caps, NULL)) {
-        std::cerr << __PRETTY_FUNCTION__ << ": No detail" << std::endl;
+        MH_ERROR("No detail");
         return;
     }
 
     GstStructure *caps_data = gst_caps_get_structure(caps, 0);
     if (!caps_data) {
-        std::cerr << __PRETTY_FUNCTION__ << ": No caps data" << std::endl;
+        MH_ERROR("No caps data");
         return;
     }
 
@@ -250,7 +251,7 @@ void gstreamer::Playbin::process_message_element(GstMessage *message)
     else if (strstr(mime, "video"))
         is_missing_video_codec = true;
 
-    std::cerr << "Missing decoder for " << mime << std::endl;
+    MH_ERROR("Missing decoder for %s", mime);
 }
 
 void gstreamer::Playbin::on_new_message_async(const Bus::Message& message)
@@ -324,7 +325,7 @@ void gstreamer::Playbin::setup_pipeline_for_audio_video()
                     ::getenv("CORE_UBUNTU_MEDIA_SERVICE_AUDIO_SINK_NAME"),
                     "audio-sink");
 
-        std::cout << "audio_sink: " << ::getenv("CORE_UBUNTU_MEDIA_SERVICE_AUDIO_SINK_NAME") << std::endl;
+        MH_INFO("audio_sink: %s", ::getenv("CORE_UBUNTU_MEDIA_SERVICE_AUDIO_SINK_NAME"));
 
         g_object_set (
                     pipeline,
@@ -339,7 +340,7 @@ void gstreamer::Playbin::setup_pipeline_for_audio_video()
             ::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME"),
             "video-sink");
 
-        std::cout << "video_sink: " << ::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME") << std::endl;
+        MH_INFO("video_sink: %s", ::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME"));
 
         g_object_set (
                 pipeline,
@@ -404,16 +405,17 @@ media::Player::Orientation gstreamer::Playbin::orientation_lut(const gchar *orie
 /** Sets the new audio stream role on the pulsesink in playbin */
 void gstreamer::Playbin::set_audio_stream_role(media::Player::AudioStreamRole new_audio_role)
 {
-    std::string role_str("props,media.role=" + get_audio_role_str(new_audio_role));
-    std::cout << "Audio stream role: " << role_str << std::endl;
+    const std::string role_str("props,media.role=" + get_audio_role_str(new_audio_role));
+    MH_INFO("Audio stream role: %s", role_str);
 
     GstStructure *props = gst_structure_from_string (role_str.c_str(), NULL);
-    if (audio_sink != nullptr && props != nullptr) {
+    if (audio_sink != nullptr && props != nullptr)
+    {
         g_object_set (audio_sink, "stream-properties", props, NULL);
-    } else {
-        std::cerr <<
-            "Warning: couldn't set audio stream role - couldn't get audio_sink from pipeline" <<
-            std::endl;
+    }
+    else
+    {
+        MH_WARNING("Couldn't set audio stream role - couldn't get audio_sink from pipeline");
     }
 
     gst_structure_free (props);
@@ -475,9 +477,7 @@ void gstreamer::Playbin::set_uri(
         {
             // First decode the URI just in case it's partially encoded already
             tmp_uri = decode_uri(uri);
-#ifdef VERBOSE_DEBUG
-            std::cout << "File URI was encoded, now decoded: " << tmp_uri << std::endl;
-#endif
+            MH_DEBUG("File URI was encoded, now decoded: %s", tmp_uri);
         }
         tmp_uri = encode_uri(tmp_uri);
     }
@@ -538,7 +538,7 @@ bool gstreamer::Playbin::set_state_and_wait(GstState new_state)
 
     auto ret = gst_element_set_state(pipeline, new_state);
 
-    std::cout << __PRETTY_FUNCTION__ << ": requested state change." << std::endl;
+    MH_DEBUG("Requested state change.");
 
     bool result = false; GstState current, pending;
     switch(ret)
@@ -570,15 +570,15 @@ bool gstreamer::Playbin::set_state_and_wait(GstState new_state)
         }
         catch (const std::exception& e)
         {
-            std::cerr << "Problem querying video dimensions: " << e.what() << std::endl;
+            MH_WARNING("Problem querying video dimensions: %s", e.what());
         }
         catch (...)
         {
-            std::cerr << "Problem querying video dimensions." << std::endl;
+            MH_WARNING("Problem querying video dimensions.");
         }
 
 #ifdef DEBUG_GST_PIPELINE
-        std::cout << "Dumping pipeline dot file" << std::endl;
+        MH_DEBUG("Dumping pipeline dot file");
         GST_DEBUG_BIN_TO_DOT_FILE((GstBin*)pipeline, GST_DEBUG_GRAPH_SHOW_ALL, "pipeline");
 #endif
     }
@@ -656,17 +656,13 @@ std::string gstreamer::Playbin::encode_uri(const std::string& uri) const
     // We have a URI and it is already percent encoded
     if (uri_scheme and strlen(uri_scheme) > 0 and uri_check->is_encoded())
     {
-#ifdef VERBOSE_DEBUG
-        std::cout << "Is a URI and is already percent encoded" << std::endl;
-#endif
+        MH_DEBUG("Is a URI and is already percent encoded");
         encoded_uri = uri;
     }
     // We have a URI but it's not already percent encoded
     else if (uri_scheme and strlen(uri_scheme) > 0 and !uri_check->is_encoded())
     {
-#ifdef VERBOSE_DEBUG
-        std::cout << "Is a URI and is not already percent encoded" << std::endl;
-#endif
+        MH_DEBUG("Is a URI and is not already percent encoded");
         gchar *encoded = g_uri_escape_string(uri.c_str(),
                                                    "!$&'()*+,;=:/?[]@", // reserved chars
                                                    TRUE); // Allow UTF-8 chars
@@ -681,9 +677,7 @@ std::string gstreamer::Playbin::encode_uri(const std::string& uri) const
     else // We have a path and not a URI. Turn it into a full URI and encode it
     {
         GError *error = nullptr;
-#ifdef VERBOSE_DEBUG
-        std::cout << "Is a path and is not already percent encoded" << std::endl;
-#endif
+        MH_DEBUG("Is a path and is not already percent encoded");
         gchar *str = g_filename_to_uri(uri.c_str(), nullptr, &error);
         if (!str)
         {
@@ -694,8 +688,7 @@ std::string gstreamer::Playbin::encode_uri(const std::string& uri) const
         g_free(str);
         if (error != nullptr)
         {
-            std::cerr << "Warning: failed to get actual track content type: " << error->message
-                      << std::endl;
+            MH_WARNING("Failed to get actual track content type: %s", error->message);
             g_error_free(error);
             g_free(str);
             g_free(uri_scheme);
@@ -742,11 +735,11 @@ std::string gstreamer::Playbin::get_file_content_type(const std::string& uri) co
     const std::string content_type {file_info_from_uri(encoded_uri)};
     if (content_type.empty())
     {
-        std::cerr << "Warning: failed to get actual track content type" << std::endl;
+        MH_WARNING("Failed to get actual track content type");
         return std::string("audio/video/");
     }
 
-    std::cout << "Found content type: " << content_type << std::endl;
+    MH_INFO("Found content type: %s", content_type);
 
     return content_type;
 }
@@ -758,7 +751,7 @@ bool gstreamer::Playbin::is_audio_file(const std::string& uri) const
 
     if (get_file_content_type(uri).find("audio/") == 0)
     {
-        std::cout << "Found audio content" << std::endl;
+        MH_INFO("Found audio content");
         return true;
     }
 
@@ -772,7 +765,7 @@ bool gstreamer::Playbin::is_video_file(const std::string& uri) const
 
     if (get_file_content_type(uri).find("video/") == 0)
     {
-        std::cout << "Found video content" << std::endl;
+        MH_INFO("Found video content");
         return true;
     }
 

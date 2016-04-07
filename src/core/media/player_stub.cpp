@@ -30,10 +30,13 @@
 
 #include "mpris/player.h"
 
+#include "core/media/logger/logger.h"
+
 #include <core/dbus/property.h>
 #include <core/dbus/types/object_path.h>
 
 #include <limits>
+#include <sstream>
 
 #define UNUSED __attribute__((unused))
 
@@ -159,37 +162,38 @@ struct media::PlayerStub::Private
         {
             dbus.seeked_to->connect([this](std::uint64_t value)
             {
-                std::cout << "SeekedTo signal arrived via the bus." << std::endl;
+                MH_DEBUG("SeekedTo signal arrived via the bus.");
                 seeked_to(value);
             });
 
             dbus.about_to_finish->connect([this]()
             {
-                std::cout << "AboutToFinish signal arrived via the bus." << std::endl;
+                MH_DEBUG("AboutToFinish signal arrived via the bus.");
                 about_to_finish();
             });
 
             dbus.end_of_stream->connect([this]()
             {
-                std::cout << "EndOfStream signal arrived via the bus." << std::endl;
+                MH_DEBUG("EndOfStream signal arrived via the bus.");
                 end_of_stream();
             });
 
             dbus.playback_status_changed->connect([this](const media::Player::PlaybackStatus& status)
             {
-                std::cout << "PlaybackStatusChanged signal arrived via the bus (Status: " << status << ")" << std::endl;
+                MH_DEBUG("PlaybackStatusChanged signal arrived via the bus (status: %s)",
+                        status);
                 playback_status_changed(status);
             });
 
             dbus.video_dimension_changed->connect([this](const media::video::Dimensions dimensions)
             {
-                std::cout << "VideoDimensionChanged signal arrived via the bus." << std::endl;
+                MH_DEBUG("VideoDimensionChanged signal arrived via the bus.");
                 video_dimension_changed(dimensions);
             });
 
             dbus.error->connect([this](const media::Player::Error& e)
             {
-                std::cout << "Error signal arrived via the bus (Error: " << e << ")" << std::endl;
+                MH_DEBUG("Error signal arrived via the bus (error: %s)", e);
                 error(e);
             });
         }

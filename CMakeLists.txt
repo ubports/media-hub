@@ -43,7 +43,7 @@ include(CTest)
 include(GNUInstallDirs)
 
 find_package(PkgConfig)
-find_package(Boost COMPONENTS filesystem system program_options REQUIRED)
+find_package(Boost COMPONENTS filesystem log system thread program_options REQUIRED)
 find_package(GLog)
 pkg_check_modules(DBUS dbus-1 REQUIRED)
 pkg_check_modules(DBUS_CPP dbus-cpp REQUIRED)

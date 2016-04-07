@@ -33,6 +33,9 @@
 #include "recorder_observer.h"
 #include "telephony/call_monitor.h"
 
+#include "util/timeout.h"
+#include "core/media/logger/logger.h"
+
 #include <boost/asio.hpp>
 
 #include <string>
@@ -44,8 +47,6 @@
 #include <utility>
 
 #include <pulse/pulseaudio.h>
-
-#include "util/timeout.h"
 
 namespace media = core::ubuntu::media;
 
@@ -126,16 +127,16 @@ media::ServiceImplementation::ServiceImplementation(const Configuration& configu
         switch (state)
         {
         case audio::OutputState::Earpiece:
-            std::cout << "AudioOutputObserver reports that output is now Headphones/Headset." << std::endl;
+            MH_INFO("AudioOutputObserver reports that output is now Headphones/Headset.");
             break;
         case audio::OutputState::Speaker:
-            std::cout << "AudioOutputObserver reports that output is now Speaker." << std::endl;
+            MH_INFO("AudioOutputObserver reports that output is now Speaker.");
             // Whatever player session is currently playing, make sure it is NOT resumed after
             // a phonecall is hung up
             pause_all_multimedia_sessions(resume_play_after_phonecall);
             break;
         case audio::OutputState::External:
-            std::cout << "AudioOutputObserver reports that output is now External." << std::endl;
+            MH_INFO("AudioOutputObserver reports that output is now External.");
             break;
         }
         d->audio_output_state = state;
@@ -146,13 +147,13 @@ media::ServiceImplementation::ServiceImplementation(const Configuration& configu
         const bool resume_play_after_phonecall = true;
         switch (state) {
         case media::telephony::CallMonitor::State::OffHook:
-            std::cout << "Got call started signal, pausing all multimedia sessions" << std::endl;
+            MH_INFO("Got call started signal, pausing all multimedia sessions");
             // Whatever player session is currently playing, make sure it gets resumed after
             // a phonecall is hung up
             pause_all_multimedia_sessions(resume_play_after_phonecall);
             break;
         case media::telephony::CallMonitor::State::OnHook:
-            std::cout << "Got call ended signal, resuming paused multimedia sessions" << std::endl;
+            MH_INFO("Got call ended signal, resuming paused multimedia sessions");
             resume_paused_multimedia_sessions(false);
             break;
         }
@@ -217,10 +218,10 @@ std::shared_ptr<media::Player> media::ServiceImplementation::create_session(
                     d->configuration.player_store->remove_player_for_key(key);
             }
             catch (const std::out_of_range &e) {
-                std::cerr << "Failed to look up Player instance for key " << key
-                << ", no valid Player instance for that key value. Removal of Player from Player store"
-                << " might not have completed. This most likely means that media-hub-server has"
-                << " crashed and restarted." << std::endl;
+                MH_WARNING("Failed to look up Player instance for key %d"
+                    ", no valid Player instance for that key value. Removal of Player from Player store"
+                    " might not have completed. This most likely means that media-hub-server has"
+                    " crashed and restarted.", key);
                 return;
             }
         });
@@ -264,11 +265,11 @@ void media::ServiceImplementation::set_current_player(Player::PlayerKey)
 
 void media::ServiceImplementation::pause_other_sessions(media::Player::PlayerKey key)
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    MH_TRACE("");
 
     if (not d->configuration.player_store->has_player_for_key(key))
     {
-        cerr << "Could not find Player by key: " << key << endl;
+        MH_WARNING("Could not find Player by key: %d", key);
         return;
     }
 
@@ -291,7 +292,7 @@ void media::ServiceImplementation::pause_other_sessions(media::Player::PlayerKey
             current_player->audio_stream_role() == media::Player::multimedia &&
             other_player->audio_stream_role() == media::Player::multimedia)
         {
-            cout << "Pausing Player with key: " << other_key << endl;
+            MH_INFO("Pausing Player with key: %d", other_key);
             other_player->pause();
         }
     });
@@ -306,8 +307,8 @@ void media::ServiceImplementation::pause_all_multimedia_sessions(bool resume_pla
         {
             auto paused_player_pair = std::make_pair(key, resume_play_after_phonecall);
             d->paused_sessions.push_back(paused_player_pair);
-            std::cout << "Pausing Player with key: " << key << ", resuming after phone call? "
-                << (resume_play_after_phonecall ? "yes" : "no") << std::endl;
+            MH_INFO("Pausing Player with key: %d, resuming after phone call? %s", key,
+                (resume_play_after_phonecall ? "yes" : "no"));
             player->pause();
         }
     });
@@ -324,17 +325,17 @@ void media::ServiceImplementation::resume_paused_multimedia_sessions(bool resume
                 player = d->configuration.player_store->player_for_key(key);
             }
             catch (const std::out_of_range &e) {
-                std::cerr << "Failed to look up Player instance for key " << key
-                    << ", no valid Player instance for that key value and cannot automatically resume"
-                    << " paused players. This most likely means that media-hub-server has crashed and"
-                    << " restarted." << std::endl;
+                MH_WARNING("Failed to look up Player instance for key %d"
+                    ", no valid Player instance for that key value and cannot automatically resume"
+                    " paused players. This most likely means that media-hub-server has crashed and"
+                    " restarted.", key);
                 return;
             }
             // Only resume video playback if explicitly desired
             if ((resume_video_sessions || player->is_audio_source()) && resume_play_after_phonecall)
                 player->play();
             else
-                std::cout << "Not auto-resuming video player session or other type of player session." << std::endl;
+                MH_INFO("Not auto-resuming video player session or other type of player session.");
         });
 
     d->paused_sessions.clear();
@@ -350,16 +351,16 @@ void media::ServiceImplementation::resume_multimedia_session()
         player = d->configuration.player_store->player_for_key(d->resume_key);
     }
     catch (const std::out_of_range &e) {
-        std::cerr << "Failed to look up Player instance for key " << d->resume_key
-            << ", no valid Player instance for that key value and cannot automatically resume"
-            << " paused Player. This most likely means that media-hub-server has crashed and"
-            << " restarted." << std::endl;
+        MH_WARNING("Failed to look up Player instance for key %d"
+            ", no valid Player instance for that key value and cannot automatically resume"
+            " paused Player. This most likely means that media-hub-server has crashed and"
+            " restarted.", d->resume_key);
         return;
     }
 
     if (player->playback_status() == Player::paused)
     {
-        cout << "Resuming playback of Player with key: " << d->resume_key << endl;
+        MH_INFO("Resuming playback of Player with key: %d", d->resume_key);
         player->play();
         d->resume_key = std::numeric_limits<std::uint32_t>::max();
     }

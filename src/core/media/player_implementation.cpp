@@ -28,9 +28,10 @@
 
 #include "gstreamer/engine.h"
 
+#include "core/media/logger/logger.h"
+
 #include <memory>
 #include <exception>
-#include <iostream>
 #include <mutex>
 
 #define UNUSED __attribute__((unused))
@@ -75,22 +76,22 @@ struct media::PlayerImplementation<Parent>::Private :
         // Poor man's logging of release/acquire events.
         display_state_lock->acquired().connect([](media::power::DisplayState state)
         {
-            std::cout << "Acquired new display state: " << state << std::endl;
+            MH_INFO("Acquired new display state: %s", state);
         });
 
         display_state_lock->released().connect([](media::power::DisplayState state)
         {
-            std::cout << "Released display state: " << state << std::endl;
+            MH_INFO("Released display state: %s", state);
         });
 
         system_state_lock->acquired().connect([](media::power::SystemState state)
         {
-            std::cout << "Acquired new system state: "  << state << std::endl;
+            MH_INFO("Acquired new system state: %s", state);
         });
 
         system_state_lock->released().connect([](media::power::SystemState state)
         {
-            std::cout << "Released system state: "  << state << std::endl;
+            MH_INFO("Released system state: %s", state);
         });
     }
 
@@ -120,7 +121,7 @@ struct media::PlayerImplementation<Parent>::Private :
          */
         return [this](const Engine::State& state)
         {
-            std::cout << "Setting state for parent: " << parent << std::endl;
+            MH_DEBUG("Setting state for parent: %s", parent);
             switch(state)
             {
             case Engine::State::ready:
@@ -139,7 +140,7 @@ struct media::PlayerImplementation<Parent>::Private :
                 parent->meta_data_for_current_track().set(std::get<1>(engine->track_meta_data().get()));
                 // And update our playback status.
                 parent->playback_status().set(media::Player::playing);
-                std::cout << "Requesting power state" << std::endl;
+                MH_INFO("Requesting power state");
                 request_power_state();
                 break;
             }
@@ -174,45 +175,44 @@ struct media::PlayerImplementation<Parent>::Private :
     {
         return [this](const media::Player::PlaybackStatus& status)
         {
-            std::cout << "Emiting playback_status_changed signal: " << status << std::endl;
+            MH_INFO("Emiting playback_status_changed signal: %s", status);
             parent->emit_playback_status_changed(status);
         };
     }
 
     void request_power_state()
     {
-        std::cout << __PRETTY_FUNCTION__ << std::endl;
+        MH_TRACE("");
         try
         {
             if (parent->is_video_source())
             {
                 if (++display_wakelock_count == 1)
                 {
-                    std::cout << "Requesting new display wakelock." << std::endl;
+                    MH_INFO("Requesting new display wakelock.");
                     display_state_lock->request_acquire(media::power::DisplayState::on);
-                    std::cout << "Requested new display wakelock." << std::endl;
+                    MH_INFO("Requested new display wakelock.");
                 }
             }
             else
             {
                 if (++system_wakelock_count == 1)
                 {
-                    std::cout << "Requesting new system wakelock." << std::endl;
+                    MH_INFO("Requesting new system wakelock.");
                     system_state_lock->request_acquire(media::power::SystemState::active);
-                    std::cout << "Requested new system wakelock." << std::endl;
+                    MH_INFO("Requested new system wakelock.");
                 }
             }
         }
         catch(const std::exception& e)
         {
-            std::cerr << "Warning: failed to request power state: ";
-            std::cerr << e.what() << std::endl;
+            MH_WARNING("Failed to request power state: %s", e.what());
         }
     }
 
     void clear_wakelock(const wakelock_clear_t &wakelock)
     {
-        cout << __PRETTY_FUNCTION__ << endl;
+        MH_TRACE("");
         try
         {
             switch (wakelock)
@@ -223,7 +223,7 @@ struct media::PlayerImplementation<Parent>::Private :
                     // Only actually clear the system wakelock once the count reaches zero
                     if (--system_wakelock_count == 0)
                     {
-                        std::cout << "Clearing system wakelock." << std::endl;
+                        MH_INFO("Clearing system wakelock.");
                         system_state_lock->request_release(media::power::SystemState::active);
                     }
                     break;
@@ -231,19 +231,18 @@ struct media::PlayerImplementation<Parent>::Private :
                     // Only actually clear the display wakelock once the count reaches zero
                     if (--display_wakelock_count == 0)
                     {
-                        std::cout << "Clearing display wakelock." << std::endl;
+                        MH_INFO("Clearing display wakelock.");
                         display_state_lock->request_release(media::power::DisplayState::on);
                     }
                     break;
                 case wakelock_clear_t::WAKELOCK_CLEAR_INVALID:
                 default:
-                    cerr << "Can't clear invalid wakelock type" << endl;
+                    MH_WARNING("Can't clear invalid wakelock type");
             }
         }
         catch(const std::exception& e)
         {
-            std::cerr << "Warning: failed to clear power state: ";
-            std::cerr << e.what() << std::endl;
+            MH_WARNING("Failed to request clear power state: %s", e.what());
         }
     }
 
@@ -294,9 +293,9 @@ struct media::PlayerImplementation<Parent>::Private :
         {
             // Using a TrackList for playback, added tracks via add_track(), but open_uri hasn't
             // been called yet to load a media resource
-            std::cout << "Calling d->engine->open_resource_for_uri() for first track added only: "
-                      << uri << std::endl;
-            std::cout << "\twith a Track::Id: " << id << std::endl;
+            MH_INFO("Calling d->engine->open_resource_for_uri() for first track added only: %s",
+                      uri);
+            MH_INFO("\twith a Track::Id: %s", id);
             static const bool do_pipeline_reset = false;
             engine->open_resource_for_uri(uri, do_pipeline_reset);
         }
@@ -311,10 +310,10 @@ struct media::PlayerImplementation<Parent>::Private :
         auto n_tracks = track_list->tracks()->size();
         bool has_tracks = (n_tracks > 0) ? true : false;
 
-        std::cout << "Updating MPRIS TrackList properties"
-                  << "; Tracks: " << n_tracks
-                  << ", has_previous: " << has_previous
-                  << ", has_next: " << has_next << std::endl;
+        MH_INFO("Updating MPRIS TrackList properties:");
+        MH_INFO("\tTracks: %d", n_tracks);
+        MH_INFO("\thas_previous: %d", has_previous);
+        MH_INFO("\thas_next: %d", has_next);
 
         // Update properties
         parent->can_play().set(has_tracks);
@@ -418,7 +417,7 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
     // When the client changes the loop status, make sure to update the TrackList
     Parent::loop_status().changed().connect([this](media::Player::LoopStatus loop_status)
     {
-        std::cout << "LoopStatus: " << loop_status << std::endl;
+        MH_INFO("LoopStatus: %s", loop_status);
         d->track_list->on_loop_status_changed(loop_status);
     });
 
@@ -465,7 +464,7 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         const Track::UriType uri = d->track_list->query_uri_for_track(d->track_list->next());
         if (prev_track_id != d->track_list->current() && !uri.empty())
         {
-            std::cout << "Advancing to next track on playbin: " << uri << std::endl;
+            MH_INFO("Advancing to next track on playbin: %s", uri);
             static const bool do_pipeline_reset = false;
             d->engine->open_resource_for_uri(uri, do_pipeline_reset);
         }
@@ -508,7 +507,7 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         if (d->engine->state() != gstreamer::Engine::State::ready
                 && d->engine->state() != gstreamer::Engine::State::stopped)
         {
-            std::cout << "End of tracklist reached, stopping playback" << std::endl;
+            MH_INFO("End of tracklist reached, stopping playback");
             d->engine->stop();
         }
     });
@@ -528,15 +527,15 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         const Track::UriType uri = d->track_list->query_uri_for_track(id);
         if (!uri.empty())
         {
-            std::cout << "Setting next track on playbin (on_go_to_track signal): " << uri << std::endl;
-            std::cout << "\twith a Track::Id: " << id << std::endl;
+            MH_INFO("Setting next track on playbin (on_go_to_track signal): %s", uri);
+            MH_INFO("\twith a Track::Id: %s", id);
             static const bool do_pipeline_reset = true;
             d->engine->open_resource_for_uri(uri, do_pipeline_reset);
         }
 
         if (auto_play)
         {
-            std::cout << "Restoring playing state in on_go_to_track()" << std::endl;
+            MH_DEBUG("Restoring playing state");
             d->engine->play();
         }
 
@@ -545,7 +544,7 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
 
     d->track_list->on_track_added().connect([this](const media::Track::Id& id)
     {
-        std::cout << "** Track was added, handling in PlayerImplementation" << std::endl;
+        MH_TRACE("** Track was added, handling in PlayerImplementation");
         if (d->track_list->tracks()->size() == 1)
             d->open_first_track_from_tracklist(id);
 
@@ -554,7 +553,7 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
 
     d->track_list->on_tracks_added().connect([this](const media::TrackList::ContainerURI& tracks)
     {
-        std::cout << "** Track was added, handling in PlayerImplementation" << std::endl;
+        MH_TRACE("** Track was added, handling in PlayerImplementation");
         // If the two sizes are the same, that means the TrackList was previously empty and we need
         // to open the first track in the TrackList so that is_audio_source() and is_video_source()
         // will function correctly.
@@ -689,7 +688,7 @@ bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri)
 
     // If empty uri, give the same meaning as QMediaPlayer::setMedia("")
     if (uri.empty()) {
-        cout << __PRETTY_FUNCTION__ << ": resetting current media" << endl;
+        MH_DEBUG("Resetting current media");
         return true;
     }
 
@@ -722,19 +721,21 @@ void media::PlayerImplementation<Parent>::previous()
 template<typename Parent>
 void media::PlayerImplementation<Parent>::play()
 {
+    MH_TRACE("");
     d->engine->play();
 }
 
 template<typename Parent>
 void media::PlayerImplementation<Parent>::pause()
 {
+    MH_TRACE("");
     d->engine->pause();
 }
 
 template<typename Parent>
 void media::PlayerImplementation<Parent>::stop()
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    MH_TRACE("");
     d->engine->stop();
 }
 

@@ -36,7 +36,7 @@ struct NullSink : public video::Sink
     // and returns true or returns false and leaves 'matrix' unchanged in case
     // of issues.
     bool transformation_matrix(float*) const
-    {        
+    {
         return true;
     }
 
