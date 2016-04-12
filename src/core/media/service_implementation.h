@@ -50,6 +50,7 @@ public:
     std::shared_ptr<Player> create_fixed_session(const std::string& name, const Player::Configuration&);
     std::shared_ptr<Player> resume_session(Player::PlayerKey key);
     void set_current_player(Player::PlayerKey key);
+    std::shared_ptr<Player> get_current_player() const;
     void reset_current_player();
     void pause_other_sessions(Player::PlayerKey key);
 

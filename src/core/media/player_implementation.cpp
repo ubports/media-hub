@@ -334,6 +334,16 @@ struct media::PlayerImplementation<Parent>::Private :
         return true;
     }
 
+    bool is_current_player(const media::PlayerImplementation<Parent> *p) const
+    {
+        return p == *(config.parent.player_service->get_current_player());
+    }
+
+    bool is_multimedia_role()
+    {
+        return config.parent.player_service->is_multimedia_role();
+    }
+
     bool reset_current_player()
     {
         if (not config.parent.player_service)
@@ -502,7 +512,7 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
 
         // This is not a fatal error but merely a warning that should
         // be logged
-        if (Parent::audio_stream_role() == media::Player::AudioStreamRole::multimedia)
+        if (d->is_multimedia_role() && d->is_current_player(this))
         {
             if (not d->reset_current_player())
                 std::cerr << "Failed to reset current player in "
