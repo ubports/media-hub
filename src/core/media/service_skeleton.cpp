@@ -784,11 +784,6 @@ struct media::ServiceSkeleton::Private
 #endif
         }
 
-        std::shared_ptr<media::Player> get_current_player() const
-        {
-            return current_player.lock();
-        }
-
         void reset_current_player()
         {
             std::cout << __PRETTY_FUNCTION__ << std::endl;
@@ -922,11 +917,6 @@ void media::ServiceSkeleton::set_current_player(media::Player::PlayerKey key)
     // We only care to allow the MPRIS controls to apply to multimedia player (i.e. audio, video)
     if (player->audio_stream_role() == media::Player::AudioStreamRole::multimedia)
         d->exported.set_current_player(player);
-}
-
-std::shared_ptr<media::Player> media::ServiceSkeleton::get_current_player() const
-{
-    d->exported.get_current_player()
 }
 
 void media::ServiceSkeleton::reset_current_player()

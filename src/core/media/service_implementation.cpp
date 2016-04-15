@@ -264,12 +264,6 @@ void media::ServiceImplementation::set_current_player(Player::PlayerKey)
   // no impl
 }
 
-std::shared_ptr<Player> media::ServiceImplementation::get_current_player() const
-{
-  // no impl
-  return std::shared_ptr<media::Player>();
-}
-
 void media::ServiceImplementation::reset_current_player()
 {
     // no impl

@@ -148,11 +148,6 @@ void media::ServiceStub::set_current_player(Player::PlayerKey key)
         throw std::runtime_error("Problem setting current player: " + op.error());
 }
 
-std::shared_ptr<Player> media::ServiceStub::get_current_player() const
-{
-    // No implementation
-}
-
 void media::ServiceStub::reset_current_player()
 {
     // No implementation

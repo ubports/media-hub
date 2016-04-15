@@ -61,7 +61,6 @@ public:
     std::shared_ptr<Player> resume_session(Player::PlayerKey);
     void set_current_player(Player::PlayerKey key);
     void reset_current_player();
-    std::shared_ptr<Player> get_current_player() const;
     void pause_other_sessions(Player::PlayerKey key);
 
     void run();
