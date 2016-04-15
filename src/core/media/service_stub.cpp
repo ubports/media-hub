@@ -148,11 +148,6 @@ void media::ServiceStub::set_current_player(Player::PlayerKey key)
         throw std::runtime_error("Problem setting current player: " + op.error());
 }
 
-void media::ServiceStub::reset_current_player()
-{
-    // No implementation
-}
-
 void media::ServiceStub::pause_other_sessions(media::Player::PlayerKey key)
 {
     auto op = d->object->invoke_method_synchronously<mpris::Service::PauseOtherSessions,

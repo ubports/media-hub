@@ -261,11 +261,6 @@ std::shared_ptr<media::Player> media::ServiceImplementation::resume_session(medi
 
 void media::ServiceImplementation::set_current_player(Player::PlayerKey)
 {
-  // no impl
-}
-
-void media::ServiceImplementation::reset_current_player()
-{
     // no impl
 }
 

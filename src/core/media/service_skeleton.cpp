@@ -919,6 +919,16 @@ void media::ServiceSkeleton::set_current_player(media::Player::PlayerKey key)
         d->exported.set_current_player(player);
 }
 
+bool media::ServiceSkeleton::is_multimedia_role() const
+{
+    return d->exported.is_multimedia_role();
+}
+
+std::shared_ptr<media::Player> media::ServiceSkeleton::get_current_player() const
+{
+    return d->exported.current_player.lock();
+}
+
 void media::ServiceSkeleton::reset_current_player()
 {
     d->exported.reset_current_player();
