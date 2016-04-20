@@ -24,18 +24,6 @@
 #include <core/dbus/bus.h>
 #include <core/dbus/object.h>
 
-
-namespace core
-{
-namespace ubuntu
-{
-namespace media
-{
-class ServiceSkeleton;
-}
-}
-}
-
 // Our internal structure for handing down parameters from the skeleton
 // to the implementation in a way that is opaque to the client.
 struct core::ubuntu::media::Player::Configuration
@@ -49,7 +37,7 @@ struct core::ubuntu::media::Player::Configuration
     // The actual session object representing a player instance.
     std::shared_ptr<core::dbus::Object> session;
     // The Service instance that manages Player instances
-    core::ubuntu::media::ServiceSkeleton* player_service;
+    core::ubuntu::media::Service* player_service;
 };
 
 #endif // CORE_UBUNTU_MEDIA_PLAYER_CLIENT_CONFIGURATION_H_

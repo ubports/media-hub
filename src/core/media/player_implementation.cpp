@@ -20,7 +20,6 @@
 #include <core/media/service.h>
 
 #include "player_implementation.h"
-#include "service_skeleton.h"
 #include "util/timeout.h"
 
 #include <unistd.h>
@@ -335,17 +334,6 @@ struct media::PlayerImplementation<Parent>::Private :
         return true;
     }
 
-    // Utility to hide the complexity of getting the ptr to current player
-    bool is_current_player(const media::PlayerImplementation<Parent> *p) const
-    {
-        return p == config.parent.player_service->get_current_player().get();
-    }
-
-    bool is_multimedia_role() const
-    {
-        return config.parent.player_service->is_multimedia_role();
-    }
-
     bool reset_current_player()
     {
         if (not config.parent.player_service)
@@ -512,14 +500,10 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         d->clear_wakelocks();
         d->track_list->reset();
 
-        // Here it is decided if it is good to reset the current player. The
-        // conditions to do so are very simple. It must be a multimedia role
-        // and the Player that disconnected must be the last player to play
-        // audio/video.
-        if (d->is_multimedia_role() && d->is_current_player(this))
+        // This is not a fatal error but merely a warning that should
+        // be logged
+        if (Parent::audio_stream_role() == media::Player::AudioStreamRole::multimedia)
         {
-            // This is not a fatal error but merely
-            // a warning that should be logged
             if (not d->reset_current_player())
                 std::cerr << "Failed to reset current player in "
                     << __PRETTY_FUNCTION__ << std::endl;

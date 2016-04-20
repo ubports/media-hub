@@ -60,16 +60,6 @@ public:
     std::shared_ptr<Player> create_fixed_session(const std::string& name, const Player::Configuration&);
     std::shared_ptr<Player> resume_session(Player::PlayerKey);
     void set_current_player(Player::PlayerKey key);
-
-    /** @brief returns true for multimedia role */
-    bool is_multimedia_role() const;
-
-    /** @brief gets the current player controlled by MRIS */
-    std::shared_ptr<Player> get_current_player() const;
-
-    /** @detail Resets the current player so that the MPRIS interface will no
-     *  longer have a current player to control
-     */
     void reset_current_player();
     void pause_other_sessions(Player::PlayerKey key);
 
