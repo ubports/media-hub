@@ -264,6 +264,12 @@ void media::ServiceImplementation::set_current_player(Player::PlayerKey)
   // no impl
 }
 
+bool media::ServiceImplementation::is_current_player(Player::PlayerKey) const
+{
+    // no impl
+    return false;
+}
+
 void media::ServiceImplementation::reset_current_player()
 {
     // no impl

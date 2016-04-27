@@ -334,6 +334,16 @@ struct media::PlayerImplementation<Parent>::Private :
         return true;
     }
 
+    bool is_current_player() const
+    {
+        return config.parent.player_service->is_current_player(parent->key());
+    }
+
+    bool is_multimedia_role() const
+    {
+        return parent->audio_stream_role() == media::Player::AudioStreamRole::multimedia;
+    }
+
     bool reset_current_player()
     {
         if (not config.parent.player_service)
@@ -502,8 +512,12 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
 
         // This is not a fatal error but merely a warning that should
         // be logged
-        if (Parent::audio_stream_role() == media::Player::AudioStreamRole::multimedia)
+        cout << "is_multimedia_role(): " << d->is_multimedia_role() << std::endl;
+        cout << "is_current_player(): " << d->is_current_player() << std::endl;
+        cout << "client_disconnected_signal (this): " << this << std::endl;
+        if (d->is_multimedia_role() and d->is_current_player())
         {
+            std::cout << "**Resetting current player" << std::endl;
             if (not d->reset_current_player())
                 std::cerr << "Failed to reset current player in "
                     << __PRETTY_FUNCTION__ << std::endl;
@@ -754,7 +768,7 @@ void media::PlayerImplementation<Parent>::previous()
 template<typename Parent>
 void media::PlayerImplementation<Parent>::play()
 {
-    if (Parent::audio_stream_role() == media::Player::AudioStreamRole::multimedia)
+    if (d->is_multimedia_role())
     {
         std::cout << "==== Updating the current player from " << __PRETTY_FUNCTION__ << std::endl;
         // This player will begin playing so make sure it's the current player. If

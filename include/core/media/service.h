@@ -63,6 +63,9 @@ class Service : public std::enable_shared_from_this<Service>
     /** @brief Sets the current player that the MPRIS interface will control */
     virtual void set_current_player(Player::PlayerKey) = 0;
 
+    /** @brief Checks if key player is the current player that the MPRIS interface controls */
+    virtual bool is_current_player(Player::PlayerKey) const = 0;
+
     /** @detail Resets the current player so that the MPRIS interface will no
      *  longer have a current player to control
      */
