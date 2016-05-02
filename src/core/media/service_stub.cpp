@@ -161,7 +161,6 @@ void media::ServiceStub::reset_current_player()
 
 void media::ServiceStub::pause_other_sessions(media::Player::PlayerKey key)
 {
-    std::cout << "*****" << __PRETTY_FUNCTION__ << " key: " << key << std::endl;
     auto op = d->object->invoke_method_synchronously<mpris::Service::PauseOtherSessions,
          void>(key);
 

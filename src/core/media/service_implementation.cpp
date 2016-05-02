@@ -302,7 +302,6 @@ void media::ServiceImplementation::pause_other_sessions(media::Player::PlayerKey
         // 2) not the same player as the one passed in my key
         // 3) new Player has an audio stream role set to multimedia
         // 4) has an audio stream role set to multimedia
-        std::cout << "Considering if we should pause any other players!!!!" << std::endl;
         if (other_player->playback_status() == Player::playing &&
             other_key != key &&
             current_player->audio_stream_role() == media::Player::multimedia &&

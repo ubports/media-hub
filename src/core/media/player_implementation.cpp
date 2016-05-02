@@ -525,10 +525,9 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         cout << "client_disconnected_signal (this): " << this << std::endl;
         if (d->is_multimedia_role() and d->is_current_player())
         {
-            std::cout << "**Resetting current player" << std::endl;
+            MH_DEBUG("==== Resetting current player");
             if (not d->reset_current_player())
-                std::cerr << "Failed to reset current player in "
-                    << __PRETTY_FUNCTION__ << std::endl;
+                MH_WARNING("Failed to reset current player");
         }
 
         // And tell the outside world that the client has gone away

@@ -491,7 +491,6 @@ struct media::ServiceSkeleton::Private
 
     void handle_pause_other_sessions(const core::dbus::Message::Ptr& msg)
     {
-        std::cout << "*****" << __PRETTY_FUNCTION__ << std::endl;
         Player::PlayerKey key;
         msg->reader() >> key;
         core::dbus::Message::Ptr reply;
@@ -1046,7 +1045,7 @@ void media::ServiceSkeleton::reset_current_player()
 
 void media::ServiceSkeleton::pause_other_sessions(media::Player::PlayerKey key)
 {
-    std::cout << "*****" << __PRETTY_FUNCTION__ << std::endl;
+    MH_TRACE("");
     d->configuration.impl->pause_other_sessions(key);
 }
 
