@@ -19,6 +19,8 @@
 
 #include "call_monitor.h"
 
+#include "core/media/logger/logger.h"
+
 #include "qtbridge.h"
 #include <TelepathyQt/AccountManager>
 #include <TelepathyQt/SimpleCallObserver>
@@ -95,7 +97,7 @@ private Q_SLOTS:
 
     void accountManagerReady(Tp::PendingOperation* operation) {
         if (operation->isError()) {
-            std::cerr << "TelepathyBridge: Operation failed (accountManagerReady)" << std::endl;
+            MH_ERROR("TelepathyBridge: Operation failed (accountManagerReady)");
             QTimer::singleShot(1000, this, SLOT(accountManagerSetup())); // again
             return;
         }
@@ -118,13 +120,13 @@ private Q_SLOTS:
 
     void accountReady(Tp::PendingOperation* operation) {
         if (operation->isError()) {
-            std::cerr << "TelepathyAccount: Operation failed (accountReady)" << std::endl;
+            MH_ERROR("TelepathyAccount: Operation failed (accountReady)");
             return;
         }
 
         Tp::PendingReady* pendingReady = qobject_cast<Tp::PendingReady*>(operation);
         if (pendingReady == 0) {
-            std::cerr << "Rejecting account because could not understand ready status" << std::endl;
+            MH_ERROR("Rejecting account because could not understand ready status");
             return;
         }
 
@@ -176,16 +178,16 @@ struct CallMonitor : public media::telephony::CallMonitor
                 {
                     qt::core::world::enter_with_task([this]()
                     {
-                        std::cout << "CallMonitor: Creating TelepathyBridge" << std::endl;
+                        MH_DEBUG("CallMonitor: Creating TelepathyBridge");
                         mBridge = new TelepathyBridge();
                         cv.notify_all();
                     });
                 });
           }));
         } catch(const std::system_error& error) {
-            std::cerr << "exception(std::system_error) in CallMonitor thread start" << error.what() << std::endl;
+            MH_ERROR("exception(std::system_error) in CallMonitor thread start %s", error.what());
         } catch(...) {
-            std::cerr << "exception(...) in CallMonitor thread start" << std::endl;
+            MH_ERROR("exception(...) in CallMonitor thread start");
         }
 
         // Wait until telepathy bridge is set, so we can hook up the change signals
@@ -234,7 +236,7 @@ struct CallMonitor : public media::telephony::CallMonitor
 
 media::telephony::CallMonitor::Ptr media::telephony::make_platform_default_call_monitor()
 {
-    return std::make_shared<impl::CallMonitor>();
+    return std::make_shared<::impl::CallMonitor>();
 }
 
 #include "call_monitor.moc"

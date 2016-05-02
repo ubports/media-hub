@@ -29,6 +29,8 @@
 #include "the_session_bus.h"
 #include "xesam.h"
 
+#include "core/media/logger/logger.h"
+
 #include <core/dbus/message.h>
 #include <core/dbus/object.h>
 #include <core/dbus/types/object_path.h>
@@ -135,9 +137,8 @@ struct media::ServiceSkeleton::Private
             impl
         };
 
-        cout << "Session created by request of: " << msg->sender()
-             << ", key: " << key << ", uuid: " << uuid
-             << ", path:" << op << std::endl;
+        MH_DEBUG("Session created by request of: %s, key: %d, uuid: %d, path: %s",
+                msg->sender(), key, uuid, op);
 
         try
         {
@@ -148,7 +149,7 @@ struct media::ServiceSkeleton::Private
             request_context_resolver->resolve_context_for_dbus_name_async(msg->sender(),
                     [this, key, msg](const media::apparmor::ubuntu::Context& context)
             {
-                fprintf(stderr, "%s():%d -- app_name='%s', attached\n", __func__, __LINE__, context.str().c_str());
+                MH_DEBUG(" -- app_name='%s', attached", context.str());
                 player_owner_map.emplace(std::make_pair(key, std::make_tuple(context.str(), true, msg->sender())));
             });
 
@@ -232,7 +233,8 @@ struct media::ServiceSkeleton::Private
                         [this, msg, key, op](const media::apparmor::ubuntu::Context& context)
                 {
                     auto info = player_owner_map.at(key);
-                    fprintf(stderr, "%s():%d -- reattach app_name='%s', info='%s', '%s'\n", __func__, __LINE__, context.str().c_str(), std::get<0>(info).c_str(), std::get<2>(info).c_str());
+                    MH_DEBUG(" -- reattach app_name='%s', info='%s', '%s'",
+                            context.str(), std::get<0>(info), std::get<2>(info));
                     if (std::get<0>(info) == context.str()) {
                         std::get<1>(info) = true; // Set to Attached
                         std::get<2>(info) = msg->sender(); // Register new owner
@@ -243,7 +245,7 @@ struct media::ServiceSkeleton::Private
                         // We only care to allow the MPRIS controls to apply to multimedia player (i.e. audio, video)
                         if (player->audio_stream_role() == media::Player::AudioStreamRole::multimedia)
                         {
-                            std::cout << "Setting current_player" << std::endl;
+                            MH_TRACE("Setting current_player");
 #if 0
                             exported.set_current_player(player);
 #else
@@ -310,7 +312,8 @@ struct media::ServiceSkeleton::Private
                         [this, msg, key](const media::apparmor::ubuntu::Context& context)
                 {
                     auto info = player_owner_map.at(key);
-                    fprintf(stderr, "%s():%d -- Destroying app_name='%s', info='%s', '%s'\n", __func__, __LINE__, context.str().c_str(), std::get<0>(info).c_str(), std::get<2>(info).c_str());
+                    MH_DEBUG(" -- Destroying app_name='%s', info='%s', '%s'",
+                            context.str(), std::get<0>(info), std::get<2>(info));
                     if (std::get<0>(info) == context.str()) {
                         player_owner_map.erase(key);
 
@@ -460,7 +463,7 @@ struct media::ServiceSkeleton::Private
         core::dbus::Message::Ptr reply;
         if (not configuration.player_store->has_player_for_key(key))
         {
-            std::cerr <<  __PRETTY_FUNCTION__ << " player key not found - " << key << std::endl;
+            MH_WARNING("Player key not found: %d", key);
             reply = dbus::Message::make_error(
                             msg,
                             mpris::Service::Errors::PlayerKeyNotFound::name(),
@@ -473,10 +476,9 @@ struct media::ServiceSkeleton::Private
                 reply = dbus::Message::make_method_return(msg);
             }
             catch (const std::out_of_range &e) {
-                std::cerr << "Failed to look up Player instance for key " << key
-                    << ", no valid Player instance for that key value and cannot set current player."
-                    << " This most likely means that media-hub-server has crashed and restarted."
-                    << std::endl;
+                MH_WARNING("Failed to look up Player instance for key %d\
+                    , no valid Player instance for that key value and cannot set current player.\
+                    This most likely means that media-hub-server has crashed and restarted.", key);
                 reply = dbus::Message::make_error(
                             msg,
                             mpris::Service::Errors::PlayerKeyNotFound::name(),
@@ -498,10 +500,9 @@ struct media::ServiceSkeleton::Private
             reply = dbus::Message::make_method_return(msg);
         }
         catch (const std::out_of_range &e) {
-            std::cerr << "Failed to look up Player instance for key " << key
-                << ", no valid Player instance for that key value and cannot pause other Players."
-                << " This most likely means that media-hub-server has crashed and restarted."
-                << std::endl;
+                MH_WARNING("Failed to look up Player instance for key %d\
+                    , no valid Player instance for that key value and cannot set current player.\
+                    This most likely means that media-hub-server has crashed and restarted.", key);
             reply = dbus::Message::make_error(
                     msg,
                     mpris::Service::Errors::PlayerKeyNotFound::name(),
@@ -536,7 +537,7 @@ struct media::ServiceSkeleton::Private
             // TODO(tvoss): These three elements really should be configurable.
             defaults.identity = "core::media::Hub";
             defaults.desktop_entry = "mediaplayer-app";
-            defaults.supported_mime_types = {"audio/mpeg3"};
+            defaults.supported_mime_types = {"audio/mpeg3", "video/mpeg4"};
 
             return defaults;
         }
@@ -693,7 +694,7 @@ struct media::ServiceSkeleton::Private
 
         inline bool is_multimedia_role()
         {
-            std::cout << "*****" << __PRETTY_FUNCTION__ << std::endl;
+            MH_TRACE("");
 #if 0
             const auto sp = current_player.lock();
             return (sp ? sp->audio_stream_role() == media::Player::AudioStreamRole::multimedia : false);
@@ -712,7 +713,7 @@ struct media::ServiceSkeleton::Private
         //void set_current_player(const std::shared_ptr<media::Player>& cp)
         void set_current_player(media::Player::PlayerKey key)
         {
-            std::cout << "*** " << __PRETTY_FUNCTION__ << std::endl;
+            MH_TRACE("");
             //reset_current_player();
 #if 0
             current_player_key = key;
@@ -871,7 +872,7 @@ struct media::ServiceSkeleton::Private
 
         void reset_current_player()
         {
-            std::cout << __PRETTY_FUNCTION__ << std::endl;
+            MH_TRACE("");
             // And announce that we can no longer be controlled.
             player.properties.can_control->set(false);
             player.properties.can_play->set(false);

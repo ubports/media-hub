@@ -29,7 +29,9 @@
 
 #include "mpris/player.h"
 #include "mpris/track_list.h"
+
 #include "util/uri_check.h"
+#include "core/media/logger/logger.h"
 
 #include <core/dbus/object.h>
 #include <core/dbus/property.h>
@@ -40,7 +42,6 @@
 
 #include <iostream>
 #include <limits>
-#include <sstream>
 #include <cstdint>
 
 namespace dbus = core::dbus;
@@ -104,7 +105,7 @@ struct media::TrackListSkeleton::Private
 
     void handle_add_track_with_uri_at(const core::dbus::Message::Ptr& msg)
     {
-        std::cout << "*** " << __PRETTY_FUNCTION__ << std::endl;
+        MH_TRACE("");
         request_context_resolver->resolve_context_for_dbus_name_async
             (msg->sender(), [this, msg](const media::apparmor::ubuntu::Context& context)
         {
@@ -124,7 +125,7 @@ struct media::TrackListSkeleton::Private
             {
                 const std::string err_str = {"Warning: Not adding track " + uri +
                      " to TrackList because it can't be found."};
-                std::cerr << err_str << std::endl;
+                MH_WARNING("%s", err_str.c_str());
                 reply = dbus::Message::make_error(
                             msg,
                             mpris::Player::Error::UriNotFound::name,
@@ -141,7 +142,7 @@ struct media::TrackListSkeleton::Private
                 {
                     const std::string err_str = {"Warning: Not adding track " + uri +
                         " to TrackList because of inadequate client apparmor permissions."};
-                    std::cerr << err_str << std::endl;
+                    MH_WARNING("%s", err_str.c_str());
                     reply = dbus::Message::make_error(
                                 msg,
                                 mpris::TrackList::Error::InsufficientPermissionsToAddTrack::name,
@@ -155,7 +156,7 @@ struct media::TrackListSkeleton::Private
 
     void handle_add_tracks_with_uri_at(const core::dbus::Message::Ptr& msg)
     {
-        std::cout << "*** " << __PRETTY_FUNCTION__ << std::endl;
+        MH_TRACE("");
         request_context_resolver->resolve_context_for_dbus_name_async
             (msg->sender(), [this, msg](const media::apparmor::ubuntu::Context& context)
         {
@@ -176,7 +177,7 @@ struct media::TrackListSkeleton::Private
                 {
                     uri_err_str = {"Warning: Not adding track " + uri +
                          " to TrackList because it can't be found."};
-                    std::cerr << uri_err_str << std::endl;
+                    MH_WARNING("%s", uri_err_str.c_str());
                     reply = dbus::Message::make_error(
                                 msg,
                                 mpris::Player::Error::UriNotFound::name,
@@ -201,7 +202,7 @@ struct media::TrackListSkeleton::Private
             }
             else
             {
-                std::cerr << err_str << std::endl;
+                MH_WARNING("%s", err_str.c_str());
                 reply = dbus::Message::make_error(
                             msg,
                             mpris::TrackList::Error::InsufficientPermissionsToAddTrack::name,
@@ -225,7 +226,7 @@ struct media::TrackListSkeleton::Private
             {
                 const std::string err_str = {"Error: Not moving track " + id +
                     " to destination " + to};
-                std::cerr << err_str << std::endl;
+                MH_WARNING("%s", err_str.c_str());
                 reply = dbus::Message::make_error(
                         msg,
                         mpris::TrackList::Error::FailedToMoveTrack::name,
@@ -262,9 +263,9 @@ struct media::TrackListSkeleton::Private
 
         auto id_it = find(impl->tracks().get().begin(), impl->tracks().get().end(), track);
         if (id_it == impl->tracks().get().end()) {
-            ostringstream err_str;
+            stringstream err_str;
             err_str << "Track " << track << " not found in track list";
-            cout << __PRETTY_FUNCTION__ << " WARNING " << err_str.str() << endl;
+            MH_WARNING("%s", err_str.str());
             auto reply = dbus::Message::make_error(
                             msg,
                             mpris::TrackList::Error::TrackNotFound::name,
@@ -278,7 +279,7 @@ struct media::TrackListSkeleton::Private
 
         if (id_it == impl->current_iterator())
         {
-            cout << "Removing current track" << endl;
+            MH_DEBUG("Removing current track");
             deleting_current = true;
 
             if (current_track != empty_iterator)
@@ -537,10 +538,10 @@ media::TrackList::ConstIterator media::TrackListSkeleton::get_current_shuffled()
 
 media::Track::Id media::TrackListSkeleton::next()
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    MH_TRACE("");
     if (tracks().get().empty()) {
         // TODO Change ServiceSkeleton to return with error from DBus call
-        std::cerr << "ERROR: no tracks, cannot go to next" << std::endl;
+        MH_ERROR("No tracks, cannot go to next");
         return media::Track::Id{};
     }
 
@@ -549,13 +550,13 @@ media::Track::Id media::TrackListSkeleton::next()
     // End of the track reached so loop around to the beginning of the track
     if (d->loop_status == media::Player::LoopStatus::track)
     {
-        std::cout << "Looping on the current track since LoopStatus is set to track" << std::endl;
+        MH_INFO("Looping on the current track since LoopStatus is set to track");
         go_to_track = true;
     }
     // End of the tracklist reached so loop around to the beginning of the tracklist
     else if (d->loop_status == media::Player::LoopStatus::playlist && not has_next())
     {
-        std::cout << "Looping on the tracklist since LoopStatus is set to playlist" << std::endl;
+        MH_INFO("Looping on the tracklist since LoopStatus is set to playlist");
 
         if (shuffle())
         {
@@ -574,7 +575,7 @@ media::Track::Id media::TrackListSkeleton::next()
         {
             auto it = get_current_shuffled();
             if (++it != shuffled_tracks().end()) {
-                cout << "Advancing to next track: " << *it << endl;
+                MH_INFO("Advancing to next track: %s", *it);
                 set_current_track(*it);
                 go_to_track = true;
             }
@@ -584,7 +585,7 @@ media::Track::Id media::TrackListSkeleton::next()
             const auto it = std::next(current_iterator());
             if (not is_last_track(it))
             {
-                cout << "Advancing to next track: " << *it << endl;
+                MH_INFO("Advancing to next track: %s", *it);
                 d->current_track = it;
                 go_to_track = true;
             }
@@ -594,7 +595,7 @@ media::Track::Id media::TrackListSkeleton::next()
 
     if (go_to_track)
     {
-        cout << "next track id is " << *(current_iterator()) << endl;
+        MH_DEBUG("next track id is %s", *(current_iterator()));
         on_track_changed()(*(current_iterator()));
         const media::Track::Id id = *(current_iterator());
         // Signal the PlayerImplementation to play the next track
@@ -603,7 +604,7 @@ media::Track::Id media::TrackListSkeleton::next()
     else
     {
         // At the end of the tracklist and not set to loop
-        cout << "End of tracklist reached" << endl;
+        MH_INFO("End of tracklist reached");
         on_end_of_tracklist()();
     }
 
@@ -612,10 +613,10 @@ media::Track::Id media::TrackListSkeleton::next()
 
 media::Track::Id media::TrackListSkeleton::previous()
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    MH_TRACE("");
     if (tracks().get().empty()) {
         // TODO Change ServiceSkeleton to return with error from DBus call
-        std::cerr << "ERROR: no tracks, cannot go to previous" << std::endl;
+        MH_ERROR("No tracks, cannot go to previous");
         return media::Track::Id{};
     }
 
@@ -627,19 +628,19 @@ media::Track::Id media::TrackListSkeleton::previous()
     // repeat it from the beginning
     if (d->current_position > max_position)
     {
-        std::cout << "Repeating current track..." << std::endl;
+        MH_INFO("Repeating current track...");
         go_to_track = true;
     }
     // Loop on the current track forever
     else if (d->loop_status == media::Player::LoopStatus::track)
     {
-        std::cout << "Looping on the current track..." << std::endl;
+        MH_INFO("Looping on the current track...");
         go_to_track = true;
     }
     // Loop over the whole playlist and repeat
     else if (d->loop_status == media::Player::LoopStatus::playlist && not has_previous())
     {
-        std::cout << "Looping on the entire TrackList..." << std::endl;
+        MH_INFO("Looping on the entire TrackList...");
 
         if (shuffle())
         {
@@ -680,7 +681,7 @@ media::Track::Id media::TrackListSkeleton::previous()
     else
     {
         // At the beginning of the tracklist and not set to loop
-        cout << "Beginning of tracklist reached" << endl;
+        MH_INFO("Beginning of tracklist reached");
         on_end_of_tracklist()();
     }
 
@@ -698,12 +699,12 @@ const media::TrackList::ConstIterator& media::TrackListSkeleton::current_iterato
     // a segfault when calling current()
     if (tracks().get().size() && (d->current_track == d->empty_iterator))
     {
-        std::cout << "Wrapping d->current_track back to begin()" << std::endl;
+        MH_DEBUG("Wrapping d->current_track back to begin()");
         d->current_track = d->skeleton.properties.tracks->get().begin();
     }
     else if (tracks().get().empty())
     {
-        std::cerr << "TrackList is empty therefore there is no valid current track" << std::endl;
+        MH_ERROR("TrackList is empty therefore there is no valid current track");
     }
 
     return d->current_track;
@@ -711,11 +712,10 @@ const media::TrackList::ConstIterator& media::TrackListSkeleton::current_iterato
 
 bool media::TrackListSkeleton::update_current_iterator(const TrackList::ConstIterator &it)
 {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
+    MH_TRACE("");
     if (it == tracks().get().end())
         return false;
 
-    std::cout << "Updating current_track iterator" << std::endl;
     d->current_track = it;
 
     return true;
@@ -780,8 +780,7 @@ media::Player::LoopStatus media::TrackListSkeleton::loop_status() const
 
 void media::TrackListSkeleton::on_shuffle_changed(bool shuffle)
 {
-    cout << __PRETTY_FUNCTION__ << endl;
-
+    MH_TRACE("");
     set_shuffle(shuffle);
 }
 
@@ -793,7 +792,7 @@ const core::Property<media::TrackList::Container>& media::TrackListSkeleton::tra
 const core::Signal<media::TrackList::ContainerTrackIdTuple>& media::TrackListSkeleton::on_track_list_replaced() const
 {
     // Print the TrackList instance
-    std::cout << *this << std::endl;
+    MH_DEBUG("%s", *this);
     return d->signals.on_track_list_replaced;
 }
 

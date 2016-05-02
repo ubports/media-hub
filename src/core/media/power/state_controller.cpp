@@ -16,12 +16,12 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
+#include "core/media/logger/logger.h"
+
 #include <core/media/power/state_controller.h>
 
 #include <core/dbus/macros.h>
 #include <core/dbus/object.h>
-
-#include <iostream>
 
 namespace media = core::ubuntu::media;
 
@@ -98,7 +98,7 @@ struct DisplayStateLock : public media::power::StateController::Lock<media::powe
     // From core::ubuntu::media::power::StateController::Lock<DisplayState>
     void request_acquire(media::power::DisplayState state) override
     {
-        std::cout << __PRETTY_FUNCTION__ << std::endl;
+        MH_TRACE("");
 
         if (state == media::power::DisplayState::off)
             return;
@@ -110,7 +110,7 @@ struct DisplayStateLock : public media::power::StateController::Lock<media::powe
                     {
                         if (result.is_error())
                         {
-                            std::cerr << result.error().print() << std::endl;
+                            MH_ERROR("%s", result.error().print());
                             return;
                         }
 
@@ -149,7 +149,7 @@ struct DisplayStateLock : public media::power::StateController::Lock<media::powe
                         {
                             if (result.is_error())
                             {
-                                std::cerr << result.error().print() << std::endl;
+                                MH_ERROR("%s", result.error().print());
                                 return;
                             }
 
@@ -207,7 +207,7 @@ struct SystemStateLock : public media::power::StateController::Lock<media::power
     // the system to stay active.
     void request_acquire(media::power::SystemState state) override
     {
-        std::cout << __PRETTY_FUNCTION__ << std::endl;
+        MH_TRACE("");
 
         if (state == media::power::SystemState::suspend)
             return;
@@ -223,7 +223,7 @@ struct SystemStateLock : public media::power::StateController::Lock<media::power
             }
             else
             {
-                std::cerr << "Failed to lock system_state_cookie_store_guard and check system lock state" << std::endl;
+                MH_WARNING("Failed to lock system_state_cookie_store_guard and check system lock state");
                 // Prevent system_state_cookie_store.count(state) and the actual call to requestSysState below from
                 // getting out of sync.
                 return;
@@ -236,7 +236,7 @@ struct SystemStateLock : public media::power::StateController::Lock<media::power
         {
             if (result.is_error())
             {
-                std::cerr << result.error().print() << std::endl;
+                MH_ERROR("%s", result.error().print());
                 return;
             }
 
@@ -249,7 +249,7 @@ struct SystemStateLock : public media::power::StateController::Lock<media::power
                     if (ul.owns_lock())
                         sp->system_state_cookie_store[state] = result.value();
                     else
-                        std::cerr << "Failed to lock system_state_cookie_store_guard and update system lock state" << std::endl;
+                        MH_WARNING("Failed to lock system_state_cookie_store_guard and update system lock state");
                 }
 
                 sp->signals.acquired(state);
@@ -275,7 +275,7 @@ struct SystemStateLock : public media::power::StateController::Lock<media::power
             }
             else
             {
-                std::cerr << "Failed to lock system_state_cookie_store_guard and check system lock state" << std::endl;
+                MH_WARNING("Failed to lock system_state_cookie_store_guard and check system lock state");
                 // Prevent system_state_cookie_store.count(state) and the actual call to clearSysState below from
                 // getting out of sync.
                 return;
@@ -287,7 +287,7 @@ struct SystemStateLock : public media::power::StateController::Lock<media::power
         object->invoke_method_asynchronously_with_callback<com::canonical::powerd::Interface::clearSysState, void>([this, wp, state](const core::dbus::Result<void>& result)
         {
             if (result.is_error())
-                std::cerr << result.error().print() << std::endl;
+                MH_ERROR("%s", result.error().print());
 
             if (auto sp = wp.lock())
             {
@@ -297,7 +297,7 @@ struct SystemStateLock : public media::power::StateController::Lock<media::power
                     if (ul.owns_lock())
                         sp->system_state_cookie_store.erase(state);
                     else
-                        std::cerr << "Failed to lock system_state_cookie_store_guard and erase system lock state" << std::endl;
+                        MH_WARNING("Failed to lock system_state_cookie_store_guard and erase system lock state");
                 }
 
                 sp->signals.released(state);
@@ -369,7 +369,7 @@ struct StateController : public media::power::StateController,
 
 media::power::StateController::Ptr media::power::make_platform_default_state_controller(core::ubuntu::media::helper::ExternalServices& external_services)
 {
-    return std::make_shared<impl::StateController>(external_services);
+    return std::make_shared<::impl::StateController>(external_services);
 }
 
 // operator<< pretty prints the given display state to the given output stream.

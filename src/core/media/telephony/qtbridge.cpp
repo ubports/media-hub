@@ -26,8 +26,6 @@
 #include<QThread>
 #include<QDebug>
 
-#include <iostream>
-
 namespace
 {
 QCoreApplication* app = nullptr;

@@ -21,6 +21,8 @@
 
 #include <pulse/pulseaudio.h>
 
+#include "core/media/logger/logger.h"
+
 #include <cstdint>
 
 #include <map>
@@ -245,7 +247,7 @@ struct audio::PulseAudioOutputObserver::Private
             std::get<1>(outputs.back()) | properties.external_output_state;
             std::get<1>(outputs.back()).changed().connect([](media::audio::OutputState state)
             {
-                std::cout << "Connection state for port changed to: " << state << std::endl;
+                MH_DEBUG("Connection state for port changed to: %s", state);
             });
         }
 
@@ -289,8 +291,8 @@ struct audio::PulseAudioOutputObserver::Private
     void on_sink_event_with_index(std::int32_t index)
     {
         config.reporter->sink_event_with_index(index);
-         
-        // Update server info (active sink)    
+
+        // Update server info (active sink)
         pa::get_server_info_async(context, main_loop, Private::query_for_server_info_finished, this);
 
     }
@@ -317,15 +319,15 @@ struct audio::PulseAudioOutputObserver::Private
             if (std::get<0>(active_sink) != info->index)
                 continue;
 
-            std::cout << "Checking if port is available " << " -> " << std::boolalpha << pa::is_port_available_on_sink(info, std::get<0>(element)) << std::endl;
-            bool available = pa::is_port_available_on_sink(info, std::get<0>(element));
-
+            MH_INFO("Checking if port is available -> %s",
+                    pa::is_port_available_on_sink(info, std::get<0>(element)));
+            const bool available = pa::is_port_available_on_sink(info, std::get<0>(element));
             if (available)
             {
                 std::get<1>(element) = audio::OutputState::Earpiece;
                 continue;
             }
-    
+
             audio::OutputState state;
             if (info->index == primary_sink_index)
                 state = audio::OutputState::Speaker;
@@ -386,7 +388,7 @@ struct audio::PulseAudioOutputObserver::Private
         }
     }
 
-    PulseAudioOutputObserver::Configuration config;    
+    PulseAudioOutputObserver::Configuration config;
     pa::ThreadedMainLoopPtr main_loop;
     pa::ContextPtr context;
     std::int32_t primary_sink_index;

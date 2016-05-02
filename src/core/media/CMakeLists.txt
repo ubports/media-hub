@@ -18,6 +18,7 @@ add_library(
   media-hub-common SHARED
 
   the_session_bus.cpp
+  util/utils.cpp
 )
 
 target_link_libraries(
@@ -41,6 +42,8 @@ add_library(
   media-hub-client SHARED
 
   ${MEDIA_HUB_HEADERS}
+
+  logger/logger.cpp
 
   player.cpp
   service.cpp
@@ -70,6 +73,8 @@ target_link_libraries(
 
   media-hub-common
 
+  ${Boost_LDFLAGS}
+  ${Boost_LIBRARIES}
   ${DBUS_LIBRARIES}
   ${DBUS_CPP_LDFLAGS}
   ${GLog_LIBRARY}
@@ -86,6 +91,8 @@ add_library(
 
     ${MEDIA_HUB_HEADERS}
     ${MPRIS_HEADERS}
+
+    logger/logger.cpp
 
     client_death_observer.cpp
     hashed_keyed_player_store.cpp
@@ -123,6 +130,8 @@ target_link_libraries(
   media-hub-client
   media-hub-common
   call-monitor
+  ${Boost_LDFLAGS}
+  ${Boost_LIBRARIES}
   ${DBUS_LIBRARIES}
   ${DBUS_CPP_LDFLAGS}
   ${GLog_LIBRARY}

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2013 Canonical Ltd.
+ * Copyright © 2016 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -13,20 +13,24 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#include <core/media/service.h>
+#ifndef NON_COPYABLE_H_
+#define NON_COPYABLE_H_
 
-#include "core/media/logger/logger.h"
-
-#include "service_stub.h"
-
-namespace media = core::ubuntu::media;
-
-const std::shared_ptr<media::Service> media::Service::Client::instance()
-{
-    MH_TRACE("");
-    static std::shared_ptr<media::Service> instance{new media::ServiceStub()};
-    return instance;
+namespace core {
+namespace ubuntu {
+namespace media {
+// The alert reader might wonder why we don't use boost::noncopyable. The reason
+// is simple: We would like to have a convenient virtual d'tor available.
+struct NonCopyable {
+    NonCopyable() = default;
+    NonCopyable(const NonCopyable&) = delete;
+    virtual ~NonCopyable() = default;
+    NonCopyable& operator=(const NonCopyable&) = delete;
+};
 }
+}
+}
+
+#endif
