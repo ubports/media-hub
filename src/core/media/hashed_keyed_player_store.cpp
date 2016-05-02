@@ -64,6 +64,14 @@ void media::HashedKeyedPlayerStore::add_player_for_key(const media::Player::Play
 void media::HashedKeyedPlayerStore::remove_player_for_key(const media::Player::PlayerKey& key)
 {
     std::lock_guard<std::recursive_mutex> lg{guard};
+
+#if 0
+    // If we're removing the current player, then reset the
+    // shared_ptr so that it's no longer pointing to this removed player instance
+    if (prop_current_player.get()->key() == key)
+        prop_current_player.get().reset();
+#endif
+
     auto it = map.find(key);
     if (it != map.end())
     {

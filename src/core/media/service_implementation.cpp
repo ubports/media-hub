@@ -277,6 +277,7 @@ void media::ServiceImplementation::reset_current_player()
 
 void media::ServiceImplementation::pause_other_sessions(media::Player::PlayerKey key)
 {
+    std::cout << "*****" << __PRETTY_FUNCTION__ << std::endl;
     if (not d->configuration.player_store->has_player_for_key(key))
     {
         cerr << "Could not find Player by key: " << key << endl;
@@ -287,8 +288,8 @@ void media::ServiceImplementation::pause_other_sessions(media::Player::PlayerKey
             d->configuration.player_store->player_for_key(key);
 
     // We immediately make the player known as new current player.
-    if (current_player->audio_stream_role() == media::Player::multimedia)
-        d->configuration.player_store->set_current_player_for_key(key);
+    //if (current_player->audio_stream_role() == media::Player::multimedia)
+    //    d->configuration.player_store->set_current_player_for_key(key);
 
     d->configuration.player_store->enumerate_players([current_player, key](const media::Player::PlayerKey& other_key, const std::shared_ptr<media::Player>& other_player)
     {
@@ -297,6 +298,7 @@ void media::ServiceImplementation::pause_other_sessions(media::Player::PlayerKey
         // 2) not the same player as the one passed in my key
         // 3) new Player has an audio stream role set to multimedia
         // 4) has an audio stream role set to multimedia
+        std::cout << "Considering if we should pause any other players!!!!" << std::endl;
         if (other_player->playback_status() == Player::playing &&
             other_key != key &&
             current_player->audio_stream_role() == media::Player::multimedia &&

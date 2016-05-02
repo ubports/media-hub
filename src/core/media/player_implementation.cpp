@@ -325,6 +325,15 @@ struct media::PlayerImplementation<Parent>::Private :
         parent->can_go_next().set(has_next);
     }
 
+    bool pause_other_players(const media::Player::PlayerKey& key)
+    {
+        if (not config.parent.player_service)
+            return false;
+
+        config.parent.player_service->pause_other_sessions(key);
+        return true;
+    }
+
     bool update_current_player(const media::Player::PlayerKey& key)
     {
         if (not config.parent.player_service)
@@ -770,6 +779,10 @@ void media::PlayerImplementation<Parent>::play()
 {
     if (d->is_multimedia_role())
     {
+        std::cout << "==== Pausing other multimedia player sessions" << std::endl;
+        if (not d->pause_other_players(d->config.key))
+            std::cerr << "Failed to pause other player sessions" << std::endl;
+
         std::cout << "==== Updating the current player from " << __PRETTY_FUNCTION__ << std::endl;
         // This player will begin playing so make sure it's the current player. If
         // this operation fails it is not a fatal condition but should be logged
