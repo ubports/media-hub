@@ -520,9 +520,6 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
 
         // This is not a fatal error but merely a warning that should
         // be logged
-        cout << "is_multimedia_role(): " << d->is_multimedia_role() << std::endl;
-        cout << "is_current_player(): " << d->is_current_player() << std::endl;
-        cout << "client_disconnected_signal (this): " << this << std::endl;
         if (d->is_multimedia_role() and d->is_current_player())
         {
             MH_DEBUG("==== Resetting current player");

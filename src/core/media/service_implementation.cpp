@@ -289,10 +289,6 @@ void media::ServiceImplementation::pause_other_sessions(media::Player::PlayerKey
     const std::shared_ptr<media::Player> current_player =
             d->configuration.player_store->player_for_key(key);
 
-    // We immediately make the player known as new current player.
-    //if (current_player->audio_stream_role() == media::Player::multimedia)
-    //    d->configuration.player_store->set_current_player_for_key(key);
-
     d->configuration.player_store->enumerate_players([current_player, key]
             (const media::Player::PlayerKey& other_key,
              const std::shared_ptr<media::Player>& other_player)
