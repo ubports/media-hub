@@ -95,11 +95,6 @@ struct media::ServiceSkeleton::Private
                         &Private::handle_resume_session,
                         this,
                         std::placeholders::_1));
-        object->install_method_handler<mpris::Service::SetCurrentPlayer>(
-                    std::bind(
-                        &Private::handle_set_current_player,
-                        this,
-                        std::placeholders::_1));
         object->install_method_handler<mpris::Service::PauseOtherSessions>(
                     std::bind(
                         &Private::handle_pause_other_sessions,
