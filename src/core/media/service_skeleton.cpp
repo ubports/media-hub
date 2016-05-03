@@ -242,16 +242,6 @@ struct media::ServiceSkeleton::Private
                         // Signal player reconnection
                         auto player = configuration.player_store->player_for_key(key);
                         player->reconnect();
-                        // We only care to allow the MPRIS controls to apply to multimedia player (i.e. audio, video)
-                        if (player->audio_stream_role() == media::Player::AudioStreamRole::multimedia)
-                        {
-                            MH_TRACE("Setting current_player");
-#if 0
-                            exported.set_current_player(player);
-#else
-                            exported.set_current_player(key);
-#endif
-                        }
 
                         auto reply = dbus::Message::make_method_return(msg);
                         reply->writer() << op;
