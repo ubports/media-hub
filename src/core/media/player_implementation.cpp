@@ -351,6 +351,9 @@ struct media::PlayerImplementation<Parent>::Private :
 
     bool is_current_player() const
     {
+        if (not config.parent.player_service)
+            return false;
+
         media::ServiceSkeleton* skel {
             reinterpret_cast<media::ServiceSkeleton*>(config.parent.player_service)
         };
