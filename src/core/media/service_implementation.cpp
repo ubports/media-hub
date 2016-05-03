@@ -260,22 +260,6 @@ std::shared_ptr<media::Player> media::ServiceImplementation::resume_session(medi
   return std::shared_ptr<media::Player>();
 }
 
-void media::ServiceImplementation::set_current_player(Player::PlayerKey)
-{
-  // no impl
-}
-
-bool media::ServiceImplementation::is_current_player(Player::PlayerKey) const
-{
-    // no impl
-    return false;
-}
-
-void media::ServiceImplementation::reset_current_player()
-{
-    // no impl
-}
-
 void media::ServiceImplementation::pause_other_sessions(media::Player::PlayerKey key)
 {
     MH_TRACE("");

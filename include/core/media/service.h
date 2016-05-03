@@ -60,17 +60,6 @@ class Service : public std::enable_shared_from_this<Service>
     /** @brief Resumes a fixed-name session directly by player key. */
     virtual std::shared_ptr<Player> resume_session(Player::PlayerKey) = 0;
 
-    /** @brief Sets the current player that the MPRIS interface will control */
-    virtual void set_current_player(Player::PlayerKey) = 0;
-
-    /** @brief Checks if key player is the current player that the MPRIS interface controls */
-    virtual bool is_current_player(Player::PlayerKey) const = 0;
-
-    /** @detail Resets the current player so that the MPRIS interface will no
-     *  longer have a current player to control
-     */
-    virtual void reset_current_player() = 0;
-
     /** @brief Pauses sessions other than the supplied one. */
     virtual void pause_other_sessions(Player::PlayerKey) = 0;
 

@@ -20,6 +20,7 @@
 #include <core/media/service.h>
 
 #include "player_implementation.h"
+#include "service_skeleton.h"
 #include "util/timeout.h"
 
 #include <unistd.h>
@@ -324,27 +325,36 @@ struct media::PlayerImplementation<Parent>::Private :
         parent->can_go_next().set(has_next);
     }
 
-    bool pause_other_players(const media::Player::PlayerKey& key)
+    bool pause_other_players(media::Player::PlayerKey key)
     {
         if (not config.parent.player_service)
             return false;
 
-        config.parent.player_service->pause_other_sessions(key);
+        media::ServiceSkeleton* skel {
+            reinterpret_cast<media::ServiceSkeleton*>(config.parent.player_service)
+        };
+        skel->pause_other_sessions(key);
         return true;
     }
 
-    bool update_current_player(const media::Player::PlayerKey& key)
+    bool update_current_player(media::Player::PlayerKey key)
     {
         if (not config.parent.player_service)
             return false;
 
-        config.parent.player_service->set_current_player(key);
+        media::ServiceSkeleton* skel {
+            reinterpret_cast<media::ServiceSkeleton*>(config.parent.player_service)
+        };
+        skel->set_current_player(key);
         return true;
     }
 
     bool is_current_player() const
     {
-        return config.parent.player_service->is_current_player(parent->key());
+        media::ServiceSkeleton* skel {
+            reinterpret_cast<media::ServiceSkeleton*>(config.parent.player_service)
+        };
+        return skel->is_current_player(parent->key());
     }
 
     bool is_multimedia_role() const
@@ -357,7 +367,10 @@ struct media::PlayerImplementation<Parent>::Private :
         if (not config.parent.player_service)
             return false;
 
-        config.parent.player_service->reset_current_player();
+        media::ServiceSkeleton* skel {
+            reinterpret_cast<media::ServiceSkeleton*>(config.parent.player_service)
+        };
+        skel->reset_current_player();
         return true;
     }
 

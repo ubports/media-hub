@@ -940,7 +940,7 @@ void media::ServiceSkeleton::set_current_player(media::Player::PlayerKey key)
         d->exported.set_current_player(key);
 }
 
-bool media::ServiceSkeleton::is_current_player(Player::PlayerKey key) const
+bool media::ServiceSkeleton::is_current_player(media::Player::PlayerKey key) const
 {
     return d->exported.is_current_player(key);
 }
