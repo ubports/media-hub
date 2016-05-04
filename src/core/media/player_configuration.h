@@ -19,6 +19,7 @@
 #define CORE_UBUNTU_MEDIA_PLAYER_CLIENT_CONFIGURATION_H_
 
 #include <core/media/player.h>
+#include <core/media/service.h>
 
 #include <core/dbus/bus.h>
 #include <core/dbus/object.h>
@@ -35,6 +36,8 @@ struct core::ubuntu::media::Player::Configuration
     std::shared_ptr<core::dbus::Service> service;
     // The actual session object representing a player instance.
     std::shared_ptr<core::dbus::Object> session;
+    // The Service instance that manages Player instances
+    core::ubuntu::media::Service* player_service;
 };
 
 #endif // CORE_UBUNTU_MEDIA_PLAYER_CLIENT_CONFIGURATION_H_

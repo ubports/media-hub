@@ -26,5 +26,5 @@ if(DOXYGEN_FOUND)
     COMMENT "Generating API documentation with Doxygen" VERBATIM)
   install(
     DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html
-    DESTINATION share/doc/music-hub)
+    DESTINATION share/doc/media-hub)
 endif(DOXYGEN_FOUND)

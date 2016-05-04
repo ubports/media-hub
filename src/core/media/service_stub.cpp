@@ -139,15 +139,6 @@ std::shared_ptr<media::Player> media::ServiceStub::resume_session(media::Player:
     });
 }
 
-void media::ServiceStub::set_current_player(Player::PlayerKey key)
-{
-    auto op = d->object->invoke_method_synchronously<mpris::Service::SetCurrentPlayer,
-         void>(key);
-
-    if (op.is_error())
-        throw std::runtime_error("Problem setting current player: " + op.error());
-}
-
 void media::ServiceStub::pause_other_sessions(media::Player::PlayerKey key)
 {
     auto op = d->object->invoke_method_synchronously<mpris::Service::PauseOtherSessions,

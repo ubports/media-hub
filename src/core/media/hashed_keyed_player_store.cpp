@@ -64,6 +64,7 @@ void media::HashedKeyedPlayerStore::add_player_for_key(const media::Player::Play
 void media::HashedKeyedPlayerStore::remove_player_for_key(const media::Player::PlayerKey& key)
 {
     std::lock_guard<std::recursive_mutex> lg{guard};
+
     auto it = map.find(key);
     if (it != map.end())
     {

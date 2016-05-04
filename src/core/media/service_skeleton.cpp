@@ -63,7 +63,7 @@ struct media::ServiceSkeleton::Private
           object(impl->access_service()->add_object_for_path(
                      dbus::traits::Service<media::Service>::object_path())),
           configuration(config),
-          exported(impl->access_bus(), config.cover_art_resolver, impl)
+          exported(impl->access_bus(), config.cover_art_resolver, impl, configuration)
     {
         object->install_method_handler<mpris::Service::CreateSession>(
                     std::bind(
@@ -93,11 +93,6 @@ struct media::ServiceSkeleton::Private
         object->install_method_handler<mpris::Service::ResumeSession>(
                     std::bind(
                         &Private::handle_resume_session,
-                        this,
-                        std::placeholders::_1));
-        object->install_method_handler<mpris::Service::SetCurrentPlayer>(
-                    std::bind(
-                        &Private::handle_set_current_player,
                         this,
                         std::placeholders::_1));
         object->install_method_handler<mpris::Service::PauseOtherSessions>(
@@ -133,7 +128,8 @@ struct media::ServiceSkeleton::Private
             key,
             impl->access_bus(),
             impl->access_service(),
-            impl->access_service()->add_object_for_path(op)
+            impl->access_service()->add_object_for_path(op),
+            impl
         };
 
         MH_DEBUG("Session created by request of: %s, key: %d, uuid: %d, path: %s",
@@ -241,12 +237,6 @@ struct media::ServiceSkeleton::Private
                         // Signal player reconnection
                         auto player = configuration.player_store->player_for_key(key);
                         player->reconnect();
-                        // We only care to allow the MPRIS controls to apply to multimedia player (i.e. audio, video)
-                        if (player->audio_stream_role() == media::Player::AudioStreamRole::multimedia)
-                        {
-                            MH_TRACE("Setting current_player");
-                            exported.set_current_player(player);
-                        }
 
                         auto reply = dbus::Message::make_method_return(msg);
                         reply->writer() << op;
@@ -369,7 +359,8 @@ struct media::ServiceSkeleton::Private
                     key,
                     impl->access_bus(),
                     impl->access_service(),
-                    impl->access_service()->add_object_for_path(op)
+                    impl->access_service()->add_object_for_path(op),
+                    impl
                 };
 
                 auto session = impl->create_session(config);
@@ -543,7 +534,7 @@ struct media::ServiceSkeleton::Private
         }
 
         explicit Exported(const dbus::Bus::Ptr& bus, const media::CoverArtResolver& cover_art_resolver,
-                media::ServiceSkeleton* impl)
+                media::ServiceSkeleton* impl, const ServiceSkeleton::Configuration& config)
             : bus{bus},
               /* Export MediaHub service interface on dbus */
               service{dbus::Service::add_service(bus, "org.mpris.MediaPlayer2.MediaHub")},
@@ -552,7 +543,8 @@ struct media::ServiceSkeleton::Private
               player{mpris::Player::Skeleton::Configuration{bus, object, player_defaults()}},
               playlists{mpris::Playlists::Skeleton::Configuration{bus, object, mpris::Playlists::Skeleton::Configuration::Defaults{}}},
               cover_art_resolver{cover_art_resolver},
-              impl{impl}
+              impl{impl},
+              service_skel_config(config)
         {
             object->install_method_handler<core::dbus::interfaces::Properties::GetAll>([this](const core::dbus::Message::Ptr& msg)
             {
@@ -574,7 +566,7 @@ struct media::ServiceSkeleton::Private
             // Setup method handlers for mpris::Player methods.
             auto next = [this](const core::dbus::Message::Ptr& msg)
             {
-                const auto sp = current_player.lock();
+                const auto sp = service_skel_config.player_store->current_player().get();
 
                 if (is_multimedia_role())
                     sp->next();
@@ -585,7 +577,7 @@ struct media::ServiceSkeleton::Private
 
             auto previous = [this](const core::dbus::Message::Ptr& msg)
             {
-                const auto sp = current_player.lock();
+                const auto sp = service_skel_config.player_store->current_player().get();
 
                 if (is_multimedia_role())
                     sp->previous();
@@ -596,7 +588,7 @@ struct media::ServiceSkeleton::Private
 
             auto pause = [this](const core::dbus::Message::Ptr& msg)
             {
-                const auto sp = current_player.lock();
+                const auto sp = service_skel_config.player_store->current_player().get();
 
                 if (is_multimedia_role() and sp->can_pause())
                     sp->pause();
@@ -607,7 +599,7 @@ struct media::ServiceSkeleton::Private
 
             auto stop = [this](const core::dbus::Message::Ptr& msg)
             {
-                const auto sp = current_player.lock();
+                const auto sp = service_skel_config.player_store->current_player().get();
 
                 if (is_multimedia_role())
                     sp->stop();
@@ -618,7 +610,7 @@ struct media::ServiceSkeleton::Private
 
             auto play = [this, impl](const core::dbus::Message::Ptr& msg)
             {
-                const auto sp = current_player.lock();
+                const auto sp = service_skel_config.player_store->current_player().get();
 
                 if (is_multimedia_role() and sp->can_play())
                 {
@@ -636,7 +628,7 @@ struct media::ServiceSkeleton::Private
 
             auto play_pause = [this, impl](const core::dbus::Message::Ptr& msg)
             {
-                const auto sp = current_player.lock();
+                const auto sp = service_skel_config.player_store->current_player().get();
 
                 if (is_multimedia_role())
                 {
@@ -662,67 +654,79 @@ struct media::ServiceSkeleton::Private
 
         inline bool is_multimedia_role()
         {
-            const auto sp = current_player.lock();
+            MH_TRACE("");
 
+            const auto sp = service_skel_config.player_store->current_player().get();
             return (sp ? sp->audio_stream_role() == media::Player::AudioStreamRole::multimedia : false);
         }
 
-        void set_current_player(const std::shared_ptr<media::Player>& cp)
+        void set_current_player(media::Player::PlayerKey key)
         {
             MH_TRACE("");
-            // We will not keep the object alive.
-            current_player = cp;
+
+            // Update the current player in the Player store
+            service_skel_config.player_store->set_current_player_for_key(key);
+            const auto player_sp = service_skel_config.player_store->current_player().get();
 
             // And announce that we can be controlled again.
             player.properties.can_control->set(true);
 
             // We wire up player state changes
-            connections.seeked_to = cp->seeked_to().connect([this](std::uint64_t position)
+            connections.seeked_to = player_sp->seeked_to().connect([this](std::uint64_t position)
             {
                 player.signals.seeked_to->emit(position);
             });
 
-            connections.duration_changed = cp->duration().changed().connect([this](std::uint64_t duration)
+            connections.duration_changed = player_sp->duration().changed().connect([this](std::uint64_t duration)
             {
                 player.properties.duration->set(duration);
             });
 
-            connections.position_changed = cp->position().changed().connect([this](std::uint64_t position)
+            connections.position_changed = player_sp->position().changed().connect([this](std::uint64_t position)
             {
                 player.properties.position->set(position);
             });
 
-            connections.playback_status_changed = cp->playback_status().changed().connect(
-                [this](core::ubuntu::media::Player::PlaybackStatus status)
+            connections.playback_status_changed = player_sp->playback_status().changed().connect(
+                [this, key, player_sp](core::ubuntu::media::Player::PlaybackStatus status)
             {
-                player.properties.playback_status->set(mpris::Player::PlaybackStatus::from(status));
+                const auto cp = service_skel_config.player_store->current_player().get();
+                // If key points to the current player's key, then update status
+                if (cp and key == cp->key())
+                    player.properties.playback_status->set(mpris::Player::PlaybackStatus::from(status));
             });
 
-            connections.loop_status_changed = cp->loop_status().changed().connect(
+            connections.loop_status_changed = player_sp->loop_status().changed().connect(
                 [this](core::ubuntu::media::Player::LoopStatus status)
             {
                 player.properties.loop_status->set(mpris::Player::LoopStatus::from(status));
             });
 
-            connections.can_play_changed = cp->can_play().changed().connect(
-                [this](bool can_play)
+            connections.can_play_changed = player_sp->can_play().changed().connect(
+                [this, key, player_sp](bool can_play)
             {
-                player.properties.can_play->set(can_play);
+                const auto cp = service_skel_config.player_store->current_player().get();
+                // If key points to the current player's key, then update can_play
+                if (cp and key == cp->key())
+                    player.properties.can_play->set(can_play);
             });
 
-            connections.can_pause_changed = cp->can_pause().changed().connect(
-                [this](bool can_pause)
+            connections.can_pause_changed = player_sp->can_pause().changed().connect(
+                [this, key, player_sp](bool can_pause)
             {
-                player.properties.can_pause->set(can_pause);
+                const auto cp = service_skel_config.player_store->current_player().get();
+                // If key points to the current player's key, then update can_pause
+                if (cp and key == cp->key())
+                    player.properties.can_pause->set(can_pause);
             });
 
-            connections.can_go_previous_changed = cp->can_go_previous().changed().connect(
+            connections.can_go_previous_changed = player_sp->can_go_previous().changed().connect(
                 [this](bool can_go_previous)
             {
                 player.properties.can_go_previous->set(can_go_previous);
             });
 
-            connections.can_go_next_changed = cp->can_go_next().changed().connect(
+            connections.can_go_next_changed = player_sp->can_go_next().changed().connect(
                 [this](bool can_go_next)
             {
                 player.properties.can_go_next->set(can_go_next);
@@ -734,16 +738,16 @@ struct media::ServiceSkeleton::Private
             // different DBus object paths, /core/ubuntu/media/Service/sessions/<n>
             // and /org/mpris/MediaPlayer2 (this is the one enforced by the MPRIS spec).
             // Discuss why this is needed with tvoss.
-            player.properties.duration->set(cp->duration().get());
-            player.properties.position->set(cp->position().get());
+            player.properties.duration->set(player_sp->duration().get());
+            player.properties.position->set(player_sp->position().get());
             player.properties.playback_status->set(mpris::Player::PlaybackStatus::from(
-                                                       cp->playback_status().get()));
+                                                       player_sp->playback_status().get()));
             player.properties.loop_status->set(mpris::Player::LoopStatus::from(
-                                                   cp->loop_status().get()));
-            player.properties.can_play->set(cp->can_play().get());
-            player.properties.can_pause->set(cp->can_pause().get());
-            player.properties.can_go_previous->set(cp->can_go_previous().get());
-            player.properties.can_go_next->set(cp->can_go_next().get());
+                                                   player_sp->loop_status().get()));
+            player.properties.can_play->set(player_sp->can_play().get());
+            player.properties.can_pause->set(player_sp->can_pause().get());
+            player.properties.can_go_previous->set(player_sp->can_go_previous().get());
+            player.properties.can_go_next->set(player_sp->can_go_next().get());
 
 #if 0
             // TODO cover_art_resolver() is not implemented yet
@@ -788,7 +792,27 @@ struct media::ServiceSkeleton::Private
             MH_TRACE("");
             // And announce that we can no longer be controlled.
             player.properties.can_control->set(false);
-            current_player.reset();
+            player.properties.can_play->set(false);
+            player.properties.can_pause->set(false);
+            player.properties.can_go_previous->set(false);
+            player.properties.can_go_next->set(false);
+
+            // Reset to null event connections
+            connections.seeked_to = the_empty_signal.connect([](){});
+            connections.duration_changed = the_empty_signal.connect([](){});
+            connections.position_changed = the_empty_signal.connect([](){});
+            connections.playback_status_changed = the_empty_signal.connect([](){});
+            connections.loop_status_changed = the_empty_signal.connect([](){});
+            connections.can_play_changed = the_empty_signal.connect([](){});
+            connections.can_pause_changed = the_empty_signal.connect([](){});
+            connections.can_go_previous_changed = the_empty_signal.connect([](){});
+            connections.can_go_next_changed = the_empty_signal.connect([](){});
+        }
+
+        bool is_current_player(media::Player::PlayerKey key)
+
+        {
+            return key == service_skel_config.player_store->current_player().get()->key();
         }
 
         dbus::Bus::Ptr bus;
@@ -801,10 +825,9 @@ struct media::ServiceSkeleton::Private
 
         // The CoverArtResolver used by the exported player.
         media::CoverArtResolver cover_art_resolver;
-        // The actual player instance.
-        std::weak_ptr<media::Player> current_player;
 
         media::ServiceSkeleton* impl;
+        ServiceSkeleton::Configuration service_skel_config;
 
         // We track event connections.
         struct
@@ -899,11 +922,23 @@ void media::ServiceSkeleton::set_current_player(media::Player::PlayerKey key)
         d->configuration.player_store->player_for_key(key);
     // We only care to allow the MPRIS controls to apply to multimedia player (i.e. audio, video)
     if (player->audio_stream_role() == media::Player::AudioStreamRole::multimedia)
-        d->exported.set_current_player(player);
+        d->exported.set_current_player(key);
+}
+
+bool media::ServiceSkeleton::is_current_player(media::Player::PlayerKey key) const
+{
+    return d->exported.is_current_player(key);
+}
+
+void media::ServiceSkeleton::reset_current_player()
+{
+    MH_TRACE("");
+    d->exported.reset_current_player();
 }
 
 void media::ServiceSkeleton::pause_other_sessions(media::Player::PlayerKey key)
 {
+    MH_TRACE("");
     d->configuration.impl->pause_other_sessions(key);
 }
 

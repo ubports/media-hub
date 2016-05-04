@@ -17,7 +17,10 @@
  *              Jim Hodapp <jim.hodapp@canonical.com>
  */
 
+#include <core/media/service.h>
+
 #include "player_implementation.h"
+#include "service_skeleton.h"
 #include "util/timeout.h"
 
 #include <unistd.h>
@@ -301,14 +304,14 @@ struct media::PlayerImplementation<Parent>::Private :
         }
     }
 
-    void update_mpris_properties(void)
+    void update_mpris_properties()
     {
-        bool has_previous =    track_list->has_previous()
+        const bool has_previous = track_list->has_previous()
                             or parent->Parent::loop_status() != Player::LoopStatus::none;
-        bool has_next =    track_list->has_next()
+        const bool has_next = track_list->has_next()
                         or parent->Parent::loop_status() != Player::LoopStatus::none;
-        auto n_tracks = track_list->tracks()->size();
-        bool has_tracks = (n_tracks > 0) ? true : false;
+        const auto n_tracks = track_list->tracks()->size();
+        const bool has_tracks = (n_tracks > 0) ? true : false;
 
         MH_INFO("Updating MPRIS TrackList properties:");
         MH_INFO("\tTracks: %d", n_tracks);
@@ -320,6 +323,58 @@ struct media::PlayerImplementation<Parent>::Private :
         parent->can_pause().set(has_tracks);
         parent->can_go_previous().set(has_previous);
         parent->can_go_next().set(has_next);
+    }
+
+    bool pause_other_players(media::Player::PlayerKey key)
+    {
+        if (not config.parent.player_service)
+            return false;
+
+        media::ServiceSkeleton* skel {
+            reinterpret_cast<media::ServiceSkeleton*>(config.parent.player_service)
+        };
+        skel->pause_other_sessions(key);
+        return true;
+    }
+
+    bool update_current_player(media::Player::PlayerKey key)
+    {
+        if (not config.parent.player_service)
+            return false;
+
+        media::ServiceSkeleton* skel {
+            reinterpret_cast<media::ServiceSkeleton*>(config.parent.player_service)
+        };
+        skel->set_current_player(key);
+        return true;
+    }
+
+    bool is_current_player() const
+    {
+        if (not config.parent.player_service)
+            return false;
+
+        media::ServiceSkeleton* skel {
+            reinterpret_cast<media::ServiceSkeleton*>(config.parent.player_service)
+        };
+        return skel->is_current_player(parent->key());
+    }
+
+    bool is_multimedia_role() const
+    {
+        return parent->audio_stream_role() == media::Player::AudioStreamRole::multimedia;
+    }
+
+    bool reset_current_player()
+    {
+        if (not config.parent.player_service)
+            return false;
+
+        media::ServiceSkeleton* skel {
+            reinterpret_cast<media::ServiceSkeleton*>(config.parent.player_service)
+        };
+        skel->reset_current_player();
+        return true;
     }
 
     // Our link back to our parent.
@@ -478,6 +533,16 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         // are cleared
         d->clear_wakelocks();
         d->track_list->reset();
+
+        // This is not a fatal error but merely a warning that should
+        // be logged
+        if (d->is_multimedia_role() and d->is_current_player())
+        {
+            MH_DEBUG("==== Resetting current player");
+            if (not d->reset_current_player())
+                MH_WARNING("Failed to reset current player");
+        }
+
         // And tell the outside world that the client has gone away
         d->on_client_disconnected();
     });
@@ -687,7 +752,8 @@ bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri)
     d->track_list->reset();
 
     // If empty uri, give the same meaning as QMediaPlayer::setMedia("")
-    if (uri.empty()) {
+    if (uri.empty())
+    {
         MH_DEBUG("Resetting current media");
         return true;
     }
@@ -697,6 +763,7 @@ bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri)
     // Don't set new track as the current track to play since we're calling open_resource_for_uri above
     static const bool make_current = false;
     d->track_list->add_track_with_uri_at(uri, media::TrackList::after_empty_track(), make_current);
+
     return ret;
 }
 
@@ -722,6 +789,19 @@ template<typename Parent>
 void media::PlayerImplementation<Parent>::play()
 {
     MH_TRACE("");
+    if (d->is_multimedia_role())
+    {
+        MH_DEBUG("==== Pausing all other multimedia player sessions");
+        if (not d->pause_other_players(d->config.key))
+            MH_WARNING("Failed to pause other player sessions");
+
+        MH_DEBUG("==== Updating the current player");
+        // This player will begin playing so make sure it's the current player. If
+        // this operation fails it is not a fatal condition but should be logged
+        if (not d->update_current_player(d->config.key))
+            MH_WARNING("Failed to update current player");
+    }
+
     d->engine->play();
 }
 
