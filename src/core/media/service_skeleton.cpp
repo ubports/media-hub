@@ -812,6 +812,11 @@ struct media::ServiceSkeleton::Private
         bool is_current_player(media::Player::PlayerKey key)
 
         {
+            if (not service_skel_config.player_store)
+                return false;
+            if (not service_skel_config.player_store->current_player().get())
+                return false;
+
             return key == service_skel_config.player_store->current_player().get()->key();
         }
 
