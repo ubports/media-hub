@@ -1,3 +1,10 @@
+media-hub (4.2.0+16.10.20160519-0ubuntu1) yakkety; urgency=medium
+
+  * Make sure that is_current_player() doesn't crash when there isn't a
+    current player pointer set. (LP: #1579953)
+
+ -- Jim Hodapp <ci-train-bot@canonical.com>  Thu, 19 May 2016 18:31:30 +0000
+
 media-hub (4.2.0+16.04.20160504-0ubuntu1) xenial; urgency=medium
 
   [ Jim Hodapp ]
