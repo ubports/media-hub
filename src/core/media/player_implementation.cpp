@@ -552,6 +552,12 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         Parent::seeked_to()(value);
     });
 
+    d->engine->on_buffering_changed_signal().connect([this](int64_t value)
+    {
+        std::cout << __PRETTY_FUNCTION__ << "buffering" << value << std::endl;
+        Parent::buffering_changed()(value);
+    });
+
     d->engine->end_of_stream_signal().connect([this]()
     {
         Parent::end_of_stream()();

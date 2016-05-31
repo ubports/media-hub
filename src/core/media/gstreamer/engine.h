@@ -68,6 +68,7 @@ public:
     const core::Signal<core::ubuntu::media::Player::PlaybackStatus>& playback_status_changed_signal() const;
     const core::Signal<core::ubuntu::media::video::Dimensions>& video_dimension_changed_signal() const;
     const core::Signal<core::ubuntu::media::Player::Error>& error_signal() const;
+    const core::Signal<int64_t>& on_buffering_changed_signal() const;
 
     void reset();
 
