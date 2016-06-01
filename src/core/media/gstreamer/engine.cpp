@@ -261,7 +261,7 @@ struct gstreamer::Engine::Private
         video_dimension_changed(dimensions);
     }
 
-    void on_buffering_changed(uint16_t value)
+    void on_buffering_changed(int value)
     {
         on_buffering(value);
     }
@@ -402,7 +402,7 @@ struct gstreamer::Engine::Private
     core::Signal<media::Player::PlaybackStatus> playback_status_changed;
     core::Signal<core::ubuntu::media::video::Dimensions> video_dimension_changed;
     core::Signal<media::Player::Error> error;
-    core::Signal<uint16_t> on_buffering;
+    core::Signal<int> on_buffering;
 };
 
 gstreamer::Engine::Engine() : d(new Private{})
@@ -609,7 +609,7 @@ const core::Signal<core::ubuntu::media::Player::Error>& gstreamer::Engine::error
     return d->error;
 }
 
-const core::Signal<uint16_t>& gstreamer::Engine::on_buffering_changed_signal() const
+const core::Signal<int>& gstreamer::Engine::on_buffering_changed_signal() const
 {
     return d->on_buffering;
 }

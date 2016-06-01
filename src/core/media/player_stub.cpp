@@ -208,7 +208,7 @@ struct media::PlayerStub::Private
         core::Signal<media::Player::PlaybackStatus> playback_status_changed;
         core::Signal<media::video::Dimensions> video_dimension_changed;
         core::Signal<media::Player::Error> error;
-        core::Signal<uint16_t> buffering_changed;
+        core::Signal<int> buffering_changed;
 
         struct DBus
         {
@@ -523,7 +523,7 @@ const core::Signal<media::Player::Error>& media::PlayerStub::error() const
     return d->signals.error;
 }
 
-const core::Signal<uint16_t>& media::PlayerStub::buffering_changed() const
+const core::Signal<int>& media::PlayerStub::buffering_changed() const
 {
     std::cout << __PRETTY_FUNCTION__ << "buffering" << std::endl;
 

@@ -354,7 +354,7 @@ struct media::PlayerSkeleton::Private
         core::Signal<media::Player::PlaybackStatus> playback_status_changed;
         core::Signal<media::video::Dimensions> video_dimension_changed;
         core::Signal<media::Player::Error> error;
-        core::Signal<uint16_t> buffering_changed;
+        core::Signal<int> buffering_changed;
     } signals;
 
 };
@@ -680,13 +680,13 @@ const core::Signal<media::Player::Error>& media::PlayerSkeleton::error() const
     return d->signals.error;
 }
 
-const core::Signal<uint16_t>& media::PlayerSkeleton::buffering_changed() const
+const core::Signal<int>& media::PlayerSkeleton::buffering_changed() const
 {
     std::cout << __PRETTY_FUNCTION__ << "buffering" << std::endl;
     return d->signals.buffering_changed;
 }
 
-core::Signal<uint16_t>& media::PlayerSkeleton::buffering_changed()
+core::Signal<int>& media::PlayerSkeleton::buffering_changed()
 {
     std::cout << __PRETTY_FUNCTION__ << "buffering" << std::endl;
 
