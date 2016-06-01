@@ -189,7 +189,7 @@ class Player : public std::enable_shared_from_this<Player>
     virtual const core::Signal<video::Dimensions>& video_dimension_changed() const = 0;
     /** Signals all errors and warnings (typically from GStreamer and below) */
     virtual const core::Signal<Error>& error() const = 0;
-    virtual const core::Signal<int64_t>& buffering_changed() const = 0;
+    virtual const core::Signal<uint16_t>& buffering_changed() const = 0;
 
   protected:
     Player();

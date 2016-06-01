@@ -143,7 +143,7 @@ struct Playbin
         core::Signal<core::ubuntu::media::Player::Orientation> on_orientation_changed;
         core::Signal<core::ubuntu::media::video::Dimensions> on_video_dimensions_changed;
         core::Signal<void> client_disconnected;
-        core::Signal<int64_t> on_buffering_changed;
+        core::Signal<uint16_t> on_buffering_changed;
     } signals;
     bool is_missing_audio_codec;
     bool is_missing_video_codec;
