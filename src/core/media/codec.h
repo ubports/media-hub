@@ -23,9 +23,17 @@
 #include <core/media/player.h>
 #include <core/media/track.h>
 
+#include <core/dbus/types/stl/map.h>
 #include <core/dbus/types/stl/string.h>
+#include <core/dbus/types/variant.h>
 #include <core/dbus/types/stl/vector.h>
 #include <core/dbus/codec.h>
+
+#include <boost/lexical_cast.hpp>
+
+#include "core/media/xesam.h"
+
+#include "core/media/logger/logger.h"
 
 namespace core
 {
@@ -38,7 +46,7 @@ struct TypeMapper<core::ubuntu::media::Track::MetaData>
 {
     constexpr static ArgumentType type_value()
     {
-        return ArgumentType::floating_point;
+        return ArgumentType::array;
     }
     constexpr static bool is_basic_type()
     {
@@ -51,7 +59,7 @@ struct TypeMapper<core::ubuntu::media::Track::MetaData>
 
     static std::string signature()
     {
-        static const std::string s = TypeMapper<double>::signature();
+        static const std::string s = TypeMapper<std::map<std::string, dbus::types::Variant>>::signature();
         return s;
     }
 };
@@ -60,16 +68,72 @@ struct TypeMapper<core::ubuntu::media::Track::MetaData>
 template<>
 struct Codec<core::ubuntu::media::Track::MetaData>
 {
-    static void encode_argument(core::dbus::Message::Writer& out, const core::ubuntu::media::Track::MetaData& in)
+    static void encode_argument(core::dbus::Message::Writer& writer, const core::ubuntu::media::Track::MetaData& md)
     {
-        (void) out;
-        (void) in;
+        typedef std::pair<std::string, dbus::types::Variant> Pair;
+        auto dict = writer.open_array(dbus::types::Signature{dbus::helper::TypeMapper<Pair>::signature()});
+
+        for (const auto& pair : *md)
+        {
+            auto de = dict.open_dict_entry();
+            {
+                if (pair.first == "mpris:length" and not pair.second.empty())
+                {
+                    Codec<Pair>::encode_argument(de, std::make_pair(pair.first, dbus::types::Variant::encode(boost::lexical_cast<std::int64_t>(pair.second))));
+                }
+                else if (pair.first == xesam::Album::name and not pair.second.empty())
+                {
+                    Codec<Pair>::encode_argument(de, std::make_pair(pair.first, dbus::types::Variant::encode(pair.second)));
+                }
+                else if (pair.first == xesam::AlbumArtist::name and not pair.second.empty())
+                {
+#if 0
+                    // TODO: This code doesn't work but will be needed for full MPRIS compliance. Technically
+                    // there can be more than one album artist stuffed into an array.
+                    auto array = de.open_array(dbus::types::Signature{dbus::helper::TypeMapper<Pair>::signature()});
+                    {
+                        // TODO: this should really iterate over all artists, but seems we only extract one artist from playbin
+                        Codec<Pair>::encode_argument(array, std::make_pair(pair.first, dbus::types::Variant::encode(pair.second)));
+                    }
+                    de.close_array(std::move(array));
+#else
+                    Codec<Pair>::encode_argument(de, std::make_pair(pair.first, dbus::types::Variant::encode(pair.second)));
+#endif
+                }
+                else
+                {
+                    Codec<Pair>::encode_argument(de, std::make_pair(pair.first, dbus::types::Variant::encode(pair.second)));
+                }
+            }
+            dict.close_dict_entry(std::move(de));
+        }
+        writer.close_array(std::move(dict));
     }
 
-    static void decode_argument(core::dbus::Message::Reader& out, core::ubuntu::media::Track::MetaData& in)
+    static void decode_argument(core::dbus::Message::Reader& reader, core::ubuntu::media::Track::MetaData& md)
     {
-        (void) out;
-        (void) in;
+        auto array = reader.pop_array();
+
+        while (array.type() != dbus::ArgumentType::invalid)
+        {
+            auto entry = array.pop_dict_entry();
+            {
+                std::string key {entry.pop_string()};
+                auto variant = entry.pop_variant();
+                {
+                    if (key == xesam::Album::name)
+                    {
+                        const std::string album = variant.pop_string();
+                        MH_DEBUG("Getting key \"%s\" and value \"%s\"", key, album);
+                        md.set_album(album);
+                    }
+                    else
+                    {
+                        MH_WARNING("Unknown metadata key \"%s\" while decoding dbus message", key);
+                    }
+                }
+            }
+        }
     }
 };
 

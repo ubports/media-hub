@@ -30,8 +30,6 @@
 
 #include <utility>
 
-//#define VERBOSE_DEBUG
-
 namespace
 {
 void setup_video_sink_for_buffer_streaming(GstElement* pipeline)
@@ -256,7 +254,7 @@ void gstreamer::Playbin::process_message_element(GstMessage *message)
 
 void gstreamer::Playbin::on_new_message_async(const Bus::Message& message)
 {
-    switch(message.type)
+    switch (message.type)
     {
     case GST_MESSAGE_ERROR:
         signals.on_error(message.detail.error_warning_info);

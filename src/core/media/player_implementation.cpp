@@ -138,7 +138,7 @@ struct media::PlayerImplementation<Parent>::Private :
             }
             case Engine::State::playing:
             {
-                // We update the track meta data prior to updating the playback status.
+                // We update the track metadata prior to updating the playback status.
                 // Some MPRIS clients expect this order of events.
                 parent->meta_data_for_current_track().set(std::get<1>(engine->track_meta_data().get()));
                 // And update our playback status.
@@ -499,6 +499,27 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
     Parent::lifetime().changed().connect([this](media::Player::Lifetime lifetime)
     {
         d->engine->lifetime().set(lifetime);
+    });
+
+    d->engine->track_meta_data().changed().connect([this, config](
+           const std::tuple<media::Track::UriType, media::Track::MetaData>& md)
+    {
+        auto metadata = std::get<1>(md);
+
+        if (not metadata.is_set(media::Track::MetaData::TrackIdKey))
+        {
+            const std::size_t last_slash = d->track_list->current().find_last_of("/");
+            const std::string track_id = d->track_list->current().substr(last_slash+1);
+            if (not track_id.empty())
+                metadata.set_track_id("/org/mpris/MediaPlayer2/Track/" + track_id);
+            else
+                MH_WARNING("Failed to set MPRIS track id since the id value is NULL");
+        }
+        // TODO: This needs to be extracted from GStreamer and dynamically set
+        if (not metadata.is_set(media::Track::MetaData::TrackArtlUrlKey))
+            metadata.set_art_url("file:///usr/lib/arm-linux-gnueabihf/unity-scopes/mediascanner-music/album_missing.svg");
+
+        d->parent->meta_data_for_current_track().set(metadata);
     });
 
     d->engine->about_to_finish_signal().connect([this]()
