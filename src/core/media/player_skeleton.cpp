@@ -347,7 +347,7 @@ struct media::PlayerSkeleton::Private
                 remote_error->emit(e);
             });
 
-            seeked_to.connect([remote_buffering_changed](int value)
+            buffering_changed.connect([remote_buffering_changed](int value)
             {
                 remote_buffering_changed->emit(value);
             });
