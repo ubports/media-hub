@@ -554,7 +554,7 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
 
     d->engine->on_buffering_changed_signal().connect([this](int value)
     {
-        std::cout << __PRETTY_FUNCTION__ << "buffering" << value << std::endl;
+        MH_DEBUG("buffering %d",value);
         Parent::buffering_changed()(value);
     });
 

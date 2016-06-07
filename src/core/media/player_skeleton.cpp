@@ -682,13 +682,12 @@ const core::Signal<media::Player::Error>& media::PlayerSkeleton::error() const
 
 const core::Signal<int>& media::PlayerSkeleton::buffering_changed() const
 {
-    std::cout << __PRETTY_FUNCTION__ << "buffering" << std::endl;
+    MH_DEBUG("buffering changed");
     return d->signals.buffering_changed;
 }
 
 core::Signal<int>& media::PlayerSkeleton::buffering_changed()
 {
-    std::cout << __PRETTY_FUNCTION__ << "buffering" << std::endl;
-
+    MH_DEBUG("buffering changed");
     return d->signals.buffering_changed;
 }
