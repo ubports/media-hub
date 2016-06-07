@@ -138,7 +138,7 @@ struct media::PlayerStub::Private
         typedef core::dbus::Signal<mpris::Player::Signals::PlaybackStatusChanged, mpris::Player::Signals::PlaybackStatusChanged::ArgumentType> DBusPlaybackStatusChangedSignal;
         typedef core::dbus::Signal<mpris::Player::Signals::VideoDimensionChanged, mpris::Player::Signals::VideoDimensionChanged::ArgumentType> DBusVideoDimensionChangedSignal;
         typedef core::dbus::Signal<mpris::Player::Signals::Error, mpris::Player::Signals::Error::ArgumentType> DBusErrorSignal;
-        typedef core::dbus::Signal<mpris::Player::Signals::Buffering, mpris::Player::Signals::Seeked::ArgumentType> DBusBufferingChangedSignal;
+        typedef core::dbus::Signal<mpris::Player::Signals::Buffering, mpris::Player::Signals::Buffering::ArgumentType> DBusBufferingChangedSignal;
 
         Signals(const std::shared_ptr<DBusSeekedToSignal>& seeked,
                 const std::shared_ptr<DBusAboutToFinishSignal>& atf,
