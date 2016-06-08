@@ -157,7 +157,7 @@ struct Player
         DBUS_CPP_SIGNAL_DEF(PlaybackStatusChanged, Player, core::ubuntu::media::Player::PlaybackStatus)
         DBUS_CPP_SIGNAL_DEF(VideoDimensionChanged, Player, core::ubuntu::media::video::Dimensions)
         DBUS_CPP_SIGNAL_DEF(Error, Player, core::ubuntu::media::Player::Error)
-        DBUS_CPP_SIGNAL_DEF(Buffering, Player, std::int64_t)
+        DBUS_CPP_SIGNAL_DEF(Buffering, Player, int)
     };
 
     struct Properties

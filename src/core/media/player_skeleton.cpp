@@ -315,7 +315,7 @@ struct media::PlayerSkeleton::Private
                 const std::shared_ptr<DBusPlaybackStatusChangedSignal>& remote_playback_status_changed,
                 const std::shared_ptr<DBusVideoDimensionChangedSignal>& remote_video_dimension_changed,
                 const std::shared_ptr<DBusErrorSignal>& remote_error,
-                const std::shared_ptr<DBusBufferingChangedSignal>&remote_buffering_changed)
+                const std::shared_ptr<DBusBufferingChangedSignal>& remote_buffering_changed)
         {
             seeked_to.connect([remote_seeked](std::uint64_t value)
             {
@@ -688,12 +688,10 @@ const core::Signal<media::Player::Error>& media::PlayerSkeleton::error() const
 
 const core::Signal<int>& media::PlayerSkeleton::buffering_changed() const
 {
-    MH_DEBUG("buffering changed");
     return d->signals.buffering_changed;
 }
 
 core::Signal<int>& media::PlayerSkeleton::buffering_changed()
 {
-    MH_DEBUG("buffering changed");
     return d->signals.buffering_changed;
 }

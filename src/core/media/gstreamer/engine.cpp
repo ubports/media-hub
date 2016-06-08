@@ -359,7 +359,6 @@ struct gstreamer::Engine::Private
                       &Private::on_buffering_changed,
                       this,
                       std::placeholders::_1)))
-
     {
     }
 

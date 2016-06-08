@@ -302,7 +302,6 @@ void gstreamer::Playbin::on_new_message_async(const Bus::Message& message)
         signals.on_end_of_stream();
         break;
     case GST_MESSAGE_BUFFERING:
-         MH_DEBUG("Got buffering message");
         signals.on_buffering_changed(message.detail.buffering.percent);
         break;
     default:

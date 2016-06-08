@@ -145,7 +145,7 @@ struct media::PlayerStub::Private
                 const std::shared_ptr<DBusEndOfStreamSignal>& eos,
                 const std::shared_ptr<DBusPlaybackStatusChangedSignal>& status,
                 const std::shared_ptr<DBusVideoDimensionChangedSignal>& d,
-                const std::shared_ptr<DBusBufferingChangedSignal>& bufferPercent,
+                const std::shared_ptr<DBusBufferingChangedSignal>& bp,
                 const std::shared_ptr<DBusErrorSignal>& e)
             : seeked_to(),
               about_to_finish(),
@@ -162,7 +162,7 @@ struct media::PlayerStub::Private
                   status,
                   d,
                   e,
-                  bufferPercent
+                  bp
               }
         {
             dbus.seeked_to->connect([this](std::uint64_t value)
@@ -202,10 +202,10 @@ struct media::PlayerStub::Private
                 error(e);
             });
 
-            dbus.buffering_changed->connect([this](int bufferPercent)
+            dbus.buffering_changed->connect([this](int percent)
             {
-                MH_DEBUG("BufferingChanged signal arrived via the bus.");
-                buffering_changed(bufferPercent);
+                MH_DEBUG("BufferingChanged signal arrived via the bus (percent: %d", percent);
+                buffering_changed(percent);
             });
         }
 
@@ -532,6 +532,5 @@ const core::Signal<media::Player::Error>& media::PlayerStub::error() const
 
 const core::Signal<int>& media::PlayerStub::buffering_changed() const
 {
-    MH_DEBUG("buffering changed");
     return d->signals.buffering_changed;
 }
