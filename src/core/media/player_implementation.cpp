@@ -24,6 +24,7 @@
 #include "util/timeout.h"
 
 #include <unistd.h>
+#include <ctime>
 
 #include "client_death_observer.h"
 #include "engine.h"
@@ -140,7 +141,16 @@ struct media::PlayerImplementation<Parent>::Private :
             {
                 // We update the track metadata prior to updating the playback status.
                 // Some MPRIS clients expect this order of events.
-                update_mpris_metadata(std::get<1>(engine->track_meta_data().get()));
+                time_t now;
+                time(&now);
+                char buf[sizeof "2011-10-08T07:07:09Z"];
+                strftime(buf, sizeof buf, "%FT%TZ", gmtime(&now));
+                media::Track::MetaData metadata{std::get<1>(engine->track_meta_data().get())};
+                // Setting this with second resolution makes sure that the track_meta_data property changes
+                // and thus the track_meta_data().changed() signal gets sent out over dbus. Otherwise the
+                // Property caching mechanism would prevent this.
+                metadata.set_last_used(std::string{buf});
+                update_mpris_metadata(metadata);
 
                 // And update our playback status.
                 parent->playback_status().set(media::Player::playing);

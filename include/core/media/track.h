@@ -114,12 +114,14 @@ public:
         const std::string& title() const;
         const std::string& track_id() const;
         const std::string& art_url() const;
+        const std::string& last_used() const;
 
         void set_album(const std::string& album);
         void set_artist(const std::string& artist);
         void set_title(const std::string& title);
         void set_track_id(const std::string& id);
         void set_art_url(const std::string& url);
+        void set_last_used(const std::string& datetime);
 
     private:
         MetaDataType map;

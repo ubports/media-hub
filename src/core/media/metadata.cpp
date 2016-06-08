@@ -47,6 +47,11 @@ const std::string& media::Track::MetaData::art_url() const
     return map.at(media::Track::MetaData::TrackArtlUrlKey);
 }
 
+const std::string& media::Track::MetaData::last_used() const
+{
+    return map.at(xesam::LastUsed::name);
+}
+
 void media::Track::MetaData::set_album(const std::string& album)
 {
     map[xesam::Album::name] = album;
@@ -70,4 +75,9 @@ void media::Track::MetaData::set_track_id(const std::string& id)
 void media::Track::MetaData::set_art_url(const std::string& url)
 {
     map[media::Track::MetaData::TrackArtlUrlKey] = url;
+}
+
+void media::Track::MetaData::set_last_used(const std::string& datetime)
+{
+    map[xesam::LastUsed::name] = datetime;
 }
