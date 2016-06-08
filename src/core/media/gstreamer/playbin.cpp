@@ -458,6 +458,8 @@ void gstreamer::Playbin::set_uri(
     const core::ubuntu::media::Player::HeadersType& headers = core::ubuntu::media::Player::HeadersType(),
     bool do_pipeline_reset)
 {
+    MH_TRACE("");
+
     gchar *current_uri = nullptr;
     g_object_get(pipeline, "current-uri", &current_uri, NULL);
 
@@ -536,12 +538,13 @@ bool gstreamer::Playbin::set_state_and_wait(GstState new_state)
 
     auto ret = gst_element_set_state(pipeline, new_state);
 
-    MH_DEBUG("Requested state change.");
+    MH_DEBUG("Requested state change: %d", new_state);
 
     bool result = false; GstState current, pending;
     switch(ret)
     {
     case GST_STATE_CHANGE_FAILURE:
+        MH_ERROR("Failed to change to new pipeline state");
         result = false; break;
     case GST_STATE_CHANGE_NO_PREROLL:
     case GST_STATE_CHANGE_SUCCESS:

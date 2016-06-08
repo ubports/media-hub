@@ -434,6 +434,8 @@ void gstreamer::Engine::create_video_sink(uint32_t texture_id)
 
 bool gstreamer::Engine::play()
 {
+    MH_TRACE("");
+
     const auto result = d->playbin.set_state_and_wait(GST_STATE_PLAYING);
 
     if (result)
@@ -443,6 +445,7 @@ bool gstreamer::Engine::play()
         d->playback_status_changed(media::Player::PlaybackStatus::playing);
     }
 
+    MH_TRACE("");
     return result;
 }
 
