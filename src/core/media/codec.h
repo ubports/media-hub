@@ -71,38 +71,49 @@ struct Codec<core::ubuntu::media::Track::MetaData>
     static void encode_argument(core::dbus::Message::Writer& writer, const core::ubuntu::media::Track::MetaData& md)
     {
         typedef std::pair<std::string, dbus::types::Variant> Pair;
-        auto dict = writer.open_array(dbus::types::Signature{dbus::helper::TypeMapper<Pair>::signature()});
+        auto dict = writer.open_array(dbus::types::Signature
+                {dbus::helper::TypeMapper<Pair>::signature()});
 
         for (const auto& pair : *md)
         {
             auto de = dict.open_dict_entry();
             {
-                if (pair.first == "mpris:length" and not pair.second.empty())
+                if (pair.first == core::ubuntu::media::Track::MetaData::TrackLengthKey
+                        and not pair.second.empty())
                 {
-                    Codec<Pair>::encode_argument(de, std::make_pair(pair.first, dbus::types::Variant::encode(boost::lexical_cast<std::int64_t>(pair.second))));
+                    Codec<Pair>::encode_argument(de, std::make_pair(pair.first,
+                                dbus::types::Variant::encode(
+                                    boost::lexical_cast<std::int64_t>(pair.second))));
                 }
                 else if (pair.first == xesam::Album::name and not pair.second.empty())
                 {
-                    Codec<Pair>::encode_argument(de, std::make_pair(pair.first, dbus::types::Variant::encode(pair.second)));
+                    Codec<Pair>::encode_argument(de, std::make_pair(pair.first,
+                                dbus::types::Variant::encode(pair.second)));
                 }
                 else if (pair.first == xesam::AlbumArtist::name and not pair.second.empty())
                 {
 #if 0
-                    // TODO: This code doesn't work but will be needed for full MPRIS compliance. Technically
-                    // there can be more than one album artist stuffed into an array.
-                    auto array = de.open_array(dbus::types::Signature{dbus::helper::TypeMapper<Pair>::signature()});
+                    // TODO: This code doesn't work but will be needed for full MPRIS compliance.
+                    // Technically there can be more than one album artist stuffed into an array.
+                    // How to satisfy stuffing this data into dbus-cpp is what needs fixing.
+                    auto array = de.open_array(dbus::types::Signature
+                            {dbus::helper::TypeMapper<Pair>::signature()});
                     {
-                        // TODO: this should really iterate over all artists, but seems we only extract one artist from playbin
-                        Codec<Pair>::encode_argument(array, std::make_pair(pair.first, dbus::types::Variant::encode(pair.second)));
+                        // TODO: this should really iterate over all artists, but seems
+                        // we only extract one artist from playbin
+                        Codec<Pair>::encode_argument(array, std::make_pair(pair.first,
+                                    dbus::types::Variant::encode(pair.second)));
                     }
                     de.close_array(std::move(array));
 #else
-                    Codec<Pair>::encode_argument(de, std::make_pair(pair.first, dbus::types::Variant::encode(pair.second)));
+                    Codec<Pair>::encode_argument(de, std::make_pair(pair.first,
+                                dbus::types::Variant::encode(pair.second)));
 #endif
                 }
                 else
                 {
-                    Codec<Pair>::encode_argument(de, std::make_pair(pair.first, dbus::types::Variant::encode(pair.second)));
+                    Codec<Pair>::encode_argument(de, std::make_pair(pair.first,
+                                dbus::types::Variant::encode(pair.second)));
                 }
             }
             dict.close_dict_entry(std::move(de));
