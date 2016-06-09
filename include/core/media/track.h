@@ -39,10 +39,15 @@ class Track
 public:
     typedef std::string UriType;
     typedef std::string Id;
+    typedef std::map<std::string, std::string> MetaDataType;
 
     class MetaData
     {
     public:
+        static constexpr const char* TrackArtlUrlKey = "mpris:artUrl";
+        static constexpr const char* TrackLengthKey = "mpris:length";
+        static constexpr const char* TrackIdKey = "mpris:trackid";
+
         bool operator==(const MetaData& rhs) const
         {
             return map == rhs.map;
@@ -90,13 +95,36 @@ public:
             return map.at(key);
         }
 
+        bool is_set(const std::string& key) const
+        {
+            try {
+                return map.at(key).empty();
+            } catch (const std::out_of_range& e) {
+                return false;
+            }
+        }
+
         const std::map<std::string, std::string>& operator*() const
         {
             return map;
         }
 
+        const std::string& album() const;
+        const std::string& artist() const;
+        const std::string& title() const;
+        const std::string& track_id() const;
+        const std::string& art_url() const;
+        const std::string& last_used() const;
+
+        void set_album(const std::string& album);
+        void set_artist(const std::string& artist);
+        void set_title(const std::string& title);
+        void set_track_id(const std::string& id);
+        void set_art_url(const std::string& url);
+        void set_last_used(const std::string& datetime);
+
     private:
-        std::map<std::string, std::string> map;
+        MetaDataType map;
     };
 
     Track(const Id& id);
@@ -108,51 +136,7 @@ public:
 
     virtual const Id& id() const;
     virtual const UriType& uri() const;
-    /*
-    class MetaData
-    {
-    public:
-        MetaData() = default;
-        MetaData(const MetaData&) = default;
-        ~MetaData() = default;
 
-        MetaData& operator=(const MetaData&) = default;
-
-        bool operator==(const MetaData&) const
-        {
-            return true;
-        }
-
-        bool operator!=(const MetaData&) const
-        {
-            return false;
-        }
-
-        struct NotImplementedFields
-        {
-            NotImplementedFields() = default;
-
-            virtual const UriType& uri() const = 0;
-            virtual const std::chrono::microseconds length() const = 0;
-            virtual const UriType& art_uri() const = 0;
-            virtual const std::string& album() const = 0;
-            virtual const std::vector<std::string>& album_artist() const = 0;
-            virtual const std::vector<std::string>& artist() const = 0;
-            virtual const std::string& as_text() const = 0;
-            virtual unsigned int audio_bpm() const = 0;
-            virtual float auto_rating() const = 0;
-            virtual const std::vector<std::string>& comment() const = 0;
-            virtual const std::vector<std::string>& composer() const = 0;
-            virtual unsigned int disc_number() const = 0;
-            virtual const std::vector<std::string>& genre() const = 0;
-            virtual const std::vector<std::string>& lyricist() const = 0;
-            virtual const std::string title() const = 0;
-            virtual unsigned int track_number() const = 0;
-            virtual unsigned int use_count() const = 0;
-            virtual float user_rating() const = 0;
-        };
-    };
-*/
 private:
     struct Private;
     std::unique_ptr<Private> d;

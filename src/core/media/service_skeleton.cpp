@@ -732,6 +732,21 @@ struct media::ServiceSkeleton::Private
                 player.properties.can_go_next->set(can_go_next);
             });
 
+            // NOTE: the metadata first gets updated in the PlayerImplementation constructor which connects
+            // and reacts to the Engine track_meta_data changed signal. Setting the
+            // meta_data_for_current_track here makes sure that the signal uses the MPRIS object path
+            connections.meta_data_changed = player_sp->meta_data_for_current_track().changed().connect(
+                    [this](const media::Track::MetaData& metadata)
+            {
+                player.properties.meta_data_for_current_track->set(metadata);
+                mpris::Player::Dictionary dict; dict[mpris::Player::Properties::Metadata::name()]
+                        = dbus::types::Variant::encode(metadata);
+                player.signals.properties_changed->emit(std::make_tuple(
+                                dbus::traits::Service<mpris::Player>::interface_name(),
+                                dict,
+                                mpris::Player::Skeleton::the_empty_list_of_invalidated_properties()));
+            });
+
             // Sync property values between session and player mpris::Player instances
             // TODO Getters from media::Player actually return values from a
             // mpris::Player::Skeleton instance different from "player". Each of them use
@@ -748,43 +763,6 @@ struct media::ServiceSkeleton::Private
             player.properties.can_pause->set(player_sp->can_pause().get());
             player.properties.can_go_previous->set(player_sp->can_go_previous().get());
             player.properties.can_go_next->set(player_sp->can_go_next().get());
-
-#if 0
-            // TODO cover_art_resolver() is not implemented yet
-            connections.meta_data_changed = cp->meta_data_for_current_track().changed().connect(
-                [this](const core::ubuntu::media::Track::MetaData& md)
-                {
-                    mpris::Player::Dictionary dict;
-
-                    bool has_title = md.count(xesam::Title::name) > 0;
-                    bool has_album_name = md.count(xesam::Album::name) > 0;
-                    bool has_artist_name = md.count(xesam::Artist::name) > 0;
-
-                    if (has_title)
-                        dict[xesam::Title::name] = dbus::types::Variant::encode(md.get(xesam::Title::name));
-                    if (has_album_name)
-                        dict[xesam::Album::name] = dbus::types::Variant::encode(md.get(xesam::Album::name));
-                    if (has_artist_name)
-                        dict[xesam::Artist::name] = dbus::types::Variant::encode(md.get(xesam::Artist::name));
-
-                    dict[mpris::metadata::ArtUrl::name] = dbus::types::Variant::encode(
-                        cover_art_resolver(
-                            has_title ? md.get(xesam::Title::name) : "",
-                            has_album_name ? md.get(xesam::Album::name) : "",
-                            has_artist_name ? md.get(xesam::Artist::name) : ""));
-
-                    mpris::Player::Dictionary wrap;
-                    wrap[mpris::Player::Properties::Metadata::name()] = dbus::types::Variant::encode(dict);
-
-                    player.signals.properties_changed->emit(
-                        std::make_tuple(
-                            dbus::traits::Service<
-                            mpris::Player::Properties::Metadata::Interface>
-                            ::interface_name(),
-                            wrap,
-                            std::vector<std::string>()));
-                });
-#endif
         }
 
         void reset_current_player()
@@ -807,6 +785,7 @@ struct media::ServiceSkeleton::Private
             connections.can_pause_changed = the_empty_signal.connect([](){});
             connections.can_go_previous_changed = the_empty_signal.connect([](){});
             connections.can_go_next_changed = the_empty_signal.connect([](){});
+            connections.meta_data_changed = the_empty_signal.connect([](){});
         }
 
         bool is_current_player(media::Player::PlayerKey key)

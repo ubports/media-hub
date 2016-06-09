@@ -22,6 +22,6 @@ core::ubuntu::media::CoverArtResolver core::ubuntu::media::always_missing_cover_
 {
     return [](const std::string&, const std::string&, const std::string&)
     {
-        return "file:///usr/share/unity/icons/album_missing.png";
+        return "file:///usr/lib/arm-linux-gnueabihf/unity-scopes/mediascanner-music/album_missing.svg";
     };
 }

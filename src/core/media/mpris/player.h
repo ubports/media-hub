@@ -44,6 +44,8 @@
 
 #include <cstdint>
 
+#include "core/media/logger/logger.h"
+
 namespace dbus = core::dbus;
 
 namespace mpris
@@ -172,8 +174,7 @@ struct Player
         DBUS_CPP_WRITABLE_PROPERTY_DEF(PlaybackRate, Player, double)
         DBUS_CPP_WRITABLE_PROPERTY_DEF(Rate, Player, double)
         DBUS_CPP_WRITABLE_PROPERTY_DEF(Shuffle, Player, bool)
-        DBUS_CPP_READABLE_PROPERTY_DEF(Metadata, Player, Dictionary)
-        DBUS_CPP_READABLE_PROPERTY_DEF(TypedMetaData, Player, core::ubuntu::media::Track::MetaData)
+        DBUS_CPP_READABLE_PROPERTY_DEF(Metadata, Player, core::ubuntu::media::Track::MetaData)
         DBUS_CPP_WRITABLE_PROPERTY_DEF(Volume, Player, double)
         DBUS_CPP_READABLE_PROPERTY_DEF(Position, Player, std::int64_t)
         DBUS_CPP_READABLE_PROPERTY_DEF(Duration, Player, std::int64_t)
@@ -222,7 +223,7 @@ struct Player
                 Properties::TypedLoopStatus::ValueType typed_loop_status{core::ubuntu::media::Player::LoopStatus::none};
                 Properties::PlaybackRate::ValueType playback_rate{1.f};
                 Properties::Shuffle::ValueType shuffle{false};
-                Properties::TypedMetaData::ValueType typed_meta_data{};
+                Properties::Metadata::ValueType meta_data{};
                 Properties::Volume::ValueType volume{0.f};
                 Properties::Position::ValueType position{0};
                 Properties::Duration::ValueType duration{0};
@@ -253,7 +254,7 @@ struct Player
                   configuration.object->template get_property<Properties::Lifetime>(),
                   configuration.object->template get_property<Properties::PlaybackRate>(),
                   configuration.object->template get_property<Properties::Shuffle>(),
-                  configuration.object->template get_property<Properties::TypedMetaData>(),
+                  configuration.object->template get_property<Properties::Metadata>(),
                   configuration.object->template get_property<Properties::Volume>(),
                   configuration.object->template get_property<Properties::Position>(),
                   configuration.object->template get_property<Properties::Duration>(),
@@ -288,6 +289,7 @@ struct Player
             properties.lifetime->set(core::ubuntu::media::Player::Lifetime::normal);
             properties.playback_rate->set(configuration.defaults.playback_rate);
             properties.shuffle->set(configuration.defaults.shuffle);
+            properties.meta_data_for_current_track->set(configuration.defaults.meta_data);
             properties.position->set(configuration.defaults.position);
             properties.duration->set(configuration.defaults.duration);
             properties.minimum_playback_rate->set(configuration.defaults.minimum_rate);
@@ -351,9 +353,9 @@ struct Player
             Dictionary dict; dict[Property::name()] = dbus::types::Variant::encode(value);
 
             signals.properties_changed->emit(std::make_tuple(
-                            dbus::traits::Service<Player>::interface_name(),
-                            dict,
-                            the_empty_list_of_invalidated_properties()));
+                        dbus::traits::Service<Player>::interface_name(),
+                        dict,
+                        the_empty_list_of_invalidated_properties()));
         }
 
         Dictionary get_all_properties()
@@ -374,6 +376,7 @@ struct Player
             dict[Properties::Lifetime::name()] = dbus::types::Variant::encode(properties.lifetime->get());
             dict[Properties::PlaybackRate::name()] = dbus::types::Variant::encode(properties.playback_rate->get());
             dict[Properties::Shuffle::name()] = dbus::types::Variant::encode(properties.shuffle->get());
+            dict[Properties::Metadata::name()] = dbus::types::Variant::encode(properties.meta_data_for_current_track->get());
             dict[Properties::Duration::name()] = dbus::types::Variant::encode(properties.duration->get());
             dict[Properties::Position::name()] = dbus::types::Variant::encode(properties.position->get());
             dict[Properties::MinimumRate::name()] = dbus::types::Variant::encode(properties.minimum_playback_rate->get());
@@ -405,7 +408,7 @@ struct Player
             std::shared_ptr<core::dbus::Property<Properties::Lifetime>> lifetime;
             std::shared_ptr<core::dbus::Property<Properties::PlaybackRate>> playback_rate;
             std::shared_ptr<core::dbus::Property<Properties::Shuffle>> shuffle;
-            std::shared_ptr<core::dbus::Property<Properties::TypedMetaData>> typed_meta_data_for_current_track;
+            std::shared_ptr<core::dbus::Property<Properties::Metadata>> meta_data_for_current_track;
             std::shared_ptr<core::dbus::Property<Properties::Volume>> volume;
             std::shared_ptr<core::dbus::Property<Properties::Position>> position;
             std::shared_ptr<core::dbus::Property<Properties::Duration>> duration;
