@@ -53,4 +53,12 @@ DATUM(Url, xesam:url, std::string)
 DATUM(UserRating, xesam:userRating, double)
 }
 
+namespace tags
+{
+// Does the track contain album art?
+DATUM(Image, tag:image, bool)
+// Does the track contain a small album art preview image?
+DATUM(PreviewImage, tag::previewImage, bool)
+}
+
 #endif // XESAM_H_

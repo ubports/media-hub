@@ -29,6 +29,7 @@
 #include "client_death_observer.h"
 #include "engine.h"
 #include "track_list_implementation.h"
+#include "xesam.h"
 
 #include "gstreamer/engine.h"
 
@@ -150,7 +151,7 @@ struct media::PlayerImplementation<Parent>::Private :
                 // and thus the track_meta_data().changed() signal gets sent out over dbus. Otherwise the
                 // Property caching mechanism would prevent this.
                 metadata.set_last_used(std::string{buf});
-                update_mpris_metadata(metadata);
+                update_mpris_metadata(std::get<0>(engine->track_meta_data().get()), metadata);
 
                 // And update our playback status.
                 parent->playback_status().set(media::Player::playing);
@@ -336,9 +337,60 @@ struct media::PlayerImplementation<Parent>::Private :
         parent->can_go_next().set(has_next);
     }
 
+    std::string get_uri_for_album_artwork(const media::Track::UriType& uri,
+            const media::Track::MetaData& metadata)
+    {
+        std::string art_uri;
+        static const std::string file_uri_prefix{"file://"};
+        size_t pos = uri.find_first_of(file_uri_prefix);
+        MH_DEBUG("find_first_of: %d", pos != std::string::npos);
+        MH_DEBUG("uri.at(0): %c", uri.at(0));
+        const bool is_local_file = (pos != std::string::npos or uri.at(0) == '/');
+        MH_DEBUG("is_local_file ? %d", is_local_file);
+        MH_DEBUG("is_video_source: %d", parent->is_video_source().get());
+        // If the track has a full image or preview image or is a video and it is a local file,
+        // then use the thumbnailer cache
+        if (  (( metadata.count(tags::PreviewImage::name) > 0
+                 and metadata.get(tags::PreviewImage::name) == "true")
+           or ( metadata.count(tags::Image::name) > 0
+                 and metadata.get(tags::Image::name) == "true")
+           or parent->is_video_source().get())
+           and is_local_file)
+        {
+            MH_DEBUG("Detected the presence of a local preview image or full image");
+            art_uri = "image://thumbnailer/" + uri;
+            MH_DEBUG("art_uri: %s", art_uri);
+        }
+        // Otherwise we'll try and see if we can look up the album art online through
+        // the dash's artwork proxy
+        else if (metadata.is_set(xesam::Album::name) or metadata.is_set(xesam::Artist::name))
+        {
+            if (metadata.is_set(xesam::Album::name) and metadata.is_set(xesam::Artist::name))
+            {
+                art_uri = "image://albumart/artist=" + metadata.artist()
+                    + "&album=" + metadata.album();
+            }
+            else
+            {
+                art_uri = "image://albumart/";
+                if (metadata.is_set(xesam::Artist::name))
+                    art_uri += "artist=" + metadata.artist();
+                else if (metadata.is_set(xesam::Album::name))
+                    art_uri += "album=" + metadata.album();
+            }
+        }
+        // If all else fails, display a placeholder icon
+        else
+        {
+            art_uri = "file:///usr/lib/arm-linux-gnueabihf/unity-scopes/mediascanner-music/album_missing.svg";
+        }
+
+        return art_uri;
+    }
+
     // Makes sure all relevant metadata fields are set to current data and
     // will trigger the track_meta_data().changed() signal to go out over dbus
-    void update_mpris_metadata(const media::Track::MetaData& md)
+    void update_mpris_metadata(const media::Track::UriType& uri, const media::Track::MetaData& md)
     {
         media::Track::MetaData metadata{md};
         if (not metadata.is_set(media::Track::MetaData::TrackIdKey))
@@ -350,9 +402,9 @@ struct media::PlayerImplementation<Parent>::Private :
             else
                 MH_WARNING("Failed to set MPRIS track id since the id value is NULL");
         }
-        // TODO: This needs to be extracted from GStreamer and dynamically set
+
         if (not metadata.is_set(media::Track::MetaData::TrackArtlUrlKey))
-            metadata.set_art_url("file:///usr/lib/arm-linux-gnueabihf/unity-scopes/mediascanner-music/album_missing.svg");
+            metadata.set_art_url(get_uri_for_album_artwork(uri, metadata));
 
         parent->meta_data_for_current_track().set(metadata);
     }
@@ -536,7 +588,7 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
     d->engine->track_meta_data().changed().connect([this, config](
            const std::tuple<media::Track::UriType, media::Track::MetaData>& md)
     {
-        d->update_mpris_metadata(std::get<1>(md));
+        d->update_mpris_metadata(std::get<0>(md), std::get<1>(md));
     });
 
     d->engine->about_to_finish_signal().connect([this]()

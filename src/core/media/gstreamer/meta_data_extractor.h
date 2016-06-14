@@ -51,7 +51,11 @@ public:
             {GST_TAG_GENRE, std::string{xesam::Genre::name}},
             {GST_TAG_TITLE, std::string{xesam::Title::name}},
             {GST_TAG_TRACK_NUMBER, std::string{xesam::TrackNumber::name}},
-            {GST_TAG_USER_RATING, std::string{xesam::UserRating::name}}
+            {GST_TAG_USER_RATING, std::string{xesam::UserRating::name}},
+            // Below this line are custom entries related but not directly from
+            // the MPRIS spec:
+            {GST_TAG_IMAGE, std::string{tags::Image::name}},
+            {GST_TAG_PREVIEW_IMAGE, std::string{tags::PreviewImage::name}}
         };
 
         return lut;
@@ -139,8 +143,22 @@ public:
                 break;
             }
 
-            (*md).set( (gstreamer_to_mpris_tag_lut().count(tag) > 0 ? gstreamer_to_mpris_tag_lut().at(tag) : tag),
-                        ss.str());
+            const bool has_tag_from_lut = (gstreamer_to_mpris_tag_lut().count(tag) > 0);
+            const std::string tag_name{(has_tag_from_lut) ?
+                    gstreamer_to_mpris_tag_lut().at(tag) : tag};
+
+
+            // Specific handling for the following tag types:
+            if (tag_name == tags::PreviewImage::name)
+                ss << "true";
+            if (tag_name == tags::Image::name)
+                ss << "true";
+
+            (*md).set((has_tag_from_lut ?
+                            gstreamer_to_mpris_tag_lut().at(tag) : tag), ss.str());
+
+            MH_DEBUG("Tag name: \"%s\", value: \"%s\"", tag_name, ss.str());
+
         },
         &md);
     }
