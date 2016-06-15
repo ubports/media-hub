@@ -1,3 +1,9 @@
+media-hub (4.2.0+16.10.20160519-0ubuntu2) xenial; urgency=medium
+
+  * Add support for buffering signal. 
+
+ -- Lorn Potter <lpotter@lpotter-Inspiron-2350>  Thu, 16 Jun 2016 06:58:10 +1000
+
 media-hub (4.2.0+16.10.20160519-0ubuntu1) yakkety; urgency=medium
 
   * Make sure that is_current_player() doesn't crash when there isn't a
