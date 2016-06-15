@@ -342,14 +342,10 @@ struct media::PlayerImplementation<Parent>::Private :
     {
         std::string art_uri;
         static const std::string file_uri_prefix{"file://"};
-        MH_DEBUG("uri: %s", uri);
         bool is_local_file = false;
         if (not uri.empty())
             is_local_file = (uri.substr(0, 7) == file_uri_prefix or uri.at(0) == '/');
 
-        MH_DEBUG("is_local_file ? %d", is_local_file);
-        MH_DEBUG("is_video_source: %d", parent->is_video_source().get());
-        MH_DEBUG("Album is_set? %d, Artist is_set? %d", metadata.is_set(xesam::Album::name), metadata.is_set(xesam::Artist::name));
         // If the track has a full image or preview image or is a video and it is a local file,
         // then use the thumbnailer cache
         if (  (( metadata.count(tags::PreviewImage::name) > 0
@@ -359,23 +355,19 @@ struct media::PlayerImplementation<Parent>::Private :
            or parent->is_video_source().get())
            and is_local_file)
         {
-            MH_DEBUG("Detected the presence of a local preview image or full image");
             art_uri = "image://thumbnailer/" + uri;
         }
         // Otherwise we'll try and see if we can look up the album art online through
         // the dash's artwork proxy
         else if (metadata.is_set(xesam::Album::name) or metadata.is_set(xesam::Artist::name))
         {
-            MH_DEBUG("Album name or artist name are set");
             if (metadata.is_set(xesam::Album::name) and metadata.is_set(xesam::Artist::name))
             {
-                MH_DEBUG("Album name and artist name are set");
                 art_uri = "image://albumart/artist=" + metadata.encode(xesam::Artist::name)
                     + "&album=" + metadata.encode(xesam::Album::name);
             }
             else
             {
-                MH_DEBUG("Album name or artist name are set (else case)");
                 art_uri = "image://albumart/";
                 if (metadata.is_set(xesam::Artist::name))
                     art_uri += "artist=" + metadata.encode(xesam::Artist::name);
@@ -389,7 +381,6 @@ struct media::PlayerImplementation<Parent>::Private :
             art_uri = "file:///usr/lib/arm-linux-gnueabihf/unity-scopes/mediascanner-music/album_missing.svg";
         }
 
-        MH_DEBUG("art_uri: %s", art_uri);
         return art_uri;
     }
 
