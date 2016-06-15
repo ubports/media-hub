@@ -20,7 +20,19 @@
 
 #include <core/media/track.h>
 
+#include <glib.h>
+
 namespace media = core::ubuntu::media;
+
+std::string media::Track::MetaData::encode(const std::string& key) const
+{
+    if (not is_set(key))
+        return std::string{};
+
+    return std::string{g_uri_escape_string(map.at(key).c_str(),
+                                            "!$&'()*+,;=:/?[]@", // Reserved chars
+                                            true)};              // Allow UTF-8 chars
+}
 
 const std::string& media::Track::MetaData::album() const
 {
