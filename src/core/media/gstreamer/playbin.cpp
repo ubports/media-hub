@@ -639,28 +639,8 @@ std::string gstreamer::Playbin::file_info_from_uri(const std::string& uri) const
     if (!info)
         return std::string();
 
-    std::string content_type = g_file_info_get_attribute_string(
-                info.get(), G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE);
-
-    if (content_type.empty())
-        return std::string();
-
-    if (content_type == "application/octet-stream")
-    {
-        std::unique_ptr<GFileInfo, void(*)(void *)> full_info(
-                    g_file_query_info(file.get(), G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE,
-                                      G_FILE_QUERY_INFO_NONE,
-                                      /* cancellable */ NULL, &error),g_object_unref);
-
-        if (!full_info)
-            return std::string();
-
-        content_type = g_file_info_get_attribute_string(
-                    full_info.get(), G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE);
-        if (content_type.empty())
-            return std::string();
-    }
-    return content_type;
+    return std::string(g_file_info_get_attribute_string(
+                info.get(), G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE));
 }
 
 std::string gstreamer::Playbin::encode_uri(const std::string& uri) const
