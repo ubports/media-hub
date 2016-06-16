@@ -4,7 +4,7 @@ media-hub (4.2.1+16.10.20160519-0ubuntu2) yakkety; urgency=medium
 
  -- Lorn Potter <lorn.potter@canonical.com>  Thu, 16 Jun 2016 06:58:10 +1000
 
-	media-hub (4.2.0+16.10.20160609-0ubuntu1) yakkety; urgency=medium
+media-hub (4.2.0+16.10.20160609-0ubuntu1) yakkety; urgency=medium
 
   * Enable exporting of metadata via MPRIS over dbus. This does not
     export everything yet and focused solely on track title, track album
