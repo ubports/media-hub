@@ -79,6 +79,7 @@ target_link_libraries(
   ${DBUS_LIBRARIES}
   ${DBUS_CPP_LDFLAGS}
   ${GLog_LIBRARY}
+  ${GIO_LIBRARIES}
   ${HYBRIS_MEDIA_LIBRARIES}
 )
 
