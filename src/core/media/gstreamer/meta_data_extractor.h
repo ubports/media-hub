@@ -156,9 +156,6 @@ public:
 
             (*md).set((has_tag_from_lut ?
                             gstreamer_to_mpris_tag_lut().at(tag) : tag), ss.str());
-
-            MH_DEBUG("Tag name: \"%s\", value: \"%s\"", tag_name, ss.str());
-
         },
         &md);
     }
