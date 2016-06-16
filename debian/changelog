@@ -1,8 +1,16 @@
-media-hub (4.2.0+16.10.20160519-0ubuntu2) yakkety; urgency=medium
+media-hub (4.2.1+16.10.20160519-0ubuntu2) yakkety; urgency=medium
 
   * Add support for buffering signal. 
 
- -- Lorn Potter <lpotter@lpotter-Inspiron-2350>  Thu, 16 Jun 2016 06:58:10 +1000
+ -- Lorn Potter <lorn.potter@canonical.com>  Thu, 16 Jun 2016 06:58:10 +1000
+
+	media-hub (4.2.0+16.10.20160609-0ubuntu1) yakkety; urgency=medium
+
+  * Enable exporting of metadata via MPRIS over dbus. This does not
+    export everything yet and focused solely on track title, track album
+    name and artist name. (LP: #1498962)
+
+ -- Jim Hodapp <jim.hodapp@canonical.com>  Thu, 09 Jun 2016 16:56:41 +0000
 
 media-hub (4.2.0+16.10.20160519-0ubuntu1) yakkety; urgency=medium
 

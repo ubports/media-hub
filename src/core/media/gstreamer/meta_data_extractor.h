@@ -24,6 +24,8 @@
 
 #include "bus.h"
 
+#include "core/media/logger/logger.h"
+
 #include <gst/gst.h>
 
 #include <exception>
@@ -72,7 +74,7 @@ public:
             auto md = static_cast<media::Track::MetaData*>(user_data);
             std::stringstream ss;
 
-            switch(gst_tag_get_type(tag))
+            switch (gst_tag_get_type(tag))
             {
             case G_TYPE_BOOLEAN:
             {
@@ -137,8 +139,7 @@ public:
                 break;
             }
 
-            (*md).set(
-                        (gstreamer_to_mpris_tag_lut().count(tag) > 0 ? gstreamer_to_mpris_tag_lut().at(tag) : tag),
+            (*md).set( (gstreamer_to_mpris_tag_lut().count(tag) > 0 ? gstreamer_to_mpris_tag_lut().at(tag) : tag),
                         ss.str());
         },
         &md);

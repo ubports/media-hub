@@ -24,6 +24,7 @@
 #include "util/timeout.h"
 
 #include <unistd.h>
+#include <ctime>
 
 #include "client_death_observer.h"
 #include "engine.h"
@@ -138,9 +139,19 @@ struct media::PlayerImplementation<Parent>::Private :
             }
             case Engine::State::playing:
             {
-                // We update the track meta data prior to updating the playback status.
+                // We update the track metadata prior to updating the playback status.
                 // Some MPRIS clients expect this order of events.
-                parent->meta_data_for_current_track().set(std::get<1>(engine->track_meta_data().get()));
+                time_t now;
+                time(&now);
+                char buf[sizeof("2011-10-08T07:07:09Z")];
+                strftime(buf, sizeof(buf), "%FT%TZ", gmtime(&now));
+                media::Track::MetaData metadata{std::get<1>(engine->track_meta_data().get())};
+                // Setting this with second resolution makes sure that the track_meta_data property changes
+                // and thus the track_meta_data().changed() signal gets sent out over dbus. Otherwise the
+                // Property caching mechanism would prevent this.
+                metadata.set_last_used(std::string{buf});
+                update_mpris_metadata(metadata);
+
                 // And update our playback status.
                 parent->playback_status().set(media::Player::playing);
                 MH_INFO("Requesting power state");
@@ -325,6 +336,27 @@ struct media::PlayerImplementation<Parent>::Private :
         parent->can_go_next().set(has_next);
     }
 
+    // Makes sure all relevant metadata fields are set to current data and
+    // will trigger the track_meta_data().changed() signal to go out over dbus
+    void update_mpris_metadata(const media::Track::MetaData& md)
+    {
+        media::Track::MetaData metadata{md};
+        if (not metadata.is_set(media::Track::MetaData::TrackIdKey))
+        {
+            const std::size_t last_slash = track_list->current().find_last_of("/");
+            const std::string track_id = track_list->current().substr(last_slash+1);
+            if (not track_id.empty())
+                metadata.set_track_id("/org/mpris/MediaPlayer2/Track/" + track_id);
+            else
+                MH_WARNING("Failed to set MPRIS track id since the id value is NULL");
+        }
+        // TODO: This needs to be extracted from GStreamer and dynamically set
+        if (not metadata.is_set(media::Track::MetaData::TrackArtlUrlKey))
+            metadata.set_art_url("file:///usr/lib/arm-linux-gnueabihf/unity-scopes/mediascanner-music/album_missing.svg");
+
+        parent->meta_data_for_current_track().set(metadata);
+    }
+
     bool pause_other_players(media::Player::PlayerKey key)
     {
         if (not config.parent.player_service)
@@ -499,6 +531,12 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
     Parent::lifetime().changed().connect([this](media::Player::Lifetime lifetime)
     {
         d->engine->lifetime().set(lifetime);
+    });
+
+    d->engine->track_meta_data().changed().connect([this, config](
+           const std::tuple<media::Track::UriType, media::Track::MetaData>& md)
+    {
+        d->update_mpris_metadata(std::get<1>(md));
     });
 
     d->engine->about_to_finish_signal().connect([this]()

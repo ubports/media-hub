@@ -49,6 +49,7 @@ add_library(
   service.cpp
   track.cpp
   track_list.cpp
+  metadata.cpp
 
   player_stub.cpp
   service_stub.cpp
@@ -99,6 +100,7 @@ add_library(
     hybris_client_death_observer.cpp
     cover_art_resolver.cpp
     engine.cpp
+    metadata.cpp
 
     apparmor/context.cpp
     apparmor/ubuntu.cpp

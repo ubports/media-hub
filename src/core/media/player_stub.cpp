@@ -70,7 +70,7 @@ struct media::PlayerStub::Private
                     object->get_property<mpris::Player::Properties::TypedLoopStatus>(),
                     object->get_property<mpris::Player::Properties::PlaybackRate>(),
                     object->get_property<mpris::Player::Properties::Shuffle>(),
-                    object->get_property<mpris::Player::Properties::TypedMetaData>(),
+                    object->get_property<mpris::Player::Properties::Metadata>(),
                     object->get_property<mpris::Player::Properties::Volume>(),
                     object->get_property<mpris::Player::Properties::Position>(),
                     object->get_property<mpris::Player::Properties::Duration>(),
@@ -119,7 +119,7 @@ struct media::PlayerStub::Private
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::TypedLoopStatus>> loop_status;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::PlaybackRate>> playback_rate;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Shuffle>> shuffle;
-        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::TypedMetaData>> meta_data_for_current_track;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Metadata>> meta_data_for_current_track;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Volume>> volume;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Position>> position;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Duration>> duration;

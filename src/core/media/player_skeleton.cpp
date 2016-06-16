@@ -488,7 +488,7 @@ const core::Property<bool>& media::PlayerSkeleton::shuffle() const
 
 const core::Property<media::Track::MetaData>& media::PlayerSkeleton::meta_data_for_current_track() const
 {
-    return *d->skeleton.properties.typed_meta_data_for_current_track;
+    return *d->skeleton.properties.meta_data_for_current_track;
 }
 
 const core::Property<media::Player::Volume>& media::PlayerSkeleton::volume() const
@@ -618,7 +618,7 @@ core::Property<bool>& media::PlayerSkeleton::is_audio_source()
 
 core::Property<media::Track::MetaData>& media::PlayerSkeleton::meta_data_for_current_track()
 {
-    return *d->skeleton.properties.typed_meta_data_for_current_track;
+    return *d->skeleton.properties.meta_data_for_current_track;
 }
 
 core::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::minimum_playback_rate()
