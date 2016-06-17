@@ -1,3 +1,10 @@
+media-hub (4.2.0+16.10.20160617.2-0ubuntu1) yakkety; urgency=medium
+
+  [ Lorn Potter ]
+  * Add support for files with no filename extension.
+
+ -- Jim Hodapp <jim.hodapp@canonical.com>  Fri, 17 Jun 2016 17:53:24 +0000
+
 media-hub (4.2.0+16.10.20160616.4-0ubuntu1) yakkety; urgency=medium
 
   * Support albumart for music and video tracks.
