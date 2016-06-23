@@ -1,3 +1,10 @@
+media-hub (4.2.0+16.10.20160623-0ubuntu1) yakkety; urgency=medium
+
+  * Make sure to not crash when the current track is not set. (LP:
+    #1594524)
+
+ -- Jim Hodapp <jim.hodapp@canonical.com>  Thu, 23 Jun 2016 00:23:30 +0000
+
 media-hub (4.2.0+16.10.20160617.2-0ubuntu1) yakkety; urgency=medium
 
   [ Lorn Potter ]
