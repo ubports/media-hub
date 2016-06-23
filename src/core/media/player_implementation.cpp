@@ -391,10 +391,16 @@ struct media::PlayerImplementation<Parent>::Private :
         media::Track::MetaData metadata{md};
         if (not metadata.is_set(media::Track::MetaData::TrackIdKey))
         {
-            const std::size_t last_slash = track_list->current().find_last_of("/");
-            const std::string track_id = track_list->current().substr(last_slash+1);
-            if (not track_id.empty())
-                metadata.set_track_id("/org/mpris/MediaPlayer2/Track/" + track_id);
+            const std::string current_track = track_list->current();
+            if (not current_track.empty())
+            {
+                const std::size_t last_slash = current_track.find_last_of("/");
+                const std::string track_id = current_track.substr(last_slash + 1);
+                if (not track_id.empty())
+                    metadata.set_track_id("/org/mpris/MediaPlayer2/Track/" + track_id);
+                else
+                    MH_WARNING("Failed to set MPRIS track id since the id value is NULL");
+            }
             else
                 MH_WARNING("Failed to set MPRIS track id since the id value is NULL");
         }
