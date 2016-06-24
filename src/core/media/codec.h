@@ -76,6 +76,11 @@ struct Codec<core::ubuntu::media::Track::MetaData>
 
         for (const auto& pair : *md)
         {
+            // The following tags are not part of the MPRIS spec and should not be encoded
+            if (pair.first == tags::Image::name or
+                    pair.first == tags::PreviewImage::name)
+                continue;
+
             auto de = dict.open_dict_entry();
             {
                 if (pair.first == core::ubuntu::media::Track::MetaData::TrackLengthKey

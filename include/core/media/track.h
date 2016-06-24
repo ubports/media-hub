@@ -26,6 +26,8 @@
 #include <string>
 #include <vector>
 
+#include "core/media/logger/logger.h"
+
 namespace core
 {
 namespace ubuntu
@@ -98,7 +100,7 @@ public:
         bool is_set(const std::string& key) const
         {
             try {
-                return map.at(key).empty();
+                return !map.at(key).empty();
             } catch (const std::out_of_range& e) {
                 return false;
             }
@@ -108,6 +110,8 @@ public:
         {
             return map;
         }
+
+        std::string encode(const std::string& key) const;
 
         const std::string& album() const;
         const std::string& artist() const;
