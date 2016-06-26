@@ -54,6 +54,11 @@ const std::string& media::Track::MetaData::track_id() const
     return map.at(media::Track::MetaData::TrackIdKey);
 }
 
+const std::string& media::Track::MetaData::track_length() const
+{
+    return map.at(media::Track::MetaData::TrackLengthKey);
+}
+
 const std::string& media::Track::MetaData::art_url() const
 {
     return map.at(media::Track::MetaData::TrackArtlUrlKey);
@@ -82,6 +87,11 @@ void media::Track::MetaData::set_title(const std::string& title)
 void media::Track::MetaData::set_track_id(const std::string& id)
 {
     map[media::Track::MetaData::TrackIdKey] = id;
+}
+
+void media::Track::MetaData::set_track_length(const std::string& length)
+{
+    map[media::Track::MetaData::TrackLengthKey] = length;
 }
 
 void media::Track::MetaData::set_art_url(const std::string& url)
