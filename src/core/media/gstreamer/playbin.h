@@ -88,7 +88,9 @@ struct Playbin
     /** Sets the new audio stream role on the pulsesink in playbin */
     void set_audio_stream_role(core::ubuntu::media::Player::AudioStreamRole new_audio_role);
 
+    /** Returns the currnet stream position in nanoseconds */
     uint64_t position() const;
+    /** Returns the currnet stream duration in nanoseconds */
     uint64_t duration() const;
 
     void set_uri(const std::string& uri, const core::ubuntu::media::Player::HeadersType& headers, bool do_pipeline_reset = true);
