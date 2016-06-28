@@ -408,6 +408,12 @@ struct media::PlayerImplementation<Parent>::Private :
         if (not metadata.is_set(media::Track::MetaData::TrackArtlUrlKey))
             metadata.set_art_url(get_uri_for_album_artwork(uri, metadata));
 
+        if (not metadata.is_set(media::Track::MetaData::TrackLengthKey))
+        {
+            // Duration is in nanoseconds, MPRIS spec requires microseconds
+            metadata.set_track_length(std::to_string(engine->duration().get() / 1000));
+        }
+
         parent->meta_data_for_current_track().set(metadata);
     }
 
