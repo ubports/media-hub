@@ -1,3 +1,10 @@
+media-hub (4.2.0+16.10.20160628-0ubuntu1) yakkety; urgency=medium
+
+  [ Jim Hodapp, Michael Zanetti ]
+  * Export the current track length per the MPRIS spec. (LP: #1596245)
+
+ -- Jim Hodapp <jim.hodapp@canonical.com>  Tue, 28 Jun 2016 01:45:45 +0000
+
 media-hub (4.2.0+16.10.20160623-0ubuntu1) yakkety; urgency=medium
 
   * Make sure to not crash when the current track is not set. (LP:
