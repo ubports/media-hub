@@ -26,7 +26,6 @@
 #include <string>
 #include <vector>
 
-#include "core/media/logger/logger.h"
 
 namespace core
 {
