@@ -314,7 +314,8 @@ TEST(GStreamerEngine, DISABLED_stop_pause_play_seek_video_works)
                     std::chrono::seconds{40}));
 }
 
-TEST(GStreamerEngine, get_position_duration_work)
+// FIXME: This is a very fragile test and needs rewriting
+TEST(GStreamerEngine, DISABLED_get_position_duration_work)
 {
     const std::string test_file{"/tmp/test-video.ogg"};
     const std::string test_file_uri{"file:///tmp/test-video.ogg"};
