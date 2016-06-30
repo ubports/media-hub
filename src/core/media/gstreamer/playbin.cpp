@@ -531,11 +531,11 @@ gboolean gstreamer::Playbin::set_state_in_main_thread(gpointer user_data)
     auto thiz = static_cast<Playbin*>(user_data);
     if (thiz and thiz->pipeline)
         gst_element_set_state(thiz->pipeline, thiz->current_new_state);
-        
+
     // Always return false so this is a single shot function call
     return false;
 }
-bool gstreamer::Playbin::set_state_and_wait(GstState new_state)
+bool gstreamer::Playbin::set_state_and_wait(GstState new_state, bool use_main_thread)
 {
     static const std::chrono::nanoseconds state_change_timeout
     {
@@ -545,18 +545,45 @@ bool gstreamer::Playbin::set_state_and_wait(GstState new_state)
         std::chrono::milliseconds{5000}
     };
 
-    // Cache this value for the static g_idle_add handler function
-    current_new_state = new_state;
-    g_idle_add((GSourceFunc) gstreamer::Playbin::set_state_in_main_thread, (gpointer) this);
-
-    MH_DEBUG("Requested state change in main thread context.");
-
+    bool result = false;
     GstState current, pending;
-    const bool result = GST_STATE_CHANGE_SUCCESS == gst_element_get_state(
+    if (use_main_thread)
+    {
+        // Cache this value for the static g_idle_add handler function
+        current_new_state = new_state;
+        g_idle_add((GSourceFunc) gstreamer::Playbin::set_state_in_main_thread, (gpointer) this);
+
+        MH_DEBUG("Requested state change in main thread context.");
+
+        GstState current, pending;
+        result = GST_STATE_CHANGE_SUCCESS == gst_element_get_state(
                 pipeline,
                 &current,
                 &pending,
                 state_change_timeout.count());
+    }
+    else
+    {
+        const auto ret = gst_element_set_state(pipeline, new_state);
+
+        MH_DEBUG("Requested state change not using main thread context.");
+
+        switch (ret)
+        {
+            case GST_STATE_CHANGE_FAILURE:
+                result = false; break;
+            case GST_STATE_CHANGE_NO_PREROLL:
+            case GST_STATE_CHANGE_SUCCESS:
+                result = true; break;
+            case GST_STATE_CHANGE_ASYNC:
+                result = GST_STATE_CHANGE_SUCCESS == gst_element_get_state(
+                        pipeline,
+                        &current,
+                        &pending,
+                        state_change_timeout.count());
+                break;
+        }
+    }
 
     // We only should query the pipeline if we actually succeeded in
     // setting the requested state.

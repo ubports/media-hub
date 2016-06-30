@@ -99,8 +99,9 @@ struct Playbin
     // Sets the pipeline state in the main thread context instead of the possibility of creating
     // a deadlock in the streaming thread
     static gboolean set_state_in_main_thread(gpointer user_data);
-    // Sets the pipeline's state (stopped, playing, paused, etc).
-    bool set_state_and_wait(GstState new_state);
+    // Sets the pipeline's state (stopped, playing, paused, etc). use_main_thread will set the
+    // pipeline's new_state in the main thread context.
+    bool set_state_and_wait(GstState new_state, bool use_main_thread = false);
     bool seek(const std::chrono::microseconds& ms);
 
     core::ubuntu::media::video::Dimensions get_video_dimensions() const;
