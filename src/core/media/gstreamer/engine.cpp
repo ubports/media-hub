@@ -446,7 +446,7 @@ bool gstreamer::Engine::play()
     return result;
 }
 
-bool gstreamer::Engine::stop()
+bool gstreamer::Engine::stop(bool use_main_thread)
 {
     // No need to wait, and we can immediately return.
     if (d->state == media::Engine::State::stopped)
@@ -455,9 +455,6 @@ bool gstreamer::Engine::stop()
         return true;
     }
 
-    // It's important that we stop playback from the main thread to avoid deadlocks when in
-    // a situation like EOS
-    static const bool use_main_thread = true;
     const auto result = d->playbin.set_state_and_wait(GST_STATE_NULL, use_main_thread);
     if (result)
     {

@@ -83,7 +83,7 @@ public:
     virtual void create_video_sink(uint32_t texture_id) = 0;
 
     virtual bool play() = 0;
-    virtual bool stop()  = 0;
+    virtual bool stop(bool use_main_context = false)  = 0;
     virtual bool pause() = 0;
     virtual bool seek_to(const std::chrono::microseconds& ts) = 0;
 
