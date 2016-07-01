@@ -659,6 +659,17 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         Parent::error()(e);
     });
 
+    d->track_list->on_end_of_tracklist().connect([this]()
+    {
+        if (d->engine->state() != gstreamer::Engine::State::ready
+                && d->engine->state() != gstreamer::Engine::State::stopped)
+        {
+            MH_INFO("End of tracklist reached, stopping playback");
+            const constexpr bool use_main_thread = true;
+            d->engine->stop(use_main_thread);
+        }
+    });
+
     d->track_list->on_go_to_track().connect([this](const media::Track::Id& id)
     {
         // This lambda needs to be mutually exclusive with the about_to_finish lambda above
