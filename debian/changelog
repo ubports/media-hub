@@ -1,4 +1,4 @@
-media-hub (4.2.1+16.10.20160519-0ubuntu3) yakkety; urgency=medium
+media-hub (4.2.1+16.10.20160519-0ubuntu4) yakkety; urgency=medium
 
   * Add support for buffering signal. 
 
