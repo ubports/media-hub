@@ -1,3 +1,14 @@
+media-hub (4.2.0+16.10.20160705-0ubuntu1) yakkety; urgency=medium
+
+  [ Jim Hodapp ]
+  * To avoid deadlocking, make sure that we don't ever change the
+    pipeline's state on the streaming thread. It will always be set from
+    the main thread context thanks to g_idle_add(). The deadlock that
+    this fixes was when calling stop() in player_implementation.cpp in
+    the on_end_of_tracklist() handler. (LP: #1596329)
+
+ -- Łukasz Zemczak <lukasz.zemczak@canonical.com>  Tue, 05 Jul 2016 14:58:25 +0000
+
 media-hub (4.2.0+16.10.20160628-0ubuntu1) yakkety; urgency=medium
 
   [ Jim Hodapp, Michael Zanetti ]
