@@ -671,7 +671,8 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
                 && d->engine->state() != gstreamer::Engine::State::stopped)
         {
             MH_INFO("End of tracklist reached, stopping playback");
-            d->engine->stop();
+            const constexpr bool use_main_thread = true;
+            d->engine->stop(use_main_thread);
         }
     });
 

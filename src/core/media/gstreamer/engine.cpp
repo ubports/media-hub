@@ -446,7 +446,7 @@ bool gstreamer::Engine::play()
     return result;
 }
 
-bool gstreamer::Engine::stop()
+bool gstreamer::Engine::stop(bool use_main_thread)
 {
     // No need to wait, and we can immediately return.
     if (d->state == media::Engine::State::stopped)
@@ -455,7 +455,7 @@ bool gstreamer::Engine::stop()
         return true;
     }
 
-    const auto result = d->playbin.set_state_and_wait(GST_STATE_NULL);
+    const auto result = d->playbin.set_state_and_wait(GST_STATE_NULL, use_main_thread);
     if (result)
     {
         d->state = media::Engine::State::stopped;

@@ -29,9 +29,19 @@ std::string media::Track::MetaData::encode(const std::string& key) const
     if (not is_set(key))
         return std::string{};
 
-    return std::string{g_uri_escape_string(map.at(key).c_str(),
-                                            "!$&'()*+,;=:/?[]@", // Reserved chars
-                                            true)};              // Allow UTF-8 chars
+    char* escaped {g_uri_escape_string(map.at(key).c_str(),
+                    "!$&'()*+,;=:/?[]@", // Reserved chars
+                    true)};
+    if (!escaped)
+    {
+        return std::string{};
+    }
+    else
+    {
+        std::string s{escaped};
+        g_free(escaped);
+        return s;
+    }
 }
 
 const std::string& media::Track::MetaData::album() const

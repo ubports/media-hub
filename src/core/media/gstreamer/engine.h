@@ -38,7 +38,8 @@ public:
     void create_video_sink(uint32_t texture_id);
 
     bool play();
-    bool stop();
+    // use_main_thread will set the pipeline's new_state in the main thread context
+    bool stop(bool use_main_thread = false);
     bool pause();
     bool seek_to(const std::chrono::microseconds& ts);
 
