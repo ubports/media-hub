@@ -100,6 +100,7 @@ class PlayerSkeleton : public core::ubuntu::media::Player
     virtual const core::Signal<void>& end_of_stream() const;
     virtual const core::Signal<video::Dimensions>& video_dimension_changed() const;
     virtual const core::Signal<Error>& error() const;
+    virtual const core::Signal<int>& buffering_changed() const;
 
     // These properties are not exposed to the client, but still need to be
     // able to be settable from within the Player:
@@ -124,6 +125,7 @@ class PlayerSkeleton : public core::ubuntu::media::Player
     virtual core::Signal<PlaybackStatus>& playback_status_changed();
     virtual core::Signal<video::Dimensions>& video_dimension_changed();
     virtual core::Signal<Error>& error();
+    virtual core::Signal<int>& buffering_changed();
 
   private:
     struct Private;

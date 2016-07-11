@@ -87,6 +87,7 @@ struct media::PlayerStub::Private
                     object->get_signal<mpris::Player::Signals::EndOfStream>(),
                     object->get_signal<mpris::Player::Signals::PlaybackStatusChanged>(),
                     object->get_signal<mpris::Player::Signals::VideoDimensionChanged>(),
+                    object->get_signal<mpris::Player::Signals::Buffering>(),
                     object->get_signal<mpris::Player::Signals::Error>()
                 }
     {
@@ -137,12 +138,14 @@ struct media::PlayerStub::Private
         typedef core::dbus::Signal<mpris::Player::Signals::PlaybackStatusChanged, mpris::Player::Signals::PlaybackStatusChanged::ArgumentType> DBusPlaybackStatusChangedSignal;
         typedef core::dbus::Signal<mpris::Player::Signals::VideoDimensionChanged, mpris::Player::Signals::VideoDimensionChanged::ArgumentType> DBusVideoDimensionChangedSignal;
         typedef core::dbus::Signal<mpris::Player::Signals::Error, mpris::Player::Signals::Error::ArgumentType> DBusErrorSignal;
+        typedef core::dbus::Signal<mpris::Player::Signals::Buffering, mpris::Player::Signals::Buffering::ArgumentType> DBusBufferingChangedSignal;
 
         Signals(const std::shared_ptr<DBusSeekedToSignal>& seeked,
                 const std::shared_ptr<DBusAboutToFinishSignal>& atf,
                 const std::shared_ptr<DBusEndOfStreamSignal>& eos,
                 const std::shared_ptr<DBusPlaybackStatusChangedSignal>& status,
                 const std::shared_ptr<DBusVideoDimensionChangedSignal>& d,
+                const std::shared_ptr<DBusBufferingChangedSignal>& bp,
                 const std::shared_ptr<DBusErrorSignal>& e)
             : seeked_to(),
               about_to_finish(),
@@ -150,6 +153,7 @@ struct media::PlayerStub::Private
               playback_status_changed(),
               video_dimension_changed(),
               error(),
+              buffering_changed(),
               dbus
               {
                   seeked,
@@ -157,7 +161,8 @@ struct media::PlayerStub::Private
                   eos,
                   status,
                   d,
-                  e
+                  e,
+                  bp
               }
         {
             dbus.seeked_to->connect([this](std::uint64_t value)
@@ -196,6 +201,12 @@ struct media::PlayerStub::Private
                 MH_DEBUG("Error signal arrived via the bus (error: %s)", e);
                 error(e);
             });
+
+            dbus.buffering_changed->connect([this](int percent)
+            {
+                MH_DEBUG("BufferingChanged signal arrived via the bus (percent: %d", percent);
+                buffering_changed(percent);
+            });
         }
 
         core::Signal<int64_t> seeked_to;
@@ -204,6 +215,7 @@ struct media::PlayerStub::Private
         core::Signal<media::Player::PlaybackStatus> playback_status_changed;
         core::Signal<media::video::Dimensions> video_dimension_changed;
         core::Signal<media::Player::Error> error;
+        core::Signal<int> buffering_changed;
 
         struct DBus
         {
@@ -213,6 +225,7 @@ struct media::PlayerStub::Private
             std::shared_ptr<DBusPlaybackStatusChangedSignal> playback_status_changed;
             std::shared_ptr<DBusVideoDimensionChangedSignal> video_dimension_changed;
             std::shared_ptr<DBusErrorSignal> error;
+            std::shared_ptr<DBusBufferingChangedSignal> buffering_changed;
         } dbus;
     } signals;
 };
@@ -515,4 +528,9 @@ const core::Signal<media::video::Dimensions>& media::PlayerStub::video_dimension
 const core::Signal<media::Player::Error>& media::PlayerStub::error() const
 {
     return d->signals.error;
+}
+
+const core::Signal<int>& media::PlayerStub::buffering_changed() const
+{
+    return d->signals.buffering_changed;
 }

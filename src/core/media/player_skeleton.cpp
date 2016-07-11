@@ -66,7 +66,8 @@ struct media::PlayerSkeleton::Private
               skeleton.signals.end_of_stream,
               skeleton.signals.playback_status_changed,
               skeleton.signals.video_dimension_changed,
-              skeleton.signals.error
+              skeleton.signals.error,
+              skeleton.signals.buffering_changed
           }
     {
     }
@@ -306,13 +307,15 @@ struct media::PlayerSkeleton::Private
         typedef core::dbus::Signal<mpris::Player::Signals::PlaybackStatusChanged, mpris::Player::Signals::PlaybackStatusChanged::ArgumentType> DBusPlaybackStatusChangedSignal;
         typedef core::dbus::Signal<mpris::Player::Signals::VideoDimensionChanged, mpris::Player::Signals::VideoDimensionChanged::ArgumentType> DBusVideoDimensionChangedSignal;
         typedef core::dbus::Signal<mpris::Player::Signals::Error, mpris::Player::Signals::Error::ArgumentType> DBusErrorSignal;
+        typedef core::dbus::Signal<mpris::Player::Signals::Buffering, mpris::Player::Signals::Buffering::ArgumentType> DBusBufferingChangedSignal;
 
         Signals(const std::shared_ptr<DBusSeekedToSignal>& remote_seeked,
                 const std::shared_ptr<DBusAboutToFinishSignal>& remote_atf,
                 const std::shared_ptr<DBusEndOfStreamSignal>& remote_eos,
                 const std::shared_ptr<DBusPlaybackStatusChangedSignal>& remote_playback_status_changed,
                 const std::shared_ptr<DBusVideoDimensionChangedSignal>& remote_video_dimension_changed,
-                const std::shared_ptr<DBusErrorSignal>& remote_error)
+                const std::shared_ptr<DBusErrorSignal>& remote_error,
+                const std::shared_ptr<DBusBufferingChangedSignal>& remote_buffering_changed)
         {
             seeked_to.connect([remote_seeked](std::uint64_t value)
             {
@@ -343,6 +346,12 @@ struct media::PlayerSkeleton::Private
             {
                 remote_error->emit(e);
             });
+
+            buffering_changed.connect([remote_buffering_changed](int value)
+            {
+                remote_buffering_changed->emit(value);
+            });
+
         }
 
         core::Signal<int64_t> seeked_to;
@@ -351,6 +360,7 @@ struct media::PlayerSkeleton::Private
         core::Signal<media::Player::PlaybackStatus> playback_status_changed;
         core::Signal<media::video::Dimensions> video_dimension_changed;
         core::Signal<media::Player::Error> error;
+        core::Signal<int> buffering_changed;
     } signals;
 
 };
@@ -674,4 +684,14 @@ core::Signal<media::Player::Error>& media::PlayerSkeleton::error()
 const core::Signal<media::Player::Error>& media::PlayerSkeleton::error() const
 {
     return d->signals.error;
+}
+
+const core::Signal<int>& media::PlayerSkeleton::buffering_changed() const
+{
+    return d->signals.buffering_changed;
+}
+
+core::Signal<int>& media::PlayerSkeleton::buffering_changed()
+{
+    return d->signals.buffering_changed;
 }

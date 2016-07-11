@@ -1,3 +1,9 @@
+media-hub (4.4.0+16.10.20160708-0ubuntu1) yakkety; urgency=medium
+
+  * Add support for buffering signal. 
+
+ -- Lorn Potter <lorn.potter@canonical.com>  Thu, 16 Jun 2016 06:58:10 +1000
+
 media-hub (4.2.0+16.10.20160705-0ubuntu1) yakkety; urgency=medium
 
   [ Jim Hodapp ]
