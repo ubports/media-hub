@@ -67,6 +67,9 @@ public:
     void run();
     void stop();
 
+    virtual const core::Signal<void>& service_disconnected() const;
+    virtual const core::Signal<void>& service_reconnected() const;
+
   private:
     struct Private;
     std::shared_ptr<Private> d;

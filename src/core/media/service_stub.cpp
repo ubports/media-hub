@@ -24,26 +24,56 @@
 
 #include "mpris/service.h"
 
+#include "core/media/logger/logger.h"
+
 namespace dbus = core::dbus;
 namespace media = core::ubuntu::media;
 
-struct media::ServiceStub::Private
-{
-    dbus::Object::Ptr object;
-};
-
 media::ServiceStub::ServiceStub()
     : core::dbus::Stub<media::Service>(the_session_bus()),
-      d(new Private{
+      object(
         access_service()->object_for_path(
             dbus::types::ObjectPath(
-                dbus::traits::Service<media::Service>::object_path()))})
+                dbus::traits::Service<media::Service>::object_path()))
+        ),
+      daemon(the_session_bus()),
+      service_watcher_reg(
+          daemon.make_service_watcher(dbus::traits::Service<media::Service>::interface_name(),
+                        dbus::DBus::WatchMode::registration)
+          ),
+      service_watcher_unreg(
+          daemon.make_service_watcher(dbus::traits::Service<media::Service>::interface_name(),
+                        dbus::DBus::WatchMode::unregistration)
+          )
 {
     auto bus = the_session_bus();
     worker = std::move(std::thread([bus]()
     {
         bus->run();
     }));
+
+    MH_DEBUG("Connecting service_watcher signals");
+
+#if 0
+    service_watcher->owner_changed().connect(
+        [&](const std::string& old_owner, const std::string& new_owner)
+        {
+            MH_DEBUG("OWNER CHANGED: old: %s, new: %s", old_owner, new_owner);
+        });
+#endif
+    service_watcher_reg->service_registered().connect(
+        [&]()
+        {
+            MH_DEBUG("SERVICE_REGISTERED");
+            signals.service_reconnected();
+        });
+    service_watcher_unreg->service_unregistered().connect(
+        [&]()
+        {
+            MH_DEBUG("SERVICE_UNREGISTERED");
+            signals.service_disconnected();
+            //bus->stop();
+        });
 }
 
 media::ServiceStub::~ServiceStub()
@@ -57,7 +87,7 @@ media::ServiceStub::~ServiceStub()
 
 std::shared_ptr<media::Player> media::ServiceStub::create_session(const media::Player::Configuration&)
 {
-    auto op = d->object->invoke_method_synchronously<mpris::Service::CreateSession,
+    const auto op = object->invoke_method_synchronously<mpris::Service::CreateSession,
          std::tuple<dbus::types::ObjectPath, std::string>>();
 
     if (op.is_error())
@@ -72,18 +102,20 @@ std::shared_ptr<media::Player> media::ServiceStub::create_session(const media::P
     });
 }
 
-void media::ServiceStub::detach_session(const std::string& uuid, const media::Player::Configuration&)
+void media::ServiceStub::detach_session(const std::string& uuid,
+        const media::Player::Configuration&)
 {
-    auto op = d->object->invoke_method_synchronously<mpris::Service::DetachSession,
+    const auto op = object->invoke_method_synchronously<mpris::Service::DetachSession,
          void>(uuid);
 
     if (op.is_error())
         throw std::runtime_error("Problem detaching session: " + op.error());
 }
 
-std::shared_ptr<media::Player> media::ServiceStub::reattach_session(const std::string& uuid, const media::Player::Configuration&)
+std::shared_ptr<media::Player> media::ServiceStub::reattach_session(const std::string& uuid,
+        const media::Player::Configuration&)
 {
-    auto op = d->object->invoke_method_synchronously<mpris::Service::ReattachSession,
+    const auto op = object->invoke_method_synchronously<mpris::Service::ReattachSession,
          dbus::types::ObjectPath>(uuid);
 
     if (op.is_error())
@@ -98,18 +130,20 @@ std::shared_ptr<media::Player> media::ServiceStub::reattach_session(const std::s
     });
 }
 
-void media::ServiceStub::destroy_session(const std::string& uuid, const media::Player::Configuration&)
+void media::ServiceStub::destroy_session(const std::string& uuid,
+        const media::Player::Configuration&)
 {
-    auto op = d->object->invoke_method_synchronously<mpris::Service::DestroySession,
+    const auto op = object->invoke_method_synchronously<mpris::Service::DestroySession,
          void>(uuid);
 
     if (op.is_error())
         throw std::runtime_error("Problem destroying session: " + op.error());
 }
 
-std::shared_ptr<media::Player> media::ServiceStub::create_fixed_session(const std::string& name, const media::Player::Configuration&)
+std::shared_ptr<media::Player> media::ServiceStub::create_fixed_session(const std::string& name,
+        const media::Player::Configuration&)
 {
-    auto op = d->object->invoke_method_synchronously<mpris::Service::CreateFixedSession,
+    const auto op = object->invoke_method_synchronously<mpris::Service::CreateFixedSession,
          dbus::types::ObjectPath>(name);
 
     if (op.is_error())
@@ -125,7 +159,7 @@ std::shared_ptr<media::Player> media::ServiceStub::create_fixed_session(const st
 
 std::shared_ptr<media::Player> media::ServiceStub::resume_session(media::Player::PlayerKey key)
 {
-    auto op = d->object->invoke_method_synchronously<mpris::Service::ResumeSession,
+    const auto op = object->invoke_method_synchronously<mpris::Service::ResumeSession,
          dbus::types::ObjectPath>(key);
 
     if (op.is_error())
@@ -141,9 +175,19 @@ std::shared_ptr<media::Player> media::ServiceStub::resume_session(media::Player:
 
 void media::ServiceStub::pause_other_sessions(media::Player::PlayerKey key)
 {
-    auto op = d->object->invoke_method_synchronously<mpris::Service::PauseOtherSessions,
+    const auto op = object->invoke_method_synchronously<mpris::Service::PauseOtherSessions,
          void>(key);
 
     if (op.is_error())
         throw std::runtime_error("Problem pausing other sessions: " + op.error());
+}
+
+const core::Signal<void>& media::ServiceStub::service_disconnected() const
+{
+    return signals.service_disconnected;
+}
+
+const core::Signal<void>& media::ServiceStub::service_reconnected() const
+{
+    return signals.service_reconnected;
 }

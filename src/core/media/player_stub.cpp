@@ -224,10 +224,12 @@ media::PlayerStub::PlayerStub(
     const std::string& uuid)
         : d(new Private{parent, service, object, uuid})
 {
+    MH_TRACE("");
 }
 
 media::PlayerStub::~PlayerStub()
 {
+    MH_TRACE("");
 }
 
 std::string media::PlayerStub::uuid() const
@@ -247,6 +249,8 @@ void media::PlayerStub::abandon()
 
 std::shared_ptr<media::TrackList> media::PlayerStub::track_list()
 {
+    MH_TRACE("");
+
     if (!d->track_list)
     {
         d->track_list = std::make_shared<media::TrackListStub>(
@@ -255,11 +259,15 @@ std::shared_ptr<media::TrackList> media::PlayerStub::track_list()
                         dbus::types::ObjectPath(
                             d->object->path().as_string() + "/TrackList")));
     }
+    else
+        MH_DEBUG("TrackListStub already exists, not create a new one");
+
     return d->track_list;
 }
 
 media::Player::PlayerKey media::PlayerStub::key() const
 {
+    MH_DEBUG("key(): %s", d->key);
     return d->key;
 }
 

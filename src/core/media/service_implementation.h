@@ -51,6 +51,9 @@ public:
     std::shared_ptr<Player> resume_session(Player::PlayerKey key);
     void pause_other_sessions(Player::PlayerKey key);
 
+    const core::Signal<void>& service_disconnected() const;
+    const core::Signal<void>& service_reconnected() const;
+
 private:
     void pause_all_multimedia_sessions(bool resume_play_after_phonecall);
     void resume_paused_multimedia_sessions(bool resume_video_sessions = true);

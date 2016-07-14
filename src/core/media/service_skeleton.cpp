@@ -117,6 +117,8 @@ struct media::ServiceSkeleton::Private
 
     void handle_create_session(const core::dbus::Message::Ptr& msg)
     {
+        MH_TRACE("");
+
         auto session_info = create_session_info();
 
         dbus::types::ObjectPath op{std::get<0>(session_info)};
@@ -872,6 +874,7 @@ media::ServiceSkeleton::~ServiceSkeleton()
 
 std::shared_ptr<media::Player> media::ServiceSkeleton::create_session(const media::Player::Configuration& config)
 {
+    MH_TRACE("");
     return d->configuration.impl->create_session(config);
 }
 
@@ -934,4 +937,18 @@ void media::ServiceSkeleton::run()
 void media::ServiceSkeleton::stop()
 {
     access_bus()->stop();
+}
+
+const core::Signal<void>& media::ServiceSkeleton::service_disconnected() const
+{
+    throw std::runtime_error("This signal is only accessible from the ServiceStub");
+    static const core::Signal<void> s;
+    return s;
+}
+
+const core::Signal<void>& media::ServiceSkeleton::service_reconnected() const
+{
+    throw std::runtime_error("This signal is only accessible from the ServiceStub");
+    static const core::Signal<void> s;
+    return s;
 }

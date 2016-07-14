@@ -63,6 +63,11 @@ class Service : public std::enable_shared_from_this<Service>
     /** @brief Pauses sessions other than the supplied one. */
     virtual void pause_other_sessions(Player::PlayerKey) = 0;
 
+    /** @brief Signals when the media-hub server disappears from the bus **/
+    virtual const core::Signal<void>& service_disconnected() const = 0;
+    /** @brief Signals when the media-hub server reappears from the bus **/
+    virtual const core::Signal<void>& service_reconnected() const = 0;
+
   protected:
     Service() = default;
 };
