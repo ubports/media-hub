@@ -261,6 +261,11 @@ struct gstreamer::Engine::Private
         video_dimension_changed(dimensions);
     }
 
+    void on_buffering_changed(int value)
+    {
+        buffering_changed(value);
+    }
+
     Private()
         : meta_data_extractor(new gstreamer::MetaDataExtractor()),
           volume(media::Engine::Volume(1.)),
@@ -347,6 +352,12 @@ struct gstreamer::Engine::Private
                   std::bind(
                       &Private::on_video_dimension_changed,
                       this,
+                      std::placeholders::_1))),
+          on_buffering_changed_connection(
+              playbin.signals.on_buffering_changed.connect(
+                  std::bind(
+                      &Private::on_buffering_changed,
+                      this,
                       std::placeholders::_1)))
     {
     }
@@ -381,6 +392,7 @@ struct gstreamer::Engine::Private
     core::ScopedConnection client_disconnected_connection;
     core::ScopedConnection on_end_of_stream_connection;
     core::ScopedConnection on_video_dimension_changed_connection;
+    core::ScopedConnection on_buffering_changed_connection;
 
     core::Signal<void> about_to_finish;
     core::Signal<uint64_t> seeked_to;
@@ -389,6 +401,7 @@ struct gstreamer::Engine::Private
     core::Signal<media::Player::PlaybackStatus> playback_status_changed;
     core::Signal<core::ubuntu::media::video::Dimensions> video_dimension_changed;
     core::Signal<media::Player::Error> error;
+    core::Signal<int> buffering_changed;
 };
 
 gstreamer::Engine::Engine() : d(new Private{})
@@ -593,6 +606,11 @@ const core::Signal<core::ubuntu::media::video::Dimensions>& gstreamer::Engine::v
 const core::Signal<core::ubuntu::media::Player::Error>& gstreamer::Engine::error_signal() const
 {
     return d->error;
+}
+
+const core::Signal<int>& gstreamer::Engine::on_buffering_changed_signal() const
+{
+    return d->buffering_changed;
 }
 
 void gstreamer::Engine::reset()

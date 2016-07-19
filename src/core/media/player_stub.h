@@ -97,6 +97,7 @@ class PlayerStub : public Player
     virtual core::Signal<PlaybackStatus>& playback_status_changed();
     virtual const core::Signal<video::Dimensions>& video_dimension_changed() const;
     virtual const core::Signal<Error>& error() const;
+    virtual const core::Signal<int>& buffering_changed() const;
 
   private:
     struct Private;
