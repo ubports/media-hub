@@ -52,27 +52,17 @@ media::ServiceStub::ServiceStub()
         bus->run();
     }));
 
-    MH_DEBUG("Connecting service_watcher signals");
-
-#if 0
-    service_watcher->owner_changed().connect(
-        [&](const std::string& old_owner, const std::string& new_owner)
-        {
-            MH_DEBUG("OWNER CHANGED: old: %s, new: %s", old_owner, new_owner);
-        });
-#endif
     service_watcher_reg->service_registered().connect(
         [&]()
         {
-            MH_DEBUG("SERVICE_REGISTERED");
+            MH_DEBUG("media-hub service registered");
             signals.service_reconnected();
         });
     service_watcher_unreg->service_unregistered().connect(
         [&]()
         {
-            MH_DEBUG("SERVICE_UNREGISTERED");
+            MH_DEBUG("media-hub service unregistered");
             signals.service_disconnected();
-            //bus->stop();
         });
 }
 
