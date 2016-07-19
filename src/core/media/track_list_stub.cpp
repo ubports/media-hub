@@ -182,12 +182,10 @@ media::TrackListStub::TrackListStub(
         const core::dbus::Object::Ptr& object)
     : d(new Private(this, parent, object))
 {
-    MH_TRACE("");
 }
 
 media::TrackListStub::~TrackListStub()
 {
-    MH_TRACE("");
 }
 
 const core::Property<bool>& media::TrackListStub::can_edit_tracks() const

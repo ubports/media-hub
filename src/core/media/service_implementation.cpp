@@ -183,8 +183,6 @@ media::ServiceImplementation::~ServiceImplementation()
 std::shared_ptr<media::Player> media::ServiceImplementation::create_session(
         const media::Player::Configuration& conf)
 {
-    MH_TRACE("");
-
     // Create a new Player
     auto player = std::make_shared<media::PlayerImplementation<media::PlayerSkeleton>>
                     (media::PlayerImplementation<media::PlayerSkeleton>::Configuration

@@ -117,8 +117,6 @@ struct media::ServiceSkeleton::Private
 
     void handle_create_session(const core::dbus::Message::Ptr& msg)
     {
-        MH_TRACE("");
-
         auto session_info = create_session_info();
 
         dbus::types::ObjectPath op{std::get<0>(session_info)};
@@ -874,7 +872,6 @@ media::ServiceSkeleton::~ServiceSkeleton()
 
 std::shared_ptr<media::Player> media::ServiceSkeleton::create_session(const media::Player::Configuration& config)
 {
-    MH_TRACE("");
     return d->configuration.impl->create_session(config);
 }
 
