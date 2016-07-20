@@ -268,11 +268,13 @@ std::shared_ptr<media::TrackList> media::PlayerStub::track_list()
                         dbus::types::ObjectPath(
                             d->object->path().as_string() + "/TrackList")));
     }
+
     return d->track_list;
 }
 
 media::Player::PlayerKey media::PlayerStub::key() const
 {
+    MH_DEBUG("key(): %s", d->key);
     return d->key;
 }
 

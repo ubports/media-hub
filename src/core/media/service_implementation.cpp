@@ -183,6 +183,7 @@ media::ServiceImplementation::~ServiceImplementation()
 std::shared_ptr<media::Player> media::ServiceImplementation::create_session(
         const media::Player::Configuration& conf)
 {
+    // Create a new Player
     auto player = std::make_shared<media::PlayerImplementation<media::PlayerSkeleton>>
                     (media::PlayerImplementation<media::PlayerSkeleton>::Configuration
     {
@@ -359,4 +360,18 @@ void media::ServiceImplementation::resume_multimedia_session()
         player->play();
         d->resume_key = std::numeric_limits<std::uint32_t>::max();
     }
+}
+
+const core::Signal<void>& media::ServiceImplementation::service_disconnected() const
+{
+    throw std::runtime_error("This signal is only accessible from the ServiceStub");
+    static const core::Signal<void> s;
+    return s;
+}
+
+const core::Signal<void>& media::ServiceImplementation::service_reconnected() const
+{
+    throw std::runtime_error("This signal is only accessible from the ServiceStub");
+    static const core::Signal<void> s;
+    return s;
 }

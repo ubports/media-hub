@@ -23,9 +23,12 @@
 
 #include "service_traits.h"
 
+#include <core/dbus/bus.h>
+#include <core/dbus/service_watcher.h>
 #include <core/dbus/stub.h>
 
 #include <memory>
+#include <string>
 
 namespace core
 {
@@ -47,10 +50,21 @@ class ServiceStub : public core::dbus::Stub<core::ubuntu::media::Service>
     std::shared_ptr<Player> resume_session(Player::PlayerKey key);
     void pause_other_sessions(Player::PlayerKey key);
 
+    virtual const core::Signal<void>& service_disconnected() const;
+    virtual const core::Signal<void>& service_reconnected() const;
+
   private:
-    struct Private;
-    std::unique_ptr<Private> d;
+    dbus::Object::Ptr object;
+    dbus::DBus daemon;
+    dbus::ServiceWatcher::Ptr service_watcher_reg;
+    dbus::ServiceWatcher::Ptr service_watcher_unreg;
     std::thread worker;
+
+    struct Signals
+    {
+        core::Signal<void> service_disconnected;
+        core::Signal<void> service_reconnected;
+    } signals;
 };
 }
 }

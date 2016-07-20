@@ -935,3 +935,17 @@ void media::ServiceSkeleton::stop()
 {
     access_bus()->stop();
 }
+
+const core::Signal<void>& media::ServiceSkeleton::service_disconnected() const
+{
+    throw std::runtime_error("This signal is only accessible from the ServiceStub");
+    static const core::Signal<void> s;
+    return s;
+}
+
+const core::Signal<void>& media::ServiceSkeleton::service_reconnected() const
+{
+    throw std::runtime_error("This signal is only accessible from the ServiceStub");
+    static const core::Signal<void> s;
+    return s;
+}
