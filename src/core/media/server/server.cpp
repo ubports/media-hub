@@ -20,6 +20,7 @@
 #include <core/media/player.h>
 #include <core/media/track_list.h>
 
+#include "core/media/backend.h"
 #include "core/media/hashed_keyed_player_store.h"
 #include "core/media/logger/logger.h"
 #include "core/media/service_implementation.h"
@@ -58,7 +59,7 @@ void logger_init()
             severity = media::Logger::Severity::kFatal;
         else
             std::cerr << "Invalid log level \"" << level
-                << "\", setting to info. Valid options: [trace, debug, info, warning, error, fatal]. "
+                << "\", setting to info. Valid options: [trace, debug, info, warning, error, fatal]."
                 << std::endl;
     }
     else
@@ -71,7 +72,18 @@ void logger_init()
 // All platform-specific initialization routines go here.
 void platform_init()
 {
-    decoding_service_init();
+    const media::AVBackend::Backend b {media::AVBackend::get_backend_type()};
+    switch (b)
+    {
+        case media::AVBackend::Backend::hybris:
+            decoding_service_init();
+            break;
+        case media::AVBackend::Backend::none:
+            MH_WARNING("No video backend selected. Video functionality won't work.");
+            break;
+        default:
+            MH_ERROR("Invalid backend. Valid options: [hybris]. Video functionality won't work.");
+    }
 }
 }
 #else  // MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER

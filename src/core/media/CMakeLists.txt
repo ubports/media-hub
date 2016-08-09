@@ -45,6 +45,8 @@ add_library(
 
   logger/logger.cpp
 
+  backend.cpp
+
   player.cpp
   service.cpp
   track.cpp
@@ -89,42 +91,46 @@ install(
 )
 
 add_library(
-    media-hub-service
+  media-hub-service
 
-    ${MEDIA_HUB_HEADERS}
-    ${MPRIS_HEADERS}
+  ${MEDIA_HUB_HEADERS}
+  ${MPRIS_HEADERS}
 
-    logger/logger.cpp
+  logger/logger.cpp
 
-    client_death_observer.cpp
-    hashed_keyed_player_store.cpp
-    hybris_client_death_observer.cpp
-    cover_art_resolver.cpp
-    engine.cpp
-    metadata.cpp
+  backend.cpp
 
-    apparmor/context.cpp
-    apparmor/ubuntu.cpp
+  client_death_observer.cpp
+  hashed_keyed_player_store.cpp
+  hybris_client_death_observer.cpp
+  stub_client_death_observer.cpp
+  cover_art_resolver.cpp
+  engine.cpp
+  metadata.cpp
 
-    audio/pulse_audio_output_observer.cpp
-    audio/ostream_reporter.cpp
-    audio/output_observer.cpp
+  apparmor/context.cpp
+  apparmor/ubuntu.cpp
 
-    power/battery_observer.cpp
-    power/state_controller.cpp
+  audio/pulse_audio_output_observer.cpp
+  audio/ostream_reporter.cpp
+  audio/output_observer.cpp
 
-    recorder_observer.cpp
-    hybris_recorder_observer.cpp
+  power/battery_observer.cpp
+  power/state_controller.cpp
 
-    gstreamer/engine.cpp
-    gstreamer/playbin.cpp
+  recorder_observer.cpp
+  hybris_recorder_observer.cpp
+  stub_recorder_observer.cpp
 
-    player_skeleton.cpp
-    player_implementation.cpp
-    service_skeleton.cpp
-    service_implementation.cpp
-    track_list_skeleton.cpp
-    track_list_implementation.cpp
+  gstreamer/engine.cpp
+  gstreamer/playbin.cpp
+
+  player_skeleton.cpp
+  player_implementation.cpp
+  service_skeleton.cpp
+  service_implementation.cpp
+  track_list_skeleton.cpp
+  track_list_implementation.cpp
 )
 
 target_link_libraries(
@@ -151,6 +157,7 @@ include_directories(${PROJECT_SOURCE_DIR}/src/ ${HYBRIS_MEDIA_CFLAGS})
 add_executable(
   media-hub-server
 
+  backend.cpp
   server/server.cpp
 )
 

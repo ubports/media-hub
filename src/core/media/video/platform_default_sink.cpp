@@ -16,6 +16,9 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
+#include "core/media/backend.h"
+#include "core/media/logger/logger.h"
+
 #include <core/media/video/platform_default_sink.h>
 
 namespace media = core::ubuntu::media;
@@ -58,7 +61,22 @@ struct NullSink : public video::Sink
 
 video::SinkFactory video::make_platform_default_sink_factory(const media::Player::PlayerKey& key)
 {
-    return video::HybrisGlSink::factory_for_key(key);
+    const media::AVBackend::Backend b {media::AVBackend::get_backend_type()};
+    switch (b)
+    {
+        case media::AVBackend::Backend::hybris:
+            return video::HybrisGlSink::factory_for_key(key);
+        case media::AVBackend::Backend::none:
+            MH_WARNING(
+                "No video backend selected. Video rendering functionality won't work."
+            );
+            return [](std::uint32_t) { return video::Sink::Ptr{}; };
+        default:
+            MH_ERROR(
+                "Invalid backend. Valid options: [hybris]. Video rendering functionality won't work."
+            );
+            return [](std::uint32_t) { return video::Sink::Ptr{}; };
+    }
 }
 #else  // MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER
 video::SinkFactory video::make_platform_default_sink_factory(const media::Player::PlayerKey&)
