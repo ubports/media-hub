@@ -82,7 +82,8 @@ void platform_init()
             MH_WARNING("No video backend selected. Video functionality won't work.");
             break;
         default:
-            MH_ERROR("Invalid backend. Valid options: [hybris]. Video functionality won't work.");
+            MH_INFO("Invalid or no A/V backend specified, using \"hybris\" as a default.");
+            decoding_service_init();
     }
 }
 }

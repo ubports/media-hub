@@ -39,9 +39,7 @@ media::RecorderObserver::Ptr media::make_platform_default_recorder_observer()
             );
             return media::StubRecorderObserver::create();
         default:
-            MH_ERROR(
-                "Invalid backend. Valid options: [hybris]. Video recording functionality won't work."
-            );
-            return media::StubRecorderObserver::create();
+            MH_INFO("Invalid or no A/V backend specified, using \"hybris\" as a default.");
+            return media::HybrisRecorderObserver::create();
     }
 }

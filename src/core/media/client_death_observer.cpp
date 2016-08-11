@@ -42,10 +42,8 @@ media::ClientDeathObserver::Ptr media::platform_default_client_death_observer()
             );
             return media::StubClientDeathObserver::create();
         default:
-            MH_ERROR(
-                "Invalid backend. Valid options: [hybris]. Client disconnect functionality won't work."
-            );
-            return media::StubClientDeathObserver::create();
+            MH_INFO("Invalid or no A/V backend specified, using \"hybris\" as a default.");
+            return media::HybrisClientDeathObserver::create();
     }
 }
 #else  // MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER

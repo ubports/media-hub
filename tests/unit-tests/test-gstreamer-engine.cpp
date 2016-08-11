@@ -103,9 +103,10 @@ TEST(GStreamerEngine, DISABLED_setting_uri_and_starting_audio_only_playback_work
                     std::ref(wst),
                     std::placeholders::_1));
 
-    static const bool do_pipeline_reset = true;
+    static const bool do_pipeline_reset = false;
     EXPECT_TRUE(engine.open_resource_for_uri(test_file_uri, do_pipeline_reset));
-    EXPECT_TRUE(engine.play());
+    static const bool use_main_context = true;
+    EXPECT_TRUE(engine.play(use_main_context));
     EXPECT_TRUE(wst.wait_for_state_for(
                     core::ubuntu::media::Engine::State::playing,
                     std::chrono::seconds{4}));
@@ -145,15 +146,16 @@ TEST(GStreamerEngine, DISABLED_setting_uri_and_starting_video_playback_works)
                     std::ref(wst),
                     std::placeholders::_1));
 
-    static const bool do_pipeline_reset = true;
+    static const bool do_pipeline_reset = false;
     EXPECT_TRUE(engine.open_resource_for_uri(test_file_uri, do_pipeline_reset));
-    EXPECT_TRUE(engine.play());
+    static const bool use_main_context = true;
+    EXPECT_TRUE(engine.play(use_main_context));
     EXPECT_TRUE(wst.wait_for_state_for(
                     core::ubuntu::media::Engine::State::playing,
                     std::chrono::milliseconds{4000}));
 
     EXPECT_TRUE(wst.wait_for_state_for(
-                    core::ubuntu::media::Engine::State::ready,
+                    core::ubuntu::media::Engine::State::stopped,
                     std::chrono::seconds{10}));
 }
 
@@ -207,7 +209,8 @@ TEST(GStreamerEngine, setting_uri_and_audio_playback_with_http_headers_works)
                     std::placeholders::_1));
 
     EXPECT_TRUE(engine.open_resource_for_uri(test_audio_uri, headers));
-    EXPECT_TRUE(engine.play());
+    static const bool use_main_context = true;
+    EXPECT_TRUE(engine.play(use_main_context));
     EXPECT_TRUE(wst.wait_for_state_for(
                     core::ubuntu::media::Engine::State::playing,
                     std::chrono::seconds{10}));

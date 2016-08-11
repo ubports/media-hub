@@ -72,10 +72,8 @@ video::SinkFactory video::make_platform_default_sink_factory(const media::Player
             );
             return [](std::uint32_t) { return video::Sink::Ptr{}; };
         default:
-            MH_ERROR(
-                "Invalid backend. Valid options: [hybris]. Video rendering functionality won't work."
-            );
-            return [](std::uint32_t) { return video::Sink::Ptr{}; };
+            MH_INFO("Invalid or no A/V backend specified, using \"hybris\" as a default.");
+            return video::HybrisGlSink::factory_for_key(key);
     }
 }
 #else  // MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER

@@ -37,8 +37,8 @@ public:
     bool open_resource_for_uri(const core::ubuntu::media::Track::UriType& uri, const core::ubuntu::media::Player::HeadersType& headers);
     void create_video_sink(uint32_t texture_id);
 
-    bool play();
-    // use_main_thread will set the pipeline's new_state in the main thread context
+    // use_main_thread will set the pipeline's new state in the main thread context
+    bool play(bool use_main_thread = false);
     bool stop(bool use_main_thread = false);
     bool pause();
     bool seek_to(const std::chrono::microseconds& ts);
