@@ -34,11 +34,11 @@ media::AVBackend::Backend media::AVBackend::get_backend_type()
 
     plugin = gst_registry_lookup(registry, "libgstandroidmedia.so");
     if (plugin)
-        //if (plugin->module)
-        {
-            MH_DEBUG("Found hybris backend");
-            return media::AVBackend::Backend::hybris;
-        }
+    {
+        MH_DEBUG("Found hybris backend");
+        gst_object_unref(plugin);
+        return media::AVBackend::Backend::hybris;
+    }
 
     return media::AVBackend::Backend::none;
 }
