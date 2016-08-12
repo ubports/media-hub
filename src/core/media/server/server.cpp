@@ -76,6 +76,7 @@ void platform_init()
     switch (b)
     {
         case media::AVBackend::Backend::hybris:
+            MH_DEBUG("Found hybris backend");
             decoding_service_init();
             break;
         case media::AVBackend::Backend::none:
