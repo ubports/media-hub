@@ -17,6 +17,7 @@ add_subdirectory(telephony)
 add_library(
   media-hub-common SHARED
 
+  backend.cpp
   the_session_bus.cpp
   util/utils.cpp
 )
@@ -27,6 +28,7 @@ target_link_libraries(
   ${Boost_LIBRARIES}
   ${DBUS_LIBRARIES}
   ${DBUS_CPP_LDFLAGS}
+  ${PC_GSTREAMER_1_0_LIBRARIES}
 )
 set_target_properties(
   media-hub-common
@@ -44,8 +46,6 @@ add_library(
   ${MEDIA_HUB_HEADERS}
 
   logger/logger.cpp
-
-  backend.cpp
 
   player.cpp
   service.cpp
@@ -97,8 +97,6 @@ add_library(
   ${MPRIS_HEADERS}
 
   logger/logger.cpp
-
-  backend.cpp
 
   client_death_observer.cpp
   hashed_keyed_player_store.cpp
@@ -152,7 +150,7 @@ target_link_libraries(
   ${PC_PULSE_AUDIO_LIBRARIES}
 )
 
-include_directories(${PROJECT_SOURCE_DIR}/src/ ${HYBRIS_MEDIA_CFLAGS})
+include_directories(${PROJECT_SOURCE_DIR}/src/ ${HYBRIS_MEDIA_CFLAGS} ${PC_GSTREAMER_1_0_INCLUDE_DIRS})
 
 add_executable(
   media-hub-server

@@ -19,25 +19,26 @@
 #include "backend.h"
 #include "core/media/logger/logger.h"
 
-#include <core/posix/signal.h>
-
-#include <cstring>
+#include <gst/gst.h>
 
 namespace media = core::ubuntu::media;
 
 media::AVBackend::Backend media::AVBackend::get_backend_type()
 {
-    const char *backend = ::getenv("MH_BACKEND");
-    if (backend)
-    {
-        MH_DEBUG("MH_BACKEND: %s", backend);
-        if (strcmp(backend, "hybris") == 0)
-            return media::AVBackend::Backend::hybris;
-        else
-            return media::AVBackend::Backend::none;
-    }
-    else
-    {
+    GstRegistry *registry;
+    GstPlugin *plugin;
+
+    registry = gst_registry_get();
+    if (not registry)
         return media::AVBackend::Backend::none;
-    }
+
+    plugin = gst_registry_lookup(registry, "libgstandroidmedia.so");
+    if (plugin)
+        //if (plugin->module)
+        {
+            MH_DEBUG("Found hybris backend");
+            return media::AVBackend::Backend::hybris;
+        }
+
+    return media::AVBackend::Backend::none;
 }
