@@ -16,13 +16,30 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
+#include "core/media/logger/logger.h"
+
+#include <core/media/player.h>
 #include <core/media/recorder_observer.h>
 
 #include <core/media/hybris_recorder_observer.h>
+#include <core/media/stub_recorder_observer.h>
 
 namespace media = core::ubuntu::media;
 
 media::RecorderObserver::Ptr media::make_platform_default_recorder_observer()
 {
-    return media::HybrisRecorderObserver::create();
+    const media::AVBackend::Backend b {media::AVBackend::get_backend_type()};
+    switch (b)
+    {
+        case media::AVBackend::Backend::hybris:
+            return media::HybrisRecorderObserver::create();
+        case media::AVBackend::Backend::none:
+            MH_WARNING(
+                "No video backend selected. Video recording functionality won't work."
+            );
+            return media::StubRecorderObserver::create();
+        default:
+            MH_INFO("Invalid or no A/V backend specified, using \"hybris\" as a default.");
+            return media::HybrisRecorderObserver::create();
+    }
 }

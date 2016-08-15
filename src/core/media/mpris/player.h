@@ -166,7 +166,7 @@ struct Player
     {
         DBUS_CPP_READABLE_PROPERTY_DEF(PlaybackStatus, Player, std::string)
         DBUS_CPP_READABLE_PROPERTY_DEF(TypedPlaybackStatus, Player, core::ubuntu::media::Player::PlaybackStatus)
-
+        DBUS_CPP_WRITABLE_PROPERTY_DEF(TypedBackend, Player, core::ubuntu::media::AVBackend::Backend)
         DBUS_CPP_WRITABLE_PROPERTY_DEF(LoopStatus, Player, std::string)
         DBUS_CPP_WRITABLE_PROPERTY_DEF(TypedLoopStatus, Player, core::ubuntu::media::Player::LoopStatus)
         DBUS_CPP_WRITABLE_PROPERTY_DEF(AudioStreamRole, Player, core::ubuntu::media::Player::AudioStreamRole)
@@ -220,6 +220,7 @@ struct Player
                 Properties::IsAudioSource::ValueType is_audio_source{true};
                 Properties::PlaybackStatus::ValueType playback_status{PlaybackStatus::stopped};
                 Properties::TypedPlaybackStatus::ValueType typed_playback_status{core::ubuntu::media::Player::PlaybackStatus::null};
+                Properties::TypedBackend::ValueType typed_backend{core::ubuntu::media::AVBackend::Backend::none};
                 Properties::LoopStatus::ValueType loop_status{LoopStatus::none};
                 Properties::TypedLoopStatus::ValueType typed_loop_status{core::ubuntu::media::Player::LoopStatus::none};
                 Properties::PlaybackRate::ValueType playback_rate{1.f};
@@ -248,6 +249,7 @@ struct Player
                   configuration.object->template get_property<Properties::IsAudioSource>(),
                   configuration.object->template get_property<Properties::PlaybackStatus>(),
                   configuration.object->template get_property<Properties::TypedPlaybackStatus>(),
+                  configuration.object->template get_property<Properties::TypedBackend>(),
                   configuration.object->template get_property<Properties::LoopStatus>(),
                   configuration.object->template get_property<Properties::TypedLoopStatus>(),
                   configuration.object->template get_property<Properties::AudioStreamRole>(),
@@ -284,6 +286,7 @@ struct Player
             properties.is_audio_source->set(configuration.defaults.is_audio_source);
             properties.playback_status->set(configuration.defaults.playback_status);
             properties.typed_playback_status->set(configuration.defaults.typed_playback_status);
+            properties.typed_backend->set(configuration.defaults.typed_backend);
             properties.loop_status->set(configuration.defaults.loop_status);
             properties.typed_loop_status->set(configuration.defaults.typed_loop_status);
             properties.audio_stream_role->set(core::ubuntu::media::Player::AudioStreamRole::multimedia);
@@ -371,6 +374,7 @@ struct Player
             dict[Properties::CanGoPrevious::name()] = dbus::types::Variant::encode(properties.can_go_previous->get());
             dict[Properties::PlaybackStatus::name()] = dbus::types::Variant::encode(properties.playback_status->get());
             dict[Properties::TypedPlaybackStatus::name()] = dbus::types::Variant::encode(properties.typed_playback_status->get());
+            dict[Properties::TypedBackend::name()] = dbus::types::Variant::encode(properties.typed_backend->get());
             dict[Properties::LoopStatus::name()] = dbus::types::Variant::encode(properties.loop_status->get());
             dict[Properties::TypedLoopStatus::name()] = dbus::types::Variant::encode(properties.typed_loop_status->get());
             dict[Properties::AudioStreamRole::name()] = dbus::types::Variant::encode(properties.audio_stream_role->get());
@@ -403,6 +407,7 @@ struct Player
 
             std::shared_ptr<core::dbus::Property<Properties::PlaybackStatus>> playback_status;
             std::shared_ptr<core::dbus::Property<Properties::TypedPlaybackStatus>> typed_playback_status;
+            std::shared_ptr<core::dbus::Property<Properties::TypedBackend>> typed_backend;
             std::shared_ptr<core::dbus::Property<Properties::LoopStatus>> loop_status;
             std::shared_ptr<core::dbus::Property<Properties::TypedLoopStatus>> typed_loop_status;
             std::shared_ptr<core::dbus::Property<Properties::AudioStreamRole>> audio_stream_role;

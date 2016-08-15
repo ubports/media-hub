@@ -505,6 +505,7 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
     Parent::shuffle().set(false);
     Parent::playback_rate().set(1.f);
     Parent::playback_status().set(Player::PlaybackStatus::null);
+    Parent::backend().set(media::AVBackend::get_backend_type());
     Parent::loop_status().set(Player::LoopStatus::none);
     Parent::position().set(0);
     Parent::duration().set(0);

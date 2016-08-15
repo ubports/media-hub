@@ -58,7 +58,7 @@ void logger_init()
             severity = media::Logger::Severity::kFatal;
         else
             std::cerr << "Invalid log level \"" << level
-                << "\", setting to info. Valid options: [trace, debug, info, warning, error, fatal]. "
+                << "\", setting to info. Valid options: [trace, debug, info, warning, error, fatal]."
                 << std::endl;
     }
     else
@@ -71,7 +71,20 @@ void logger_init()
 // All platform-specific initialization routines go here.
 void platform_init()
 {
-    decoding_service_init();
+    const media::AVBackend::Backend b {media::AVBackend::get_backend_type()};
+    switch (b)
+    {
+        case media::AVBackend::Backend::hybris:
+            MH_DEBUG("Found hybris backend");
+            decoding_service_init();
+            break;
+        case media::AVBackend::Backend::none:
+            MH_WARNING("No video backend selected. Video functionality won't work.");
+            break;
+        default:
+            MH_INFO("Invalid or no A/V backend specified, using \"hybris\" as a default.");
+            decoding_service_init();
+    }
 }
 }
 #else  // MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER

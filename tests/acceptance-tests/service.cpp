@@ -68,6 +68,14 @@ void sleep_for(const std::chrono::milliseconds& ms)
 }
 }
 
+TEST(MediaService, service_is_running)
+{
+    auto service = media::Service::Client::instance();
+    auto session = service->create_session(media::Player::Client::default_configuration());
+    EXPECT_TRUE(service != nullptr);
+    EXPECT_TRUE(session != nullptr);
+}
+
 TEST(MediaService, move_track_in_tracklist_works)
 {
     auto service = media::Service::Client::instance();

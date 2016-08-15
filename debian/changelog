@@ -1,3 +1,9 @@
+media-hub (4.6.0+16.10.20160815-0ubuntu1) yakkety; urgency=medium
+
+  * Make media-hub work on the desktop with Unity7/Unity8 sessions.
+
+ -- Jim Hodapp <jim.hodapp@canonical.com>  Fri, 12 Aug 2016 15:17:28 +0000
+
 media-hub (4.5.0+16.10.20160720-0ubuntu1) yakkety; urgency=medium
 
   * Emit client side signal when the dbus connection between

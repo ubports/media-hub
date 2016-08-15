@@ -445,9 +445,9 @@ void gstreamer::Engine::create_video_sink(uint32_t texture_id)
     d->playbin.create_video_sink(texture_id);
 }
 
-bool gstreamer::Engine::play()
+bool gstreamer::Engine::play(bool use_main_thread /* = false */)
 {
-    const auto result = d->playbin.set_state_and_wait(GST_STATE_PLAYING);
+    const auto result = d->playbin.set_state_and_wait(GST_STATE_PLAYING, use_main_thread);
 
     if (result)
     {
@@ -459,7 +459,7 @@ bool gstreamer::Engine::play()
     return result;
 }
 
-bool gstreamer::Engine::stop(bool use_main_thread)
+bool gstreamer::Engine::stop(bool use_main_thread /* = false */)
 {
     // No need to wait, and we can immediately return.
     if (d->state == media::Engine::State::stopped)

@@ -16,7 +16,11 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
+#include "core/media/logger/logger.h"
+
 #include <core/media/client_death_observer.h>
+#include <core/media/hybris_client_death_observer.h>
+#include <core/media/stub_client_death_observer.h>
 
 namespace media = core::ubuntu::media;
 
@@ -26,7 +30,20 @@ namespace media = core::ubuntu::media;
 // Accesses the default client death observer implementation for the platform.
 media::ClientDeathObserver::Ptr media::platform_default_client_death_observer()
 {
-    return media::HybrisClientDeathObserver::create();
+    const media::AVBackend::Backend b {media::AVBackend::get_backend_type()};
+    switch (b)
+    {
+        case media::AVBackend::Backend::hybris:
+            return media::HybrisClientDeathObserver::create();
+        case media::AVBackend::Backend::none:
+            MH_WARNING(
+                "No video backend selected. Client disconnect functionality won't work."
+            );
+            return media::StubClientDeathObserver::create();
+        default:
+            MH_INFO("Invalid or no A/V backend specified, using \"hybris\" as a default.");
+            return media::HybrisClientDeathObserver::create();
+    }
 }
 #else  // MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER
 // Just throws a std::logic_error as we have not yet defined a default way to

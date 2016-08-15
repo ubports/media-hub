@@ -20,7 +20,7 @@ if (NOT DEFINED UBUNTU_MEDIA_HUB_VERSION_MAJOR)
   # we define the version to be 5.0.0
   if (${DISTRO_CODENAME} STREQUAL "vivid")
     set(UBUNTU_MEDIA_HUB_VERSION_MAJOR 4)
-    set(UBUNTU_MEDIA_HUB_VERSION_MINOR 5)
+    set(UBUNTU_MEDIA_HUB_VERSION_MINOR 6)
     set(UBUNTU_MEDIA_HUB_VERSION_PATCH 0)
   else ()
     set(UBUNTU_MEDIA_HUB_VERSION_MAJOR 5)
@@ -53,7 +53,13 @@ pkg_check_modules(PROCESS_CPP process-cpp REQUIRED)
 pkg_check_modules(GIO gio-2.0 REQUIRED)
 pkg_check_modules(HYBRIS_MEDIA libmedia REQUIRED)
 
-add_definitions(-DMEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER)
+include(CheckIncludeFiles)
+check_include_files("hybris/media/media_codec_layer.h" MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER)
+if (DEFINED MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER)
+  add_definitions(-DMEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER)
+else()
+  MESSAGE(STATUS "*libhybris not found*")
+endif()
 
 #####################################################################
 # Enable code coverage calculation with gcov/gcovr/lcov
