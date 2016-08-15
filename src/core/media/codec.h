@@ -192,6 +192,49 @@ struct Codec<core::ubuntu::media::Player::PlaybackStatus>
         in = static_cast<core::ubuntu::media::Player::PlaybackStatus>(out.pop_int16());
     }
 };
+
+namespace helper
+{
+template<>
+struct TypeMapper<core::ubuntu::media::AVBackend::Backend>
+{
+    constexpr static ArgumentType type_value()
+    {
+        return core::dbus::ArgumentType::int16;
+    }
+    constexpr static bool is_basic_type()
+    {
+        return false;
+    }
+    constexpr static bool requires_signature()
+    {
+        return false;
+    }
+
+    static std::string signature()
+    {
+        static const std::string s = TypeMapper<std::int16_t>::signature();
+        return s;
+    }
+};
+}
+
+template<>
+struct Codec<core::ubuntu::media::AVBackend::Backend>
+{
+    static void encode_argument(core::dbus::Message::Writer& out,
+                const core::ubuntu::media::AVBackend::Backend& in)
+    {
+        out.push_int16(static_cast<std::int16_t>(in));
+    }
+
+    static void decode_argument(core::dbus::Message::Reader& out,
+                core::ubuntu::media::AVBackend::Backend& in)
+    {
+        in = static_cast<core::ubuntu::media::AVBackend::Backend>(out.pop_int16());
+    }
+};
+
 namespace helper
 {
 template<>

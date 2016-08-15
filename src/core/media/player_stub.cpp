@@ -54,7 +54,6 @@ struct media::PlayerStub::Private
                 object(object),
                 key(object->invoke_method_synchronously<mpris::Player::Key, media::Player::PlayerKey>().value()),
                 uuid(uuid),
-                sink_factory(media::video::make_platform_default_sink_factory(key)),
                 properties
                 {
                     // Link the properties from the server side to the client side over the bus
@@ -67,6 +66,7 @@ struct media::PlayerStub::Private
                     object->get_property<mpris::Player::Properties::IsVideoSource>(),
                     object->get_property<mpris::Player::Properties::IsAudioSource>(),
                     object->get_property<mpris::Player::Properties::TypedPlaybackStatus>(),
+                    object->get_property<mpris::Player::Properties::TypedBackend>(),
                     object->get_property<mpris::Player::Properties::TypedLoopStatus>(),
                     object->get_property<mpris::Player::Properties::PlaybackRate>(),
                     object->get_property<mpris::Player::Properties::Shuffle>(),
@@ -91,6 +91,8 @@ struct media::PlayerStub::Private
                     object->get_signal<mpris::Player::Signals::Error>()
                 }
     {
+        sink_factory = media::video::make_platform_default_sink_factory(key,
+                                properties.backend->get());
     }
 
     ~Private()
@@ -116,6 +118,7 @@ struct media::PlayerStub::Private
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::IsAudioSource>> is_audio_source;
 
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::TypedPlaybackStatus>> playback_status;
+        std::shared_ptr<core::dbus::Property<mpris::Player::Properties::TypedBackend>> backend;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::TypedLoopStatus>> loop_status;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::PlaybackRate>> playback_rate;
         std::shared_ptr<core::dbus::Property<mpris::Player::Properties::Shuffle>> shuffle;
@@ -237,10 +240,12 @@ media::PlayerStub::PlayerStub(
     const std::string& uuid)
         : d(new Private{parent, service, object, uuid})
 {
+    MH_TRACE("");
 }
 
 media::PlayerStub::~PlayerStub()
 {
+    MH_TRACE("");
 }
 
 std::string media::PlayerStub::uuid() const
@@ -410,6 +415,11 @@ const core::Property<bool>& media::PlayerStub::is_audio_source() const
 const core::Property<media::Player::PlaybackStatus>& media::PlayerStub::playback_status() const
 {
     return *d->properties.playback_status;
+}
+
+const core::Property<media::AVBackend::Backend>& media::PlayerStub::backend() const
+{
+    return *d->properties.backend;
 }
 
 const core::Property<media::Player::LoopStatus>& media::PlayerStub::loop_status() const

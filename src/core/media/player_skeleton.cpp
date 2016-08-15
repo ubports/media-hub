@@ -471,6 +471,11 @@ const core::Property<media::Player::PlaybackStatus>& media::PlayerSkeleton::play
     return *d->skeleton.properties.typed_playback_status;
 }
 
+const core::Property<media::AVBackend::Backend>& media::PlayerSkeleton::backend() const
+{
+    return *d->skeleton.properties.typed_backend;
+}
+
 const core::Property<media::Player::LoopStatus>& media::PlayerSkeleton::loop_status() const
 {
     return *d->skeleton.properties.typed_loop_status;
@@ -579,6 +584,11 @@ core::Property<media::Player::Lifetime>& media::PlayerSkeleton::lifetime()
 core::Property<media::Player::PlaybackStatus>& media::PlayerSkeleton::playback_status()
 {
     return *d->skeleton.properties.typed_playback_status;
+}
+
+core::Property<media::AVBackend::Backend>& media::PlayerSkeleton::backend()
+{
+    return *d->skeleton.properties.typed_backend;
 }
 
 core::Property<bool>& media::PlayerSkeleton::can_play()

@@ -35,7 +35,8 @@ namespace video
 // A functor that allows for creating actual sinks given a texture id.
 typedef std::function<Sink::Ptr(std::uint32_t)> SinkFactory;
 // Returns the platform default sink factory for the player instance identified by the given key.
-SinkFactory make_platform_default_sink_factory(const Player::PlayerKey& key);
+SinkFactory make_platform_default_sink_factory(const Player::PlayerKey& key,
+                                               const AVBackend::Backend b);
 }
 }
 }

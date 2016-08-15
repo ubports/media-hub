@@ -75,6 +75,7 @@ class PlayerSkeleton : public core::ubuntu::media::Player
     virtual const core::Property<bool>& is_video_source() const;
     virtual const core::Property<bool>& is_audio_source() const;
     virtual const core::Property<PlaybackStatus>& playback_status() const;
+    virtual const core::Property<AVBackend::Backend>& backend() const;
     virtual const core::Property<LoopStatus>& loop_status() const;
     virtual const core::Property<PlaybackRate>& playback_rate() const;
     virtual const core::Property<bool>& shuffle() const;
@@ -105,6 +106,7 @@ class PlayerSkeleton : public core::ubuntu::media::Player
     // These properties are not exposed to the client, but still need to be
     // able to be settable from within the Player:
     virtual core::Property<PlaybackStatus>& playback_status();
+    virtual core::Property<AVBackend::Backend>& backend();
     virtual core::Property<bool>& can_play();
     virtual core::Property<bool>& can_pause();
     virtual core::Property<bool>& can_seek();

@@ -71,6 +71,7 @@ class PlayerStub : public Player
     virtual const core::Property<bool>& is_video_source() const;
     virtual const core::Property<bool>& is_audio_source() const;
     virtual const core::Property<PlaybackStatus>& playback_status() const;
+    virtual const core::Property<AVBackend::Backend>& backend() const;
     virtual const core::Property<LoopStatus>& loop_status() const;
     virtual const core::Property<PlaybackRate>& playback_rate() const;
     virtual const core::Property<bool>& shuffle() const;

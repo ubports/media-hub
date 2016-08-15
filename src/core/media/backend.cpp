@@ -16,7 +16,7 @@
  * Authored by: Jim Hodapp <jim.hodapp@canonical.com>
  */
 
-#include "backend.h"
+#include <core/media/player.h>
 #include "core/media/logger/logger.h"
 
 #include <gst/gst.h>

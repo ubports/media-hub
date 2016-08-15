@@ -16,7 +16,6 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#include "core/media/backend.h"
 #include "core/media/logger/logger.h"
 
 #include <core/media/video/platform_default_sink.h>
@@ -59,12 +58,13 @@ struct NullSink : public video::Sink
 #if defined(MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER)
 #include <core/media/video/hybris_gl_sink.h>
 
-video::SinkFactory video::make_platform_default_sink_factory(const media::Player::PlayerKey& key)
+video::SinkFactory video::make_platform_default_sink_factory(const media::Player::PlayerKey& key,
+                                                             const media::AVBackend::Backend b)
 {
-    const media::AVBackend::Backend b {media::AVBackend::get_backend_type()};
     switch (b)
     {
         case media::AVBackend::Backend::hybris:
+            MH_DEBUG("Using hybris video sink");
             return video::HybrisGlSink::factory_for_key(key);
         case media::AVBackend::Backend::none:
             MH_WARNING(

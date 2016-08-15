@@ -16,9 +16,9 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#include "core/media/backend.h"
 #include "core/media/logger/logger.h"
 
+#include <core/media/player.h>
 #include <core/media/recorder_observer.h>
 
 #include <core/media/hybris_recorder_observer.h>

@@ -20,7 +20,6 @@
 #include <core/media/player.h>
 #include <core/media/track_list.h>
 
-#include "core/media/backend.h"
 #include "core/media/hashed_keyed_player_store.h"
 #include "core/media/logger/logger.h"
 #include "core/media/service_implementation.h"

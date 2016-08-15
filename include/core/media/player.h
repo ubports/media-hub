@@ -39,6 +39,21 @@ namespace media
 class Service;
 class TrackList;
 
+struct AVBackend
+{
+    enum Backend
+    {
+        none,
+        hybris
+    };
+
+    /**
+     * @brief Returns the type of audio/video decoding/encoding backend being used.
+     * @return Returns the current backend type.
+     */
+    static Backend get_backend_type();
+};
+
 class Player : public std::enable_shared_from_this<Player>
 {
   public:
@@ -162,6 +177,7 @@ class Player : public std::enable_shared_from_this<Player>
     virtual const core::Property<bool>& is_video_source() const = 0;
     virtual const core::Property<bool>& is_audio_source() const = 0;
     virtual const core::Property<PlaybackStatus>& playback_status() const = 0;
+    virtual const core::Property<AVBackend::Backend>& backend() const = 0;
     virtual const core::Property<LoopStatus>& loop_status() const = 0;
     virtual const core::Property<PlaybackRate>& playback_rate() const = 0;
     virtual const core::Property<bool>& shuffle() const = 0;

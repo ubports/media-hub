@@ -34,7 +34,7 @@ namespace video
 {
 class HybrisGlSink : public video::Sink
 {
-public:    
+public:
     // Returns a factory functor that allows for creating actual sink instances.
     static std::function<video::Sink::Ptr(std::uint32_t)> factory_for_key(const media::Player::PlayerKey&);
 
