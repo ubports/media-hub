@@ -1,3 +1,9 @@
+media-hub (4.6.0+16.10.20160823-0ubuntu1) yakkety; urgency=medium
+
+  * Update metadata with new tags instead of removing all old ones.
+
+ -- Alfonso Sanchez-Beato <alfonso.sanchez-beato@canonical.com>  Tue, 23 Aug 2016 08:32:29 +0000
+
 media-hub (4.6.0+16.10.20160815.3-0ubuntu1) yakkety; urgency=medium
 
   * Make media-hub work on the desktop with Unity7/Unity8 sessions.
