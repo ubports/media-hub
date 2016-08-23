@@ -96,9 +96,13 @@ private Q_SLOTS:
     }
 
     void accountManagerReady(Tp::PendingOperation* operation) {
+        static uint8_t retries = 0;
         if (operation->isError()) {
             MH_ERROR("TelepathyBridge: Operation failed (accountManagerReady)");
-            QTimer::singleShot(1000, this, SLOT(accountManagerSetup())); // again
+            if (retries < 10) {
+                QTimer::singleShot(1000, this, SLOT(accountManagerSetup())); // again
+                ++retries;
+            }
             return;
         }
 
