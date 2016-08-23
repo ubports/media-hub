@@ -209,6 +209,12 @@ struct gstreamer::Engine::Private
     void on_tag_available(const gstreamer::Bus::Message::Detail::Tag& tag)
     {
         media::Track::MetaData md;
+
+        // We update instead of creating from scratch if same uri
+        auto &tuple = track_meta_data.get();
+        if (playbin.uri() == std::get<0>(tuple))
+            md = std::get<1>(tuple);
+
         gstreamer::MetaDataExtractor::on_tag_available(tag, md);
         track_meta_data.set(std::make_tuple(playbin.uri(), md));
     }
