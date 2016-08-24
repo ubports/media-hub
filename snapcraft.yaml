@@ -1,0 +1,52 @@
+name: media-hub
+version: 1
+summary: Server and client sides of media-hub
+description: |
+  A combined package containing both media-hub-server and clients along with
+  a very simple QMediaPlayer based test client that can play and audio file.
+confinement: devmode
+
+apps:
+  service:
+    command: usr/bin/media-hub-server
+    slots: [mpris]
+    plugs: [pulseaudio]
+
+parts:
+  service:
+    plugin: cmake
+    source: .
+
+    build-packages:
+      - dbus-test-runner
+      - debhelper
+      - dh-apparmor
+      - doxygen
+      - google-mock
+      - graphviz
+      - gstreamer1.0-plugins-good
+      - libboost-dev
+      - libboost-filesystem-dev
+      - libboost-log-dev
+      - libboost-program-options-dev
+      - libboost-system-dev
+      - libdbus-1-dev
+      - libdbus-cpp-dev
+      - libgoogle-glog-dev
+      - libgstreamer1.0-dev
+      - libgstreamer-plugins-base1.0-dev
+      - libhybris-dev
+      - libprocess-cpp-dev
+      - libproperties-cpp-dev
+      - libpulse-dev
+      - libtelepathy-qt5-dev
+      - lsb-release
+      - pkg-config
+      - qtbase5-dev
+
+    stage-packages:
+      - gstreamer1.0-fluendo-mp3
+
+    configflags:
+      - -DCMAKE_INSTALL_PREFIX:PATH=/usr
+      - -DCMAKE_LIBRARY_PATH=/usr/lib
