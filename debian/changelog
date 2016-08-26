@@ -1,3 +1,10 @@
+media-hub (4.6.0+16.10.20160826-0ubuntu1) yakkety; urgency=medium
+
+  [ You-Sheng Yang ]
+  * Add /system/lib64 to apparmor permission rules
+
+ -- Alfonso Sanchez-Beato <alfonso.sanchez-beato@canonical.com>  Fri, 26 Aug 2016 07:12:23 +0000
+
 media-hub (4.6.0+16.10.20160823-0ubuntu1) yakkety; urgency=medium
 
   * Update metadata with new tags instead of removing all old ones.
