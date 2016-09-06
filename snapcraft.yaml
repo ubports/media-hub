@@ -1,10 +1,11 @@
 name: media-hub
-version: 1
+version: 4.6.0
 summary: Server and client sides of media-hub
 description: |
-  A combined package containing both media-hub-server and clients along with
-  a very simple QMediaPlayer based test client that can play and audio file.
-confinement: devmode
+  Media Hub is a simple and lightweight service for media playback using
+  DBus. Please find the source code at:
+  https://code.launchpad.net/media-hub
+confinement: strict
 
 apps:
   service:
