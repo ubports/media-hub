@@ -1,5 +1,5 @@
 name: media-hub
-version: 4.6.0
+version: 4.6.0-1
 summary: Server and client sides of media-hub
 description: |
   Media Hub is a simple and lightweight service for media playback using
@@ -46,6 +46,7 @@ parts:
       - qtbase5-dev
 
     stage-packages:
+      # Ok to ship by default since Ubuntu has an mp3 license
       - gstreamer1.0-fluendo-mp3
 
     configflags:
