@@ -19,6 +19,7 @@ parts:
     source: .
 
     build-packages:
+      - build-essential
       - dbus-test-runner
       - debhelper
       - dh-apparmor
@@ -52,3 +53,28 @@ parts:
     configflags:
       - -DCMAKE_INSTALL_PREFIX:PATH=/usr
       - -DCMAKE_LIBRARY_PATH=/usr/lib
+
+    filesets:
+      unwanted:
+        # Files that we don't want/need in the final snap package
+        - -etc
+        - -usr/lib/debug
+        - -usr/lib/*/libogg*
+        - -usr/lib/*/libpulse*
+        - -usr/lib/python*
+        - -usr/share/apport
+        - -usr/share/bug
+        - -usr/share/doc
+        - -usr/share/fonts
+        - -usr/share/libwacom
+        - -usr/share/lintian
+        - -usr/share/man
+        - -usr/share/X11
+        - -usr/lib/*.a
+        - -usr/lib/*/*.a
+        - -usr/lib/*.la
+        - -usr/lib/*/*.la
+        - -usr/lib/*/*.o
+
+    snap:
+      - $unwanted
