@@ -1,3 +1,9 @@
+media-hub (4.6.0+16.10.20160909-0ubuntu1) yakkety; urgency=medium
+
+  * Add initial version of Snappy package for media-hub-server
+
+ -- Jim Hodapp <jim.hodapp@canonical.com>  Fri, 09 Sep 2016 13:05:07 +0000
+
 media-hub (4.6.0+16.10.20160826-0ubuntu1) yakkety; urgency=medium
 
   [ You-Sheng Yang ]
