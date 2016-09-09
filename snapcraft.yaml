@@ -1,0 +1,80 @@
+name: media-hub
+version: 4.6.0-1
+summary: Server and client sides of media-hub
+description: |
+  Media Hub is a simple and lightweight service for media playback using
+  DBus. Please find the source code at:
+  https://code.launchpad.net/media-hub
+confinement: strict
+
+apps:
+  service:
+    command: usr/bin/media-hub-server
+    slots: [mpris]
+    plugs: [pulseaudio]
+
+parts:
+  service:
+    plugin: cmake
+    source: .
+
+    build-packages:
+      - build-essential
+      - dbus-test-runner
+      - debhelper
+      - dh-apparmor
+      - doxygen
+      - google-mock
+      - graphviz
+      - gstreamer1.0-plugins-good
+      - libboost-dev
+      - libboost-filesystem-dev
+      - libboost-log-dev
+      - libboost-program-options-dev
+      - libboost-system-dev
+      - libdbus-1-dev
+      - libdbus-cpp-dev
+      - libgoogle-glog-dev
+      - libgstreamer1.0-dev
+      - libgstreamer-plugins-base1.0-dev
+      - libhybris-dev
+      - libprocess-cpp-dev
+      - libproperties-cpp-dev
+      - libpulse-dev
+      - libtelepathy-qt5-dev
+      - lsb-release
+      - pkg-config
+      - qtbase5-dev
+
+    stage-packages:
+      # Ok to ship by default since Ubuntu has an mp3 license
+      - gstreamer1.0-fluendo-mp3
+
+    configflags:
+      - -DCMAKE_INSTALL_PREFIX:PATH=/usr
+      - -DCMAKE_LIBRARY_PATH=/usr/lib
+
+    filesets:
+      unwanted:
+        # Files that we don't want/need in the final snap package
+        - -etc
+        - -usr/lib/debug
+        - -usr/lib/*/libogg*
+        - -usr/lib/*/libpulse*
+        - -usr/lib/python*
+        - -usr/share/apport
+        - -usr/share/bug
+        - -usr/share/doc
+        - -usr/share/fonts
+        - -usr/share/libwacom
+        - -usr/share/lintian
+        - -usr/share/man
+        - -usr/share/X11
+        - -usr/lib/*.a
+        - -usr/lib/*/*.a
+        - -usr/lib/*.la
+        - -usr/lib/*/*.la
+        - -usr/lib/*/*.o
+
+    snap:
+      - $unwanted
