@@ -86,7 +86,7 @@ bool process_context_name(const std::string& s, std::smatch& out,
     static const std::regex full_re{"(.*)_(.*)_(.*)"};
     static const std::regex trust_store_re{"(.*)-(.*)"};
 
-    if ((s == "messaging-app" or s == unity_name)
+    if ((s == "messaging-app" or s == unity_name or s == unity8_snap_name)
             and std::regex_match(s, out, trust_store_re))
     {
         pkg_name = s;
@@ -208,7 +208,7 @@ apparmor::ubuntu::RequestAuthenticator::Result apparmor::ubuntu::ExistingAuthent
     // TODO: when the trust store lands, check it to see if this app can access the dirs and
     // then remove the explicit whitelist of the music-app, and gallery-app
     else if ((context.package_name() == "com.ubuntu.music" || context.package_name() == "com.ubuntu.gallery" ||
-              context.profile_name() == unity_name) &&
+              context.profile_name() == unity_name || context.profile_name() == unity8_snap_name) &&
             (parsed_uri.path.find(std::string("Music/")) != std::string::npos ||
              parsed_uri.path.find(std::string("Videos/")) != std::string::npos ||
              parsed_uri.path.find(std::string("/media")) != std::string::npos))
