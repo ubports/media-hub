@@ -74,6 +74,7 @@ Uri parse_uri(const std::string& s)
 static constexpr std::size_t index_package{1};
 static constexpr std::size_t index_app{2};
 static const std::string unity_name{"unity8-dash"};
+static const std::string unity8_snap_name{"snap.unity8-session.unity8-session"};
 
 // Returns true if the context name is a valid Ubuntu app id.
 // If it is, out is populated with the package and app name.
@@ -105,7 +106,7 @@ bool process_context_name(const std::string& s, std::smatch& out,
 apparmor::ubuntu::Context::Context(const std::string& name)
     : apparmor::Context{name},
       unconfined_{str() == ubuntu::unconfined},
-      unity_{name == unity_name},
+      unity_{name == unity_name || name == unity8_snap_name},
       has_package_name_{process_context_name(str(), match_, pkg_name_)}
 {
     MH_DEBUG("apparmor profile name: %s", name);
