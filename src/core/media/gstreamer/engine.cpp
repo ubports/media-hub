@@ -15,6 +15,7 @@
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  *              Jim Hodapp <jim.hodapp@canonical.com>
+ *              Alfonso Sanchez-Beato <alfonso.sanchez-beato@canonical.com>
  */
 
 #include <stdio.h>
@@ -272,8 +273,9 @@ struct gstreamer::Engine::Private
         buffering_changed(value);
     }
 
-    Private()
-        : meta_data_extractor(new gstreamer::MetaDataExtractor()),
+    Private(const core::ubuntu::media::Player::PlayerKey key)
+        : playbin(key),
+          meta_data_extractor(new gstreamer::MetaDataExtractor()),
           volume(media::Engine::Volume(1.)),
           orientation(media::Player::Orientation::rotate0),
           is_video_source(false),
@@ -410,7 +412,8 @@ struct gstreamer::Engine::Private
     core::Signal<int> buffering_changed;
 };
 
-gstreamer::Engine::Engine() : d(new Private{})
+gstreamer::Engine::Engine(const core::ubuntu::media::Player::PlayerKey key)
+    : d(new Private{key})
 {
     d->state = media::Engine::State::no_media;
 }

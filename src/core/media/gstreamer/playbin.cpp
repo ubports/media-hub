@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
+ *              Alfonso Sanchez-Beato <alfonso.sanchez-beato@canonical.com>
  */
 
 #include <core/media/gstreamer/playbin.h>
@@ -28,35 +29,55 @@
 #include "core/media/logger/logger.h"
 #include "core/media/util/uri_check.h"
 
+#include <sys/socket.h>
+#include <sys/un.h>
+
 #include <utility>
+#include <cstring>
 
-namespace
+using namespace std;
+
+void gstreamer::Playbin::setup_video_sink_for_buffer_streaming()
 {
-void setup_video_sink_for_buffer_streaming(GstElement* pipeline)
-{
-    // Get the service-side BufferQueue (IGraphicBufferProducer) and associate it with
-    // the SurfaceTextureClientHybris instance
-    IGBPWrapperHybris igbp = decoding_service_get_igraphicbufferproducer();
-    SurfaceTextureClientHybris stc = surface_texture_client_create_by_igbp(igbp);
+    IGBPWrapperHybris igbp;
+    SurfaceTextureClientHybris stc;
+    GstContext *context;
+    GstStructure *structure;
 
-    // Because mirsink is being loaded, we are definitely doing * hardware rendering.
-    surface_texture_client_set_hardware_rendering(stc, TRUE);
+    switch (backend) {
+    case core::ubuntu::media::AVBackend::Backend::hybris:
+        // Get the service-side BufferQueue (IGraphicBufferProducer) and
+        // associate with it the SurfaceTextureClientHybris instance.
+        igbp = decoding_service_get_igraphicbufferproducer();
+        stc = surface_texture_client_create_by_igbp(igbp);
 
-    GstContext *context = gst_context_new("gst.mir.MirContext", TRUE);
-    GstStructure *structure = gst_context_writable_structure(context);
-    gst_structure_set(structure, "gst_mir_context", G_TYPE_POINTER, stc, NULL);
+        // Because mirsink is being loaded, we are definitely doing * hardware rendering.
+        surface_texture_client_set_hardware_rendering(stc, TRUE);
 
-    /* Propagate context in pipeline (needed by amchybris and mirsink) */
-    gst_element_set_context(pipeline, context);
-}
+        context = gst_context_new("gst.mir.MirContext", TRUE);
+        structure = gst_context_writable_structure(context);
+        gst_structure_set(structure, "gst_mir_context", G_TYPE_POINTER, stc, NULL);
+
+        /* Propagate context in pipeline (needed by amchybris and mirsink) */
+        gst_element_set_context(pipeline, context);
+        break;
+    case core::ubuntu::media::AVBackend::Backend::mir:
+        // Connect to buffer consumer socket
+        connect_to_consumer();
+        // Configure mirsink so it exports buffers
+        g_object_set (G_OBJECT (video_sink), "export-buffers", TRUE, nullptr);
+        break;
+    case core::ubuntu::media::AVBackend::Backend::none:
+    default:
+        throw core::ubuntu::media::Player::Errors::
+            OutOfProcessBufferStreamingNotSupported{};
+    }
 }
 #else  // MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER
-namespace
+void setup_video_sink_for_buffer_streaming()
 {
-void setup_video_sink_for_buffer_streaming(GstElement*)
-{
-    throw core::ubuntu::media::Player::Errors::OutOfProcessBufferStreamingNotSupported{};
-}
+    throw core::ubuntu::media::Player::Errors::
+        OutOfProcessBufferStreamingNotSupported{};
 }
 #endif // MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER
 
@@ -98,7 +119,7 @@ void gstreamer::Playbin::source_setup(GstElement*,
     static_cast<Playbin*>(user_data)->setup_source(source);
 }
 
-gstreamer::Playbin::Playbin()
+gstreamer::Playbin::Playbin(const core::ubuntu::media::Player::PlayerKey key_in)
     : pipeline(gst_element_factory_make("playbin", pipeline_name().c_str())),
       bus{gst_element_get_bus(pipeline)},
       file_type(MEDIA_FILE_TYPE_NONE),
@@ -122,7 +143,10 @@ gstreamer::Playbin::Playbin()
       is_missing_video_codec(false),
       audio_stream_id(-1),
       video_stream_id(-1),
-      current_new_state(GST_STATE_NULL)
+      current_new_state(GST_STATE_NULL),
+      key(key_in),
+      backend(core::ubuntu::media::AVBackend::get_backend_type()),
+      sock_consumer(0)
 {
     if (!pipeline)
         throw std::runtime_error("Could not create pipeline for playbin.");
@@ -176,6 +200,11 @@ gstreamer::Playbin::~Playbin()
     if (pipeline)
         gst_object_unref(pipeline);
 
+    if (sock_consumer) {
+        close(sock_consumer);
+        sock_consumer = 0;
+    }
+
 #ifdef DEBUG_REFS
     print_refs(*this, "gstreamer::Playbin::~Playbin pipeline");
 #endif
@@ -217,13 +246,14 @@ void gstreamer::Playbin::reset_pipeline()
     is_missing_video_codec = false;
     audio_stream_id = -1;
     video_stream_id = -1;
+    if (sock_consumer) {
+        close(sock_consumer);
+        sock_consumer = 0;
+    }
 }
 
-void gstreamer::Playbin::process_message_element(GstMessage *message)
+void gstreamer::Playbin::process_missing_plugin_message(GstMessage *message)
 {
-    if (!gst_is_missing_plugin_message(message))
-      return;
-
     gchar *desc = gst_missing_plugin_message_get_description(message);
     MH_WARNING("Missing plugin: %s", desc);
     g_free(desc);
@@ -253,6 +283,41 @@ void gstreamer::Playbin::process_message_element(GstMessage *message)
     MH_ERROR("Missing decoder for %s", mime);
 }
 
+void gstreamer::Playbin::process_message_element(GstMessage *message)
+{
+    const GstStructure *msg_data = gst_message_get_structure(message);
+    const gchar *struct_name = gst_structure_get_name(msg_data);
+
+    MH_DEBUG("Rx message element with struct %s", struct_name);
+
+    if (g_strcmp0("buffer-export-data", struct_name) == 0)
+    {
+        int fd;
+        BufferMetadata meta;
+        if (!gst_structure_get(msg_data,
+                               "fd", G_TYPE_INT, &fd,
+                               "width", G_TYPE_INT, &meta.width,
+                               "height", G_TYPE_INT, &meta.height,
+                               "fourcc", G_TYPE_INT, &meta.fourcc,
+                               "stride", G_TYPE_INT, &meta.stride,
+                               "offset", G_TYPE_INT, &meta.offset,
+                               NULL))
+        {
+            MH_ERROR("Wrong buffer-export-data message");
+            return;
+        }
+        send_buffer_data(fd, &meta, sizeof meta);
+    }
+    else if (g_strcmp0("frame-ready", struct_name) == 0)
+    {
+        send_frame_ready();
+    }
+    else
+    {
+        MH_ERROR("Unknown GST_MESSAGE_ELEMENT with struct %s", struct_name);
+    }
+}
+
 void gstreamer::Playbin::on_new_message_async(const Bus::Message& message)
 {
     switch (message.type)
@@ -274,7 +339,10 @@ void gstreamer::Playbin::on_new_message_async(const Bus::Message& message)
         signals.on_state_changed(std::make_pair(message.detail.state_changed, message.source));
         break;
     case GST_MESSAGE_ELEMENT:
-        process_message_element(message.message);
+        if (gst_is_missing_plugin_message(message.message))
+            process_missing_plugin_message(message.message);
+        else
+            process_message_element(message.message);
         break;
     case GST_MESSAGE_TAG:
         {
@@ -360,7 +428,7 @@ void gstreamer::Playbin::create_video_sink(uint32_t)
         "No video sink configured for the current pipeline"
     };
 
-    setup_video_sink_for_buffer_streaming(pipeline);
+    setup_video_sink_for_buffer_streaming();
 }
 
 void gstreamer::Playbin::set_volume(double new_volume)
@@ -845,4 +913,87 @@ bool gstreamer::Playbin::can_play_streams() const
         return false;
     else
         return true;
+}
+
+bool gstreamer::Playbin::connect_to_consumer(void)
+{
+    static const char *local_socket = "media-hub-server";
+    static const char *consumer_socket = "media-consumer";
+
+    int len;
+    struct sockaddr_un local, remote;
+
+    if ((sock_consumer = socket(AF_UNIX, SOCK_DGRAM, 0)) == -1)
+    {
+        MH_ERROR("Cannot create socket: %s (%d)", strerror(errno), errno);
+        return false;
+    }
+
+    // Bind client to local -abstract- socket (media-hub-server<session>)
+    ostringstream local_ss;
+    local_ss << local_socket << key;
+    local.sun_family = AF_UNIX;
+    local.sun_path[0] = '\0';
+    strcpy(local.sun_path + 1, local_ss.str().c_str());
+    len = sizeof(local.sun_family) + local_ss.str().length() + 2;
+    if (bind(sock_consumer, (struct sockaddr *) &local, sizeof(local)) == -1)
+    {
+        MH_ERROR("Cannot bind socket: %s (%d)", strerror(errno), errno);
+        close(sock_consumer);
+        sock_consumer = 0;
+        return false;
+    }
+
+    // Connect to buffer consumer (media-consumer<session>)
+    ostringstream remote_ss;
+    remote_ss << consumer_socket << key;
+    remote.sun_family = AF_UNIX;
+    remote.sun_path[0] = '\0';
+    strcpy(remote.sun_path + 1, remote_ss.str().c_str());
+    len = sizeof(remote.sun_family) + remote_ss.str().length() + 2;
+    if (connect(sock_consumer, (struct sockaddr *) &remote, len) == -1)
+    {
+        MH_ERROR("Cannot connect to consumer: %s (%d)", strerror(errno), errno);
+        close(sock_consumer);
+        sock_consumer = 0;
+        return false;
+    }
+
+    MH_DEBUG("Connected to buffer consumer socket");
+
+    return true;
+}
+
+void gstreamer::Playbin::send_buffer_data(int fd, void *data, size_t len)
+{
+    struct msghdr msg{};
+    char buf[CMSG_SPACE(sizeof fd)]{};
+    struct cmsghdr *cmsg;
+    struct iovec io = { .iov_base = data, .iov_len = len };
+
+    msg.msg_iov = &io;
+    msg.msg_iovlen = 1;
+    msg.msg_control = buf;
+    msg.msg_controllen = sizeof buf;
+
+    cmsg = CMSG_FIRSTHDR(&msg);
+    cmsg->cmsg_level = SOL_SOCKET;
+    cmsg->cmsg_type = SCM_RIGHTS;
+    cmsg->cmsg_len = CMSG_LEN(sizeof fd);
+
+    memmove(CMSG_DATA(cmsg), &fd, sizeof fd);
+
+    msg.msg_controllen = cmsg->cmsg_len;
+
+    if (sendmsg(sock_consumer, &msg, 0) < 0)
+        MH_ERROR("Failed to send dma_buf fd to consumer");
+}
+
+void gstreamer::Playbin::send_frame_ready(void)
+{
+    const char ready = 'r';
+
+    if (send (sock_consumer, &ready, sizeof ready, 0) == -1)
+        MH_ERROR("Error when sending sync to client: %s (%d)",
+                 strerror(errno), errno);
 }

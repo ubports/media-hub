@@ -26,7 +26,7 @@ namespace gstreamer
 class Engine : public core::ubuntu::media::Engine
 {
 public:
-    Engine();
+    Engine(const core::ubuntu::media::Player::PlayerKey key);
     ~Engine();
 
     const std::shared_ptr<MetaDataExtractor>& meta_data_extractor() const;

@@ -78,6 +78,9 @@ void platform_init()
             MH_DEBUG("Found hybris backend");
             decoding_service_init();
             break;
+        case media::AVBackend::Backend::mir:
+            MH_DEBUG("Found mir backend");
+            break;
         case media::AVBackend::Backend::none:
             MH_WARNING("No video backend selected. Video functionality won't work.");
             break;

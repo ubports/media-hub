@@ -65,7 +65,7 @@ struct EnsureMirVideoSinkEnvVarIsSet
 
 TEST(GStreamerEngine, construction_and_deconstruction_works)
 {
-    gstreamer::Engine engine;
+    gstreamer::Engine engine{0};
 }
 
 TEST(GStreamerEngine, DISABLED_setting_uri_and_starting_audio_only_playback_works)
@@ -78,7 +78,7 @@ TEST(GStreamerEngine, DISABLED_setting_uri_and_starting_audio_only_playback_work
     core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
                 core::ubuntu::media::Engine::State::ready);
 
-    gstreamer::Engine engine;
+    gstreamer::Engine engine{0};
 
     engine.track_meta_data().changed().connect(
                 [](const std::tuple<media::Track::UriType, media::Track::MetaData>& md)
@@ -127,7 +127,7 @@ TEST(GStreamerEngine, DISABLED_setting_uri_and_starting_video_playback_works)
     core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
                 core::ubuntu::media::Engine::State::ready);
 
-    gstreamer::Engine engine;
+    gstreamer::Engine engine{0};
 
     engine.track_meta_data().changed().connect(
                 [](const std::tuple<media::Track::UriType, media::Track::MetaData>& md)
@@ -200,7 +200,7 @@ TEST(GStreamerEngine, setting_uri_and_audio_playback_with_http_headers_works)
     core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
                 core::ubuntu::media::Engine::State::ready);
 
-    gstreamer::Engine engine;
+    gstreamer::Engine engine{0};
 
     engine.state().changed().connect(
                 std::bind(
@@ -231,7 +231,7 @@ TEST(GStreamerEngine, DISABLED_stop_pause_play_seek_audio_only_works)
     core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
                 core::ubuntu::media::Engine::State::ready);
 
-    gstreamer::Engine engine;
+    gstreamer::Engine engine{0};
 
     engine.state().changed().connect(
                 std::bind(
@@ -280,7 +280,7 @@ TEST(GStreamerEngine, DISABLED_stop_pause_play_seek_video_works)
     core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
                 core::ubuntu::media::Engine::State::ready);
 
-    gstreamer::Engine engine;
+    gstreamer::Engine engine{0};
 
     engine.state().changed().connect(
                 std::bind(
@@ -327,7 +327,7 @@ TEST(GStreamerEngine, get_position_duration_work)
     core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
                 core::ubuntu::media::Engine::State::ready);
 
-    gstreamer::Engine engine;
+    gstreamer::Engine engine{0};
 
     engine.state().changed().connect(
                 std::bind(
@@ -365,7 +365,7 @@ TEST(GStreamerEngine, adjusting_volume_works)
     core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
                 core::ubuntu::media::Engine::State::ready);
 
-    gstreamer::Engine engine;
+    gstreamer::Engine engine{0};
     engine.state().changed().connect(
                 std::bind(
                     &core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State>::trigger,
@@ -402,7 +402,7 @@ TEST(GStreamerEngine, adjusting_volume_works)
 
 TEST(GStreamerEngine, provides_non_null_meta_data_extractor)
 {
-    gstreamer::Engine engine;
+    gstreamer::Engine engine{0};
     EXPECT_NE(nullptr, engine.meta_data_extractor());
 }
 
@@ -413,7 +413,7 @@ TEST(GStreamerEngine, meta_data_extractor_provides_correct_tags)
     std::remove(test_file.c_str());
     ASSERT_TRUE(test::copy_test_media_file_to("test.mp3", test_file));
 
-    gstreamer::Engine engine;
+    gstreamer::Engine engine{0};
 
     core::ubuntu::media::Track::MetaData md;
     ASSERT_NO_THROW({

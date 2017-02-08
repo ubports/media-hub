@@ -35,6 +35,7 @@ media::ClientDeathObserver::Ptr media::platform_default_client_death_observer()
     {
         case media::AVBackend::Backend::hybris:
             return media::HybrisClientDeathObserver::create();
+        case media::AVBackend::Backend::mir:
         case media::AVBackend::Backend::none:
             MH_WARNING(
                 "No video backend selected. Client disconnect functionality won't work."

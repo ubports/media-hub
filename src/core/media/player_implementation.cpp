@@ -63,7 +63,7 @@ struct media::PlayerImplementation<Parent>::Private :
           config(config),
           display_state_lock(config.power_state_controller->display_state_lock()),
           system_state_lock(config.power_state_controller->system_state_lock()),
-          engine(std::make_shared<gstreamer::Engine>()),
+          engine(std::make_shared<gstreamer::Engine>(config.key)),
           track_list(std::make_shared<TrackListImplementation>(
               config.parent.bus,
               config.parent.service->add_object_for_path(
