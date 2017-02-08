@@ -58,6 +58,7 @@ add_library(
   track_list_stub.cpp
 
   video/hybris_gl_sink.cpp
+  video/egl_sink.cpp
   video/platform_default_sink.cpp
 )
 
@@ -83,6 +84,8 @@ target_link_libraries(
   ${GLog_LIBRARY}
   ${GIO_LIBRARIES}
   ${HYBRIS_MEDIA_LIBRARIES}
+  ${EGL_LIBRARIES}
+  ${GL_LIBRARIES}
 )
 
 install(

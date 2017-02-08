@@ -19,6 +19,7 @@
 #include "core/media/logger/logger.h"
 
 #include <core/media/video/platform_default_sink.h>
+#include <core/media/video/egl_sink.h>
 
 namespace media = core::ubuntu::media;
 namespace video = core::ubuntu::media::video;
@@ -66,6 +67,9 @@ video::SinkFactory video::make_platform_default_sink_factory(const media::Player
         case media::AVBackend::Backend::hybris:
             MH_DEBUG("Using hybris video sink");
             return video::HybrisGlSink::factory_for_key(key);
+        case media::AVBackend::Backend::mir:
+            MH_DEBUG("Using mir/egl video sink");
+            return video::EglSink::factory_for_key(key);
         case media::AVBackend::Backend::none:
             MH_WARNING(
                 "No video backend selected. Video rendering functionality won't work."

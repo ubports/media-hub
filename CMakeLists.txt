@@ -52,6 +52,8 @@ pkg_check_modules(PROPERTIES_CPP properties-cpp REQUIRED)
 pkg_check_modules(PROCESS_CPP process-cpp REQUIRED)
 pkg_check_modules(GIO gio-2.0 REQUIRED)
 pkg_check_modules(HYBRIS_MEDIA libmedia REQUIRED)
+pkg_check_modules(EGL egl REQUIRED)
+pkg_check_modules(GL gl REQUIRED)
 
 include(CheckIncludeFiles)
 check_include_files("hybris/media/media_codec_layer.h" MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER)
