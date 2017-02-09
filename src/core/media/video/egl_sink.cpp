@@ -109,7 +109,7 @@ struct video::EglSink::Private
         local.sun_family = AF_UNIX;
         local.sun_path[0] = '\0';
         strcpy(local.sun_path + 1, sock_name_ss.str().c_str());
-        len = sizeof(local.sun_family) + sock_name_ss.str().length() + 2;
+        len = sizeof(local.sun_family) + sock_name_ss.str().length() + 1;
         if (bind(sock_fd, (struct sockaddr *) &local, len) == -1) {
             perror("Cannot bind consumer socket");
             return;

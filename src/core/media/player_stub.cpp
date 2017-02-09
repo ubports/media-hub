@@ -316,17 +316,22 @@ bool media::PlayerStub::open_uri(const Track::UriType& uri, const Player::Header
 
 media::video::Sink::Ptr media::PlayerStub::create_gl_texture_video_sink(std::uint32_t texture_id)
 {
+    // Create first local stub so media-hub can rely on an existing socket
+    // for the mir/desktop case.
+    auto sink = d->sink_factory(texture_id);
+
     auto op = d->object->transact_method<mpris::Player::CreateVideoSink, void>(texture_id);
 
     if (op.is_error())
     {
-        if (op.error().name() == mpris::Player::Error::OutOfProcessBufferStreamingNotSupported::name)
+        if (op.error().name() ==
+            mpris::Player::Error::OutOfProcessBufferStreamingNotSupported::name)
             throw media::Player::Errors::OutOfProcessBufferStreamingNotSupported{};
         else
             throw std::runtime_error{op.error().print()};
     }
 
-    return d->sink_factory(texture_id);
+    return sink;
 }
 
 void media::PlayerStub::next()

@@ -935,8 +935,8 @@ bool gstreamer::Playbin::connect_to_consumer(void)
     local.sun_family = AF_UNIX;
     local.sun_path[0] = '\0';
     strcpy(local.sun_path + 1, local_ss.str().c_str());
-    len = sizeof(local.sun_family) + local_ss.str().length() + 2;
-    if (bind(sock_consumer, (struct sockaddr *) &local, sizeof(local)) == -1)
+    len = sizeof(local.sun_family) + local_ss.str().length() + 1;
+    if (bind(sock_consumer, (struct sockaddr *) &local, len) == -1)
     {
         MH_ERROR("Cannot bind socket: %s (%d)", strerror(errno), errno);
         close(sock_consumer);
@@ -950,7 +950,7 @@ bool gstreamer::Playbin::connect_to_consumer(void)
     remote.sun_family = AF_UNIX;
     remote.sun_path[0] = '\0';
     strcpy(remote.sun_path + 1, remote_ss.str().c_str());
-    len = sizeof(remote.sun_family) + remote_ss.str().length() + 2;
+    len = sizeof(remote.sun_family) + remote_ss.str().length() + 1;
     if (connect(sock_consumer, (struct sockaddr *) &remote, len) == -1)
     {
         MH_ERROR("Cannot connect to consumer: %s (%d)", strerror(errno), errno);
