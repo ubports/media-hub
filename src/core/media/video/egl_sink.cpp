@@ -109,10 +109,15 @@ struct video::EglSink::Private
 
         // Now signal frame syncs
         while(true) {
+            ssize_t res;
             char c;
 
-            if (recv(sock_fd, &c, sizeof c, 0) == -1) {
+            res = recv(sock_fd, &c, sizeof c, 0);
+            if (res == -1) {
                 perror("while waiting sync");
+                return;
+            } else if (res == 0) {
+                cout << "Socket shutdown\n";
                 return;
             }
 

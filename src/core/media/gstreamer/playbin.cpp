@@ -178,11 +178,11 @@ static void print_refs(const gstreamer::Playbin &pb, const char *func)
 
     MH_DEBUG("%s", func);
     if (pb.pipeline)
-        MH_DEBUG("pipeline:   %d", GST_OBJECT_REFCOUNT(pb.pipeline));
+        MH_DEBUG("pipeline:   %d", (const void *) GST_OBJECT_REFCOUNT(pb.pipeline));
     if (pb.video_sink)
-        MH_DEBUG("video_sink: %d", GST_OBJECT_REFCOUNT(pb.video_sink));
+        MH_DEBUG("video_sink: %d", (const void *) GST_OBJECT_REFCOUNT(pb.video_sink));
     if (pb.audio_sink)
-        MH_DEBUG("audio_sink: %d", GST_OBJECT_REFCOUNT(pb.audio_sink));
+        MH_DEBUG("audio_sink: %d", (const void *) GST_OBJECT_REFCOUNT(pb.audio_sink));
 }
 #endif
 
@@ -918,6 +918,11 @@ bool gstreamer::Playbin::connect_to_consumer(void)
 
     int len;
     struct sockaddr_un local, remote;
+
+    if (sock_consumer != -1) {
+        MH_DEBUG("Resetting socket");
+        close(sock_consumer);
+    }
 
     if ((sock_consumer = socket(AF_UNIX, SOCK_DGRAM, 0)) == -1)
     {
