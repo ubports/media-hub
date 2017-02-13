@@ -159,17 +159,8 @@ struct Playbin
     GstState current_new_state;
 
 private:
-    // TODO make this available for client library
-    struct BufferMetadata
-    {
-        int width;
-        int height;
-        int fourcc;
-        int stride;
-        int offset;
-    };
-
     void setup_video_sink_for_buffer_streaming(void);
+    bool is_supported_video_sink(void) const;
     bool connect_to_consumer(void);
     void send_buffer_data(int fd, void *data, size_t len);
     void send_frame_ready(void);
@@ -177,6 +168,7 @@ private:
 
     const core::ubuntu::media::Player::PlayerKey key;
     const core::ubuntu::media::AVBackend::Backend backend;
+    std::string video_sink_name;
     int sock_consumer;
 };
 }

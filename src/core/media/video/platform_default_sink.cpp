@@ -20,6 +20,7 @@
 
 #include <core/media/video/platform_default_sink.h>
 #include <core/media/video/egl_sink.h>
+#include <core/media/video/hybris_gl_sink.h>
 
 namespace media = core::ubuntu::media;
 namespace video = core::ubuntu::media::video;
@@ -56,9 +57,6 @@ struct NullSink : public video::Sink
 };
 }
 
-#if defined(MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER)
-#include <core/media/video/hybris_gl_sink.h>
-
 video::SinkFactory video::make_platform_default_sink_factory(const media::Player::PlayerKey& key,
                                                              const media::AVBackend::Backend b)
 {
@@ -80,9 +78,3 @@ video::SinkFactory video::make_platform_default_sink_factory(const media::Player
             return video::HybrisGlSink::factory_for_key(key);
     }
 }
-#else  // MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER
-video::SinkFactory video::make_platform_default_sink_factory(const media::Player::PlayerKey&)
-{
-    return [](std::uint32_t) { return video::Sink::Ptr{}; };
-}
-#endif // MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER

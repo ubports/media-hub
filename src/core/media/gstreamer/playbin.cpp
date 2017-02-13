@@ -19,10 +19,10 @@
 
 #include <core/media/gstreamer/playbin.h>
 #include <core/media/gstreamer/engine.h>
+#include <core/media/video/socket_types.h>
 
 #include <gst/pbutils/missing-plugins.h>
 
-#if defined(MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER)
 #include <hybris/media/surface_texture_client_hybris.h>
 #include <hybris/media/media_codec_layer.h>
 
@@ -34,6 +34,10 @@
 
 #include <utility>
 #include <cstring>
+
+static const char *PULSE_SINK = "pulsesink";
+static const char *HYBRIS_SINK = "hybrissink";
+static const char *MIR_SINK = "mirsink";
 
 using namespace std;
 
@@ -73,21 +77,15 @@ void gstreamer::Playbin::setup_video_sink_for_buffer_streaming()
             OutOfProcessBufferStreamingNotSupported{};
     }
 }
-#else  // MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER
-void setup_video_sink_for_buffer_streaming()
-{
-    throw core::ubuntu::media::Player::Errors::
-        OutOfProcessBufferStreamingNotSupported{};
-}
-#endif // MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER
 
-namespace
+bool gstreamer::Playbin::is_supported_video_sink(void) const
 {
-bool is_mir_video_sink()
-{
-    return g_strcmp0(::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME"), "mirsink") == 0;
+    if (video_sink_name == HYBRIS_SINK || video_sink_name ==  MIR_SINK)
+        return TRUE;
+
+    return FALSE;
 }
-}
+
 // Uncomment to generate a dot file at the time that the pipeline
 // goes to the PLAYING state. Make sure to export GST_DEBUG_DUMP_DOT_DIR
 // before starting media-hub-server. To convert the dot file to something
@@ -146,7 +144,7 @@ gstreamer::Playbin::Playbin(const core::ubuntu::media::Player::PlayerKey key_in)
       current_new_state(GST_STATE_NULL),
       key(key_in),
       backend(core::ubuntu::media::AVBackend::get_backend_type()),
-      sock_consumer(0)
+      sock_consumer(-1)
 {
     if (!pipeline)
         throw std::runtime_error("Could not create pipeline for playbin.");
@@ -200,9 +198,9 @@ gstreamer::Playbin::~Playbin()
     if (pipeline)
         gst_object_unref(pipeline);
 
-    if (sock_consumer) {
+    if (sock_consumer != -1) {
         close(sock_consumer);
-        sock_consumer = 0;
+        sock_consumer = -1;
     }
 
 #ifdef DEBUG_REFS
@@ -246,9 +244,9 @@ void gstreamer::Playbin::reset_pipeline()
     is_missing_video_codec = false;
     audio_stream_id = -1;
     video_stream_id = -1;
-    if (sock_consumer) {
+    if (sock_consumer != -1) {
         close(sock_consumer);
-        sock_consumer = 0;
+        sock_consumer = -1;
     }
 }
 
@@ -288,12 +286,10 @@ void gstreamer::Playbin::process_message_element(GstMessage *message)
     const GstStructure *msg_data = gst_message_get_structure(message);
     const gchar *struct_name = gst_structure_get_name(msg_data);
 
-    MH_DEBUG("Rx message element with struct %s", struct_name);
-
     if (g_strcmp0("buffer-export-data", struct_name) == 0)
     {
         int fd;
-        BufferMetadata meta;
+        core::ubuntu::media::video::BufferMetadata meta;
         if (!gst_structure_get(msg_data,
                                "fd", G_TYPE_INT, &fd,
                                "width", G_TYPE_INT, &meta.width,
@@ -306,6 +302,7 @@ void gstreamer::Playbin::process_message_element(GstMessage *message)
             MH_ERROR("Wrong buffer-export-data message");
             return;
         }
+        MH_DEBUG("Exporting %dx%d buffer (fd %d)", meta.width, meta.height, fd);
         send_buffer_data(fd, &meta, sizeof meta);
     }
     else if (g_strcmp0("frame-ready", struct_name) == 0)
@@ -390,34 +387,33 @@ void gstreamer::Playbin::setup_pipeline_for_audio_video()
     flags &= ~GST_PLAY_FLAG_TEXT;
     g_object_set (pipeline, "flags", flags, nullptr);
 
-    if (::getenv("CORE_UBUNTU_MEDIA_SERVICE_AUDIO_SINK_NAME") != nullptr)
-    {
-        audio_sink = gst_element_factory_make (
-                    ::getenv("CORE_UBUNTU_MEDIA_SERVICE_AUDIO_SINK_NAME"),
-                    "audio-sink");
+    const char *asink_name = ::getenv("CORE_UBUNTU_MEDIA_SERVICE_AUDIO_SINK_NAME");
 
-        MH_INFO("audio_sink: %s", ::getenv("CORE_UBUNTU_MEDIA_SERVICE_AUDIO_SINK_NAME"));
+    if (asink_name == nullptr)
+        asink_name = PULSE_SINK;
 
-        g_object_set (
-                    pipeline,
-                    "audio-sink",
-                    audio_sink,
-                    NULL);
+    audio_sink = gst_element_factory_make (asink_name, "audio-sink");
+    if (audio_sink)
+        g_object_set (pipeline, "audio-sink", audio_sink, NULL);
+    else
+        MH_ERROR("Error trying to create audio sink %s", asink_name);
+
+    const char *vsink_name = ::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME");
+
+    if (vsink_name == nullptr) {
+        if (backend == core::ubuntu::media::AVBackend::Backend::hybris)
+            vsink_name = HYBRIS_SINK;
+        else if (backend == core::ubuntu::media::AVBackend::Backend::mir)
+            vsink_name = MIR_SINK;
     }
 
-    if (::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME") != nullptr)
-    {
-        video_sink = gst_element_factory_make (
-            ::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME"),
-            "video-sink");
-
-        MH_INFO("video_sink: %s", ::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME"));
-
-        g_object_set (
-                pipeline,
-                "video-sink",
-                video_sink,
-                NULL);
+    if (vsink_name) {
+        video_sink_name = vsink_name;
+        video_sink = gst_element_factory_make (vsink_name, "video-sink");
+        if (video_sink)
+            g_object_set (pipeline, "video-sink", video_sink, NULL);
+        else
+            MH_ERROR("Error trying to create video sink %s", vsink_name);
     }
 }
 
@@ -698,7 +694,7 @@ bool gstreamer::Playbin::seek(const std::chrono::microseconds& ms)
 
 core::ubuntu::media::video::Dimensions gstreamer::Playbin::get_video_dimensions() const
 {
-    if (not video_sink || not is_mir_video_sink())
+    if (not video_sink || not is_supported_video_sink())
         throw std::runtime_error
         {
             "Missing video sink or video sink does not support query of width and height."
@@ -940,7 +936,7 @@ bool gstreamer::Playbin::connect_to_consumer(void)
     {
         MH_ERROR("Cannot bind socket: %s (%d)", strerror(errno), errno);
         close(sock_consumer);
-        sock_consumer = 0;
+        sock_consumer = -1;
         return false;
     }
 
@@ -955,7 +951,7 @@ bool gstreamer::Playbin::connect_to_consumer(void)
     {
         MH_ERROR("Cannot connect to consumer: %s (%d)", strerror(errno), errno);
         close(sock_consumer);
-        sock_consumer = 0;
+        sock_consumer = -1;
         return false;
     }
 
@@ -986,7 +982,8 @@ void gstreamer::Playbin::send_buffer_data(int fd, void *data, size_t len)
     msg.msg_controllen = cmsg->cmsg_len;
 
     if (sendmsg(sock_consumer, &msg, 0) < 0)
-        MH_ERROR("Failed to send dma_buf fd to consumer");
+        MH_ERROR("Failed to send dma_buf fd to consumer: %s (%d)",
+                 strerror(errno), errno);
 }
 
 void gstreamer::Playbin::send_frame_ready(void)

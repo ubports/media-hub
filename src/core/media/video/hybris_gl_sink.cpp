@@ -18,7 +18,6 @@
 
 #include <core/media/video/hybris_gl_sink.h>
 
-#if defined(MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER)
 // Hybris
 #include <hybris/media/media_codec_layer.h>
 #include <hybris/media/surface_texture_client_hybris.h>
@@ -113,4 +112,3 @@ bool video::HybrisGlSink::swap_buffers() const
     gl_consumer_update_texture(d->gl_texture_consumer);
     return true;
 }
-#endif // MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER

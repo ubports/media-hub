@@ -24,6 +24,8 @@
 #include "core/media/logger/logger.h"
 #include "core/media/service_implementation.h"
 
+#include <hybris/media/media_codec_layer.h>
+
 #include <core/posix/signal.h>
 
 #include <iostream>
@@ -31,9 +33,6 @@
 namespace media = core::ubuntu::media;
 
 using namespace std;
-
-#if defined(MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER)
-#include <hybris/media/media_codec_layer.h>
 
 namespace
 {
@@ -90,16 +89,6 @@ void platform_init()
     }
 }
 }
-#else  // MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER
-namespace
-{
-// All platform-specific initialization routines go here.
-void platform_init()
-{
-    // Consciously left empty
-}
-}
-#endif // MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER
 
 int main()
 {

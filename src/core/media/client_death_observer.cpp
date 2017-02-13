@@ -21,11 +21,9 @@
 #include <core/media/client_death_observer.h>
 #include <core/media/hybris_client_death_observer.h>
 #include <core/media/stub_client_death_observer.h>
+#include <core/media/hybris_client_death_observer.h>
 
 namespace media = core::ubuntu::media;
-
-#if defined(MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER)
-#include <core/media/hybris_client_death_observer.h>
 
 // Accesses the default client death observer implementation for the platform.
 media::ClientDeathObserver::Ptr media::platform_default_client_death_observer()
@@ -46,15 +44,3 @@ media::ClientDeathObserver::Ptr media::platform_default_client_death_observer()
             return media::HybrisClientDeathObserver::create();
     }
 }
-#else  // MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER
-// Just throws a std::logic_error as we have not yet defined a default way to
-// identify client death changes. One possible way of implementing the interface
-// would be to listen to dbus name changes and react accordingly.
-media::ClientDeathObserver::Ptr media::platform_default_client_death_observer()
-{
-    throw std::logic_error
-    {
-        "No platform-specific death observer implementation known."
-    };
-}
-#endif // MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER

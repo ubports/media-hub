@@ -17,6 +17,7 @@
  */
 
 #include <core/media/video/egl_sink.h>
+#include <core/media/video/socket_types.h>
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
@@ -31,26 +32,12 @@
 #include <thread>
 #include <future>
 #include <cstring>
+#include <unistd.h>
 
 namespace media = core::ubuntu::media;
 namespace video = core::ubuntu::media::video;
 
-namespace {
-struct BufferMetadata
-{
-    int width;
-    int height;
-    int fourcc;
-    int stride;
-    int offset;
-};
-
-struct BufferData
-{
-    int fd;
-    BufferMetadata meta;
-};
-}
+using namespace std;
 
 struct video::EglSink::Private
 {
@@ -69,7 +56,7 @@ struct video::EglSink::Private
         msg.msg_controllen = sizeof c_buffer;
 
         if (recvmsg(socket, &msg, 0) < 0) {
-            printf("Failed to receive message\n");
+            cout << "Failed to receive message\n";
             return false;
         }
 
@@ -77,34 +64,33 @@ struct video::EglSink::Private
 
         memmove(&data->fd, CMSG_DATA(cmsg), sizeof data->fd);
 
-        printf("Extracted fd %d\n", data->fd);
-        printf("width    %d\n", data->meta.width);
-        printf("height   %d\n", data->meta.height);
-        printf("fourcc 0x%X\n", data->meta.fourcc);
-        printf("stride   %d\n", data->meta.stride);
-        printf("offset   %d\n", data->meta.offset);
+        cout << "Extracted fd " << data->fd << '\n';
+        cout << "width    " << data->meta.width << '\n';
+        cout << "height   " << data->meta.height << '\n';
+        cout << "fourcc 0x" << hex << data->meta.fourcc << dec << '\n';
+        cout << "stride   " << data->meta.stride << '\n';
+        cout << "offset   " << data->meta.offset << '\n';
 
         return true;
     }
 
     static void read_sock_events(const media::Player::PlayerKey key,
-                                 std::promise<BufferData>& prom_buff,
+                                 int sock_fd,
+                                 promise<BufferData>& prom_buff,
                                  core::Signal<void>& frame_available)
     {
         static const char *consumer_socket = "media-consumer";
 
         struct sockaddr_un local;
-        int sock_fd, len;
+        int len;
         BufferData buff_data;
 
-        // Bind to socket
-
-        if ((sock_fd = socket(AF_UNIX, SOCK_DGRAM, 0)) == -1) {
+        if (sock_fd == -1) {
             perror("Cannot create buffer consumer socket");
             return;
         }
 
-        std::ostringstream sock_name_ss;
+        ostringstream sock_name_ss;
         sock_name_ss << consumer_socket << key;
         local.sun_family = AF_UNIX;
         local.sun_path[0] = '\0';
@@ -134,29 +120,91 @@ struct video::EglSink::Private
         }
     }
 
-    Private(std::uint32_t gl_texture, const media::Player::PlayerKey key)
+    bool find_extension(const string& extensions, const string& ext)
+    {
+        size_t len_all = extensions.length();
+        size_t len = ext.length();
+        size_t pos = 0;
+
+        while ((pos = extensions.find(ext, pos)) != string::npos) {
+            if (pos + len == len_all || extensions[pos + len] == ' ')
+                return true;
+
+            pos = pos + len;
+        }
+
+        return false;
+    }
+
+    Private(uint32_t gl_texture, const media::Player::PlayerKey key)
         : gl_texture{gl_texture},
           prom_buff{},
           fut_buff{prom_buff.get_future()},
-          sock_thread{read_sock_events, key,
-                  std::ref(prom_buff), std::ref(frame_available)},
-          egl_image{EGL_NO_IMAGE_KHR}
+          sock_fd{socket(AF_UNIX, SOCK_DGRAM, 0)},
+          sock_thread{read_sock_events, key, sock_fd,
+                      ref(prom_buff), ref(frame_available)},
+          egl_image{EGL_NO_IMAGE_KHR},
+          buf_fd{-1}
     {
-        // TODO check if extensions are available
+        const char *extensions;
+        const char *egl_needed[] = {"EGL_KHR_image_base",
+                                    "EGL_EXT_image_dma_buf_import"};
+        EGLDisplay egl_display = eglGetCurrentDisplay();
+        size_t i;
+
+        extensions = eglQueryString (egl_display, EGL_EXTENSIONS);
+        if (!extensions)
+            throw runtime_error {"Error querying EGL extensions"};
+
+        for (i = 0; i < sizeof(egl_needed)/sizeof(egl_needed[0]); ++i) {
+            if (!find_extension(extensions, egl_needed[i])) {
+                ostringstream oss;
+                oss << egl_needed[i] << " not supported";
+                cout << oss.str() << '\n';
+                // TODO check why extensions is different from es2_info output
+                //throw runtime_error {oss.str().c_str()};
+            }
+        }
+
+        // TODO this returns a NULL pointer, probably same issue as with eglQueryString
+        // extensions = reinterpret_cast<const char *>(glGetString(GL_EXTENSIONS));
+        // if (!extensions)
+        //     throw runtime_error {"Error querying OpenGL ES extensions"};
+
+        // if (!find_extension(extensions, "GL_OES_EGL_image_external"))
+        //     throw runtime_error {"GL_OES_EGL_image_external is not supported"};
+
         // Import functions from extensions
         _eglCreateImageKHR = (PFNEGLCREATEIMAGEKHRPROC)
             eglGetProcAddress("eglCreateImageKHR");
+        _eglDestroyImageKHR = (PFNEGLDESTROYIMAGEKHRPROC)
+            eglGetProcAddress("eglDestroyImageKHR");
         _glEGLImageTargetTexture2DOES = (PFNGLEGLIMAGETARGETTEXTURE2DOESPROC)
             eglGetProcAddress("glEGLImageTargetTexture2DOES");
+
+        if (_eglCreateImageKHR == nullptr || _eglDestroyImageKHR == nullptr ||
+            _glEGLImageTargetTexture2DOES == nullptr)
+            throw runtime_error {"Error when loading extensions"};
     }
 
     ~Private()
     {
-        // TODO destroy thread
+        if (sock_fd != -1) {
+            shutdown(sock_fd, SHUT_RDWR);
+            sock_thread.join();
+            close(sock_fd);
+        }
+
+        if (buf_fd != -1)
+            close(buf_fd);
+
+        if (egl_image != EGL_NO_IMAGE_KHR)
+            _eglDestroyImageKHR(eglGetCurrentDisplay(), egl_image);
     }
 
     bool import_buffer(const BufferData *buf_data)
     {
+        GLenum err;
         EGLDisplay egl_display = eglGetCurrentDisplay();
         EGLint image_attrs[] = {
             EGL_WIDTH, buf_data->meta.width,
@@ -168,10 +216,12 @@ struct video::EglSink::Private
             EGL_NONE
         };
 
+        buf_fd = buf_data->fd;
         egl_image = _eglCreateImageKHR(egl_display, EGL_NO_CONTEXT,
                                        EGL_LINUX_DMA_BUF_EXT, NULL, image_attrs);
         if (egl_image == EGL_NO_IMAGE_KHR) {
-            printf("eglCreateImageKHR error 0x%x\n", eglGetError());
+            cout << "eglCreateImageKHR error 0x" << hex
+                 << eglGetError() << dec << '\n';
             return false;
         }
 
@@ -179,31 +229,37 @@ struct video::EglSink::Private
         glBindTexture(GL_TEXTURE_2D, gl_texture);
         _glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, egl_image);
 
-        printf("Image successfully imported\n");
+        while((err = glGetError()) != GL_NO_ERROR)
+            cout << "OpenGL error 0x" << hex << err << dec << '\n';
+
+        cout << "Image successfully imported\n";
 
         return true;
     }
 
-    std::uint32_t gl_texture;
-    std::promise<BufferData> prom_buff;
-    std::future<BufferData> fut_buff;
+    uint32_t gl_texture;
+    promise<BufferData> prom_buff;
+    future<BufferData> fut_buff;
     core::Signal<void> frame_available;
-    std::thread sock_thread;
+    int sock_fd;
+    thread sock_thread;
     EGLImageKHR egl_image;
+    int buf_fd;
     PFNEGLCREATEIMAGEKHRPROC _eglCreateImageKHR;
+    PFNEGLDESTROYIMAGEKHRPROC _eglDestroyImageKHR;
     PFNGLEGLIMAGETARGETTEXTURE2DOESPROC _glEGLImageTargetTexture2DOES;
 };
 
-std::function<video::Sink::Ptr(std::uint32_t)>
+function<video::Sink::Ptr(uint32_t)>
 video::EglSink::factory_for_key(const media::Player::PlayerKey& key)
 {
-    return [key](std::uint32_t texture)
+    return [key](uint32_t texture)
     {
         return video::Sink::Ptr{new video::EglSink{texture, key}};
     };
 }
 
-video::EglSink::EglSink(std::uint32_t gl_texture,
+video::EglSink::EglSink(uint32_t gl_texture,
                         const media::Player::PlayerKey key)
     : d{new Private{gl_texture, key}}
 {
@@ -239,8 +295,8 @@ bool video::EglSink::swap_buffers() const
             return false;
     }
 
-    // We need to do nothing here, as the only buffer has already been mapped
-    // Unless maybe the active texture changes?
+    // We need to do nothing here, as the only buffer has already been mapped.
+    // TODO Change when we implement a buffer queue.
 
     return true;
 }
