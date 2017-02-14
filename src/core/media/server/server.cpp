@@ -162,7 +162,8 @@ int main()
     {
         impl,
         player_store,
-        external_services
+        external_services,
+        nullptr
     });
 
     std::thread service_worker

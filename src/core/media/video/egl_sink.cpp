@@ -48,6 +48,7 @@ struct video::EglSink::Private
         struct iovec io = { .iov_base = &data->meta,
                             .iov_len = sizeof data->meta };
         char c_buffer[256];
+        ssize_t res;
 
         msg.msg_iov = &io;
         msg.msg_iovlen = 1;
@@ -55,8 +56,11 @@ struct video::EglSink::Private
         msg.msg_control = c_buffer;
         msg.msg_controllen = sizeof c_buffer;
 
-        if (recvmsg(socket, &msg, 0) < 0) {
+        if ((res = recvmsg(socket, &msg, 0)) == -1) {
             cout << "Failed to receive message\n";
+            return false;
+        } else if (res == 0) {
+            cout << "Socket shutdown while receiving buffer data";
             return false;
         }
 

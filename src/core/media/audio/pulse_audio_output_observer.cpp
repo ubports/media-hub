@@ -329,7 +329,7 @@ struct audio::PulseAudioOutputObserver::Private
             }
 
             audio::OutputState state;
-            if (info->index == primary_sink_index)
+            if (info->index == static_cast<std::uint32_t>(primary_sink_index))
                 state = audio::OutputState::Speaker;
             else
                 state = audio::OutputState::External;
