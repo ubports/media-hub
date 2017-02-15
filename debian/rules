@@ -21,7 +21,7 @@ minor=$(shell echo $(full_version) | cut -d'.' -f2)
 patch=$(shell echo $(full_version) | cut -d'.' -f3)
 
 %:
-	dh $@ --fail-missing --parallel -- -B build 
+	dh $@ --fail-missing --parallel -Xusr/lib/libgtest -Xusr/lib/libgmock -- -B build
 
 override_dh_auto_configure:
 	dh_auto_configure -- -DUBUNTU_MEDIA_HUB_VERSION_MAJOR=$(major) -DUBUNTU_MEDIA_HUB_VERSION_MINOR=$(minor) -DUBUNTU_MEDIA_HUB_VERSION_PATCH=$(patch)
