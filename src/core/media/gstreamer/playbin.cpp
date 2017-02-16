@@ -68,7 +68,8 @@ void gstreamer::Playbin::setup_video_sink_for_buffer_streaming()
     case core::ubuntu::media::AVBackend::Backend::mir:
         // Connect to buffer consumer socket
         connect_to_consumer();
-        // Configure mirsink so it exports buffers
+        // Configure mirsink so it exports buffers (otherwise it would create
+        // its own window).
         g_object_set (G_OBJECT (video_sink), "export-buffers", TRUE, nullptr);
         break;
     case core::ubuntu::media::AVBackend::Backend::none:
@@ -299,7 +300,7 @@ void gstreamer::Playbin::process_message_element(GstMessage *message)
                                "offset", G_TYPE_INT, &meta.offset,
                                NULL))
         {
-            MH_ERROR("Wrong buffer-export-data message");
+            MH_ERROR("Bad buffer-export-data message: mirsink version mismatch?");
             return;
         }
         MH_DEBUG("Exporting %dx%d buffer (fd %d)", meta.width, meta.height, fd);
@@ -996,6 +997,6 @@ void gstreamer::Playbin::send_frame_ready(void)
     const char ready = 'r';
 
     if (send (sock_consumer, &ready, sizeof ready, 0) == -1)
-        MH_ERROR("Error when sending sync to client: %s (%d)",
+        MH_ERROR("Error when sending frame ready flag to client: %s (%d)",
                  strerror(errno), errno);
 }

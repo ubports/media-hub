@@ -16,6 +16,8 @@
  * Authored by: Alfonso Sanchez-Beato <alfonso.sanchez-beato@canonical.com>
  */
 
+#include "core/media/logger/logger.h"
+
 #include <core/media/video/egl_sink.h>
 #include <core/media/video/socket_types.h>
 
@@ -57,10 +59,10 @@ struct video::EglSink::Private
         msg.msg_controllen = sizeof c_buffer;
 
         if ((res = recvmsg(socket, &msg, 0)) == -1) {
-            cout << "Failed to receive message\n";
+            MH_ERROR("Failed to receive message");
             return false;
         } else if (res == 0) {
-            cout << "Socket shutdown while receiving buffer data";
+            MH_ERROR("Socket shutdown while receiving buffer data");
             return false;
         }
 
@@ -68,12 +70,12 @@ struct video::EglSink::Private
 
         memmove(&data->fd, CMSG_DATA(cmsg), sizeof data->fd);
 
-        cout << "Extracted fd " << data->fd << '\n';
-        cout << "width    " << data->meta.width << '\n';
-        cout << "height   " << data->meta.height << '\n';
-        cout << "fourcc 0x" << hex << data->meta.fourcc << dec << '\n';
-        cout << "stride   " << data->meta.stride << '\n';
-        cout << "offset   " << data->meta.offset << '\n';
+        MH_DEBUG("Extracted fd %d", data->fd);
+        MH_DEBUG("width    %d", data->meta.width);
+        MH_DEBUG("height   %d", data->meta.height);
+        MH_DEBUG("fourcc 0x%X", data->meta.fourcc);
+        MH_DEBUG("stride   %d", data->meta.stride);
+        MH_DEBUG("offset   %d", data->meta.offset);
 
         return true;
     }
@@ -90,7 +92,8 @@ struct video::EglSink::Private
         BufferData buff_data;
 
         if (sock_fd == -1) {
-            perror("Cannot create buffer consumer socket");
+            MH_ERROR("Cannot create buffer consumer socket: %s (%d)",
+                     strerror(errno), errno);
             return;
         }
 
@@ -101,7 +104,8 @@ struct video::EglSink::Private
         strcpy(local.sun_path + 1, sock_name_ss.str().c_str());
         len = sizeof(local.sun_family) + sock_name_ss.str().length() + 1;
         if (bind(sock_fd, (struct sockaddr *) &local, len) == -1) {
-            perror("Cannot bind consumer socket");
+            MH_ERROR("Cannot bind consumer socket: %s (%d)",
+                     strerror(errno), errno);
             return;
         }
 
@@ -118,10 +122,11 @@ struct video::EglSink::Private
 
             res = recv(sock_fd, &c, sizeof c, 0);
             if (res == -1) {
-                perror("while waiting sync");
+                MH_ERROR("while waiting sync: %s (%d)",
+                         strerror(errno), errno);
                 return;
             } else if (res == 0) {
-                cout << "Socket shutdown\n";
+                MH_DEBUG("Socket shutdown");
                 return;
             }
 
@@ -161,16 +166,22 @@ struct video::EglSink::Private
         EGLDisplay egl_display = eglGetCurrentDisplay();
         size_t i;
 
+        // Retrieve EGL extensions from current display, then make sure the ones
+        // we need are present.
         extensions = eglQueryString (egl_display, EGL_EXTENSIONS);
         if (!extensions)
             throw runtime_error {"Error querying EGL extensions"};
 
         for (i = 0; i < sizeof(egl_needed)/sizeof(egl_needed[0]); ++i) {
             if (!find_extension(extensions, egl_needed[i])) {
-                ostringstream oss;
-                oss << egl_needed[i] << " not supported";
-                cout << oss.str() << '\n';
-                // TODO check why extensions is different from es2_info output
+                MH_DEBUG("%s not supported", egl_needed[i]);
+                //ostringstream oss;
+                //oss << egl_needed[i] << " not supported";
+                // TODO: The returned extensions do not really reflect what is
+                // supported by the system, and do not include the ones we need.
+                // It is probably related to how qt initializes EGL, because
+                // mirsink does not show this problem. So we need to
+                // check why extensions is different from es2_info output.
                 //throw runtime_error {oss.str().c_str()};
             }
         }
@@ -183,7 +194,8 @@ struct video::EglSink::Private
         // if (!find_extension(extensions, "GL_OES_EGL_image_external"))
         //     throw runtime_error {"GL_OES_EGL_image_external is not supported"};
 
-        // Import functions from extensions
+        // Dinamically load functions from extensions (they are not
+        // automatically exported by EGL library).
         _eglCreateImageKHR = (PFNEGLCREATEIMAGEKHRPROC)
             eglGetProcAddress("eglCreateImageKHR");
         _eglDestroyImageKHR = (PFNEGLDESTROYIMAGEKHRPROC)
@@ -211,6 +223,10 @@ struct video::EglSink::Private
             _eglDestroyImageKHR(eglGetCurrentDisplay(), egl_image);
     }
 
+    // This imports dma_buf buffers by using the EGL_EXT_image_dma_buf_import
+    // extension. The buffers have been previously exported in mirsink, using
+    // EGL_MESA_image_dma_buf_export extension. After that, we bind the buffer
+    // to the app texture by using GL_OES_EGL_image_external extension.
     bool import_buffer(const BufferData *buf_data)
     {
         GLenum err;
@@ -229,8 +245,7 @@ struct video::EglSink::Private
         egl_image = _eglCreateImageKHR(egl_display, EGL_NO_CONTEXT,
                                        EGL_LINUX_DMA_BUF_EXT, NULL, image_attrs);
         if (egl_image == EGL_NO_IMAGE_KHR) {
-            cout << "eglCreateImageKHR error 0x" << hex
-                 << eglGetError() << dec << '\n';
+            MH_ERROR("eglCreateImageKHR error 0x%X", eglGetError());
             return false;
         }
 
@@ -239,9 +254,9 @@ struct video::EglSink::Private
         _glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, egl_image);
 
         while((err = glGetError()) != GL_NO_ERROR)
-            cout << "OpenGL error 0x" << hex << err << dec << '\n';
+            MH_WARNING("OpenGL error 0x%X", err);
 
-        cout << "Image successfully imported\n";
+        MH_DEBUG("Image successfully imported");
 
         return true;
     }

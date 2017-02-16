@@ -318,7 +318,7 @@ media::video::Sink::Ptr media::PlayerStub::create_gl_texture_video_sink(std::uin
 {
     // Create first local stub so media-hub can rely on an existing socket
     // for the mir/desktop case.
-    auto sink = d->sink_factory(texture_id);
+    const auto sink = d->sink_factory(texture_id);
 
     auto op = d->object->transact_method<mpris::Player::CreateVideoSink, void>(texture_id);
 
