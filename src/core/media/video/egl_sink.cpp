@@ -194,7 +194,7 @@ struct video::EglSink::Private
         // if (!find_extension(extensions, "GL_OES_EGL_image_external"))
         //     throw runtime_error {"GL_OES_EGL_image_external is not supported"};
 
-        // Dinamically load functions from extensions (they are not
+        // Dynamically load functions from extensions (they are not
         // automatically exported by EGL library).
         _eglCreateImageKHR = (PFNEGLCREATEIMAGEKHRPROC)
             eglGetProcAddress("eglCreateImageKHR");
