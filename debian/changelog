@@ -1,3 +1,9 @@
+media-hub (4.6.0+17.04.20170217-0ubuntu1) zesty; urgency=medium
+
+  * Support for video decoding on Classic.
+
+ -- Alfonso Sanchez-Beato <alfonso.sanchez-beato@canonical.com>  Fri, 17 Feb 2017 15:56:44 +0000
+
 media-hub (4.6.0+16.10.20160909-0ubuntu1) yakkety; urgency=medium
 
   * Add initial version of Snappy package for media-hub-server
