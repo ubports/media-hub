@@ -44,7 +44,8 @@ struct AVBackend
     enum Backend
     {
         none,
-        hybris
+        hybris,
+        mir
     };
 
     /**

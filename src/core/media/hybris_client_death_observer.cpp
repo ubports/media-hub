@@ -18,10 +18,10 @@
 
 #include <core/media/hybris_client_death_observer.h>
 
+#include <hybris/media/media_codec_layer.h>
+
 namespace media = core::ubuntu::media;
 
-#if defined(MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER)
-#include <hybris/media/media_codec_layer.h>
 
 namespace
 {
@@ -69,16 +69,3 @@ const core::Signal<media::Player::PlayerKey>& media::HybrisClientDeathObserver::
 {
     return client_with_key_died;
 }
-#else  // MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER
-// Creates an instance of the HybrisClientDeathObserver or throws
-// if the underlying platform does not support it.
-media::ClientDeathObserver::Ptr media::HybrisClientDeathObserver::create()
-{
-    throw std::logic_error
-    {
-        "Hybris-based death observer implementation not supported on this platform."
-    };
-}
-#endif // MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER
-
-

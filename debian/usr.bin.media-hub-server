@@ -126,6 +126,14 @@
   owner @{HOME}/.local/share/** rk,
   owner /{,var/}run/user/[0-9]*/** rk,
 
+  # Permissions for desktop video decoding
+  unix (bind, send) type=dgram addr="@media-hub-server*",
+  /sys/devices/**/drm/render** r,
+  /sys/devices/**/drm/card** r,
+  /sys/devices/system/node/node*/meminfo r,
+  /run/user/*/orcexec* rw,
+  /run/user/**/mir_socket rw,
+
   # Site-specific additions and overrides. See local/README for details.
   #include <local/usr.bin.media-hub-server>
 }

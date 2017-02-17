@@ -30,9 +30,11 @@
 #include <chrono>
 #include <string>
 
+#include "core/media/player.h"
+
 // Uncomment to generate a dot file at the time that the pipeline
 // goes to the PLAYING state. Make sure to export GST_DEBUG_DUMP_DOT_DIR
-// before starting media-hub-server. To convert the dot file to something
+// before starting media-hub-server. To convert the dot file to some
 // other image format, use: dot pipeline.dot -Tpng -o pipeline.png
 //#define DEBUG_GST_PIPELINE
 
@@ -64,7 +66,7 @@ struct Playbin
                              GstElement *source,
                              gpointer user_data);
 
-    Playbin();
+    Playbin(const core::ubuntu::media::Player::PlayerKey key);
     ~Playbin();
 
     void reset();
@@ -155,6 +157,19 @@ struct Playbin
     gint audio_stream_id;
     gint video_stream_id;
     GstState current_new_state;
+
+private:
+    void setup_video_sink_for_buffer_streaming(void);
+    bool is_supported_video_sink(void) const;
+    bool connect_to_consumer(void);
+    void send_buffer_data(int fd, void *data, size_t len);
+    void send_frame_ready(void);
+    void process_missing_plugin_message(GstMessage *message);
+
+    const core::ubuntu::media::Player::PlayerKey key;
+    const core::ubuntu::media::AVBackend::Backend backend;
+    std::string video_sink_name;
+    int sock_consumer;
 };
 }
 

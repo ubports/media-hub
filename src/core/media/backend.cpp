@@ -39,5 +39,12 @@ media::AVBackend::Backend media::AVBackend::get_backend_type()
         return media::AVBackend::Backend::hybris;
     }
 
+    plugin = gst_registry_lookup(registry, "libgstmirsink.so");
+    if (plugin)
+    {
+        gst_object_unref(plugin);
+        return media::AVBackend::Backend::mir;
+    }
+
     return media::AVBackend::Backend::none;
 }

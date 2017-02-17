@@ -33,6 +33,7 @@ media::RecorderObserver::Ptr media::make_platform_default_recorder_observer()
     {
         case media::AVBackend::Backend::hybris:
             return media::HybrisRecorderObserver::create();
+        case media::AVBackend::Backend::mir:
         case media::AVBackend::Backend::none:
             MH_WARNING(
                 "No video backend selected. Video recording functionality won't work."

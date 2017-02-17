@@ -18,10 +18,9 @@
 
 #include <core/media/hybris_recorder_observer.h>
 
-namespace media = core::ubuntu::media;
-
-#if defined(MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER)
 #include <hybris/media/media_recorder_layer.h>
+
+namespace media = core::ubuntu::media;
 
 struct media::HybrisRecorderObserver::Private
 {
@@ -88,12 +87,3 @@ media::RecorderObserver::Ptr media::HybrisRecorderObserver::create()
 {
     return media::RecorderObserver::Ptr{new media::HybrisRecorderObserver{}};
 }
-#else  // MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER
-media::RecorderObserver::Ptr media::HybrisRecorderObserver::create()
-{
-    throw std::logic_error
-    {
-        "Hybris-based recorder observer implementation not supported on this platform."
-    };
-}
-#endif // MEDIA_HUB_HAVE_HYBRIS_MEDIA_COMPAT_LAYER

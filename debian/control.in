@@ -28,6 +28,8 @@ Build-Depends: cmake,
                libpulse-dev,
                qtbase5-dev,
                libtelepathy-qt5-dev,
+               libegl1-mesa-dev,
+               libgl1-mesa-dev,
 Standards-Version: 3.9.6
 Homepage: https://launchpad.net/media-hub
 # If you aren't a member of ~phablet-team but need to upload packaging changes,
