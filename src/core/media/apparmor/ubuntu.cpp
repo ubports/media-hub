@@ -76,6 +76,8 @@ static constexpr std::size_t index_app{2};
 static const std::string unity_name{"unity8-dash"};
 static const std::string unity8_snap_name{"snap.unity8-session.unity8-session"};
 
+// adhoc for mediaplayer-app until it settles down with proper handling
+static const std::string mediaplayer_snap_name{"snap.mediaplayer-app.mediaplayer-app"};
 // Returns true if the context name is a valid Ubuntu app id.
 // If it is, out is populated with the package and app name.
 bool process_context_name(const std::string& s, std::smatch& out,
@@ -86,7 +88,7 @@ bool process_context_name(const std::string& s, std::smatch& out,
     static const std::regex full_re{"(.*)_(.*)_(.*)"};
     static const std::regex trust_store_re{"(.*)-(.*)"};
 
-    if ((s == "messaging-app" or s == unity_name or s == unity8_snap_name)
+    if ((s == "messaging-app" or s == unity_name or s == unity8_snap_name or s == mediaplayer_snap_name)
             and std::regex_match(s, out, trust_store_re))
     {
         pkg_name = s;
@@ -117,6 +119,7 @@ apparmor::ubuntu::Context::Context(const std::string& name)
         {
             "apparmor::ubuntu::Context: Invalid profile name " + str()
         };
+
 }
 
 bool apparmor::ubuntu::Context::is_unconfined() const
