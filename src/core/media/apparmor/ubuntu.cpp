@@ -211,7 +211,7 @@ apparmor::ubuntu::RequestAuthenticator::Result apparmor::ubuntu::ExistingAuthent
     // TODO: when the trust store lands, check it to see if this app can access the dirs and
     // then remove the explicit whitelist of the music-app, and gallery-app
     else if ((context.package_name() == "com.ubuntu.music" || context.package_name() == "com.ubuntu.gallery" ||
-              context.profile_name() == unity_name || context.profile_name() == unity8_snap_name) &&
+              context.profile_name() == unity_name || context.profile_name() == unity8_snap_name || context.profile_name() == mediaplayer_snap_name) &&
             (parsed_uri.path.find(std::string("Music/")) != std::string::npos ||
              parsed_uri.path.find(std::string("Videos/")) != std::string::npos ||
              parsed_uri.path.find(std::string("/media")) != std::string::npos))
