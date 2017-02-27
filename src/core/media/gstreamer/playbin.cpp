@@ -714,7 +714,7 @@ core::ubuntu::media::video::Dimensions gstreamer::Playbin::get_video_dimensions(
         GstCaps *caps = gst_pad_get_current_caps(pad);
 
         if (caps) {
-            GstStructure *s = gst_caps_get_structure(caps, 0);
+            const GstStructure *s = gst_caps_get_structure(caps, 0);
             gst_structure_get_int(s, "width", &video_width);
             gst_structure_get_int(s, "height", &video_height);
             MH_DEBUG("Video dimensions are %d x %d", video_width, video_height);
