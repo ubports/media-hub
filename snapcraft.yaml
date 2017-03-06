@@ -20,6 +20,11 @@ apps:
     daemon: simple
     slots: [session-service]
     plugs: [home, pulseaudio]
+#ad-hoc until daemon runs as user session
+  media-hub-service:
+    command: snappyenv ${SNAP}/usr/bin/media-hub-server
+    slots: [session-service]
+    plugs: [home, pulseaudio]
 
 parts:
   service:
