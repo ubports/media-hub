@@ -35,63 +35,27 @@ export UNITY_INDICATOR_PROFILE=desktop
 export XCURSOR_PATH=~/.icons:$SNAP/usr/share/icons:~/.cursors
 export PYTHONHOME=$SNAP/usr
 
-export LD_PRELOAD=$SNAP/lib/libsnap-preload-shim.so
-
 export GST_PLUGIN_SCANNER=$SNAP/usr/lib/$ARCH/gstreamer1.0/gstreamer-1.0/gst-plugin-scanner
 export GST_PLUGIN_PATH=$SNAP/usr/lib/$ARCH/gstreamer-1.0
 export GST_PLUGIN_SYSTEM_PATH=$SNAP/usr/lib/$ARCH/gstreamer-1.0
+
+export CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME=mirsink
+export CORE_UBUNTU_MEDIA_SERVICE_AUDIO_SINK_NAME=pulsesink
 
 # Oxide needs this to work inside a snap (until bug 1447345 is fixed).
 # We'll rely on confinement to do our sandboxing in meantime.
 export OXIDE_NO_SANDBOX=1
 
-# EDS and Folks
-export EDS_ADDRESS_BOOK_MODULES=$SNAP/usr/lib/evolution-data-server/addressbook-backends/
-export EDS_CALENDAR_MODULES=$SNAP/usr/lib/evolution-data-server/calendar-backends/
-export EDS_CAMEL_PROVIDER_DIR=$SNAP/usr/lib/evolution/camel-providers
-export EDS_REGISTRY_MODULES=$SNAP/usr/lib/evolution-data-server/registry-modules/
-export EDS_SUBPROCESS_BOOK_PATH=$SNAP/usr/lib/evolution/evolution-addressbook-factory-subprocess
-export EDS_SUBPROCESS_CAL_PATH=$SNAP/usr/lib/evolution/evolution-calendar-factory-subprocess
-export FOLKS_BACKEND_PATH=$SNAP/usr/lib/$ARCH/folks/43/backends
-
 # Mir config
 export MIR_SERVER_PLATFORM_PATH=$SNAP/usr/lib/$ARCH/mir/server-platform
-
-# UAL config
-export UBUNTU_APP_LAUNCH_LEGACY_ROOT=$SNAP
-export UBUNTU_APP_LAUNCH_DEMANGLER=$SNAP/usr/lib/$ARCH/ubuntu-app-launch/socket-demangler
-export UBUNTU_APP_LAUNCH_OOM_HELPER=$SNAP/usr/lib/$ARCH/ubuntu-app-launch/oom-adjust-setuid-helper
-export UBUNTU_APP_LAUNCH_LIBERTINE_LAUNCH=$SNAP/bin/snappy-libertine-launch
-export UBUNTU_APP_LAUNCH_SNAPPY_XMIR_HELPER=/snap/bin/unity8-session.xmir-helper
-export UBUNTU_APP_LAUNCH_XMIR_PATH=$SNAP/bin/snappy-xmir
 
 # Qt Platform to Mir
 export QT_QPA_PLATFORM=ubuntumirclient
 export UBUNTU_PLATFORM_API_BACKEND=desktop_mirclient
 
-# Libs
-export LD_LIBRARY_PATH=$SNAP/usr/lib/$ARCH/libunity:$LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=$SNAP/usr/lib/$ARCH/NetworkManager:$LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=$SNAP/usr/lib/$ARCH/oxide-qt:$LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=$SNAP/usr/lib/$ARCH/pulseaudio:$LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=$SNAP/usr/lib/$ARCH/qt5/libs:$LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=$SNAP/usr/lib/$ARCH/ubuntu-system-settings:$LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=$SNAP/usr/lib/telepathy/gabble-0/lib:$LD_LIBRARY_PATH
-
-# We can't write to XDG_GREETER_DATA_DIR, so create it. lp:1644586
-export XDG_GREETER_DATA_DIR=$SNAP_USER_COMMON/.lightdm-data
-mkdir -p $XDG_GREETER_DATA_DIR
-
 # XDG Config
 export XDG_CONFIG_DIRS=$SNAP/xdg-config-dirs:$XDG_CONFIG_DIRS
 export XDG_DATA_DIRS=$SNAP_DATA/xdg-data:$SNAP_COMMON/xdg-data:$SNAP/:$XDG_DATA_DIRS
-
-# If AccountsService isn't available, just skip the wizard, it doesn't handle
-# that very well.  This is just temporary until Core 16 gets a snap for AS.
-if ! pidof accounts-daemon >/dev/null; then
-  mkdir -p $HOME/.config/ubuntu-system-settings
-  touch $HOME/.config/ubuntu-system-settings/wizard-has-run
-fi
 
 # work around crashes caused by appmenu-qt5
 # https://bugs.launchpad.net/appmenu-qt5/+bug/1606246
