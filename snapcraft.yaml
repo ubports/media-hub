@@ -7,10 +7,18 @@ description: |
   https://code.launchpad.net/media-hub
 confinement: strict
 
+slots:
+  session-service:
+    interface: media-hub
+  mpris-service:
+    interface: mpris
+    name: "MediaHub"
+
 apps:
-  service:
-    command: usr/bin/media-hub-server
-    slots: [mpris]
+  media-hub-server:
+    command: snappyenv ${SNAP}/usr/bin/media-hub-server
+    daemon: simple
+    slots: [session-service]
     plugs: [pulseaudio]
 
 parts:
@@ -78,3 +86,6 @@ parts:
 
     snap:
       - $unwanted
+  overlay:
+    plugin: dump
+    source: overlay
