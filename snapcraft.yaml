@@ -19,7 +19,7 @@ apps:
     command: snappyenv ${SNAP}/usr/bin/media-hub-server
     daemon: simple
     slots: [session-service]
-    plugs: [pulseaudio]
+    plugs: [home, pulseaudio]
 
 parts:
   service:
@@ -57,7 +57,12 @@ parts:
     stage-packages:
       # Ok to ship by default since Ubuntu has an mp3 license
       - gstreamer1.0-fluendo-mp3
-
+      - gstreamer1.0-libav
+      - gstreamer1.0-plugins-bad-faad
+      - gstreamer1.0-plugins-bad-videoparsers
+      - gstreamer1.0-plugins-good
+      - gstreamer1.0-plugins-ugly-amr
+      - gstreamer1.0-pulseaudio
     configflags:
       - -DCMAKE_INSTALL_PREFIX:PATH=/usr
       - -DCMAKE_LIBRARY_PATH=/usr/lib
@@ -67,8 +72,6 @@ parts:
         # Files that we don't want/need in the final snap package
         - -etc
         - -usr/lib/debug
-        - -usr/lib/*/libogg*
-        - -usr/lib/*/libpulse*
         - -usr/lib/python*
         - -usr/share/apport
         - -usr/share/bug
