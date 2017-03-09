@@ -16,15 +16,22 @@ slots:
 
 apps:
   media-hub-server:
-    command: snappyenv ${SNAP}/usr/bin/media-hub-server
+    command: desktop-launch ${SNAP}/usr/bin/media-hub-server
     daemon: simple
     slots: [session-service]
     plugs: [home, pulseaudio]
 #ad-hoc until daemon runs as user session
   media-hub-service:
-    command: snappyenv ${SNAP}/usr/bin/media-hub-server
+    command: desktop-launch ${SNAP}/usr/bin/media-hub-server
     slots: [session-service]
     plugs: [home, pulseaudio]
+
+plugs:
+  platform:
+    interface: content
+    content: ubuntu-app-platform1
+    target:  ubuntu-app-platform
+    default-provider: ubuntu-app-platform
 
 parts:
   service:
@@ -69,7 +76,6 @@ parts:
       - gstreamer1.0-plugins-ugly-amr
       - gstreamer1.0-pulseaudio
       - xdg-user-dirs
-      - locales-all
       - mime-support
       - shared-mime-info
     configflags:
@@ -79,6 +85,7 @@ parts:
     filesets:
       unwanted:
         # Files that we don't want/need in the final snap package
+        - -etc
         - -usr/lib/debug
         - -usr/lib/python*
         - -usr/share/apport
@@ -99,6 +106,3 @@ parts:
 
     snap:
       - $unwanted
-  overlay:
-    plugin: dump
-    source: overlay
