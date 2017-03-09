@@ -20,56 +20,11 @@ else
   export HOME=$SNAP_COMMON
 fi
 
-# Ensure some standard variables if we aren't started by lightdm (not typical)
-[ -n "$XDG_RUNTIME_DIR" ] || export XDG_RUNTIME_DIR=/run/user/$(id -u)
-[ -n "$XDG_VTNR" ]        || export XDG_VTNR=1
-mkdir -p "$XDG_RUNTIME_DIR"
-
-# Needed so UAL can find the snap binaries
 export PATH="$PATH:/snap/bin"
 
-export G_MESSAGES_DEBUG=all
-export DESKTOP_SESSION=ubuntu-touch
-export XDG_SESSION_DESKTOP=ubuntu-desktop
-export UNITY_INDICATOR_PROFILE=desktop
-export XCURSOR_PATH=~/.icons:$SNAP/usr/share/icons:~/.cursors
-export PYTHONHOME=$SNAP/usr
-
 export GST_PLUGIN_SCANNER=$SNAP/usr/lib/$ARCH/gstreamer1.0/gstreamer-1.0/gst-plugin-scanner
-export GST_PLUGIN_PATH=$SNAP/usr/lib/$ARCH/gstreamer-1.0
-export GST_PLUGIN_SYSTEM_PATH=$SNAP/usr/lib/$ARCH/gstreamer-1.0
-
-export CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME=mirsink
-export CORE_UBUNTU_MEDIA_SERVICE_AUDIO_SINK_NAME=pulsesink
-
-# Oxide needs this to work inside a snap (until bug 1447345 is fixed).
-# We'll rely on confinement to do our sandboxing in meantime.
-export OXIDE_NO_SANDBOX=1
-
-# Mir config
-export MIR_SERVER_PLATFORM_PATH=$SNAP/usr/lib/$ARCH/mir/server-platform
-
-# Qt Platform to Mir
-export QT_QPA_PLATFORM=ubuntumirclient
-export UBUNTU_PLATFORM_API_BACKEND=desktop_mirclient
-
-# XDG Config
-export XDG_CONFIG_DIRS=$SNAP/xdg-config-dirs:$XDG_CONFIG_DIRS
-export XDG_DATA_DIRS=$SNAP_DATA/xdg-data:$SNAP_COMMON/xdg-data:$SNAP/:$XDG_DATA_DIRS
-
-# work around crashes caused by appmenu-qt5
-# https://bugs.launchpad.net/appmenu-qt5/+bug/1606246
-unset QT_QPA_PLATFORMTHEME
 
 # desktop-launch uses SNAP_USER_DATA and HOME differently than us
 export SNAP_USER_DATA=$HOME
-# Set XDG_DATA_HOME to local path
-export XDG_DATA_HOME=$SNAP_USER_DATA/.local/share
-export XDG_DATA_DIRS=$XDG_DATA_HOME:$XDG_DATA_DIRS
-mkdir -p $XDG_DATA_HOME
 
-# Set cache folder to local path
-export XDG_CACHE_HOME=$SNAP_USER_DATA/.cache
-mkdir -p $XDG_CACHE_HOME
-
-exec "$@"
+exec $SNAP/bin/desktop-launch "$@"

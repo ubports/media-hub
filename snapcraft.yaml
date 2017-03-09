@@ -68,6 +68,10 @@ parts:
       - gstreamer1.0-plugins-good
       - gstreamer1.0-plugins-ugly-amr
       - gstreamer1.0-pulseaudio
+      - xdg-user-dirs
+      - locales-all
+      - mime-support
+      - shared-mime-info
     configflags:
       - -DCMAKE_INSTALL_PREFIX:PATH=/usr
       - -DCMAKE_LIBRARY_PATH=/usr/lib
@@ -75,7 +79,6 @@ parts:
     filesets:
       unwanted:
         # Files that we don't want/need in the final snap package
-        - -etc
         - -usr/lib/debug
         - -usr/lib/python*
         - -usr/share/apport
@@ -91,6 +94,8 @@ parts:
         - -usr/lib/*.la
         - -usr/lib/*/*.la
         - -usr/lib/*/*.o
+    after:
+      - desktop-ubuntu-app-platform
 
     snap:
       - $unwanted
