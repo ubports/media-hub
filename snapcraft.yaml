@@ -19,12 +19,12 @@ apps:
     command: desktop-launch ${SNAP}/usr/bin/media-hub-server
     daemon: simple
     slots: [session-service]
-    plugs: [home, pulseaudio]
+    plugs: [home, pulseaudio, platform]
 #ad-hoc until daemon runs as user session
   media-hub-service:
     command: desktop-launch ${SNAP}/usr/bin/media-hub-server
     slots: [session-service]
-    plugs: [home, pulseaudio]
+    plugs: [home, pulseaudio, platform]
 
 plugs:
   platform:
@@ -106,3 +106,6 @@ parts:
 
     snap:
       - $unwanted
+  environment:
+    source: snap/
+    plugin: dump
