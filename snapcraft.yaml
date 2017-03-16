@@ -8,30 +8,29 @@ description: |
 confinement: strict
 
 slots:
-  session-service:
+  service:
     interface: media-hub
-  mpris-service:
+  mpris:
     interface: mpris
-    name: "MediaHub"
-
-apps:
-  media-hub-server:
-    command: desktop-launch ${SNAP}/usr/bin/media-hub-server
-    daemon: simple
-    slots: [session-service]
-    plugs: [home, pulseaudio, platform]
-#ad-hoc until daemon runs as user session
-  media-hub-service:
-    command: desktop-launch ${SNAP}/usr/bin/media-hub-server
-    slots: [session-service]
-    plugs: [home, pulseaudio, platform]
 
 plugs:
   platform:
     interface: content
     content: ubuntu-app-platform1
-    target:  ubuntu-app-platform
+    target: ubuntu-app-platform
     default-provider: ubuntu-app-platform
+
+apps:
+  media-hub-server:
+    command: desktop-launch ${SNAP}/usr/bin/media-hub-server
+    daemon: simple
+    slots: [service]
+    plugs: [home, pulseaudio, platform]
+# ad-hoc until daemon runs as user session
+  media-hub-service:
+    command: desktop-launch ${SNAP}/usr/bin/media-hub-server
+    slots: [service]
+    plugs: [home, pulseaudio, platform]
 
 parts:
   service:
@@ -72,6 +71,7 @@ parts:
       - gstreamer1.0-libav
       - gstreamer1.0-plugins-bad-faad
       - gstreamer1.0-plugins-bad-videoparsers
+      - gstreamer1.0-plugins-bad
       - gstreamer1.0-plugins-good
       - gstreamer1.0-plugins-ugly-amr
       - gstreamer1.0-pulseaudio
@@ -106,6 +106,7 @@ parts:
 
     snap:
       - $unwanted
+
   environment:
     source: snap/
     plugin: dump

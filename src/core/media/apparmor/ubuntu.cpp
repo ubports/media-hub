@@ -76,7 +76,8 @@ static constexpr std::size_t index_app{2};
 static const std::string unity_name{"unity8-dash"};
 static const std::string unity8_snap_name{"snap.unity8-session.unity8-session"};
 
-// adhoc for mediaplayer-app until it settles down with proper handling
+// ad-hoc for mediaplayer-app until it settles down with proper handling
+// Bug #1642611
 static const std::string mediaplayer_snap_name{"snap.mediaplayer-app.mediaplayer-app"};
 // Returns true if the context name is a valid Ubuntu app id.
 // If it is, out is populated with the package and app name.
@@ -119,7 +120,6 @@ apparmor::ubuntu::Context::Context(const std::string& name)
         {
             "apparmor::ubuntu::Context: Invalid profile name " + str()
         };
-
 }
 
 bool apparmor::ubuntu::Context::is_unconfined() const
@@ -211,7 +211,8 @@ apparmor::ubuntu::RequestAuthenticator::Result apparmor::ubuntu::ExistingAuthent
     // TODO: when the trust store lands, check it to see if this app can access the dirs and
     // then remove the explicit whitelist of the music-app, and gallery-app
     else if ((context.package_name() == "com.ubuntu.music" || context.package_name() == "com.ubuntu.gallery" ||
-              context.profile_name() == unity_name || context.profile_name() == unity8_snap_name || context.profile_name() == mediaplayer_snap_name) &&
+              context.profile_name() == unity_name || context.profile_name() == unity8_snap_name ||
+              context.profile_name() == mediaplayer_snap_name) &&
             (parsed_uri.path.find(std::string("Music/")) != std::string::npos ||
              parsed_uri.path.find(std::string("Videos/")) != std::string::npos ||
              parsed_uri.path.find(std::string("/media")) != std::string::npos))
