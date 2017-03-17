@@ -6,12 +6,16 @@ description: |
   DBus. Please find the source code at:
   https://code.launchpad.net/media-hub
 confinement: strict
+grade: stable
 
 slots:
   service:
     interface: media-hub
   mpris:
     interface: mpris
+    # It works as a parameter to the mpris interface,
+    # and gets used to build the apparmor profile
+    name: "MediaHub"
 
 plugs:
   platform:
@@ -22,15 +26,16 @@ plugs:
 
 apps:
   media-hub-server:
-    command: desktop-launch ${SNAP}/usr/bin/media-hub-server
+    command: bin/launch.wrapper ${SNAP}/usr/bin/media-hub-server
     daemon: simple
     slots: [service]
-    plugs: [home, pulseaudio, platform]
-# ad-hoc until daemon runs as user session
+    plugs: [home, pulseaudio, platform, screen-inhibit-control]
+  # ad-hoc until daemon runs as user session
+  # Bug for https://bugs.launchpad.net/snappy/+bug/1613420
   media-hub-service:
-    command: desktop-launch ${SNAP}/usr/bin/media-hub-server
+    command: bin/launch.wrapper ${SNAP}/usr/bin/media-hub-server
     slots: [service]
-    plugs: [home, pulseaudio, platform]
+    plugs: [home, pulseaudio, platform, screen-inhibit-control]
 
 parts:
   service:
@@ -73,7 +78,6 @@ parts:
       - gstreamer1.0-plugins-bad-videoparsers
       - gstreamer1.0-plugins-bad
       - gstreamer1.0-plugins-good
-      - gstreamer1.0-plugins-ugly-amr
       - gstreamer1.0-pulseaudio
       - xdg-user-dirs
       - mime-support
@@ -104,9 +108,9 @@ parts:
     after:
       - desktop-ubuntu-app-platform
 
-    snap:
+    prime:
       - $unwanted
 
-  environment:
-    source: snap/
+  media-hub-overlay:
+    source: overlay/
     plugin: dump
