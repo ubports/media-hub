@@ -26,14 +26,14 @@ plugs:
 
 apps:
   media-hub-server:
-    command: bin/launch.wrapper ${SNAP}/usr/bin/media-hub-server
+    command: bin/media-hub-service.wrapper ${SNAP}/usr/bin/media-hub-server
     daemon: simple
     slots: [service]
     plugs: [home, pulseaudio, platform, screen-inhibit-control]
   # ad-hoc until daemon runs as user session
   # Bug for https://bugs.launchpad.net/snappy/+bug/1613420
   media-hub-service:
-    command: bin/launch.wrapper ${SNAP}/usr/bin/media-hub-server
+    command: bin/media-hub-service.wrapper ${SNAP}/usr/bin/media-hub-server
     slots: [service]
     plugs: [home, pulseaudio, platform, screen-inhibit-control]
 

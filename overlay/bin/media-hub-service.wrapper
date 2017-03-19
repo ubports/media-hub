@@ -20,7 +20,7 @@ if [ -e /var/run/pulse ]; then
   export PULSE_SYSTEM=1
 else
   # classic
-  export PULSE_RUNTIME_PATH=/run/user/$UID/pulse
+  export PULSE_RUNTIME_PATH=/run/user/$(id -u)/pulse
 fi
 
 exec $SNAP/bin/desktop-launch "$@"
