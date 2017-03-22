@@ -111,6 +111,9 @@ parts:
     prime:
       - $unwanted
 
+  # media-hub-overlay includes
+  # - ubuntu-app-platform to bind link ubuntu-app-platform snap when connected
+  # - bin/media-hub-wrapper to include environment variables
   media-hub-overlay:
     source: overlay/
     plugin: dump
