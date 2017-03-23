@@ -702,9 +702,27 @@ core::ubuntu::media::video::Dimensions gstreamer::Playbin::get_video_dimensions(
         };
 
     // Initialize to default value prior to querying actual values from the sink.
-    uint32_t video_width = 0, video_height = 0;
-    g_object_get (video_sink, "height", &video_height, nullptr);
-    g_object_get (video_sink, "width", &video_width, nullptr);
+    int video_width = 0, video_height = 0;
+
+    // There should be only one pad actually
+    GstIterator *iter = gst_element_iterate_pads(video_sink);
+    for (GValue item{};
+         gst_iterator_next(iter, &item) == GST_ITERATOR_OK;
+         g_value_unset(&item))
+    {
+        GstPad *pad = GST_PAD(g_value_get_object(&item));
+        GstCaps *caps = gst_pad_get_current_caps(pad);
+
+        if (caps) {
+            const GstStructure *s = gst_caps_get_structure(caps, 0);
+            gst_structure_get_int(s, "width", &video_width);
+            gst_structure_get_int(s, "height", &video_height);
+            MH_DEBUG("Video dimensions are %d x %d", video_width, video_height);
+
+            gst_caps_unref(caps);
+        }
+    }
+    gst_iterator_free(iter);
 
     // TODO(tvoss): We should probably check here if width and height are valid.
     return core::ubuntu::media::video::Dimensions
