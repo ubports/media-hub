@@ -74,7 +74,12 @@ Uri parse_uri(const std::string& s)
 static constexpr std::size_t index_package{1};
 static constexpr std::size_t index_app{2};
 static const std::string unity_name{"unity8-dash"};
+static const std::string unity8_snap_name{"snap.unity8-session.unity8-session"};
 
+// ad-hoc for mediaplayer-app/music-app until it settles down with proper handling
+// Bug #1642611
+static const std::string mediaplayer_snap_name{"snap.mediaplayer-app.mediaplayer-app"};
+static const std::string music_snap_name{"snap.music-app.music-app"};
 // Returns true if the context name is a valid Ubuntu app id.
 // If it is, out is populated with the package and app name.
 bool process_context_name(const std::string& s, std::smatch& out,
@@ -85,7 +90,8 @@ bool process_context_name(const std::string& s, std::smatch& out,
     static const std::regex full_re{"(.*)_(.*)_(.*)"};
     static const std::regex trust_store_re{"(.*)-(.*)"};
 
-    if ((s == "messaging-app" or s == unity_name)
+    if ((s == "messaging-app" or s == unity_name or s == unity8_snap_name or
+            s == mediaplayer_snap_name or s == music_snap_name)
             and std::regex_match(s, out, trust_store_re))
     {
         pkg_name = s;
@@ -105,7 +111,7 @@ bool process_context_name(const std::string& s, std::smatch& out,
 apparmor::ubuntu::Context::Context(const std::string& name)
     : apparmor::Context{name},
       unconfined_{str() == ubuntu::unconfined},
-      unity_{name == unity_name},
+      unity_{name == unity_name || name == unity8_snap_name},
       has_package_name_{process_context_name(str(), match_, pkg_name_)}
 {
     MH_DEBUG("apparmor profile name: %s", name);
@@ -207,7 +213,8 @@ apparmor::ubuntu::RequestAuthenticator::Result apparmor::ubuntu::ExistingAuthent
     // TODO: when the trust store lands, check it to see if this app can access the dirs and
     // then remove the explicit whitelist of the music-app, and gallery-app
     else if ((context.package_name() == "com.ubuntu.music" || context.package_name() == "com.ubuntu.gallery" ||
-              context.profile_name() == unity_name) &&
+              context.profile_name() == unity_name || context.profile_name() == unity8_snap_name ||
+              context.profile_name() == mediaplayer_snap_name || context.profile_name() == music_snap_name) &&
             (parsed_uri.path.find(std::string("Music/")) != std::string::npos ||
              parsed_uri.path.find(std::string("Videos/")) != std::string::npos ||
              parsed_uri.path.find(std::string("/media")) != std::string::npos))

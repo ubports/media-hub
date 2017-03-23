@@ -6,12 +6,36 @@ description: |
   DBus. Please find the source code at:
   https://code.launchpad.net/media-hub
 confinement: strict
+grade: stable
+
+slots:
+  service:
+    interface: media-hub
+  mpris:
+    interface: mpris
+    # It works as a parameter to the mpris interface,
+    # and gets used to build the apparmor profile
+    name: "MediaHub"
+
+plugs:
+  platform:
+    interface: content
+    content: ubuntu-app-platform1
+    target: ubuntu-app-platform
+    default-provider: ubuntu-app-platform
 
 apps:
-  service:
-    command: usr/bin/media-hub-server
-    slots: [mpris]
-    plugs: [pulseaudio]
+  media-hub-server:
+    command: bin/media-hub-service.wrapper ${SNAP}/usr/bin/media-hub-server
+    daemon: simple
+    slots: [service]
+    plugs: [home, pulseaudio, platform, screen-inhibit-control]
+  # ad-hoc until daemon runs as user session
+  # Bug for https://bugs.launchpad.net/snappy/+bug/1613420
+  media-hub-service:
+    command: bin/media-hub-service.wrapper ${SNAP}/usr/bin/media-hub-server
+    slots: [service]
+    plugs: [home, pulseaudio, platform, screen-inhibit-control]
 
 parts:
   service:
@@ -49,7 +73,15 @@ parts:
     stage-packages:
       # Ok to ship by default since Ubuntu has an mp3 license
       - gstreamer1.0-fluendo-mp3
-
+      - gstreamer1.0-libav
+      - gstreamer1.0-plugins-bad-faad
+      - gstreamer1.0-plugins-bad-videoparsers
+      - gstreamer1.0-plugins-bad
+      - gstreamer1.0-plugins-good
+      - gstreamer1.0-pulseaudio
+      - xdg-user-dirs
+      - mime-support
+      - shared-mime-info
     configflags:
       - -DCMAKE_INSTALL_PREFIX:PATH=/usr
       - -DCMAKE_LIBRARY_PATH=/usr/lib
@@ -59,8 +91,6 @@ parts:
         # Files that we don't want/need in the final snap package
         - -etc
         - -usr/lib/debug
-        - -usr/lib/*/libogg*
-        - -usr/lib/*/libpulse*
         - -usr/lib/python*
         - -usr/share/apport
         - -usr/share/bug
@@ -75,6 +105,15 @@ parts:
         - -usr/lib/*.la
         - -usr/lib/*/*.la
         - -usr/lib/*/*.o
+    after:
+      - desktop-ubuntu-app-platform
 
-    snap:
+    prime:
       - $unwanted
+
+  # media-hub-overlay includes
+  # - ubuntu-app-platform to bind link ubuntu-app-platform snap when connected
+  # - bin/media-hub-wrapper to include environment variables
+  media-hub-overlay:
+    source: overlay/
+    plugin: dump
