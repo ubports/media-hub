@@ -1,5 +1,5 @@
 name: media-hub
-version: 4.6.0+17.04.20170217-0ubuntu1
+version: 4.6.0+17.04.20170323-0ubuntu1
 summary: Server and client sides of media-hub
 description: |
   Media Hub is a simple and lightweight service for media playback using

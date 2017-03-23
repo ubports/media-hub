@@ -1,3 +1,15 @@
+media-hub (4.6.0+17.04.20170323-0ubuntu1) zesty; urgency=medium
+
+  [ Alfonso Sanchez-Beato ]
+  * Initial documentation for media-hub snap.
+  * Use caps instead of custom properties to retrieve video dimensions
+
+  [ Chunsang Jeong ]
+  * Enable media-hub as a snap enabling media playback with media-hub
+    clients e.g. mediaplayer-app
+
+ -- Alfonso Sanchez-Beato <alfonso.sanchez-beato@canonical.com>  Thu, 23 Mar 2017 13:58:57 +0000
+
 media-hub (4.6.0+17.04.20170217-0ubuntu1) zesty; urgency=medium
 
   * Support for video decoding on Classic.
