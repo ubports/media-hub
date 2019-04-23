@@ -834,7 +834,7 @@ media::video::Sink::Ptr media::PlayerImplementation<Parent>::create_gl_texture_v
 }
 
 template<typename Parent>
-bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri)
+bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri, const Player::HeadersType& headers)
 {
     d->track_list->reset();
 
@@ -846,7 +846,7 @@ bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri)
     }
 
     static const bool do_pipeline_reset = false;
-    const bool ret = d->engine->open_resource_for_uri(uri, do_pipeline_reset);
+    const bool ret = d->engine->open_resource_for_uri(uri, headers, do_pipeline_reset);
     // Don't set new track as the current track to play since we're calling open_resource_for_uri above
     static const bool make_current = false;
     d->track_list->add_track_with_uri_at(uri, media::TrackList::after_empty_track(), make_current);
@@ -855,9 +855,9 @@ bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri)
 }
 
 template<typename Parent>
-bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri, const Player::HeadersType& headers)
+bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri)
 {
-    return d->engine->open_resource_for_uri(uri, headers);
+    return open_uri(uri, Player::HeadersType{});
 }
 
 template<typename Parent>

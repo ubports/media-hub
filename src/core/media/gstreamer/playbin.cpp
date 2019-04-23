@@ -32,8 +32,13 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-#include <utility>
 #include <cstring>
+#include <string>
+#include <utility>
+
+#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/join.hpp>
+
 
 static const char *PULSE_SINK = "pulsesink";
 static const char *HYBRIS_SINK = "hybrissink";
@@ -608,6 +613,42 @@ void gstreamer::Playbin::setup_source(GstElement *source)
             g_object_set(source, "user-agent", request_headers["User-Agent"].c_str(), NULL);
         }
     }
+
+    // Re-interpret "Authorization" header into user and password properties
+    if (request_headers.find("Authorization") != request_headers.end()) {
+        std::string basic_auth_str = request_headers["Authorization"];
+
+        const bool has_basic_auth = (basic_auth_str.find("Basic ") == 0);
+        if (has_basic_auth) {
+            basic_auth_str = basic_auth_str.replace(basic_auth_str.begin(),
+                                                    basic_auth_str.begin()+6,
+                                                    "");
+        }
+        gsize decoded_length = 0;
+        gchar* decoded_auth = (gchar*)g_base64_decode(basic_auth_str.c_str(),
+                                                      &decoded_length);
+
+        std::string decoded_auth_str(decoded_auth);
+        const bool has_colon = (decoded_auth_str.find(':') != std::string::npos);
+        if (decoded_length > 0 && has_colon) {
+            std::vector<std::string> words;
+            boost::split(words, decoded_auth_str, boost::is_any_of(":"));
+
+            const std::string user = words[0];
+            words.erase(words.begin());
+            const std::string pass = boost::algorithm::join(words, ":");
+            
+            if (g_object_class_find_property(G_OBJECT_GET_CLASS(source), "user-id") != NULL) {
+                g_object_set(source, "user-id", user.c_str(), NULL);
+            }
+            if (g_object_class_find_property(G_OBJECT_GET_CLASS(source), "user-pw") != NULL) {
+                g_object_set(source, "user-pw", pass.c_str(), NULL);
+            }
+        }
+        g_free(decoded_auth);
+    }
+    
+    MH_INFO("setup_source done");
 }
 
 void gstreamer::Playbin::update_media_file_type()

@@ -436,9 +436,10 @@ const core::Property<media::Engine::State>& gstreamer::Engine::state() const
 }
 
 bool gstreamer::Engine::open_resource_for_uri(const media::Track::UriType& uri,
+                                              const core::ubuntu::media::Player::HeadersType& headers
                                               bool do_pipeline_reset)
 {
-    d->playbin.set_uri(uri, core::ubuntu::media::Player::HeadersType{}, do_pipeline_reset);
+    d->playbin.set_uri(uri, headers, do_pipeline_reset);
     return true;
 }
 

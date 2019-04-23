@@ -76,8 +76,11 @@ public:
 
     virtual const core::Property<State>& state() const = 0;
 
-    virtual bool open_resource_for_uri(const core::ubuntu::media::Track::UriType& uri, bool do_pipeline_reset) = 0;
-    virtual bool open_resource_for_uri(const core::ubuntu::media::Track::UriType& uri, const Player::HeadersType&) = 0;
+    virtual bool open_resource_for_uri(const core::ubuntu::media::Track::UriType& uri,
+                               bool do_pipeline_reset) = 0;
+    virtual bool open_resource_for_uri(const core::ubuntu::media::Track::UriType& uri,
+                               const core::ubuntu::media::Player::HeadersType& headers,
+                               bool do_pipeline_reset) = 0;
     // Throws core::ubuntu::media::Player::Error::OutOfProcessBufferStreamingNotSupported if the implementation does not
     // support this feature.
     virtual void create_video_sink(uint32_t texture_id) = 0;
