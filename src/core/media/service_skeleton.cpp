@@ -141,12 +141,14 @@ struct media::ServiceSkeleton::Private
             configuration.player_store->add_player_for_key(key, player);
             uuid_player_map.emplace(std::make_pair(uuid, key));
 
-            request_context_resolver->resolve_context_for_dbus_name_async(msg->sender(),
-                    [this, key, msg](const media::apparmor::ubuntu::Context& context)
+            //request_context_resolver->resolve_context_for_dbus_name_async(msg->sender(),
+            //        [this, key, msg](const media::apparmor::ubuntu::Context& context)
             {
-                MH_DEBUG(" -- app_name='%s', attached", context.str());
-                player_owner_map.emplace(std::make_pair(key, std::make_tuple(context.str(), true, msg->sender())));
-            });
+                //MH_DEBUG(" -- app_name='%s', attached", context.str());
+                //player_owner_map.emplace(std::make_pair(key, std::make_tuple(context.str(), true, msg->sender())));
+                MH_DEBUG(" -- app_name='%s', attached", "usr.bin.media-hub-server");
+                player_owner_map.emplace(std::make_pair(key, std::make_tuple("usr.bin.media-hub-server", true, msg->sender())));
+            }//);
 
             auto reply = dbus::Message::make_method_return(msg);
             reply->writer() << std::make_tuple(op, uuid);

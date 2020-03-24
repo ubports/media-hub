@@ -179,7 +179,7 @@ struct media::PlayerSkeleton::Private
 
     void handle_open_uri(const core::dbus::Message::Ptr& in)
     {
-        request_context_resolver->resolve_context_for_dbus_name_async(in->sender(), [this, in](const media::apparmor::ubuntu::Context& context)
+        //request_context_resolver->resolve_context_for_dbus_name_async(in->sender(), [this, in](const media::apparmor::ubuntu::Context& context)
         {
             Track::UriType uri;
             in->reader() >> uri;
@@ -201,15 +201,16 @@ struct media::PlayerSkeleton::Private
             else
             {
                 // Make sure the client has adequate apparmor permissions to open the URI
-                const auto result = request_authenticator->authenticate_open_uri_request(context, uri);
-                if (std::get<0>(result))
+                //const auto result = request_authenticator->authenticate_open_uri_request(context, uri);
+                if (1) //std::get<0>(result))
                 {
-                    reply->writer() << (std::get<0>(result) ? impl->open_uri(uri) : false);
+                    //reply->writer() << (std::get<0>(result) ? impl->open_uri(uri) : false);
+                    reply->writer() << impl->open_uri(uri);
                 }
                 else
                 {
                     const std::string err_str = {"Warning: Failed to authenticate necessary "
-                        "apparmor permissions to open uri: " + std::get<1>(result)};
+                        "apparmor permissions to open uri: "};// + std::get<1>(result)};
                     MH_ERROR("%s", err_str);
                     reply = dbus::Message::make_error(
                                 in,
@@ -219,12 +220,12 @@ struct media::PlayerSkeleton::Private
             }
 
             bus->send(reply);
-        });
+        }//);
     }
 
     void handle_open_uri_extended(const core::dbus::Message::Ptr& in)
     {
-        request_context_resolver->resolve_context_for_dbus_name_async(in->sender(), [this, in](const media::apparmor::ubuntu::Context& context)
+        //request_context_resolver->resolve_context_for_dbus_name_async(in->sender(), [this, in](const media::apparmor::ubuntu::Context& context)
         {
             Track::UriType uri;
             Player::HeadersType headers;
@@ -248,15 +249,16 @@ struct media::PlayerSkeleton::Private
             else
             {
                 // Make sure the client has adequate apparmor permissions to open the URI
-                const auto result = request_authenticator->authenticate_open_uri_request(context, uri);
-                if (std::get<0>(result))
+                //const auto result = request_authenticator->authenticate_open_uri_request(context, uri);
+                if (1)//std::get<0>(result))
                 {
-                    reply->writer() << (std::get<0>(result) ? impl->open_uri(uri, headers) : false);
+                    //reply->writer() << (std::get<0>(result) ? impl->open_uri(uri, headers) : false);
+                    reply->writer() << impl->open_uri(uri, headers);
                 }
                 else
                 {
                     const std::string err_str = {"Warning: Failed to authenticate necessary "
-                        "apparmor permissions to open uri: " + std::get<1>(result)};
+                        "apparmor permissions to open uri: "};// + std::get<1>(result)};
                     MH_ERROR("%s", err_str);
                     reply = dbus::Message::make_error(
                                 in,
@@ -266,7 +268,7 @@ struct media::PlayerSkeleton::Private
             }
 
             bus->send(reply);
-        });
+        }//);
     }
 
     template<typename Property>

@@ -106,8 +106,8 @@ struct media::TrackListSkeleton::Private
     void handle_add_track_with_uri_at(const core::dbus::Message::Ptr& msg)
     {
         MH_TRACE("");
-        request_context_resolver->resolve_context_for_dbus_name_async
-            (msg->sender(), [this, msg](const media::apparmor::ubuntu::Context& context)
+        //request_context_resolver->resolve_context_for_dbus_name_async
+        //    (msg->sender(), [this, msg](const media::apparmor::ubuntu::Context& context)
         {
             Track::UriType uri;
             media::Track::Id after;
@@ -115,7 +115,7 @@ struct media::TrackListSkeleton::Private
             msg->reader() >> uri >> after >> make_current;
 
             // Make sure the client has adequate apparmor permissions to open the URI
-            const auto result = request_authenticator->authenticate_open_uri_request(context, uri);
+            //const auto result = request_authenticator->authenticate_open_uri_request(context, uri);
             auto reply = dbus::Message::make_method_return(msg);
 
             uri_check->set(uri);
@@ -134,7 +134,7 @@ struct media::TrackListSkeleton::Private
             else
             {
                 // Only add the track to the TrackList if it passes the apparmor permissions check
-                if (std::get<0>(result))
+                if (1) //std::get<0>(result))
                 {
                     impl->add_track_with_uri_at(uri, after, make_current);
                 }
@@ -151,7 +151,7 @@ struct media::TrackListSkeleton::Private
             }
 
             bus->send(reply);
-        });
+        }//);
     }
 
     void handle_add_tracks_with_uri_at(const core::dbus::Message::Ptr& msg)
@@ -165,7 +165,7 @@ struct media::TrackListSkeleton::Private
             msg->reader() >> uris >> after;
 
             bool valid_uri = false;
-            media::apparmor::ubuntu::RequestAuthenticator::Result result;
+            //media::apparmor::ubuntu::RequestAuthenticator::Result result;
             std::string uri_err_str, err_str;
             core::dbus::Message::Ptr reply;
             for (const auto uri : uris)
@@ -185,8 +185,8 @@ struct media::TrackListSkeleton::Private
                 }
 
                 // Make sure the client has adequate apparmor permissions to open the URI
-                result = request_authenticator->authenticate_open_uri_request(context, uri);
-                if (not std::get<0>(result))
+                //result = request_authenticator->authenticate_open_uri_request(context, uri);
+                if (0) //not std::get<0>(result))
                 {
                     err_str = {"Warning: Not adding track " + uri +
                         " to TrackList because of inadequate client apparmor permissions."};
@@ -195,7 +195,7 @@ struct media::TrackListSkeleton::Private
             }
 
             // Only add the track to the TrackList if it passes the apparmor permissions check
-            if (std::get<0>(result))
+            if (1) //std::get<0>(result))
             {
                 reply = dbus::Message::make_method_return(msg);
                 impl->add_tracks_with_uri_at(uris, after);
