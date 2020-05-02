@@ -24,6 +24,7 @@
 #include "bus.h"
 #include "engine.h"
 #include "meta_data_extractor.h"
+#include "meta_data_support.h"
 #include "playbin.h"
 
 #include "core/media/logger/logger.h"
@@ -207,14 +208,21 @@ struct gstreamer::Engine::Private
         MH_DEBUG("Got a playbin info message (no action taken): %s", ewi.debug);
     }
 
+    void cleanupAlbumArtFile(const core::ubuntu::media::Track::MetaData& md) 
+    {
+        MetaDataSupport::cleanupTempAlbumArtFile(md);
+    }
+
     void on_tag_available(const gstreamer::Bus::Message::Detail::Tag& tag)
     {
         media::Track::MetaData md;
 
         // We update instead of creating from scratch if same uri
         auto &tuple = track_meta_data.get();
-        if (playbin.uri() == std::get<0>(tuple))
+        if (playbin.uri() == std::get<0>(tuple)) 
             md = std::get<1>(tuple);
+        else 
+            cleanupAlbumArtFile(std::get<1>(tuple));
 
         gstreamer::MetaDataExtractor::on_tag_available(tag, md);
         track_meta_data.set(std::make_tuple(playbin.uri(), md));
@@ -256,6 +264,7 @@ struct gstreamer::Engine::Private
     void on_client_disconnected()
     {
         client_disconnected();
+        cleanupAlbumArtFile(std::get<1>(track_meta_data.get()));
     }
 
     void on_end_of_stream()
