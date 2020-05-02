@@ -357,28 +357,10 @@ struct media::PlayerImplementation<Parent>::Private :
         {
             art_uri = "image://thumbnailer/" + uri;
         }
-        // Otherwise we'll try and see if we can look up the album art online through
-        // the dash's artwork proxy
-        else if (metadata.is_set(xesam::Album::name) or metadata.is_set(xesam::Artist::name))
-        {
-            if (metadata.is_set(xesam::Album::name) and metadata.is_set(xesam::Artist::name))
-            {
-                art_uri = "image://albumart/artist=" + metadata.encode(xesam::Artist::name)
-                    + "&album=" + metadata.encode(xesam::Album::name);
-            }
-            else
-            {
-                art_uri = "image://albumart/";
-                if (metadata.is_set(xesam::Artist::name))
-                    art_uri += "artist=" + metadata.encode(xesam::Artist::name);
-                else if (metadata.is_set(xesam::Album::name))
-                    art_uri += "album=" + metadata.encode(xesam::Album::name);
-            }
-        }
         // If all else fails, display a placeholder icon
         else
         {
-            art_uri = "file:///usr/lib/arm-linux-gnueabihf/unity-scopes/mediascanner-music/album_missing.svg";
+            art_uri = "file:///usr/share/icons/suru/apps/scalable/music-app-symbolic.svg";
         }
 
         return art_uri;
