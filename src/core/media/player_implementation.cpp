@@ -621,6 +621,10 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
             MH_INFO("Advancing to next track on playbin: %s", uri);
             static const bool do_pipeline_reset = false;
             d->engine->open_resource_for_uri(uri, do_pipeline_reset);
+
+            // Force the 'playing' state.
+            MH_INFO("Forcing engine 'playing' state");
+            d->engine->play();
         }
 
         d->doing_go_to_track.unlock();
