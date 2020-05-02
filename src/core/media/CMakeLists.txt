@@ -124,6 +124,7 @@ add_library(
   stub_recorder_observer.cpp
 
   gstreamer/engine.cpp
+  gstreamer/meta_data_support.cpp
   gstreamer/playbin.cpp
 
   player_skeleton.cpp
