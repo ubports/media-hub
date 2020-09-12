@@ -32,7 +32,3 @@ override_dh_auto_test:
 override_dh_installdeb:
 	dh_apparmor --profile-name=usr.bin.media-hub-server -pmedia-hub
 	dh_installdeb
-
-override_dh_auto_clean:
-	/bin/sh $(CURDIR)/debian/bileto_pre_release_hook
-	dh_auto_clean
