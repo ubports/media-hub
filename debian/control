@@ -3,12 +3,12 @@ Priority: optional
 Section: libs
 Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
 Build-Depends: cmake,
-               dbus-test-runner,
+               dbus-test-runner <!nocheck>,
                debhelper (>= 9),
                dh-apparmor,
-               doxygen,
-               google-mock,
-               graphviz,
+               doxygen <!nodoc>,
+               google-mock <!nocheck>,
+               graphviz <!nodoc>,
                gstreamer1.0-plugins-good,
                libboost-dev (>=1.53),
                libboost-filesystem-dev (>=1.53),
@@ -87,6 +87,7 @@ Description: Simple and lightweight media playback service
 Package: libmedia-hub-doc
 Section: doc
 Architecture: all
+Build-Profiles: <!nodoc>
 Depends: ${misc:Depends},
          ${shlibs:Depends},
 Recommends: libmedia-hub-dev
