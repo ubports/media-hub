@@ -167,6 +167,7 @@ private:
     void send_buffer_data(int fd, void *data, size_t len);
     void send_frame_ready(void);
     void process_missing_plugin_message(GstMessage *message);
+    void process_video_sink_state_changed(Bus::Message::Detail::StateChanged state);
 
     const core::ubuntu::media::Player::PlayerKey key;
     const core::ubuntu::media::AVBackend::Backend backend;

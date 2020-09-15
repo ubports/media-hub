@@ -308,6 +308,30 @@ void gstreamer::Playbin::process_missing_plugin_message(GstMessage *message)
     MH_ERROR("Missing decoder for %s", mime);
 }
 
+void gstreamer::Playbin::process_video_sink_state_changed(
+    Bus::Message::Detail::StateChanged state)
+{
+
+    if (state.new_state == GST_STATE_PAUSED ||
+        state.new_state == GST_STATE_PLAYING) {
+        // Get the video height/width from the video sink
+        try
+        {
+            const core::ubuntu::media::video::Dimensions new_dimensions = get_video_dimensions();
+            emit_video_dimensions_changed_if_changed(new_dimensions);
+            cached_video_dimensions = new_dimensions;
+        }
+        catch (const std::exception& e)
+        {
+            MH_WARNING("Problem querying video dimensions: %s", e.what());
+        }
+        catch (...)
+        {
+            MH_WARNING("Problem querying video dimensions.");
+        }
+    }
+}
+
 void gstreamer::Playbin::process_message_element(GstMessage *message)
 {
     const GstStructure *msg_data = gst_message_get_structure(message);
@@ -363,6 +387,8 @@ void gstreamer::Playbin::on_new_message_async(const Bus::Message& message)
         if (message.source == "playbin") {
             g_object_get(G_OBJECT(pipeline), "current-audio", &audio_stream_id, NULL);
             g_object_get(G_OBJECT(pipeline), "current-video", &video_stream_id, NULL);
+        } else if (message.source == "video-sink") {
+            process_video_sink_state_changed(message.detail.state_changed);
         }
         signals.on_state_changed(std::make_pair(message.detail.state_changed, message.source));
         break;
@@ -705,22 +731,6 @@ bool gstreamer::Playbin::set_state_and_wait(GstState new_state, bool use_main_th
     // setting the requested state.
     if (result && new_state == GST_STATE_PLAYING)
     {
-        // Get the video height/width from the video sink
-        try
-        {
-            const core::ubuntu::media::video::Dimensions new_dimensions = get_video_dimensions();
-            emit_video_dimensions_changed_if_changed(new_dimensions);
-            cached_video_dimensions = new_dimensions;
-        }
-        catch (const std::exception& e)
-        {
-            MH_WARNING("Problem querying video dimensions: %s", e.what());
-        }
-        catch (...)
-        {
-            MH_WARNING("Problem querying video dimensions.");
-        }
-
 #ifdef DEBUG_GST_PIPELINE
         MH_DEBUG("Dumping pipeline dot file");
         GST_DEBUG_BIN_TO_DOT_FILE((GstBin*)pipeline, GST_DEBUG_GRAPH_SHOW_ALL, "pipeline");
