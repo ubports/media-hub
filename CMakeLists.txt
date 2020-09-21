@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 2.8)
 
 project(ubuntu-media-hub)
 
+option(ENABLE_DOC "Build documentation" ON)
+option(ENABLE_TESTS "Build tests" ON)
+
 # We haven't received version information via the packaging setup.
 # For that, we try to determine sensible values on our own, ensuring
 # plain old invocations to cmake still work as expected.
@@ -87,9 +90,13 @@ include_directories(
 )
 
 add_subdirectory(include)
-add_subdirectory(doc)
+if (ENABLE_DOC)
+  add_subdirectory(doc)
+endif (ENABLE_DOC)
 add_subdirectory(src)
-add_subdirectory(tests)
+if (ENABLE_TESTS)
+  add_subdirectory(tests)
+endif (ENABLE_TESTS)
 
 # There's no nice way to format this. Thanks CMake.
 add_test(LGPL-required
