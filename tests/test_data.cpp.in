@@ -37,3 +37,17 @@ bool test::copy_test_media_file_to(const std::string& media, const std::string& 
 
     return true;
 }
+
+bool test::file_exists(const std::string& path)
+{
+    static const std::string file{"@CMAKE_CURRENT_SOURCE_DIR@/" + path};
+
+    try
+    {
+        return boost::filesystem::exists( file );
+    } catch (const boost::filesystem::filesystem_error& e)
+    {
+        return false;
+    }
+
+}
