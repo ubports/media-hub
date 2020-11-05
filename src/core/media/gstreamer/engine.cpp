@@ -466,6 +466,7 @@ void gstreamer::Engine::create_video_sink(uint32_t texture_id)
 
 bool gstreamer::Engine::play(bool use_main_thread /* = false */)
 {
+    MH_INFO("enter");
     const auto result = d->playbin.set_state_and_wait(GST_STATE_PLAYING, use_main_thread);
 
     if (result)
@@ -475,6 +476,7 @@ bool gstreamer::Engine::play(bool use_main_thread /* = false */)
         d->playback_status_changed(media::Player::PlaybackStatus::playing);
     }
 
+    MH_INFO("exit");
     return result;
 }
 

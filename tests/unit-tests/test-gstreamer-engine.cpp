@@ -444,7 +444,9 @@ TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art)
     //ASSERT_TRUE(test::copy_test_media_file_to("test-audio.ogg", test_file));
     ASSERT_TRUE(test::copy_test_media_file_to("test.mp3", test_file));
 
-    const std::string test_audio_uri{"http://localhost:5000"};
+    //const std::string test_audio_uri{"http://localhost:5000"};
+    //const std::string test_audio_uri{"http://www.wndbz.nl/ubuntu-touch/test.mp3"};
+    const std::string test_audio_uri{"http://www.wndbz.nl/ubuntu-touch/test-audio.ogg"};
     const core::ubuntu::media::Player::HeadersType headers{{ "User-Agent", "MediaHub" }, { "Cookie", "A=B;X=Y" }};
 
     // test server
@@ -474,11 +476,11 @@ TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art)
     EXPECT_TRUE(false) << "arrived before fork: " << test_file;
     std::cerr << "[          ] [ INFO ] testing 123";
 
-    auto server = core::posix::fork(
+    /*auto server = core::posix::fork(
                 std::bind(testing::a_web_server(configuration), cps),
                 core::posix::StandardStream::stdout | core::posix::StandardStream::stderr);
     cps.wait_for_signal_ready_for(std::chrono::seconds{15});
-    std::this_thread::sleep_for(std::chrono::milliseconds{500});
+    std::this_thread::sleep_for(std::chrono::milliseconds{500});*/
 
     // test
     core::testing::WaitableStateTransition<core::ubuntu::media::Engine::State> wst(
@@ -494,11 +496,31 @@ TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art)
 
     std::cerr << "[          ] open_resource_for_uri: " << test_audio_uri << std::endl;
     EXPECT_TRUE(engine.open_resource_for_uri(test_audio_uri, headers));
-    static const bool use_main_context = true;
+
+    engine.track_meta_data().changed().connect(
+                [](const std::tuple<media::Track::UriType, media::Track::MetaData>& md)
+                {
+                    std::cerr << "track_meta_data changed" << std::endl;
+                    if (0 < std::get<1>(md).count(xesam::Album::name))
+                        std::cerr << "Album.name: " << std::get<1>(md).get(xesam::Album::name) << std::endl;
+                    if (0 < std::get<1>(md).count(xesam::AlbumArtist::name))
+                        std::cerr << "AlbumArtist.name: " << std::get<1>(md).get(xesam::AlbumArtist::name) << std::endl;
+                    if (0 < std::get<1>(md).count(xesam::Artist::name))
+                        std::cerr << "Artist.name: " << std::get<1>(md).get(xesam::Artist::name) << std::endl;
+                    if (0 < std::get<1>(md).count(xesam::Genre::name))
+                        std::cerr << "Genre.name: " << std::get<1>(md).get(xesam::Genre::name) << std::endl;
+                });
+
+    std::cerr << "[          ] before play" << std::endl;
+    static const bool use_main_context = false;
     EXPECT_TRUE(engine.play(use_main_context));
+    std::cerr << "[          ] after play" << std::endl;
     EXPECT_TRUE(wst.wait_for_state_for(
                     core::ubuntu::media::Engine::State::playing,
                     std::chrono::seconds{10}));
+    std::cerr << "[          ] before sleep" << std::endl;
+    std::this_thread::sleep_for(std::chrono::milliseconds{1000});
+    std::cerr << "[          ] after sleep" << std::endl;
 
     auto &tuple = engine.track_meta_data().get();
     core::ubuntu::media::Track::MetaData md;

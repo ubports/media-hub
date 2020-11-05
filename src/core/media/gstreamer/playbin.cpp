@@ -582,7 +582,15 @@ void gstreamer::Playbin::set_uri(
         tmp_uri = encode_uri(tmp_uri);
     }
 
+    MH_INFO("setting uri: %s", tmp_uri);
     g_object_set(pipeline, "uri", tmp_uri.c_str(), NULL);
+    if (is_video_file(tmp_uri)) {
+        MH_INFO("MEDIA_FILE_TYPE_VIDEO");
+        file_type = MEDIA_FILE_TYPE_VIDEO;
+    } else if (is_audio_file(tmp_uri)) {
+        MH_INFO("MEDIA_FILE_TYPE_AUDIO");
+        file_type = MEDIA_FILE_TYPE_AUDIO;
+    }
 
     request_headers = headers;
 
@@ -668,11 +676,13 @@ bool gstreamer::Playbin::set_state_and_wait(GstState new_state, bool use_main_th
         MH_DEBUG("Requested state change in main thread context.");
 
         GstState current, pending;
-        result = GST_STATE_CHANGE_SUCCESS == gst_element_get_state(
+        const auto ret = gst_element_get_state(
                 pipeline,
                 &current,
                 &pending,
                 state_change_timeout.count());
+        result = GST_STATE_CHANGE_SUCCESS == ret;
+        MH_DEBUG("ret: %d - %d", ret, result);
     }
     else
     {
