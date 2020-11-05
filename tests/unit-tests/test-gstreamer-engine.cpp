@@ -490,14 +490,15 @@ TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art)
                     core::ubuntu::media::Engine::State::playing,
                     std::chrono::seconds{10}));
 
-    auto &tuple = engine.track_meta_data.get();
+    auto &tuple = engine.track_meta_data().get();
     core::ubuntu::media::Track::MetaData md;
     md = std::get<1>(tuple);
 
     if (0 < md.count(xesam::Album::name))
         EXPECT_EQ("Test", md.get(xesam::Album::name));
     EXPECT_TRUE(md.has_embedded_album_art());
-    EXPECT_EQ(0x59C3 AF41, md.embeddedAlbumArtCRC);
+    //EXPECT_EQ(0xAF41, md.embeddedAlbumArtCRC);
+    EXPECT_EQ(0x59C3, md.embeddedAlbumArtCRC);
     ASSERT_TRUE(test::file_exists(md.embeddedAlbumArtFileName));
 
     EXPECT_TRUE(engine.stop());
