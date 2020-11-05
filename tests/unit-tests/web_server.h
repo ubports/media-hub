@@ -100,10 +100,13 @@ inline std::function<core::posix::exit::Status(core::testing::CrossProcessSync& 
             }
         };
 
+	std::cerr << "[          ] web_server before mg_create_server " << std::endl;
         auto server = mg_create_server(&context, Context::on_request);
         // Setup the port on which the server should be exposed.
+	std::cerr << "[          ] web_server before mg_set_option" << std::endl;
         mg_set_option(server, "listening_port", std::to_string(configuration.port).c_str());
         // Notify framework that we are good to go
+	std::cerr << "[          ] web_server before try_signal_ready_for" << std::endl;
         cps.try_signal_ready_for(std::chrono::milliseconds{500});
         // Start the polling loop
 	std::cerr << "[          ] web_server start polling loop";
