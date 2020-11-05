@@ -562,6 +562,7 @@ void gstreamer::Playbin::set_uri(
     gchar *current_uri = nullptr;
     g_object_get(pipeline, "current-uri", &current_uri, NULL);
 
+    MH_INFO("set_uri: %s", uri);
     // Checking for a current_uri being set and not resetting the pipeline
     // if there isn't a current_uri causes the first play to start playback
     // sooner since reset_pipeline won't be called
@@ -585,6 +586,7 @@ void gstreamer::Playbin::set_uri(
 
     request_headers = headers;
 
+    MH_INFO("current_uri: %s", current_uri);
     g_free(current_uri);
 }
 

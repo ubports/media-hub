@@ -159,7 +159,7 @@ TEST(GStreamerEngine, DISABLED_setting_uri_and_starting_video_playback_works)
                     std::chrono::seconds{10}));
 }
 
-TEST(GStreamerEngine, setting_uri_and_audio_playback_with_http_headers_works)
+TEST(GStreamerEngine, DISABLED_setting_uri_and_audio_playback_with_http_headers_works)
 {
     const std::string test_file{"/tmp/test-audio-1.ogg"};
     std::remove(test_file.c_str());
@@ -492,6 +492,7 @@ TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art)
                     std::ref(wst),
                     std::placeholders::_1));
 
+    std::cerr << "[          ] open_resource_for_uri: " << test_audio_uri << endl;
     EXPECT_TRUE(engine.open_resource_for_uri(test_audio_uri, headers));
     static const bool use_main_context = true;
     EXPECT_TRUE(engine.play(use_main_context));
