@@ -471,6 +471,9 @@ TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art)
         }
     };
 
+    EXPECT_TRUE(false) << "arrived before fork: " << test_file;
+    std::cerr << "[          ] [ INFO ] testing 123";
+
     auto server = core::posix::fork(
                 std::bind(testing::a_web_server(configuration), cps),
                 core::posix::StandardStream::empty);
