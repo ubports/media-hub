@@ -147,7 +147,7 @@ public:
             const bool has_tag_from_lut = (gstreamer_to_mpris_tag_lut().count(tag) > 0);
             const std::string tag_name{(has_tag_from_lut) ?
                     gstreamer_to_mpris_tag_lut().at(tag) : tag};
-
+            MH_INFO("Found tag: %s", tag_name);
 
             // Specific handling for the following tag types:
             if (tag_name == tags::PreviewImage::name)

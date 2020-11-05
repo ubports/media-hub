@@ -217,6 +217,7 @@ struct gstreamer::Engine::Private
     {
         media::Track::MetaData md;
 
+	MH_INFO("");
         // We update instead of creating from scratch if same uri
         auto &tuple = track_meta_data.get();
         if (playbin.uri() == std::get<0>(tuple)) 
