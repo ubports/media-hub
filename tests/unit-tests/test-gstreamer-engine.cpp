@@ -185,6 +185,8 @@ TEST(GStreamerEngine, setting_uri_and_audio_playback_with_http_headers_works)
             EXPECT_TRUE(headers.at("Cookie").count("A=B") == 1);
             EXPECT_TRUE(headers.at("Cookie").count("X=Y") == 1);
 
+	    EXPECT_TRUE(false) << "arrived before mg_send_file: " << test_file;
+
             mg_send_file(conn, test_file.c_str(), 0);
             return MG_MORE;
         }
