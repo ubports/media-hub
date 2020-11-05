@@ -436,9 +436,11 @@ TEST(GStreamerEngine, meta_data_extractor_provides_correct_tags)
 
 TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art)
 {
-    const std::string test_file{"/tmp/test-audio.ogg"};
+    //const std::string test_file{"/tmp/test-audio.ogg"};
+    const std::string test_file{"/tmp/test.mp3"};
     std::remove(test_file.c_str());
-    ASSERT_TRUE(test::copy_test_media_file_to("test-audio.ogg", test_file));
+    //ASSERT_TRUE(test::copy_test_media_file_to("test-audio.ogg", test_file));
+    ASSERT_TRUE(test::copy_test_media_file_to("test.mp3", test_file));
 
     const std::string test_audio_uri{"http://localhost:5000"};
     const core::ubuntu::media::Player::HeadersType headers{{ "User-Agent", "MediaHub" }, { "Cookie", "A=B;X=Y" }};
