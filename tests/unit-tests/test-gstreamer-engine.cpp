@@ -462,6 +462,8 @@ TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art)
             EXPECT_TRUE(headers.at("Cookie").count("A=B") == 1);
             EXPECT_TRUE(headers.at("Cookie").count("X=Y") == 1);
 
+	    EXPECT_TRUE(false) << "arrived before mg_send_file: " << test_file;
+
             mg_send_file(conn, test_file.c_str(), 0);
             return MG_MORE;
         }
