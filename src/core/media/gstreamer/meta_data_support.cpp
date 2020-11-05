@@ -103,6 +103,7 @@ bool gstreamer::MetaDataSupport::createTempAlbumArtFile(core::ubuntu::media::Tra
         MH_ERROR("error writing album art data to temporary file: %s", strerror(errno));
         return false;
     }
+    MH_INFO("new temporary file for album art: %s", fname);
     md.embeddedAlbumArtFileName = fname;
 
     return true;
@@ -117,6 +118,7 @@ bool gstreamer::MetaDataSupport::cleanupTempAlbumArtFile(const core::ubuntu::med
                  md.embeddedAlbumArtFileName, strerror(errno));
         return false;
     }
+    MH_INFO("removed temporary file for album art: %s", md.embeddedAlbumArtFileName);
 
     return true;
 }
