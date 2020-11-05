@@ -71,10 +71,13 @@ inline std::function<core::posix::exit::Status(core::testing::CrossProcessSync& 
                 switch (ev)
                 {
                 case MG_REQUEST:
+		std::cerr << "[          ] web_server MG_REQUEST";
                     return thiz->handle_request(conn);
                 case MG_AUTH:
+		std::cerr << "[          ] web_server MG_AUTH";
                     return MG_TRUE;
                 default:
+		std::cerr << "[          ] web_server other: " << ev;
                     return MG_FALSE;
                 }
 
@@ -103,6 +106,7 @@ inline std::function<core::posix::exit::Status(core::testing::CrossProcessSync& 
         // Notify framework that we are good to go
         cps.try_signal_ready_for(std::chrono::milliseconds{500});
         // Start the polling loop
+	std::cerr << "[          ] web_server start polling loop";
         for (;;)
         {
             mg_poll_server(server, 200);
@@ -110,6 +114,7 @@ inline std::function<core::posix::exit::Status(core::testing::CrossProcessSync& 
             if (terminated)
                 break;
         }
+	std::cerr << "[          ] web_server done polling loop";
 
         // Cleanup, and free server instance
         mg_destroy_server(&server);

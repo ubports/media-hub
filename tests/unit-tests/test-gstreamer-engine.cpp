@@ -476,7 +476,7 @@ TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art)
 
     auto server = core::posix::fork(
                 std::bind(testing::a_web_server(configuration), cps),
-                core::posix::StandardStream::empty);
+                core::posix::StandardStream::stderr);
     cps.wait_for_signal_ready_for(std::chrono::seconds{2});
     std::this_thread::sleep_for(std::chrono::milliseconds{500});
 
