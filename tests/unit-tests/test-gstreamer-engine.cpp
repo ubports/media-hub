@@ -492,7 +492,7 @@ TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art)
                     std::ref(wst),
                     std::placeholders::_1));
 
-    std::cerr << "[          ] open_resource_for_uri: " << test_audio_uri << endl;
+    std::cerr << "[          ] open_resource_for_uri: " << test_audio_uri << std::endl;
     EXPECT_TRUE(engine.open_resource_for_uri(test_audio_uri, headers));
     static const bool use_main_context = true;
     EXPECT_TRUE(engine.play(use_main_context));
