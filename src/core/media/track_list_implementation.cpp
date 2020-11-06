@@ -38,17 +38,20 @@ namespace media = core::ubuntu::media;
 struct media::TrackListImplementation::Private
 {
     typedef std::map<Track::Id, std::tuple<Track::UriType, Track::MetaData>> MetaDataCache;
+    typedef std::map<Track::Id, Player::HeadersType> HeadersCache;
 
     dbus::Object::Ptr object;
     size_t track_counter;
     MetaDataCache meta_data_cache;
+    HeadersCache headers_cache;
+    Player::HeadersType headers_for_next_uri;
     std::shared_ptr<media::Engine::MetaDataExtractor> extractor;
     // Used for caching the original tracklist order to be used to restore the order
     // to the live TrackList after shuffle is turned off
     media::TrackList::Container shuffled_tracks;
     bool shuffle;
 
-    void updateCachedTrackMetadata(const media::Track::Id& id, const media::Track::UriType& uri)
+    void updateCachedTrackMetadata(const media::Track::Id& id, const media::Track::UriType& uri, const media::Player::HeadersType& headers)
     {
         if (meta_data_cache.count(id) == 0)
         {
@@ -70,6 +73,8 @@ struct media::TrackListImplementation::Private
         {
             std::get<0>(meta_data_cache[id]) = uri;
         }
+
+        headers_cache[id] = headers;
     }
 
     media::TrackList::Container::iterator get_shuffled_insert_it()
@@ -93,8 +98,8 @@ media::TrackListImplementation::TrackListImplementation(
         const media::apparmor::ubuntu::RequestContextResolver::Ptr& request_context_resolver,
         const media::apparmor::ubuntu::RequestAuthenticator::Ptr& request_authenticator)
     : media::TrackListSkeleton(bus, object, request_context_resolver, request_authenticator),
-      d(new Private{object, 0, Private::MetaDataCache{},
-                    extractor, media::TrackList::Container{}, false})
+      d(new Private{object, 0, Private::MetaDataCache{}, Private::HeadersCache{},
+                    Player::HeadersType{}, extractor, media::TrackList::Container{}, false})
 {
     can_edit_tracks().set(true);
 }
@@ -123,6 +128,21 @@ media::Track::MetaData media::TrackListImplementation::query_meta_data_for_track
     return std::get<1>(it->second);
 }
 
+media::Player::HeadersType media::TrackListImplementation::query_headers_for_track(const media::Track::Id& id)
+{
+    const auto it = d->headers_cache.find(id);
+
+    if (it == d->headers_cache.end())
+        return Player::HeadersType{};
+
+    return it->second;
+}
+
+void media::TrackListImplementation::attach_headers_for_next_uri(const Player::HeadersType& headers)
+{
+    d->headers_for_next_uri = headers;
+}
+
 void media::TrackListImplementation::add_track_with_uri_at(
         const media::Track::UriType& uri,
         const media::Track::Id& position,
@@ -149,7 +169,9 @@ void media::TrackListImplementation::add_track_with_uri_at(
 
     if (result)
     {
-        d->updateCachedTrackMetadata(id, uri);
+        Player::HeadersType headers = d->headers_for_next_uri;
+        d->headers_for_next_uri = Player::HeadersType{};
+        d->updateCachedTrackMetadata(id, uri, headers);
 
         if (d->shuffle)
             d->shuffled_tracks.insert(d->get_shuffled_insert_it(), id);
@@ -207,7 +229,7 @@ void media::TrackListImplementation::add_tracks_with_uri_at(const ContainerURI& 
 
         if (result)
         {
-            d->updateCachedTrackMetadata(id, uri);
+            d->updateCachedTrackMetadata(id, uri, Player::HeadersType{});
 
             if (d->shuffle)
                 d->shuffled_tracks.insert(d->get_shuffled_insert_it(), id);

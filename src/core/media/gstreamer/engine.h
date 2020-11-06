@@ -33,8 +33,11 @@ public:
 
     const core::Property<State>& state() const;
 
-    bool open_resource_for_uri(const core::ubuntu::media::Track::UriType& uri, bool do_pipeline_reset);
-    bool open_resource_for_uri(const core::ubuntu::media::Track::UriType& uri, const core::ubuntu::media::Player::HeadersType& headers);
+    bool open_resource_for_uri(const core::ubuntu::media::Track::UriType& uri,
+                               bool do_pipeline_reset);
+    bool open_resource_for_uri(const core::ubuntu::media::Track::UriType& uri,
+                               const core::ubuntu::media::Player::HeadersType& headers,
+                               bool do_pipeline_reset);
     void create_video_sink(uint32_t texture_id);
 
     // use_main_thread will set the pipeline's new state in the main thread context

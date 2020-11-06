@@ -41,6 +41,9 @@ public:
 
     Track::UriType query_uri_for_track(const Track::Id& id);
     Track::MetaData query_meta_data_for_track(const Track::Id& id);
+    Player::HeadersType query_headers_for_track(const Track::Id& id);
+
+    void attach_headers_for_next_uri(const Player::HeadersType& headers);
 
     void add_track_with_uri_at(const Track::UriType& uri, const Track::Id& position, bool make_current);
     void add_tracks_with_uri_at(const ContainerURI& uris, const Track::Id& position);
