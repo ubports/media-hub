@@ -304,6 +304,7 @@ struct media::PlayerImplementation<Parent>::Private :
     void open_first_track_from_tracklist(const media::Track::Id& id)
     {
         const Track::UriType uri = track_list->query_uri_for_track(id);
+        const Player::HeadersType headers = track_list->query_headers_for_track(id);
         if (!uri.empty())
         {
             // Using a TrackList for playback, added tracks via add_track(), but open_uri hasn't
@@ -312,7 +313,7 @@ struct media::PlayerImplementation<Parent>::Private :
                       uri);
             MH_INFO("\twith a Track::Id: %s", id);
             static const bool do_pipeline_reset = false;
-            engine->open_resource_for_uri(uri, do_pipeline_reset);
+            engine->open_resource_for_uri(uri, headers, do_pipeline_reset);
         }
     }
 
@@ -598,11 +599,12 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         // Make sure that the TrackList keeps advancing. The logic for what gets played next,
         // if anything at all, occurs in TrackListSkeleton::next()
         const Track::UriType uri = d->track_list->query_uri_for_track(d->track_list->next());
+        const Player::HeadersType headers = d->track_list->query_headers_for_track(d->track_list->next());
         if (prev_track_id != d->track_list->current() && !uri.empty())
         {
             MH_INFO("Advancing to next track on playbin: %s", uri);
             static const bool do_pipeline_reset = false;
-            d->engine->open_resource_for_uri(uri, do_pipeline_reset);
+            d->engine->open_resource_for_uri(uri, headers, do_pipeline_reset);
         }
 
         d->doing_go_to_track.unlock();
@@ -677,12 +679,13 @@ media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImp
         const bool auto_play = Parent::playback_status().get() == media::Player::playing;
 
         const Track::UriType uri = d->track_list->query_uri_for_track(id);
+        const Player::HeadersType headers = d->track_list->query_headers_for_track(id);
         if (!uri.empty())
         {
             MH_INFO("Setting next track on playbin (on_go_to_track signal): %s", uri);
             MH_INFO("\twith a Track::Id: %s", id);
             static const bool do_pipeline_reset = true;
-            d->engine->open_resource_for_uri(uri, do_pipeline_reset);
+            d->engine->open_resource_for_uri(uri, headers, do_pipeline_reset);
         }
 
         if (auto_play)
@@ -845,10 +848,16 @@ bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri, co
         return true;
     }
 
+    if (!headers.empty())
+    {
+        MH_INFO("Contains headers");
+    }
+
     static const bool do_pipeline_reset = false;
     const bool ret = d->engine->open_resource_for_uri(uri, headers, do_pipeline_reset);
     // Don't set new track as the current track to play since we're calling open_resource_for_uri above
     static const bool make_current = false;
+    d->track_list->attach_headers_for_next_uri(headers);
     d->track_list->add_track_with_uri_at(uri, media::TrackList::after_empty_track(), make_current);
 
     return ret;

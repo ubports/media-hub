@@ -208,7 +208,8 @@ TEST(GStreamerEngine, setting_uri_and_audio_playback_with_http_headers_works)
                     std::ref(wst),
                     std::placeholders::_1));
 
-    EXPECT_TRUE(engine.open_resource_for_uri(test_audio_uri, headers));
+    static const bool do_pipeline_reset = false;
+    EXPECT_TRUE(engine.open_resource_for_uri(test_audio_uri, headers, do_pipeline_reset));
     static const bool use_main_context = true;
     EXPECT_TRUE(engine.play(use_main_context));
     EXPECT_TRUE(wst.wait_for_state_for(

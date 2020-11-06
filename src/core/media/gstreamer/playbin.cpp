@@ -637,7 +637,7 @@ void gstreamer::Playbin::setup_source(GstElement *source)
             const std::string user = words[0];
             words.erase(words.begin());
             const std::string pass = boost::algorithm::join(words, ":");
-            
+
             if (g_object_class_find_property(G_OBJECT_GET_CLASS(source), "user-id") != NULL) {
                 g_object_set(source, "user-id", user.c_str(), NULL);
             }
@@ -647,7 +647,7 @@ void gstreamer::Playbin::setup_source(GstElement *source)
         }
         g_free(decoded_auth);
     }
-    
+
     MH_INFO("setup_source done");
 }
 
