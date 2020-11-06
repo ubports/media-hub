@@ -584,13 +584,6 @@ void gstreamer::Playbin::set_uri(
 
     MH_INFO("setting uri: %s", tmp_uri);
     g_object_set(pipeline, "uri", tmp_uri.c_str(), NULL);
-    if (is_video_file(tmp_uri)) {
-        MH_INFO("MEDIA_FILE_TYPE_VIDEO");
-        file_type = MEDIA_FILE_TYPE_VIDEO;
-    } else if (is_audio_file(tmp_uri)) {
-        MH_INFO("MEDIA_FILE_TYPE_AUDIO");
-        file_type = MEDIA_FILE_TYPE_AUDIO;
-    }
 
     request_headers = headers;
 
