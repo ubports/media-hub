@@ -26,7 +26,7 @@ static unsigned short crc16_table[256];
 namespace gstreamer
 {
 
-bool gstreamer::MetaDataSupport::crc16_table_init = true;
+bool gstreamer::MetaDataSupport::crc16_table_init = false;
 std::string gstreamer::MetaDataSupport::tempDirName = "";
 
 static void initCRCTable() {
