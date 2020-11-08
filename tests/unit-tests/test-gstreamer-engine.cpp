@@ -24,6 +24,7 @@
 
 #include "core/media/xesam.h"
 #include "core/media/gstreamer/engine.h"
+#include "core/media/gstreamer/meta_data_support.h"
 
 #include "../test_data.h"
 #include "../waitable_state_transition.h"
@@ -434,3 +435,63 @@ TEST(GStreamerEngine, meta_data_extractor_provides_correct_tags)
         EXPECT_EQ("42", md.get(xesam::TrackNumber::name));
 }
 
+TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art)
+{
+    const std::string test_file{"/tmp/test-audio.ogg"};
+    std::remove(test_file.c_str());
+    ASSERT_TRUE(test::copy_test_media_file_to("test-audio.ogg", test_file));
+    const std::string test_audio_uri{"http://localhost:5000"};
+
+    // test server
+    core::testing::CrossProcessSync cps;
+    testing::web::server::Configuration configuration
+    {
+        5000,
+        [test_file](mg_connection* conn)
+        {
+            std::cerr << "test server will call mg_send_file" << std::endl;
+            mg_send_file(conn, test_file.c_str(), 0);
+            return MG_MORE;
+        }
+    };
+    auto server = core::posix::fork(
+                std::bind(testing::a_web_server(configuration), cps),
+                core::posix::StandardStream::empty);
+    cps.wait_for_signal_ready_for(std::chrono::seconds{2});
+    std::this_thread::sleep_for(std::chrono::milliseconds{500});
+
+    // test
+    core::ubuntu::media::Track::MetaData md;
+    gstreamer::Engine engine{0};
+
+    ASSERT_NO_THROW({
+        try {
+        md = engine.meta_data_extractor()->meta_data_for_track_with_uri(test_audio_uri);
+        } catch (const std::exception& e) {
+            std::cerr << "exception while getting meta data: " << e.what() << std::endl;
+            throw;
+        } catch (...) {
+            std::cerr << "exception while getting meta data" << std::endl;
+            throw;
+        }
+    });
+
+    // old tags still ok?
+    if (0 < md.count(xesam::Album::name))
+        EXPECT_EQ("Test", md.get(xesam::Album::name));
+    if (0 < md.count(xesam::Artist::name))
+        EXPECT_EQ("Test", md.get(xesam::Artist::name));
+    if (0 < md.count(xesam::AlbumArtist::name))
+        EXPECT_EQ("Test", md.get(xesam::AlbumArtist::name));
+    if (0 < md.count(xesam::Genre::name))
+        EXPECT_EQ("Test", md.get(xesam::Genre::name));
+
+    // found and handled embedded album art
+    EXPECT_TRUE(md.has_embedded_album_art());
+    EXPECT_EQ(0x9599, md.embeddedAlbumArtCRC);
+    ASSERT_TRUE(test::file_exists(md.embeddedAlbumArtFileName));
+
+    // does it clean it up?
+    gstreamer::MetaDataSupport::cleanupTempAlbumArtFile(md);
+    ASSERT_FALSE(test::file_exists(md.embeddedAlbumArtFileName));
+}
