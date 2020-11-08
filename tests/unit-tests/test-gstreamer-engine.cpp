@@ -439,17 +439,46 @@ TEST(GStreamerEngine, meta_data_extractor_provides_correct_tags)
 
 TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art)
 {
-    const std::string test_file{"/tmp/test.mp3"};
-    const std::string test_file_uri{"file:///tmp/test.mp3"};
+    const std::string test_file{"/tmp/test-audio.ogg"};
     std::remove(test_file.c_str());
-    ASSERT_TRUE(test::copy_test_media_file_to("test.mp3", test_file));
-    const std::string test_audio_uri{"http://www.wndbz.nl/ubuntu-touch/test-audio.ogg"};
+    ASSERT_TRUE(test::copy_test_media_file_to("test-audio.ogg", test_file));
+    const std::string test_audio_uri{"http://localhost:5000"};
+    //const std::string test_audio_uri{"http://www.wndbz.nl/ubuntu-touch/test-audio.ogg"};
 
+    // test server
+    core::testing::CrossProcessSync cps; // server - ready -> client
+
+    testing::web::server::Configuration configuration
+    {
+        5000,
+        [test_file](mg_connection* conn)
+        {
+            std::cerr << "test server will call mg_send_file" << std::endl;
+            mg_send_file(conn, test_file.c_str(), 0);
+            return MG_MORE;
+        }
+    };
+
+    auto server = core::posix::fork(
+                std::bind(testing::a_web_server(configuration), cps),
+                core::posix::StandardStream::empty);
+    cps.wait_for_signal_ready_for(std::chrono::seconds{2});
+    std::this_thread::sleep_for(std::chrono::milliseconds{500});
+
+    // test
     gstreamer::Engine engine{0};
 
     core::ubuntu::media::Track::MetaData md;
     ASSERT_NO_THROW({
+        try {
         md = engine.meta_data_extractor()->meta_data_for_track_with_uri(test_audio_uri);
+        } catch (const std::exception& e) {
+            std::cerr << "exception while getting meta data: " << e.what() << std::endl;
+            throw;
+        } catch (...) {
+            std::cerr << "exception while getting meta data" << std::endl;
+            throw;
+        }
     });
 
     if (0 < md.count(xesam::Album::name))
