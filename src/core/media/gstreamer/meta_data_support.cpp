@@ -26,7 +26,7 @@ static unsigned short crc16_table[256];
 namespace gstreamer
 {
 
-bool gstreamer::MetaDataSupport::crc16_table_init = true;
+bool gstreamer::MetaDataSupport::crc16_table_init = false;
 std::string gstreamer::MetaDataSupport::tempDirName = "";
 
 static void initCRCTable() {
@@ -138,6 +138,7 @@ bool gstreamer::MetaDataSupport::checkForImageData(const gchar *tagName,
 
     if(gst_buffer_map(buffer, &mapInfo, GST_MAP_READ)) {
         unsigned short crc = computeBufferCRC(mapInfo.data, mapInfo.size);
+MH_INFO("image data crc: %d", crc);
         if(md.embeddedAlbumArtSize != mapInfo.size
            || md.embeddedAlbumArtCRC != crc) {
             if(MetaDataSupport::createTempAlbumArtFile(md, mapInfo)) {
