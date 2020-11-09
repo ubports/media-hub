@@ -59,8 +59,6 @@ class PlayerSkeleton : public core::ubuntu::media::Player
         std::shared_ptr<core::dbus::Object> session;
         // The Service instance that manages Player instances
         core::ubuntu::media::Service* player_service;
-        // The asio service for async timers
-        boost::asio::io_service& io_service;
         // Our functional dependencies.
         apparmor::ubuntu::RequestContextResolver::Ptr request_context_resolver;
         apparmor::ubuntu::RequestAuthenticator::Ptr request_authenticator;

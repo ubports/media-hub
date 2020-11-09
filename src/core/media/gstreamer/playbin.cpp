@@ -118,16 +118,6 @@ void gstreamer::Playbin::source_setup(GstElement*,
     static_cast<Playbin*>(user_data)->setup_source(source);
 }
 
-void gstreamer::Playbin::streams_changed(GstElement *pipeline,
-                                         gpointer /*user_data*/)
-{
-    /* We are possibly in a GStreamer working thread, so we notify the main
-     * thread of this event through a message in the bus */
-    gst_element_post_message(pipeline,
-        gst_message_new_application(GST_OBJECT(pipeline),
-            gst_structure_new_empty("streams-changed")));
-}
-
 gstreamer::Playbin::Playbin(const core::ubuntu::media::Player::PlayerKey key_in)
     : pipeline(gst_element_factory_make("playbin", pipeline_name().c_str())),
       bus{gst_element_get_bus(pipeline)},
@@ -177,20 +167,6 @@ gstreamer::Playbin::Playbin(const core::ubuntu::media::Player::PlayerKey key_in)
         G_CALLBACK(source_setup),
         this
         );
-
-    audio_changed_handler_id = g_signal_connect(
-        pipeline,
-        "audio-changed",
-        G_CALLBACK(streams_changed),
-        this
-        );
-
-    video_changed_handler_id = g_signal_connect(
-        pipeline,
-        "video-changed",
-        G_CALLBACK(streams_changed),
-        this
-        );
 }
 
 // Note that we might be accessing freed memory here, so activate DEBUG_REFS
@@ -219,8 +195,6 @@ gstreamer::Playbin::~Playbin()
 
     g_signal_handler_disconnect(pipeline, about_to_finish_handler_id);
     g_signal_handler_disconnect(pipeline, source_setup_handler_id);
-    g_signal_handler_disconnect(pipeline, audio_changed_handler_id);
-    g_signal_handler_disconnect(pipeline, video_changed_handler_id);
 
     if (pipeline)
         gst_object_unref(pipeline);
@@ -336,10 +310,6 @@ void gstreamer::Playbin::process_message_element(GstMessage *message)
     {
         send_frame_ready();
     }
-    else if (g_strcmp0("streams-changed", struct_name) == 0)
-    {
-        update_media_file_type();
-    }
     else
     {
         MH_ERROR("Unknown GST_MESSAGE_ELEMENT with struct %s", struct_name);
@@ -366,7 +336,6 @@ void gstreamer::Playbin::on_new_message_async(const Bus::Message& message)
         }
         signals.on_state_changed(std::make_pair(message.detail.state_changed, message.source));
         break;
-    case GST_MESSAGE_APPLICATION:
     case GST_MESSAGE_ELEMENT:
         if (gst_is_missing_plugin_message(message.message))
             process_missing_plugin_message(message.message);
@@ -582,6 +551,10 @@ void gstreamer::Playbin::set_uri(
     }
 
     g_object_set(pipeline, "uri", tmp_uri.c_str(), NULL);
+    if (is_video_file(tmp_uri))
+        file_type = MEDIA_FILE_TYPE_VIDEO;
+    else if (is_audio_file(tmp_uri))
+        file_type = MEDIA_FILE_TYPE_AUDIO;
 
     request_headers = headers;
 
@@ -608,20 +581,6 @@ void gstreamer::Playbin::setup_source(GstElement *source)
             g_object_set(source, "user-agent", request_headers["User-Agent"].c_str(), NULL);
         }
     }
-}
-
-void gstreamer::Playbin::update_media_file_type()
-{
-    int videoStreamCount = 0, audioStreamCount = 0;
-    g_object_get(pipeline, "n-video", &videoStreamCount, NULL);
-    g_object_get(pipeline, "n-audio", &audioStreamCount, NULL);
-    MH_DEBUG("streams changed: file has %d video streams and %d audio streams",
-             videoStreamCount, audioStreamCount);
-
-    if (videoStreamCount > 0)
-        file_type = MEDIA_FILE_TYPE_VIDEO;
-    else if (audioStreamCount > 0)
-        file_type = MEDIA_FILE_TYPE_AUDIO;
 }
 
 std::string gstreamer::Playbin::uri() const
@@ -898,6 +857,53 @@ std::string gstreamer::Playbin::decode_uri(const std::string& uri) const
     const std::string decoded{decoded_gchar};
     g_free(decoded_gchar);
     return decoded;
+}
+
+std::string gstreamer::Playbin::get_file_content_type(const std::string& uri) const
+{
+    if (uri.empty())
+        return std::string();
+
+    const std::string encoded_uri{encode_uri(uri)};
+
+    const std::string content_type {file_info_from_uri(encoded_uri)};
+    if (content_type.empty())
+    {
+        MH_WARNING("Failed to get actual track content type");
+        return std::string("audio/video/");
+    }
+
+    MH_INFO("Found content type: %s", content_type);
+
+    return content_type;
+}
+
+bool gstreamer::Playbin::is_audio_file(const std::string& uri) const
+{
+    if (uri.empty())
+        return false;
+
+    if (get_file_content_type(uri).find("audio/") == 0)
+    {
+        MH_INFO("Found audio content");
+        return true;
+    }
+
+    return false;
+}
+
+bool gstreamer::Playbin::is_video_file(const std::string& uri) const
+{
+    if (uri.empty())
+        return false;
+
+    if (get_file_content_type(uri).find("video/") == 0)
+    {
+        MH_INFO("Found video content");
+        return true;
+    }
+
+    return false;
 }
 
 gstreamer::Playbin::MediaFileType gstreamer::Playbin::media_file_type() const
