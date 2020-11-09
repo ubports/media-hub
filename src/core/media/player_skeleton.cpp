@@ -42,9 +42,6 @@
 #include <core/dbus/asio/executor.h>
 #include <core/dbus/interfaces/properties.h>
 
-#include <chrono>
-#include <boost/asio/steady_timer.hpp>
-
 namespace dbus = core::dbus;
 namespace media = core::ubuntu::media;
 
@@ -53,7 +50,6 @@ struct media::PlayerSkeleton::Private
     Private(media::PlayerSkeleton* player,
             const std::shared_ptr<core::dbus::Bus>& bus,
             const std::shared_ptr<core::dbus::Object>& session,
-            boost::asio::io_service& io_service,
             const apparmor::ubuntu::RequestContextResolver::Ptr& request_context_resolver,
             const apparmor::ubuntu::RequestAuthenticator::Ptr& request_authenticator)
         : impl(player),
@@ -71,8 +67,7 @@ struct media::PlayerSkeleton::Private
               skeleton.signals.playback_status_changed,
               skeleton.signals.video_dimension_changed,
               skeleton.signals.error,
-              skeleton.signals.buffering_changed,
-              io_service,
+              skeleton.signals.buffering_changed
           }
     {
     }
@@ -320,9 +315,7 @@ struct media::PlayerSkeleton::Private
                 const std::shared_ptr<DBusPlaybackStatusChangedSignal>& remote_playback_status_changed,
                 const std::shared_ptr<DBusVideoDimensionChangedSignal>& remote_video_dimension_changed,
                 const std::shared_ptr<DBusErrorSignal>& remote_error,
-                const std::shared_ptr<DBusBufferingChangedSignal>& remote_buffering_changed,
-                boost::asio::io_service& io_service)
-            : buffering_signal_timeout(io_service)
+                const std::shared_ptr<DBusBufferingChangedSignal>& remote_buffering_changed)
         {
             seeked_to.connect([remote_seeked](std::uint64_t value)
             {
@@ -354,32 +347,9 @@ struct media::PlayerSkeleton::Private
                 remote_error->emit(e);
             });
 
-            buffering_changed.connect([this, remote_buffering_changed](int value)
+            buffering_changed.connect([remote_buffering_changed](int value)
             {
-                auto now = std::chrono::steady_clock::now();
-                auto time_since_last_emission = now - buffering_signal_last_emission;
-                if (value >= 100 ||
-                    time_since_last_emission > std::chrono::milliseconds(500)) {
-                    // Send the signal immediately
-                    buffering_signal_timeout.cancel();
-                    buffering_signal_value = -1;
-                    remote_buffering_changed->emit(value);
-                    buffering_signal_last_emission = now;
-                } else {
-                    if (buffering_signal_value < 0) {
-                        auto next_emission_time = buffering_signal_last_emission + std::chrono::milliseconds(500);
-                        buffering_signal_timeout.expires_at(next_emission_time);
-                        buffering_signal_timeout.async_wait(
-                            [this, remote_buffering_changed](const boost::system::error_code& ec) {
-                            if (ec == boost::asio::error::operation_aborted)
-                                return;
-                            remote_buffering_changed->emit(buffering_signal_value);
-                            buffering_signal_last_emission = std::chrono::steady_clock::now();
-                            buffering_signal_value = -1;
-                        });
-                    }
-                    buffering_signal_value = value;
-                }
+                remote_buffering_changed->emit(value);
             });
 
         }
@@ -391,15 +361,12 @@ struct media::PlayerSkeleton::Private
         core::Signal<media::video::Dimensions> video_dimension_changed;
         core::Signal<media::Player::Error> error;
         core::Signal<int> buffering_changed;
-        boost::asio::steady_timer buffering_signal_timeout;
-        std::chrono::steady_clock::time_point buffering_signal_last_emission;
-        int buffering_signal_value = -1;
     } signals;
 
 };
 
 media::PlayerSkeleton::PlayerSkeleton(const media::PlayerSkeleton::Configuration& config)
-        : d(new Private{this, config.bus, config.session, config.io_service, config.request_context_resolver, config.request_authenticator})
+        : d(new Private{this, config.bus, config.session, config.request_context_resolver, config.request_authenticator})
 {
     // Setup method handlers for mpris::Player methods.
     auto next = std::bind(&Private::handle_next, d, std::placeholders::_1);

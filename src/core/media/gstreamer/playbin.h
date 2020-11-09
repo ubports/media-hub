@@ -66,8 +66,6 @@ struct Playbin
                              GstElement *source,
                              gpointer user_data);
 
-    static void streams_changed(GstElement*, gpointer user_data);
-
     Playbin(const core::ubuntu::media::Player::PlayerKey key);
     ~Playbin();
 
@@ -102,8 +100,6 @@ struct Playbin
 
     void setup_source(GstElement *source);
 
-    void update_media_file_type();
-
     // Sets the pipeline state in the main thread context instead of the possibility of creating
     // a deadlock in the streaming thread
     static gboolean set_state_in_main_thread(gpointer user_data);
@@ -118,6 +114,10 @@ struct Playbin
     std::string file_info_from_uri(const std::string& uri) const;
     std::string encode_uri(const std::string& uri) const;
     std::string decode_uri(const std::string& uri) const;
+    std::string get_file_content_type(const std::string& uri) const;
+
+    bool is_audio_file(const std::string& uri) const;
+    bool is_video_file(const std::string& uri) const;
 
     MediaFileType media_file_type() const;
 
@@ -136,8 +136,6 @@ struct Playbin
     core::ubuntu::media::Player::Lifetime player_lifetime;
     gulong about_to_finish_handler_id;
     gulong source_setup_handler_id;
-    gulong audio_changed_handler_id;
-    gulong video_changed_handler_id;
     struct
     {
         core::Signal<void> about_to_finish;

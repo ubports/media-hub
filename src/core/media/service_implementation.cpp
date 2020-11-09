@@ -194,7 +194,6 @@ std::shared_ptr<media::Player> media::ServiceImplementation::create_session(
             conf.service,
             conf.session,
             conf.player_service,
-            d->configuration.external_services.io_service,
             d->request_context_resolver,
             d->request_authenticator
         },
