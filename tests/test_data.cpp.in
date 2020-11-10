@@ -17,13 +17,13 @@
  */
 
 #include "test_data.h"
-
+#include <iostream>
 #include <boost/filesystem.hpp>
 
 bool test::copy_test_media_file_to(const std::string& media, const std::string& dest)
 {
-    static const std::string file{"@CMAKE_CURRENT_SOURCE_DIR@/" + media};
-
+    const std::string file{"@CMAKE_CURRENT_SOURCE_DIR@/" + media};
+    std::cerr << media << " -> " << file << " -> " << dest << std::endl;
     try
     {
         boost::filesystem::copy_file(
