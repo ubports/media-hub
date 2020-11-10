@@ -181,9 +181,9 @@ TEST(GStreamerEngine, setting_uri_and_audio_playback_with_http_headers_works)
               headers[conn->http_headers[i].name].insert(conn->http_headers[i].value);
             }
 
-            EXPECT_TRUE(headers.at("User-Agent").count("MediaHub") == 1);
-            EXPECT_TRUE(headers.at("Cookie").count("A=B") == 1);
-            EXPECT_TRUE(headers.at("Cookie").count("X=Y") == 1);
+            EXPECT_EQ(headers.at("User-Agent").count("MediaHub"), 1);
+            EXPECT_EQ(headers.at("Cookie").count("A=B"), 1);
+            EXPECT_EQ(headers.at("Cookie").count("X=Y"), 1);
 
             mg_send_file(conn, test_file.c_str(), 0);
             return MG_MORE;
