@@ -219,7 +219,7 @@ struct gstreamer::Engine::Private
 
         // We update instead of creating from scratch if same uri
         auto &tuple = track_meta_data.get();
-        if (playbin.uri() == std::get<0>(tuple)) 
+        if (playbin.uri() == std::get<0>(tuple))
             md = std::get<1>(tuple);
         else 
             cleanupAlbumArtFile(std::get<1>(tuple));
