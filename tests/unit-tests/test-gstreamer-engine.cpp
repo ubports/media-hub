@@ -424,7 +424,8 @@ TEST(GStreamerEngine, meta_data_extractor_provides_correct_tags)
             std::cerr << "runtime_error while getting meta data: " << error.what() << std::endl;
             // as the audio is not being played but just being parsed this runtime error is 
             // expected. see meta_data_extractor.h: meta_data_for_track_with_uri
-            if(error.what() != "Problem extracting meta data for track")
+            const std::string rtem{"Problem extracting meta data for track"};
+            if(rtem.compare(error.what()) != 0)
                 throw;
         } catch (const std::exception& e) {
             std::cerr << "exception while getting meta data: " << e.what() << std::endl;
@@ -484,7 +485,8 @@ TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art)
             std::cerr << "runtime_error while getting meta data: " << error.what() << std::endl;
             // as the audio is not being played but just being parsed this runtime error is 
             // expected. see meta_data_extractor.h: meta_data_for_track_with_uri
-            if(error.what() != "Problem extracting meta data for track")
+            const std::string rtem{"Problem extracting meta data for track"};
+            if(rtem.compare(error.what()) != 0)
                 throw;
         } catch (const std::exception& e) {
             std::cerr << "exception while getting meta data: " << e.what() << std::endl;
