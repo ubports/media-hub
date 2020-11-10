@@ -190,8 +190,11 @@ struct media::PlayerImplementation<Parent>::Private :
     {
         return [this](const media::Player::PlaybackStatus& status)
         {
-            MH_INFO("Emiting playback_status_changed signal: %s", status);
-            parent->emit_playback_status_changed(status);
+            const auto n_tracks = track_list->tracks()->size();
+            if (n_tracks > 0) {
+                MH_INFO("Emitting playback_status_changed signal: %s", status);
+                parent->emit_playback_status_changed(status);
+            }
         };
     }
 
@@ -373,7 +376,9 @@ struct media::PlayerImplementation<Parent>::Private :
         media::Track::MetaData metadata{md};
         if (not metadata.is_set(media::Track::MetaData::TrackIdKey))
         {
-            const std::string current_track = track_list->current();
+            const auto n_tracks = track_list->tracks()->size();
+            const std::string current_track =
+                n_tracks > 0 ? track_list->current() : std::string();
             if (not current_track.empty())
             {
                 const std::size_t last_slash = current_track.find_last_of("/");
