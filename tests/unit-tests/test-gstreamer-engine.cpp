@@ -440,7 +440,8 @@ TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art)
     const std::string test_file{"/tmp/test-audio.ogg"};
     std::remove(test_file.c_str());
     ASSERT_TRUE(test::copy_test_media_file_to("test-audio.ogg", test_file));
-    const std::string test_audio_uri{"http://localhost:5000"};
+    //const std::string test_audio_uri{"http://localhost:5000"};
+    const std::string test_audio_uri{"http://www.wndbz.nl/ubuntu-touch/test-audio.ogg"};
     //const std::string test_audio_uri{"file:///tmp/test-audio.ogg"};
 
     // test server
