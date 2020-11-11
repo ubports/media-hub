@@ -447,13 +447,67 @@ TEST(GStreamerEngine, meta_data_extractor_provides_correct_tags)
         EXPECT_EQ("42", md.get(xesam::TrackNumber::name));
 }
 
-TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art)
+TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art_file)
 {
     const std::string test_file{"/tmp/test-audio.ogg"};
     std::remove(test_file.c_str());
     ASSERT_TRUE(test::copy_test_media_file_to("test-audio.ogg", test_file));
-    //const std::string test_audio_uri{"http://localhost:5000"};
     const std::string test_audio_uri{"file:///tmp/test-audio.ogg"};
+
+    // test
+    core::ubuntu::media::Track::MetaData md;
+    gstreamer::Engine engine{0};
+
+    ASSERT_NO_THROW({
+        try {
+            md = engine.meta_data_extractor()->meta_data_for_track_with_uri(test_audio_uri);
+	} catch (const std::runtime_error& error) {
+            std::cerr << "runtime_error while getting meta data: " << error.what() << std::endl;
+            // as the audio is not being played but just being parsed this runtime error is 
+            // expected. see meta_data_extractor.h: meta_data_for_track_with_uri
+            const std::string rtem{"Problem extracting meta data for track"};
+            if(rtem.compare(error.what()) != 0)
+                throw;
+        } catch (const std::exception& e) {
+            std::cerr << "exception while getting meta data: " << e.what() << std::endl;
+            throw;
+        }
+    });
+
+    // old tags still ok?
+    if (0 < md.count(xesam::Album::name))
+        EXPECT_EQ("Test", md.get(xesam::Album::name));
+    else
+        std::cerr << "no xesam::Album::name" << std::endl;
+    if (0 < md.count(xesam::Artist::name))
+        EXPECT_EQ("Test", md.get(xesam::Artist::name));
+    else
+        std::cerr << "no xesam::Artist::name" << std::endl;
+    if (0 < md.count(xesam::AlbumArtist::name))
+        EXPECT_EQ("Test", md.get(xesam::AlbumArtist::name));
+    else
+        std::cerr << "no xesam::AlbumArtist::name" << std::endl;
+    if (0 < md.count(xesam::Genre::name))
+        EXPECT_EQ("Test", md.get(xesam::Genre::name));
+    else
+        std::cerr << "no xesam::Genre::name" << std::endl;
+
+    // found and handled embedded album art
+    EXPECT_TRUE(md.has_embedded_album_art());
+    EXPECT_EQ(0x9599, md.embeddedAlbumArtCRC);
+    ASSERT_TRUE(test::file_exists(md.embeddedAlbumArtFileName));
+
+    // does it clean it up?
+    gstreamer::MetaDataSupport::cleanupTempAlbumArtFile(md);
+    ASSERT_FALSE(test::file_exists(md.embeddedAlbumArtFileName));
+}
+
+TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art_http_local)
+{
+    const std::string test_file{"/tmp/test-audio.ogg"};
+    std::remove(test_file.c_str());
+    ASSERT_TRUE(test::copy_test_media_file_to("test-audio.ogg", test_file));
+    const std::string test_audio_uri{"http://localhost:5000"};
 
     // test server
     core::testing::CrossProcessSync cps;
@@ -472,6 +526,58 @@ TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art)
                 core::posix::StandardStream::empty);
     cps.wait_for_signal_ready_for(std::chrono::seconds{2});
     std::this_thread::sleep_for(std::chrono::milliseconds{500});
+
+    // test
+    core::ubuntu::media::Track::MetaData md;
+    gstreamer::Engine engine{0};
+
+    ASSERT_NO_THROW({
+        try {
+            md = engine.meta_data_extractor()->meta_data_for_track_with_uri(test_audio_uri);
+	} catch (const std::runtime_error& error) {
+            std::cerr << "runtime_error while getting meta data: " << error.what() << std::endl;
+            // as the audio is not being played but just being parsed this runtime error is 
+            // expected. see meta_data_extractor.h: meta_data_for_track_with_uri
+            const std::string rtem{"Problem extracting meta data for track"};
+            if(rtem.compare(error.what()) != 0)
+                throw;
+        } catch (const std::exception& e) {
+            std::cerr << "exception while getting meta data: " << e.what() << std::endl;
+            throw;
+        }
+    });
+
+    // old tags still ok?
+    if (0 < md.count(xesam::Album::name))
+        EXPECT_EQ("Test", md.get(xesam::Album::name));
+    else
+        std::cerr << "no xesam::Album::name" << std::endl;
+    if (0 < md.count(xesam::Artist::name))
+        EXPECT_EQ("Test", md.get(xesam::Artist::name));
+    else
+        std::cerr << "no xesam::Artist::name" << std::endl;
+    if (0 < md.count(xesam::AlbumArtist::name))
+        EXPECT_EQ("Test", md.get(xesam::AlbumArtist::name));
+    else
+        std::cerr << "no xesam::AlbumArtist::name" << std::endl;
+    if (0 < md.count(xesam::Genre::name))
+        EXPECT_EQ("Test", md.get(xesam::Genre::name));
+    else
+        std::cerr << "no xesam::Genre::name" << std::endl;
+
+    // found and handled embedded album art
+    EXPECT_TRUE(md.has_embedded_album_art());
+    EXPECT_EQ(0x9599, md.embeddedAlbumArtCRC);
+    ASSERT_TRUE(test::file_exists(md.embeddedAlbumArtFileName));
+
+    // does it clean it up?
+    gstreamer::MetaDataSupport::cleanupTempAlbumArtFile(md);
+    ASSERT_FALSE(test::file_exists(md.embeddedAlbumArtFileName));
+}
+
+TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art_http_remote)
+{
+    const std::string test_audio_uri{"http://www.wndbz.nl/ubuntu-touch/test-audio.ogg"};
 
     // test
     core::ubuntu::media::Track::MetaData md;
