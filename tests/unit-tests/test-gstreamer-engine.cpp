@@ -433,21 +433,27 @@ TEST(GStreamerEngine, meta_data_extractor_provides_correct_tags)
         }
     });
 
-    if (0 < md.count(xesam::Album::name))
+    EXPECT_GT(md.count(xesam::Album::name), 0);
+    if (md.count(xesam::Album::name) > 0)
         EXPECT_EQ("Test", md.get(xesam::Album::name));
-    if (0 < md.count(xesam::AlbumArtist::name))
+    EXPECT_GT(md.count(xesam::AlbumArtist::name), 0);
+    if (md.count(xesam::AlbumArtist::name) > 0)
         EXPECT_EQ("Test", md.get(xesam::AlbumArtist::name));
-    if (0 < md.count(xesam::Artist::name))
+    EXPECT_GT(md.count(xesam::Artist::name), 0);
+    if (md.count(xesam::Artist::name) > 0)
         EXPECT_EQ("Ezwa", md.get(xesam::Artist::name));
-    if (0 < md.count(xesam::DiscNumber::name))
+    EXPECT_GT(md.count(xesam::DiscNumber::name), 0);
+    if (md.count(xesam::DiscNumber::name) > 0)
         EXPECT_EQ("1", md.get(xesam::DiscNumber::name));
-    if (0 < md.count(xesam::Genre::name))
+    EXPECT_GT(md.count(xesam::Genre::name), 0);
+    if (md.count(xesam::Genre::name) > 0)
         EXPECT_EQ("Test", md.get(xesam::Genre::name));
-    if (0 < md.count(xesam::TrackNumber::name))
+    EXPECT_GT(md.count(xesam::TrackNumber::name), 0);
+    if (md.count(xesam::TrackNumber::name) > 0)
         EXPECT_EQ("42", md.get(xesam::TrackNumber::name));
 }
 
-TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art_file)
+/*TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art_file)
 {
     const std::string test_file{"/tmp/test-audio.ogg"};
     std::remove(test_file.c_str());
@@ -500,7 +506,8 @@ TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art_file)
     // does it clean it up?
     gstreamer::MetaDataSupport::cleanupTempAlbumArtFile(md);
     ASSERT_FALSE(test::file_exists(md.embeddedAlbumArtFileName));
-}
+
+}*/
 
 TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art_http_local)
 {
@@ -548,22 +555,18 @@ TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art_http_local
     });
 
     // old tags still ok?
-    if (0 < md.count(xesam::Album::name))
-        EXPECT_EQ("Test", md.get(xesam::Album::name));
-    else
-        std::cerr << "no xesam::Album::name" << std::endl;
-    if (0 < md.count(xesam::Artist::name))
-        EXPECT_EQ("Test", md.get(xesam::Artist::name));
-    else
-        std::cerr << "no xesam::Artist::name" << std::endl;
-    if (0 < md.count(xesam::AlbumArtist::name))
-        EXPECT_EQ("Test", md.get(xesam::AlbumArtist::name));
-    else
-        std::cerr << "no xesam::AlbumArtist::name" << std::endl;
-    if (0 < md.count(xesam::Genre::name))
-        EXPECT_EQ("Test", md.get(xesam::Genre::name));
-    else
-        std::cerr << "no xesam::Genre::name" << std::endl;
+    EXPECT_GT(md.count(xesam::Album::name), 0);
+    if (md.count(xesam::Album::name) > 0)
+      EXPECT_EQ("Test", md.get(xesam::Album::name));
+    EXPECT_GT(md.count(xesam::Artist::name), 0);
+    if (md.count(xesam::Artist::name) > 0)
+      EXPECT_EQ("Test", md.get(xesam::Artist::name));
+    EXPECT_GT(md.count(xesam::AlbumArtist::name), 0);
+    if (md.count(xesam::AlbumArtist::name) > 0)
+      EXPECT_EQ("Test", md.get(xesam::AlbumArtist::name));
+    EXPECT_GT(md.count(xesam::Genre::name), 0);
+    if (md.count(xesam::Genre::name) > 0)
+      EXPECT_EQ("Test", md.get(xesam::Genre::name));
 
     // found and handled embedded album art
     EXPECT_TRUE(md.has_embedded_album_art());
@@ -575,7 +578,7 @@ TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art_http_local
     ASSERT_FALSE(test::file_exists(md.embeddedAlbumArtFileName));
 }
 
-TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art_http_remote)
+/*TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art_http_remote)
 {
     const std::string test_audio_uri{"http://www.wndbz.nl/ubuntu-touch/test-audio.ogg"};
 
@@ -625,4 +628,4 @@ TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art_http_remot
     // does it clean it up?
     gstreamer::MetaDataSupport::cleanupTempAlbumArtFile(md);
     ASSERT_FALSE(test::file_exists(md.embeddedAlbumArtFileName));
-}
+}*/
