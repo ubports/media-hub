@@ -476,7 +476,7 @@ TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art_from_strea
                 std::bind(testing::a_web_server(configuration), cps),
                 core::posix::StandardStream::empty);
     cps.wait_for_signal_ready_for(std::chrono::seconds{2});
-    std::this_thread::sleep_for(std::chrono::milliseconds{500});
+    std::this_thread::sleep_for(std::chrono::milliseconds{1000});
 
     // test
     core::ubuntu::media::Track::MetaData md;
@@ -498,21 +498,21 @@ TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art_from_strea
         }
     });
 
-    // old tags still ok?
-    EXPECT_GT(md.count(xesam::Album::name), 0);
+    // other tags still ok?
+    EXPECT_TRUE(md.count(xesam::Album::name) > 0);
     if (md.count(xesam::Album::name) > 0)
       EXPECT_EQ("Test", md.get(xesam::Album::name));
-    EXPECT_GT(md.count(xesam::Artist::name), 0);
+    EXPECT_TRUE(md.count(xesam::Artist::name) > 0);
     if (md.count(xesam::Artist::name) > 0)
       EXPECT_EQ("Test", md.get(xesam::Artist::name));
-    EXPECT_GT(md.count(xesam::AlbumArtist::name), 0);
+    EXPECT_TRUE(md.count(xesam::AlbumArtist::name) > 0);
     if (md.count(xesam::AlbumArtist::name) > 0)
       EXPECT_EQ("Test", md.get(xesam::AlbumArtist::name));
-    EXPECT_GT(md.count(xesam::Genre::name), 0);
+    EXPECT_TRUE(md.count(xesam::Genre::name) > 0);
     if (md.count(xesam::Genre::name) > 0)
       EXPECT_EQ("Test", md.get(xesam::Genre::name));
 
-    // found and handled embedded album art
+    // found and handled embedded album art?
     EXPECT_TRUE(md.has_embedded_album_art());
     EXPECT_EQ(0x9599, md.embeddedAlbumArtCRC);
     ASSERT_TRUE(test::file_exists(md.embeddedAlbumArtFileName));
