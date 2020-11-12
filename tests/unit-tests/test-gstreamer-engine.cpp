@@ -418,37 +418,25 @@ TEST(GStreamerEngine, meta_data_extractor_provides_correct_tags)
 
     core::ubuntu::media::Track::MetaData md;
     ASSERT_NO_THROW({
-        try {
-            md = engine.meta_data_extractor()->meta_data_for_track_with_uri(test_file_uri);
-	} catch (const std::runtime_error& error) {
-            std::cerr << "runtime_error while getting meta data: " << error.what() << std::endl;
-            // as the audio is not being played but just being parsed this runtime error is 
-            // expected. see meta_data_extractor.h: meta_data_for_track_with_uri
-            const std::string rtem{"Problem extracting meta data for track"};
-            if(rtem.compare(error.what()) != 0)
-                throw;
-        } catch (const std::exception& e) {
-            std::cerr << "exception while getting meta data: " << e.what() << std::endl;
-            throw;
-        }
+        md = engine.meta_data_extractor()->meta_data_for_track_with_uri(test_file_uri);
     });
 
-    EXPECT_GT(md.count(xesam::Album::name), 0);
+    EXPECT_TRUE(md.count(xesam::Album::name) > 0);
     if (md.count(xesam::Album::name) > 0)
         EXPECT_EQ("Test", md.get(xesam::Album::name));
-    EXPECT_GT(md.count(xesam::AlbumArtist::name), 0);
+    EXPECT_TRUE(md.count(xesam::AlbumArtist::name) > 0);
     if (md.count(xesam::AlbumArtist::name) > 0)
         EXPECT_EQ("Test", md.get(xesam::AlbumArtist::name));
-    EXPECT_GT(md.count(xesam::Artist::name), 0);
+    EXPECT_TRUE(md.count(xesam::Artist::name) > 0);
     if (md.count(xesam::Artist::name) > 0)
         EXPECT_EQ("Ezwa", md.get(xesam::Artist::name));
-    EXPECT_GT(md.count(xesam::DiscNumber::name), 0);
+    EXPECT_TRUE(md.count(xesam::DiscNumber::name) > 0);
     if (md.count(xesam::DiscNumber::name) > 0)
         EXPECT_EQ("1", md.get(xesam::DiscNumber::name));
-    EXPECT_GT(md.count(xesam::Genre::name), 0);
+    EXPECT_TRUE(md.count(xesam::Genre::name) > 0);
     if (md.count(xesam::Genre::name) > 0)
         EXPECT_EQ("Test", md.get(xesam::Genre::name));
-    EXPECT_GT(md.count(xesam::TrackNumber::name), 0);
+    EXPECT_TRUE(md.count(xesam::TrackNumber::name) > 0);
     if (md.count(xesam::TrackNumber::name) > 0)
         EXPECT_EQ("42", md.get(xesam::TrackNumber::name));
 }
