@@ -83,6 +83,12 @@ struct gstreamer::Engine::Private
                 playbin.reset();
                 const media::Player::Error e = media::Player::Error::format_error;
                 error(e);
+#if 0
+            } else if (status == media::Player::PlaybackStatus::paused &&
+                       (state == Engine::State::ready || state == Engine::State::stopped)) {
+                MH_DEBUG("######################################################################");
+                MH_DEBUG("ignoring paused state while setup");
+#endif
             } else {
                 playback_status_changed(status);
             }

@@ -48,8 +48,10 @@ void gstreamer::Playbin::setup_video_sink_for_buffer_streaming()
     GstContext *context;
     GstStructure *structure;
 
+    MH_DEBUG("");
     switch (backend) {
     case core::ubuntu::media::AVBackend::Backend::hybris:
+        MH_DEBUG("hybris backend");
         // Get the service-side BufferQueue (IGraphicBufferProducer) and
         // associate with it the SurfaceTextureClientHybris instance.
         igbp = decoding_service_get_igraphicbufferproducer();
@@ -66,6 +68,7 @@ void gstreamer::Playbin::setup_video_sink_for_buffer_streaming()
         gst_element_set_context(pipeline, context);
         break;
     case core::ubuntu::media::AVBackend::Backend::mir:
+        MH_DEBUG("mir backend");
         // Connect to buffer consumer socket
         connect_to_consumer();
         // Configure mirsink so it exports buffers (otherwise it would create
@@ -74,6 +77,7 @@ void gstreamer::Playbin::setup_video_sink_for_buffer_streaming()
         break;
     case core::ubuntu::media::AVBackend::Backend::none:
     default:
+        MH_DEBUG("none backend");
         throw core::ubuntu::media::Player::Errors::
             OutOfProcessBufferStreamingNotSupported{};
     }
@@ -445,6 +449,7 @@ void gstreamer::Playbin::setup_pipeline_for_audio_video()
     flags &= ~GST_PLAY_FLAG_TEXT;
     g_object_set (pipeline, "flags", flags, nullptr);
 
+    MH_DEBUG("flags: %x", flags);
     const char *asink_name = ::getenv("CORE_UBUNTU_MEDIA_SERVICE_AUDIO_SINK_NAME");
 
     if (asink_name == nullptr)
@@ -464,6 +469,7 @@ void gstreamer::Playbin::setup_pipeline_for_audio_video()
         else if (backend == core::ubuntu::media::AVBackend::Backend::mir)
             vsink_name = MIR_SINK;
     }
+    MH_DEBUG("vsink_name: %s", vsink_name);
 
     if (vsink_name) {
         video_sink_name = vsink_name;
@@ -613,6 +619,8 @@ void gstreamer::Playbin::set_uri(
          * inspect the media and report the number of audio and video streams
          */
         set_state_and_wait(GST_STATE_PAUSED, true);
+        set_state_and_wait(GST_STATE_READY, true);
+        //gst_element_set_state(pipeline, GST_STATE_READY);
     }
 
     request_headers = headers;
