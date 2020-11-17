@@ -175,19 +175,19 @@ TEST(GStreamerEngine, setting_uri_and_audio_playback_with_http_headers_works)
     testing::web::server::Configuration configuration
     {
         5000,
-        [test_file](mg_connection* conn)
+        [test_file](struct mg_connection* conn, struct http_message* hm)
         {
             std::map<std::string, std::set<std::string>> headers;
-            for (int i = 0; i < conn->num_headers; ++i) {
-              headers[conn->http_headers[i].name].insert(conn->http_headers[i].value);
+            for (int i = 0; hm->header_names[i].len > 0; i++) {
+              headers[hm->header_names[i].p].insert(hm->header_values[i].p);
             }
 
             EXPECT_TRUE(headers.at("User-Agent").count("MediaHub") == 1);
             EXPECT_TRUE(headers.at("Cookie").count("A=B") == 1);
             EXPECT_TRUE(headers.at("Cookie").count("X=Y") == 1);
 
-            mg_send_file(conn, test_file.c_str(), 0);
-            return MG_MORE;
+            mg_http_serve_file(conn, hm, test_file.c_str(),
+                               mg_mk_str("audio/ogg"), mg_mk_str(""));
         }
     };
 
@@ -446,18 +446,20 @@ TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art_from_strea
     const std::string test_file{"/tmp/test-audio.ogg"};
     std::remove(test_file.c_str());
     ASSERT_TRUE(test::copy_test_media_file_to("test-audio.ogg", test_file));
-    const std::string test_audio_uri{"http://localhost:5000"};
+    //const std::string test_audio_uri{"http://localhost:5000"};
+    const std::string test_audio_uri{"http://www.wndbz.nl/ubuntu-touch/test-audio.ogg"};
 
     // test server
     core::testing::CrossProcessSync cps;
     testing::web::server::Configuration configuration
     {
         5000,
-        [test_file](mg_connection* conn)
+        [test_file](struct mg_connection* conn, struct http_message* hm)
         {
             std::cerr << "test server will call mg_send_file" << std::endl;
-            mg_send_file(conn, test_file.c_str(), 0);
-            return MG_MORE;
+            mg_http_serve_file(conn, hm, test_file.c_str(),
+                               mg_mk_str("audio/ogg"), mg_mk_str(""));
+            //mg_send_file(conn, test_file.c_str());
         }
     };
     auto server = core::posix::fork(

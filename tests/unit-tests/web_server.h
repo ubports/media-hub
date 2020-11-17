@@ -41,7 +41,7 @@ struct Configuration
     // The port to expose the web-server on.
     std::uint16_t port;
     // Function that is invoked for individual client requests.
-    std::function<int(mg_connection*)> request_handler;
+    std::function<void(struct mg_connection*, struct http_message*)> request_handler;
 };
 }
 }
@@ -64,26 +64,17 @@ inline std::function<core::posix::exit::Status(core::testing::CrossProcessSync& 
 
         struct Context
         {
-            static int on_request(mg_connection* conn, mg_event ev)
-            {
-                auto thiz = static_cast<Context*>(conn->server_param);
-
-                switch (ev)
-                {
-                case MG_REQUEST:
-                    return thiz->handle_request(conn);
-                case MG_AUTH:
-                    return MG_TRUE;
-                default:
-                    return MG_FALSE;
+            static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
+		auto thiz = static_cast<Context*>(nc->user_data);
+                if (ev == MG_EV_HTTP_REQUEST) {
+                   thiz->handle_request(nc, ev_data);
                 }
-
-                return MG_FALSE;
             }
 
-            int handle_request(mg_connection* conn)
+            int handle_request(mg_connection* conn, void *ev_data)
             {
-                return configuration.request_handler(conn);
+                struct http_message *hm = (struct http_message *) ev_data;
+                configuration.request_handler(conn, hm);
             }
 
             const testing::web::server::Configuration& configuration;
@@ -97,22 +88,31 @@ inline std::function<core::posix::exit::Status(core::testing::CrossProcessSync& 
             }
         };
 
-        auto server = mg_create_server(&context, Context::on_request);
-        // Setup the port on which the server should be exposed.
-        mg_set_option(server, "listening_port", std::to_string(configuration.port).c_str());
-        // Notify framework that we are good to go
-        cps.try_signal_ready_for(std::chrono::milliseconds{500});
-        // Start the polling loop
-        for (;;)
-        {
-            mg_poll_server(server, 200);
+  struct mg_mgr mgr;
+  struct mg_connection *nc;
+  const char *s_http_port = std::to_string(configuration.port).c_str();
 
-            if (terminated)
-                break;
-        }
+  mg_mgr_init(&mgr, NULL);
+  printf("Starting web server on port %s\n", s_http_port);
+  nc = mg_bind(&mgr, s_http_port, Context::ev_handler);
+  if (nc == NULL) {
+    printf("Failed to create listener\n");
+    return core::posix::exit::Status::failure;
+  }
 
-        // Cleanup, and free server instance
-        mg_destroy_server(&server);
+  // Set up HTTP server parameters
+  mg_set_protocol_http_websocket(nc);
+
+  // Notify framework that we are good to go
+  cps.try_signal_ready_for(std::chrono::milliseconds{500});
+
+  // Start the polling loop
+  for (;;) {
+    mg_mgr_poll(&mgr, 1000);
+    if (terminated)
+      break;
+  }
+  mg_mgr_free(&mgr);
 
         if (trap_worker.joinable())
             trap_worker.join();
