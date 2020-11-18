@@ -65,16 +65,17 @@ inline std::function<core::posix::exit::Status(core::testing::CrossProcessSync& 
         struct Context
         {
             static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
-		auto thiz = static_cast<Context*>(nc->user_data);
+		auto thiz = static_cast<struct Context*>(nc->user_data);
                 if (ev == MG_EV_HTTP_REQUEST) {
                    thiz->handle_request(nc, ev_data);
                 }
             }
 
-            int handle_request(mg_connection* conn, void *ev_data)
+            void handle_request(mg_connection* conn, void *ev_data)
             {
                 struct http_message *hm = (struct http_message *) ev_data;
-                configuration.request_handler(conn, hm);
+		auto thiz = static_cast<struct Context*>(conn->user_data);
+                thiz->configuration.request_handler(conn, hm);
             }
 
             const testing::web::server::Configuration& configuration;
@@ -88,31 +89,35 @@ inline std::function<core::posix::exit::Status(core::testing::CrossProcessSync& 
             }
         };
 
-  struct mg_mgr mgr;
-  struct mg_connection *nc;
-  const char *s_http_port = std::to_string(configuration.port).c_str();
+        struct mg_mgr mgr;
+        struct mg_connection *nc;
+        const char *s_http_port = std::to_string(configuration.port).c_str();
 
-  mg_mgr_init(&mgr, NULL);
-  printf("Starting web server on port %s\n", s_http_port);
-  nc = mg_bind(&mgr, s_http_port, Context::ev_handler);
-  if (nc == NULL) {
-    printf("Failed to create listener\n");
-    return core::posix::exit::Status::failure;
-  }
+        std::cerr << "Starting web server on port " << s_http_port << std::endl;
+        mg_mgr_init(&mgr, &context);
+        nc = mg_bind(&mgr, s_http_port, Context::ev_handler);
+        if (nc == NULL) {
+            std::cerr << "Failed to create listener" << std::endl;
+            return core::posix::exit::Status::failure;
+        }
 
-  // Set up HTTP server parameters
-  mg_set_protocol_http_websocket(nc);
+        // Don't know what is going on but mongoose destroys the user_data pointer
+        // so restore it. See https://github.com/cesanta/mongoose/issues/756
+        nc->user_data = mgr.user_data = &context;
 
-  // Notify framework that we are good to go
-  cps.try_signal_ready_for(std::chrono::milliseconds{500});
+        // Set up HTTP server parameters
+        mg_set_protocol_http_websocket(nc);
 
-  // Start the polling loop
-  for (;;) {
-    mg_mgr_poll(&mgr, 1000);
-    if (terminated)
-      break;
-  }
-  mg_mgr_free(&mgr);
+        // Notify framework that we are good to go
+        cps.try_signal_ready_for(std::chrono::milliseconds{500});
+
+        // Start the polling loop
+        for (;;) {
+            mg_mgr_poll(&mgr, 1000);
+            if (terminated)
+                break;
+        }
+        mg_mgr_free(&mgr);
 
         if (trap_worker.joinable())
             trap_worker.join();
