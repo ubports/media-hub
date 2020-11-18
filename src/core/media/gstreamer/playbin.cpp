@@ -679,8 +679,10 @@ gboolean gstreamer::Playbin::set_state_in_main_thread(gpointer user_data)
 {
     MH_TRACE("");
     auto thiz = static_cast<Playbin*>(user_data);
-    if (thiz and thiz->pipeline)
+    if (thiz and thiz->pipeline) {
         gst_element_set_state(thiz->pipeline, thiz->current_new_state);
+        MH_TRACE("state set to %d", thiz->current_new_state);
+    }
 
     // Always return false so this is a single shot function call
     return false;
@@ -706,11 +708,14 @@ bool gstreamer::Playbin::set_state_and_wait(GstState new_state, bool use_main_th
         MH_DEBUG("Requested state change in main thread context.");
 
         GstState current, pending;
-        result = GST_STATE_CHANGE_SUCCESS == gst_element_get_state(
+        GstStateChangeReturn ret = gst_element_get_state(
                 pipeline,
                 &current,
                 &pending,
                 state_change_timeout.count());
+        MH_DEBUG("gst_element_get_state returned %d, current = %d, pending = %d",
+                 ret, current, pending);
+        result = (ret == GST_STATE_CHANGE_SUCCESS);
     }
     else
     {
