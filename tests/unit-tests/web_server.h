@@ -102,7 +102,9 @@ inline std::function<core::posix::exit::Status(core::testing::CrossProcessSync& 
         }
 
         // Don't know what is going on but mongoose destroys the user_data pointer
-        // so restore it. See https://github.com/cesanta/mongoose/issues/756
+        // so restore it. 
+        // See https://github.com/cesanta/mongoose/issues/756
+        // and https://github.com/cesanta/mongoose/issues/857
         nc->user_data = mgr.user_data = &context;
 
         // Set up HTTP server parameters

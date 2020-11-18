@@ -165,7 +165,6 @@ TEST(GStreamerEngine, setting_uri_and_audio_playback_with_http_headers_works)
     const std::string test_file{"/tmp/test-audio-1.ogg"};
     std::remove(test_file.c_str());
     ASSERT_TRUE(test::copy_test_media_file_to("test-audio-1.ogg", test_file));
-
     const std::string test_audio_uri{"http://localhost:5000"};
     const core::ubuntu::media::Player::HeadersType headers{{ "User-Agent", "MediaHub" }, { "Cookie", "A=B;X=Y" }};
 
@@ -175,13 +174,21 @@ TEST(GStreamerEngine, setting_uri_and_audio_playback_with_http_headers_works)
     testing::web::server::Configuration configuration
     {
         5000,
-        [test_file](struct mg_connection* conn, struct http_message* hm)
+        [test_file](struct mg_connection* conn, struct http_message* hm) 
         {
+            std::cerr << "test server will call mg_http_serve_file" << std::endl;
+
             std::map<std::string, std::set<std::string>> headers;
             for (int i = 0; hm->header_names[i].len > 0; i++) {
-              headers[hm->header_names[i].p].insert(hm->header_values[i].p);
+                std::string name; 
+                name.assign(hm->header_names[i].p, hm->header_names[i].len);
+                std::string value;
+                value.assign(hm->header_values[i].p, hm->header_values[i].len);
+                headers[name].insert(value);
             }
 
+            // unfortunately due to threading issues these EXPECTS when they fail
+            // will not cause the test to fail
             EXPECT_TRUE(headers.at("User-Agent").count("MediaHub") == 1);
             EXPECT_TRUE(headers.at("Cookie").count("A=B") == 1);
             EXPECT_TRUE(headers.at("Cookie").count("X=Y") == 1);
@@ -210,7 +217,7 @@ TEST(GStreamerEngine, setting_uri_and_audio_playback_with_http_headers_works)
                     std::placeholders::_1));
 
     EXPECT_TRUE(engine.open_resource_for_uri(test_audio_uri, headers));
-    static const bool use_main_context = true;
+    static const bool use_main_context = false; // when true the request to the http server is not made
     EXPECT_TRUE(engine.play(use_main_context));
     EXPECT_TRUE(wst.wait_for_state_for(
                     core::ubuntu::media::Engine::State::playing,
@@ -220,6 +227,9 @@ TEST(GStreamerEngine, setting_uri_and_audio_playback_with_http_headers_works)
     EXPECT_TRUE(wst.wait_for_state_for(
                     core::ubuntu::media::Engine::State::stopped,
                     std::chrono::seconds{10}));
+
+    // TODO some test to verify the headers are actually tested (the request is made) 
+
 }
 
 TEST(GStreamerEngine, DISABLED_stop_pause_play_seek_audio_only_works)
@@ -455,10 +465,9 @@ TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art_from_strea
         5000,
         [test_file](struct mg_connection* conn, struct http_message* hm)
         {
-            std::cerr << "test server will call mg_send_file" << std::endl;
+            std::cerr << "test server will call mg_http_serve_file" << std::endl;
             mg_http_serve_file(conn, hm, test_file.c_str(),
                                mg_mk_str("audio/ogg"), mg_mk_str(""));
-            //mg_send_file(conn, test_file.c_str());
         }
     };
     auto server = core::posix::fork(
