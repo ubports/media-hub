@@ -37,6 +37,7 @@
 #include <condition_variable>
 #include <functional>
 #include <thread>
+#include <future>
 
 namespace media = core::ubuntu::media;
 
@@ -160,6 +161,7 @@ TEST(GStreamerEngine, DISABLED_setting_uri_and_starting_video_playback_works)
                     std::chrono::seconds{10}));
 }
 
+
 TEST(GStreamerEngine, setting_uri_and_audio_playback_with_http_headers_works)
 {
     const std::string test_file{"/tmp/test-audio-1.ogg"};
@@ -167,40 +169,41 @@ TEST(GStreamerEngine, setting_uri_and_audio_playback_with_http_headers_works)
     ASSERT_TRUE(test::copy_test_media_file_to("test-audio-1.ogg", test_file));
     const std::string test_audio_uri{"http://localhost:5000"};
     const core::ubuntu::media::Player::HeadersType headers{{ "User-Agent", "MediaHub" }, { "Cookie", "A=B;X=Y" }};
+    std::map<std::string, std::set<std::string>> rxheaders;// = new std::map<std::string, std::set<std::string>>();
+    int stop = 0;
 
     // test server
-    core::testing::CrossProcessSync cps; // server - ready -> client
+    core::testing::CrossProcessSync cps; 
 
     testing::web::server::Configuration configuration
     {
         5000,
-        [test_file](struct mg_connection* conn, struct http_message* hm) 
+        &stop,
+        [test_file, &rxheaders](struct mg_connection* conn, struct http_message* hm)
         {
             std::cerr << "test server will call mg_http_serve_file" << std::endl;
 
-            std::map<std::string, std::set<std::string>> headers;
             for (int i = 0; hm->header_names[i].len > 0; i++) {
                 std::string name; 
                 name.assign(hm->header_names[i].p, hm->header_names[i].len);
                 std::string value;
                 value.assign(hm->header_values[i].p, hm->header_values[i].len);
-                headers[name].insert(value);
+                // std::cerr << "adding " << name << "=" << value << std::endl;
+                //(*rxheaders)[name].insert(value);
+                rxheaders[name].insert(value);
             }
-
-            // unfortunately due to threading issues these EXPECTS when they fail
-            // will not cause the test to fail
-            EXPECT_TRUE(headers.at("User-Agent").count("MediaHub") == 1);
-            EXPECT_TRUE(headers.at("Cookie").count("A=B") == 1);
-            EXPECT_TRUE(headers.at("Cookie").count("X=Y") == 1);
 
             mg_http_serve_file(conn, hm, test_file.c_str(),
                                mg_mk_str("audio/ogg"), mg_mk_str(""));
         }
     };
 
-    auto server = core::posix::fork(
-                std::bind(testing::a_web_server(configuration), cps),
-                core::posix::StandardStream::empty);
+    std::thread t([configuration, cps]()
+    {
+        auto server = std::bind(testing::a_web_server(configuration), cps);
+        server();
+    });
+
     cps.wait_for_signal_ready_for(std::chrono::seconds{2});
     std::this_thread::sleep_for(std::chrono::milliseconds{500});
 
@@ -228,7 +231,20 @@ TEST(GStreamerEngine, setting_uri_and_audio_playback_with_http_headers_works)
                     core::ubuntu::media::Engine::State::stopped,
                     std::chrono::seconds{10}));
 
-    // TODO some test to verify the headers are actually tested (the request is made) 
+    // stop the server
+    stop = 1;
+    if (t.joinable())
+        t.join();
+
+    // verify the received headers
+    EXPECT_TRUE(rxheaders.count("User-Agent") > 0);
+    if(rxheaders.count("User-Agent") > 0)
+        EXPECT_TRUE(rxheaders.at("User-Agent").count("MediaHub") == 1);
+    EXPECT_TRUE(rxheaders.count("Cookie") > 0);
+    if(rxheaders.count("Cookie") > 0) {
+        EXPECT_TRUE(rxheaders.at("Cookie").count("A=B") == 1);
+        EXPECT_TRUE(rxheaders.at("Cookie").count("X=Y") == 1);
+    }
 
 }
 
@@ -457,12 +473,14 @@ TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art_from_strea
     std::remove(test_file.c_str());
     ASSERT_TRUE(test::copy_test_media_file_to("test-audio.ogg", test_file));
     const std::string test_audio_uri{"http://localhost:5000"};
+    int stop = 0;
 
-    // test server
+    // the server
     core::testing::CrossProcessSync cps;
     testing::web::server::Configuration configuration
     {
         5000,
+        &stop,
         [test_file](struct mg_connection* conn, struct http_message* hm)
         {
             std::cerr << "test server will call mg_http_serve_file" << std::endl;
@@ -470,9 +488,12 @@ TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art_from_strea
                                mg_mk_str("audio/ogg"), mg_mk_str(""));
         }
     };
-    auto server = core::posix::fork(
-                std::bind(testing::a_web_server(configuration), cps),
-                core::posix::StandardStream::empty);
+
+    std::thread t([configuration, cps]()
+    {
+        auto server = std::bind(testing::a_web_server(configuration), cps);
+        server();
+    });
     cps.wait_for_signal_ready_for(std::chrono::seconds{2});
     std::this_thread::sleep_for(std::chrono::milliseconds{1000});
 
@@ -495,6 +516,11 @@ TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art_from_strea
             throw;
         }
     });
+
+    // stop the server
+    stop = 1;
+    if (t.joinable())
+        t.join();
 
     // other tags still ok?
     EXPECT_TRUE(md.count(xesam::Album::name) > 0);

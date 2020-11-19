@@ -26,6 +26,7 @@
 
 #include <functional>
 #include <thread>
+#include <future>
 
 #include "mongoose.h"
 
@@ -40,6 +41,8 @@ struct Configuration
 {
     // The port to expose the web-server on.
     std::uint16_t port;
+    // indicates the server must stop
+    int * stop;
     // Function that is invoked for individual client requests.
     std::function<void(struct mg_connection*, struct http_message*)> request_handler;
 };
@@ -48,6 +51,7 @@ struct Configuration
 // Returns an executable web-server for the given configuration.
 inline std::function<core::posix::exit::Status(core::testing::CrossProcessSync& cps)> a_web_server(const web::server::Configuration& configuration)
 {
+
     return [configuration](core::testing::CrossProcessSync& cps)
     {
         bool terminated = false;
@@ -118,9 +122,12 @@ inline std::function<core::posix::exit::Status(core::testing::CrossProcessSync& 
             mg_mgr_poll(&mgr, 1000);
             if (terminated)
                 break;
+            if (*configuration.stop > 0)
+                break;
         }
         mg_mgr_free(&mgr);
 
+        trap->stop();
         if (trap_worker.joinable())
             trap_worker.join();
 
