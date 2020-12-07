@@ -23,6 +23,7 @@
 #include "core/media/logger/logger.h"
 
 #include <regex>
+#include <unistd.h> // geteuid()
 
 namespace apparmor = core::ubuntu::media::apparmor;
 namespace media = core::ubuntu::media;
@@ -175,7 +176,8 @@ apparmor::ubuntu::RequestAuthenticator::Result apparmor::ubuntu::ExistingAuthent
 
     // All confined apps can access their own files
     if (parsed_uri.path.find(std::string(".local/share/" + context.package_name() + "/")) != std::string::npos ||
-        parsed_uri.path.find(std::string(".cache/" + context.package_name() + "/")) != std::string::npos)
+        parsed_uri.path.find(std::string(".cache/" + context.package_name() + "/")) != std::string::npos ||
+        parsed_uri.path.find(std::string("/run/user/" + std::to_string(geteuid()) + "/confined/" + context.package_name())) != std::string::npos)
     {
         return Result
         {
