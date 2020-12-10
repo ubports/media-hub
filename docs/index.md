@@ -37,3 +37,16 @@ After this, files in Music or Videos folders can be played:
 ```text
 $ mediaplayer-app Music/file.mp3
 ```
+
+## Configure gstreamer1.0 backend
+
+Some properties of the playbin object can be configured by creating a file in $HOME/.config/media-hub/media-hub.conf containing:
+```text
+# Playbin buffer-duration, in nano seconds, or 0 to disble
+export PLAYBIN_BUFFER_DURATION=5000000000
+# Playbin buffer-size, in bytes or 0 to disable
+export PLAYBIN_BUFFER_SIZE=0
+# Additional flags. See GstPlayFlags
+# 0x100: Enable buffering
+export PLAYBIN_ADDITIONAL_FLAGS=0x100
+```

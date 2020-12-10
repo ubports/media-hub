@@ -413,11 +413,36 @@ gstreamer::Bus& gstreamer::Playbin::message_bus()
 void gstreamer::Playbin::setup_pipeline_for_audio_video()
 {
     gint flags;
+    char * playbin_env_var;
+
+
     g_object_get (pipeline, "flags", &flags, nullptr);
     flags |= GST_PLAY_FLAG_AUDIO;
     flags |= GST_PLAY_FLAG_VIDEO;
     flags &= ~GST_PLAY_FLAG_TEXT;
+
+    playbin_env_var = ::getenv("PLAYBIN_ADDITIONAL_FLAGS");
+    if (playbin_env_var != nullptr) {
+        const unsigned int playbin_additional_flags = strtol(playbin_env_var, nullptr, 0);
+        MH_INFO(" adding playbin flags 0x%X", playbin_additional_flags);
+        flags |= playbin_additional_flags;
+    }
+
     g_object_set (pipeline, "flags", flags, nullptr);
+
+    playbin_env_var = ::getenv("PLAYBIN_BUFFER_SIZE");
+    if (playbin_env_var != nullptr) {
+        const int playbin_buffer_size = strtol(playbin_env_var, nullptr, 0);
+        MH_INFO(" setting playbin buffer-size to %d", playbin_buffer_size);
+        g_object_set (pipeline, "buffer-size", playbin_buffer_size, nullptr);
+    }
+
+    playbin_env_var = ::getenv("PLAYBIN_BUFFER_DURATION");
+    if (playbin_env_var != nullptr) {
+        const long long playbin_buffer_duration = strtoll(playbin_env_var, nullptr, 0);
+        MH_INFO(" setting playbin buffer-duration to %lld", playbin_buffer_duration);
+        g_object_set (pipeline, "buffer-duration", playbin_buffer_duration, nullptr);
+    }
 
     const char *asink_name = ::getenv("CORE_UBUNTU_MEDIA_SERVICE_AUDIO_SINK_NAME");
 
