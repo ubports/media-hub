@@ -346,16 +346,21 @@ struct media::PlayerImplementation<Parent>::Private :
         if (not uri.empty())
             is_local_file = (uri.substr(0, 7) == file_uri_prefix or uri.at(0) == '/');
 
-        // If the track has a full image or preview image or is a video and it is a local file,
+        // If the track has a full image or preview image or is a video
         // then use the thumbnailer cache
         if (  (( metadata.count(tags::PreviewImage::name) > 0
                  and metadata.get(tags::PreviewImage::name) == "true")
            or ( metadata.count(tags::Image::name) > 0
                  and metadata.get(tags::Image::name) == "true")
-           or parent->is_video_source().get())
-           and is_local_file)
-        {
-            art_uri = "image://thumbnailer/" + uri;
+           or parent->is_video_source().get())) {
+               if(is_local_file) {
+                   art_uri = "image://thumbnailer/" + uri;
+               } else {
+                   if(metadata.has_embedded_album_art()) {
+                       art_uri = "image://thumbnailer/file://";
+                       art_uri.append(metadata.embeddedAlbumArtFileName);
+                   }
+               }
         }
         // If all else fails, display a placeholder icon
         else

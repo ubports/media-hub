@@ -24,6 +24,7 @@
 
 #include "core/media/xesam.h"
 #include "core/media/gstreamer/engine.h"
+#include "core/media/gstreamer/meta_data_support.h"
 
 #include "../test_data.h"
 #include "../waitable_state_transition.h"
@@ -36,6 +37,7 @@
 #include <condition_variable>
 #include <functional>
 #include <thread>
+#include <future>
 
 namespace media = core::ubuntu::media;
 
@@ -159,40 +161,49 @@ TEST(GStreamerEngine, DISABLED_setting_uri_and_starting_video_playback_works)
                     std::chrono::seconds{10}));
 }
 
+
 TEST(GStreamerEngine, setting_uri_and_audio_playback_with_http_headers_works)
 {
     const std::string test_file{"/tmp/test-audio-1.ogg"};
     std::remove(test_file.c_str());
     ASSERT_TRUE(test::copy_test_media_file_to("test-audio-1.ogg", test_file));
-
     const std::string test_audio_uri{"http://localhost:5000"};
     const core::ubuntu::media::Player::HeadersType headers{{ "User-Agent", "MediaHub" }, { "Cookie", "A=B;X=Y" }};
+    std::map<std::string, std::set<std::string>> rxheaders;// = new std::map<std::string, std::set<std::string>>();
+    int stop = 0;
 
     // test server
-    core::testing::CrossProcessSync cps; // server - ready -> client
+    core::testing::CrossProcessSync cps; 
 
     testing::web::server::Configuration configuration
     {
         5000,
-        [test_file](mg_connection* conn)
+        &stop,
+        [test_file, &rxheaders](struct mg_connection* conn, struct http_message* hm)
         {
-            std::map<std::string, std::set<std::string>> headers;
-            for (int i = 0; i < conn->num_headers; ++i) {
-              headers[conn->http_headers[i].name].insert(conn->http_headers[i].value);
+            std::cerr << "test server will call mg_http_serve_file" << std::endl;
+
+            for (int i = 0; hm->header_names[i].len > 0; i++) {
+                std::string name; 
+                name.assign(hm->header_names[i].p, hm->header_names[i].len);
+                std::string value;
+                value.assign(hm->header_values[i].p, hm->header_values[i].len);
+                // std::cerr << "adding " << name << "=" << value << std::endl;
+                //(*rxheaders)[name].insert(value);
+                rxheaders[name].insert(value);
             }
 
-            EXPECT_TRUE(headers.at("User-Agent").count("MediaHub") == 1);
-            EXPECT_TRUE(headers.at("Cookie").count("A=B") == 1);
-            EXPECT_TRUE(headers.at("Cookie").count("X=Y") == 1);
-
-            mg_send_file(conn, test_file.c_str(), 0);
-            return MG_MORE;
+            mg_http_serve_file(conn, hm, test_file.c_str(),
+                               mg_mk_str("audio/ogg"), mg_mk_str(""));
         }
     };
 
-    auto server = core::posix::fork(
-                std::bind(testing::a_web_server(configuration), cps),
-                core::posix::StandardStream::empty);
+    std::thread t([configuration, cps]()
+    {
+        auto server = std::bind(testing::a_web_server(configuration), cps);
+        server();
+    });
+
     cps.wait_for_signal_ready_for(std::chrono::seconds{2});
     std::this_thread::sleep_for(std::chrono::milliseconds{500});
 
@@ -209,7 +220,7 @@ TEST(GStreamerEngine, setting_uri_and_audio_playback_with_http_headers_works)
                     std::placeholders::_1));
 
     EXPECT_TRUE(engine.open_resource_for_uri(test_audio_uri, headers));
-    static const bool use_main_context = true;
+    static const bool use_main_context = false; // when true the request to the http server is not made
     EXPECT_TRUE(engine.play(use_main_context));
     EXPECT_TRUE(wst.wait_for_state_for(
                     core::ubuntu::media::Engine::State::playing,
@@ -219,6 +230,22 @@ TEST(GStreamerEngine, setting_uri_and_audio_playback_with_http_headers_works)
     EXPECT_TRUE(wst.wait_for_state_for(
                     core::ubuntu::media::Engine::State::stopped,
                     std::chrono::seconds{10}));
+
+    // stop the server
+    stop = 1;
+    if (t.joinable())
+        t.join();
+
+    // verify the received headers
+    EXPECT_TRUE(rxheaders.count("User-Agent") > 0);
+    if(rxheaders.count("User-Agent") > 0)
+        EXPECT_TRUE(rxheaders.at("User-Agent").count("MediaHub") == 1);
+    EXPECT_TRUE(rxheaders.count("Cookie") > 0);
+    if(rxheaders.count("Cookie") > 0) {
+        EXPECT_TRUE(rxheaders.at("Cookie").count("A=B") == 1);
+        EXPECT_TRUE(rxheaders.at("Cookie").count("X=Y") == 1);
+    }
+
 }
 
 TEST(GStreamerEngine, DISABLED_stop_pause_play_seek_audio_only_works)
@@ -420,17 +447,102 @@ TEST(GStreamerEngine, meta_data_extractor_provides_correct_tags)
         md = engine.meta_data_extractor()->meta_data_for_track_with_uri(test_file_uri);
     });
 
-    if (0 < md.count(xesam::Album::name))
+    EXPECT_TRUE(md.count(xesam::Album::name) > 0);
+    if (md.count(xesam::Album::name) > 0)
         EXPECT_EQ("Test", md.get(xesam::Album::name));
-    if (0 < md.count(xesam::AlbumArtist::name))
+    EXPECT_TRUE(md.count(xesam::AlbumArtist::name) > 0);
+    if (md.count(xesam::AlbumArtist::name) > 0)
         EXPECT_EQ("Test", md.get(xesam::AlbumArtist::name));
-    if (0 < md.count(xesam::Artist::name))
+    EXPECT_TRUE(md.count(xesam::Artist::name) > 0);
+    if (md.count(xesam::Artist::name) > 0)
         EXPECT_EQ("Ezwa", md.get(xesam::Artist::name));
-    if (0 < md.count(xesam::DiscNumber::name))
+    EXPECT_TRUE(md.count(xesam::DiscNumber::name) > 0);
+    if (md.count(xesam::DiscNumber::name) > 0)
         EXPECT_EQ("1", md.get(xesam::DiscNumber::name));
-    if (0 < md.count(xesam::Genre::name))
+    EXPECT_TRUE(md.count(xesam::Genre::name) > 0);
+    if (md.count(xesam::Genre::name) > 0)
         EXPECT_EQ("Test", md.get(xesam::Genre::name));
-    if (0 < md.count(xesam::TrackNumber::name))
+    EXPECT_TRUE(md.count(xesam::TrackNumber::name) > 0);
+    if (md.count(xesam::TrackNumber::name) > 0)
         EXPECT_EQ("42", md.get(xesam::TrackNumber::name));
+}
+
+TEST(GStreamerEngine, meta_data_extractor_supports_embedded_album_art_from_stream)
+{
+    const std::string test_file{"/tmp/test-audio.ogg"};
+    std::remove(test_file.c_str());
+    ASSERT_TRUE(test::copy_test_media_file_to("test-audio.ogg", test_file));
+    const std::string test_audio_uri{"http://localhost:5000"};
+    int stop = 0;
+
+    // the server
+    core::testing::CrossProcessSync cps;
+    testing::web::server::Configuration configuration
+    {
+        5000,
+        &stop,
+        [test_file](struct mg_connection* conn, struct http_message* hm)
+        {
+            std::cerr << "test server will call mg_http_serve_file" << std::endl;
+            mg_http_serve_file(conn, hm, test_file.c_str(),
+                               mg_mk_str("audio/ogg"), mg_mk_str(""));
+        }
+    };
+
+    std::thread t([configuration, cps]()
+    {
+        auto server = std::bind(testing::a_web_server(configuration), cps);
+        server();
+    });
+    cps.wait_for_signal_ready_for(std::chrono::seconds{2});
+    std::this_thread::sleep_for(std::chrono::milliseconds{1000});
+
+    // test
+    core::ubuntu::media::Track::MetaData md;
+    gstreamer::Engine engine{0};
+
+    ASSERT_NO_THROW({
+        try {
+            md = engine.meta_data_extractor()->meta_data_for_track_with_uri(test_audio_uri);
+	} catch (const std::runtime_error& error) {
+            std::cerr << "runtime_error while getting meta data: " << error.what() << std::endl;
+            // as the audio is not being played but just being parsed this runtime error is 
+            // expected. see meta_data_extractor.h: meta_data_for_track_with_uri
+            const std::string rtem{"Problem extracting meta data for track"};
+            if(rtem.compare(error.what()) != 0)
+                throw;
+        } catch (const std::exception& e) {
+            std::cerr << "exception while getting meta data: " << e.what() << std::endl;
+            throw;
+        }
+    });
+
+    // stop the server
+    stop = 1;
+    if (t.joinable())
+        t.join();
+
+    // other tags still ok?
+    EXPECT_TRUE(md.count(xesam::Album::name) > 0);
+    if (md.count(xesam::Album::name) > 0)
+      EXPECT_EQ("Test", md.get(xesam::Album::name));
+    EXPECT_TRUE(md.count(xesam::Artist::name) > 0);
+    if (md.count(xesam::Artist::name) > 0)
+      EXPECT_EQ("Test", md.get(xesam::Artist::name));
+    EXPECT_TRUE(md.count(xesam::AlbumArtist::name) > 0);
+    if (md.count(xesam::AlbumArtist::name) > 0)
+      EXPECT_EQ("Test", md.get(xesam::AlbumArtist::name));
+    EXPECT_TRUE(md.count(xesam::Genre::name) > 0);
+    if (md.count(xesam::Genre::name) > 0)
+      EXPECT_EQ("Test", md.get(xesam::Genre::name));
+
+    // found and handled embedded album art?
+    EXPECT_TRUE(md.has_embedded_album_art());
+    EXPECT_EQ(0x9599, md.embeddedAlbumArtCRC);
+    ASSERT_TRUE(test::file_exists(md.embeddedAlbumArtFileName));
+
+    // does it clean it up?
+    gstreamer::MetaDataSupport::cleanupTempAlbumArtFile(md);
+    ASSERT_FALSE(test::file_exists(md.embeddedAlbumArtFileName));
 }
 

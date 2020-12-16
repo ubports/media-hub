@@ -23,6 +23,7 @@
 #include "../xesam.h"
 
 #include "bus.h"
+#include "meta_data_support.h"
 
 #include "core/media/logger/logger.h"
 
@@ -158,6 +159,14 @@ public:
                             gstreamer_to_mpris_tag_lut().at(tag) : tag), ss.str());
         },
         &md);
+
+        // embedded album art
+        if(MetaDataSupport::checkForImageData(GST_TAG_IMAGE, 0, tag.tag_list, md)) { 
+            md.mark_has_album_art_image();
+        } else if(!md.has_embedded_album_art_image() 
+                  && MetaDataSupport::checkForImageData(GST_TAG_PREVIEW_IMAGE, 0, tag.tag_list, md)) { 
+            md.mark_has_album_art_preview_image();
+        }
     }
 
     MetaDataExtractor()

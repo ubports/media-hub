@@ -48,6 +48,13 @@ public:
         static constexpr const char* TrackLengthKey = "mpris:length";
         static constexpr const char* TrackIdKey = "mpris:trackid";
 
+        MetaData() :
+            embeddedAlbumArtSize(0),
+            embeddedAlbumArtCRC(0),
+            eaaMask(0) 
+        {
+        }
+
         bool operator==(const MetaData& rhs) const
         {
             return map == rhs.map;
@@ -127,8 +134,23 @@ public:
         void set_art_url(const std::string& url);
         void set_last_used(const std::string& datetime);
 
+        // name of temporary file for album art 
+        std::string embeddedAlbumArtFileName;
+        // size of the embedded album art data (gstreamer buffer)
+        unsigned int embeddedAlbumArtSize;
+        // a checksum to see if reported album art is the same as the current one
+        unsigned short embeddedAlbumArtCRC;
+
+        // there can be an embedded image or an embedded preview image
+        // the image is preferred
+        void mark_has_album_art_image() { eaaMask |= 0x01; }
+        void mark_has_album_art_preview_image() { eaaMask |= 0x02; }
+        bool has_embedded_album_art_image() const { return (eaaMask & 0x01) > 0; }
+        bool has_embedded_album_art() const { return (eaaMask & 0x03) > 0; }
+
     private:
         MetaDataType map;
+        unsigned char eaaMask;
     };
 
     Track(const Id& id);

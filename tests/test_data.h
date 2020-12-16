@@ -24,6 +24,7 @@
 namespace test
 {
 bool copy_test_media_file_to(const std::string& media, const std::string& path);
+bool file_exists(const std::string& file);
 }
 
 #endif // TEST_DATA_H_

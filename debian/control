@@ -30,6 +30,7 @@ Build-Depends: cmake,
                libtelepathy-qt5-dev,
                libegl1-mesa-dev,
                libgl1-mesa-dev,
+               gstreamer1.0-fluendo-mp3,
 Standards-Version: 3.9.6
 Homepage: https://launchpad.net/media-hub
 # If you aren't a member of ~phablet-team but need to upload packaging changes,
