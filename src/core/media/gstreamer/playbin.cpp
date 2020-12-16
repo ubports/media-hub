@@ -615,6 +615,7 @@ bool gstreamer::Playbin::set_state_and_wait(GstState new_state, bool use_main_th
     };
 
     bool result = false;
+    GstStateChangeReturn state_change_return;
     GstState current, pending;
     if (use_main_thread)
     {
@@ -625,11 +626,12 @@ bool gstreamer::Playbin::set_state_and_wait(GstState new_state, bool use_main_th
         MH_DEBUG("Requested state change in main thread context.");
 
         GstState current, pending;
-        result = GST_STATE_CHANGE_SUCCESS == gst_element_get_state(
+        state_change_return = gst_element_get_state(
                 pipeline,
                 &current,
                 &pending,
                 state_change_timeout.count());
+        result = state_change_return != GST_STATE_CHANGE_FAILURE;
     }
     else
     {
@@ -643,20 +645,21 @@ bool gstreamer::Playbin::set_state_and_wait(GstState new_state, bool use_main_th
                 result = false; break;
             case GST_STATE_CHANGE_NO_PREROLL:
             case GST_STATE_CHANGE_SUCCESS:
+                state_change_return = ret;
                 result = true; break;
             case GST_STATE_CHANGE_ASYNC:
-                result = GST_STATE_CHANGE_SUCCESS == gst_element_get_state(
+                state_change_return = gst_element_get_state(
                         pipeline,
                         &current,
                         &pending,
                         state_change_timeout.count());
+                result = state_change_return != GST_STATE_CHANGE_FAILURE;
                 break;
         }
     }
 
-    // We only should query the pipeline if we actually succeeded in
-    // setting the requested state.
-    if (result && new_state == GST_STATE_PLAYING)
+    // We can query the pipeline if it has data
+    if (result && state_change_return == GST_STATE_CHANGE_SUCCESS)
     {
         // Get the video height/width from the video sink
         try
