@@ -72,6 +72,7 @@ public:
     virtual void pause();
     virtual void stop();
     virtual void seek_to(const std::chrono::microseconds& offset);
+    virtual void equalizer_set_band(int band, double gain);
 
     const core::Signal<>& on_client_disconnected() const;
 

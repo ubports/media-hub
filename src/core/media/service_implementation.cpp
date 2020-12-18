@@ -362,6 +362,20 @@ void media::ServiceImplementation::resume_multimedia_session()
     }
 }
 
+void media::ServiceImplementation::equalizer_set_band(int band, double gain) {
+    d->configuration.player_store->enumerate_players([this, band, gain]
+            (const media::Player::PlayerKey& key,
+             const std::shared_ptr<media::Player>& player)
+    {
+        // Only set eualizer if player has an audio stream role set to multimedia
+        if (player->audio_stream_role() == media::Player::multimedia)
+        {
+            MH_INFO("Set Equalizer Band for Player with key: %d", key);
+            player->equalizer_set_band(band, gain);
+        }
+    });
+}
+
 const core::Signal<void>& media::ServiceImplementation::service_disconnected() const
 {
     throw std::runtime_error("This signal is only accessible from the ServiceStub");

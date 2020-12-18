@@ -119,6 +119,18 @@ struct Service
                 return s;
             }
         };
+
+        struct EqualizerSetBand
+        {
+            static const std::string& name()
+            {
+                static const std::string s
+                {
+                    "core.ubuntu.media.Service.Error.EqualizerSetBand"
+                };
+                return s;
+            }
+        };
     };
 
     DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(CreateSession, Service, 1000)
@@ -128,6 +140,7 @@ struct Service
     DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(CreateFixedSession, Service, 1000)
     DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(ResumeSession, Service, 1000)
     DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(PauseOtherSessions, Service, 1000)
+    DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(EqualizerSetBand, Service, 1000)
 };
 }
 

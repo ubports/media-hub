@@ -913,6 +913,12 @@ void media::PlayerImplementation<Parent>::seek_to(const std::chrono::microsecond
 }
 
 template<typename Parent>
+void media::PlayerImplementation<Parent>::equalizer_set_band(int band, double gain) 
+{
+    d->engine->equalizer_set_band(band, gain);
+}
+
+template<typename Parent>
 const core::Signal<>& media::PlayerImplementation<Parent>::on_client_disconnected() const
 {
     return d->on_client_disconnected;

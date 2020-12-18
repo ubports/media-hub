@@ -50,6 +50,7 @@ public:
     std::shared_ptr<Player> create_fixed_session(const std::string& name, const Player::Configuration&);
     std::shared_ptr<Player> resume_session(Player::PlayerKey key);
     void pause_other_sessions(Player::PlayerKey key);
+    void equalizer_set_band(int band, double gain);
 
     const core::Signal<void>& service_disconnected() const;
     const core::Signal<void>& service_reconnected() const;

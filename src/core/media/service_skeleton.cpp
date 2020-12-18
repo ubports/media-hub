@@ -100,6 +100,11 @@ struct media::ServiceSkeleton::Private
                         &Private::handle_pause_other_sessions,
                         this,
                         std::placeholders::_1));
+        object->install_method_handler<mpris::Service::EqualizerSetBand>(
+                    std::bind(
+                        &Private::handle_equalizer_set_band,
+                        this,
+                        std::placeholders::_1));
     }
 
     std::tuple<std::string, media::Player::PlayerKey, std::string> create_session_info()
@@ -491,6 +496,29 @@ struct media::ServiceSkeleton::Private
                     msg,
                     mpris::Service::Errors::PlayerKeyNotFound::name(),
                     "Player key not found");
+        }
+
+        impl->access_bus()->send(reply);
+    }
+
+    void handle_equalizer_set_band(const core::dbus::Message::Ptr& msg) {
+
+        core::dbus::Message::Ptr reply;
+        try {
+            int band = 0;    //   0 .. 9
+            double gain = 0; // -24 .. 24
+
+            msg->reader() >> band;
+            msg->reader() >> gain;
+
+            impl->equalizer_set_band(band, gain);
+            reply = dbus::Message::make_method_return(msg);
+
+        } catch(const std::runtime_error& e) {
+            reply = dbus::Message::make_error(
+                    msg,
+                    mpris::Service::Errors::EqualizerSetBand::name(),
+                    e.what());
         }
 
         impl->access_bus()->send(reply);
@@ -898,6 +926,10 @@ std::shared_ptr<media::Player> media::ServiceSkeleton::create_fixed_session(cons
 std::shared_ptr<media::Player> media::ServiceSkeleton::resume_session(media::Player::PlayerKey key)
 {
     return d->configuration.impl->resume_session(key);
+}
+
+void media::ServiceSkeleton::equalizer_set_band(int band, double gain) {
+    d->configuration.impl->equalizer_set_band(band, gain);
 }
 
 void media::ServiceSkeleton::set_current_player(media::Player::PlayerKey key)

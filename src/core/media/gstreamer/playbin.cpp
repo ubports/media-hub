@@ -124,6 +124,7 @@ gstreamer::Playbin::Playbin(const core::ubuntu::media::Player::PlayerKey key_in)
       file_type(MEDIA_FILE_TYPE_NONE),
       video_sink(nullptr),
       audio_sink(nullptr),
+      equalizer(nullptr),
       on_new_message_connection_async(
           bus.on_new_message_async.connect(
               std::bind(
@@ -393,8 +394,35 @@ void gstreamer::Playbin::setup_pipeline_for_audio_video()
     if (asink_name == nullptr)
         asink_name = PULSE_SINK;
 
+    MH_INFO("Will create Equalizer");
+    equalizer = gst_element_factory_make ("equalizer-10bands", "equalizer");
+    if(!equalizer)
+        MH_ERROR("Failed to create equalizer-10bands");
+    else
+      MH_INFO("Created Equalizer");
+
     audio_sink = gst_element_factory_make (asink_name, "audio-sink");
-    if (audio_sink)
+    if (audio_sink && equalizer) {
+
+	GstElement *bin;
+        // create bin, add equalizer and audio_sink
+	bin = gst_bin_new ("audio_sink_bin");
+        gst_bin_add_many (GST_BIN(bin), equalizer, audio_sink, NULL);
+        gst_element_link_many (equalizer, audio_sink, NULL);
+        // make them being used
+        GstPad * pad = gst_element_get_static_pad (equalizer, "sink");
+        GstPad * ghost_pad = gst_ghost_pad_new ("sink", pad);
+        gst_pad_set_active (ghost_pad, TRUE);
+        gst_element_add_pad (bin, ghost_pad);
+        MH_INFO("after creating new bin");
+        //gst_object_unref (pad);
+        //gst_object_unref (ghost_pad);
+
+        // set new bin as playbin's audio sink
+        g_object_set (pipeline, "audio-sink", bin, NULL);
+        MH_INFO("after adding new bin");
+
+    } else if (audio_sink)
         g_object_set (pipeline, "audio-sink", audio_sink, NULL);
     else
         MH_ERROR("Error trying to create audio sink %s", asink_name);
@@ -1017,4 +1045,29 @@ void gstreamer::Playbin::send_frame_ready(void)
     if (send (sock_consumer, &ready, sizeof ready, 0) == -1)
         MH_ERROR("Error when sending frame ready flag to client: %s (%d)",
                  strerror(errno), errno);
+}
+
+void gstreamer::Playbin::equalizer_set_band(int band, double gain) 
+{
+    char band_name[6];
+
+    MH_INFO("band: %d, gain: %d", band, gain);
+
+    if(!equalizer) {
+        MH_ERROR("No Equalizer");
+        return;
+    }
+
+    if(band > 9)
+        band = 9;
+    else if(band < 0)
+        band = 0;
+
+    if(gain > 24.0)
+        gain = 24.0;
+    else if(gain < -24.0)
+        gain = -24.0;
+
+    sprintf(band_name, "band%d", band);
+    g_object_set (G_OBJECT(equalizer), band_name, (gdouble)gain, NULL);
 }

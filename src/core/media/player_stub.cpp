@@ -374,6 +374,12 @@ void media::PlayerStub::seek_to(const std::chrono::microseconds& offset)
         throw std::runtime_error("Problem seeking on remote object");
 }
 
+void media::PlayerStub::equalizer_set_band(int band, double gain) 
+{
+    MH_INFO("not implemented");
+}
+
+
 void media::PlayerStub::stop()
 {
     auto op = d->object->transact_method<mpris::Player::Stop, void>();

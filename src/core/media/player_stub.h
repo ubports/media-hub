@@ -62,6 +62,7 @@ class PlayerStub : public Player
     virtual void pause();
     virtual void seek_to(const std::chrono::microseconds& offset);
     virtual void stop();
+    virtual void equalizer_set_band(int band, double gain);
 
     virtual const core::Property<bool>& can_play() const;
     virtual const core::Property<bool>& can_pause() const;
