@@ -506,7 +506,7 @@ struct media::ServiceSkeleton::Private
         core::dbus::Message::Ptr reply;
         try {
             int band = 0;    //   0 .. 9
-            double gain = 0; // -24 .. 24
+            double gain = 0; // -24 .. 12
 
             msg->reader() >> band >> gain;
 

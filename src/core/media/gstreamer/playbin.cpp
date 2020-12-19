@@ -1063,8 +1063,8 @@ void gstreamer::Playbin::equalizer_set_band(int band, double gain)
     else if(band < 0)
         band = 0;
 
-    if(gain > 24.0)
-        gain = 24.0;
+    if(gain > 12.0)
+        gain = 12.0;
     else if(gain < -24.0)
         gain = -24.0;
 
