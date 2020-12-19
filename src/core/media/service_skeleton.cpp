@@ -508,8 +508,7 @@ struct media::ServiceSkeleton::Private
             int band = 0;    //   0 .. 9
             double gain = 0; // -24 .. 24
 
-            msg->reader() >> band;
-            msg->reader() >> gain;
+            msg->reader() >> band >> gain;
 
             impl->equalizer_set_band(band, gain);
             reply = dbus::Message::make_method_return(msg);
