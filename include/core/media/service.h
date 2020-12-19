@@ -20,6 +20,7 @@
 
 #include <core/media/player.h>
 
+#include <map>
 #include <memory>
 
 namespace core
@@ -62,6 +63,9 @@ class Service : public std::enable_shared_from_this<Service>
 
     /** @brief Pauses sessions other than the supplied one. */
     virtual void pause_other_sessions(Player::PlayerKey) = 0;
+
+    /** @brief Set equalizer band for all multimedia players. */
+    virtual std::map<int, double>& equalizer_get_bands() = 0;
 
     /** @brief Set equalizer band for all multimedia players. */
     virtual void equalizer_set_band(int band, double gain) = 0;

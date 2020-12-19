@@ -63,6 +63,7 @@ public:
     bool is_current_player(Player::PlayerKey key) const;
     void reset_current_player();
     void pause_other_sessions(Player::PlayerKey key);
+    std::map<int, double>& equalizer_get_bands();
     void equalizer_set_band(int band, double gain);
 
     void run();

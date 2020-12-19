@@ -48,6 +48,8 @@
 
 #include <pulse/pulseaudio.h>
 
+#define EQUALIZER_NUMBER_OF_BANDS 10
+
 namespace media = core::ubuntu::media;
 
 using namespace std;
@@ -70,6 +72,8 @@ struct media::ServiceImplementation::Private
           audio_output_state(media::audio::OutputState::Speaker),
           call_monitor(media::telephony::make_platform_default_call_monitor())
     {
+        for(int i=0;i<EQUALIZER_NUMBER_OF_BANDS;i++)
+            equalizer_bands[i] = 0.0;
     }
 
     media::ServiceImplementation::Configuration configuration;
@@ -90,6 +94,8 @@ struct media::ServiceImplementation::Private
     // Holds a pair of a Player key denoting what player to resume playback, and a bool
     // for if it should be resumed after a phone call is hung up
     std::list<std::pair<media::Player::PlayerKey, bool>> paused_sessions;
+
+    map<int, double> equalizer_bands;
 };
 
 media::ServiceImplementation::ServiceImplementation(const Configuration& configuration)
@@ -230,6 +236,9 @@ std::shared_ptr<media::Player> media::ServiceImplementation::create_session(
         });
     });
 
+    for(int i=0;i<EQUALIZER_NUMBER_OF_BANDS;i++)
+        player->equalizer_set_band(i, d->equalizer_bands[i]);
+
     return player;
 }
 
@@ -362,7 +371,18 @@ void media::ServiceImplementation::resume_multimedia_session()
     }
 }
 
+std::map<int, double>& media::ServiceImplementation::equalizer_get_bands() {
+    return d->equalizer_bands;
+}
+
 void media::ServiceImplementation::equalizer_set_band(int band, double gain) {
+    if(band < 0 || band >= EQUALIZER_NUMBER_OF_BANDS) {
+        MH_INFO("invalid equalizer band: %d", band);
+        return;
+    }
+
+    d->equalizer_bands[band] = gain;
+
     d->configuration.player_store->enumerate_players([this, band, gain]
             (const media::Player::PlayerKey& key,
              const std::shared_ptr<media::Player>& player)

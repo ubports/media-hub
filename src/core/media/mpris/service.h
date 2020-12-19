@@ -140,6 +140,7 @@ struct Service
     DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(CreateFixedSession, Service, 1000)
     DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(ResumeSession, Service, 1000)
     DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(PauseOtherSessions, Service, 1000)
+    DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(EqualizerGetBands, Service, 1000)
     DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(EqualizerSetBand, Service, 1000)
 };
 }
