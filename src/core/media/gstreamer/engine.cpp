@@ -626,3 +626,9 @@ void gstreamer::Engine::reset()
 {
     d->playbin.reset();
 }
+
+void gstreamer::Engine::equalizer_set_band(int band, double gain) 
+{
+    d->playbin.equalizer_set_band(band, gain);
+}
+

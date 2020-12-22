@@ -169,6 +169,7 @@ class Player : public std::enable_shared_from_this<Player>
     virtual void pause() = 0;
     virtual void stop() = 0;
     virtual void seek_to(const std::chrono::microseconds& offset) = 0;
+    virtual void equalizer_set_band(int band, double gain) = 0;
 
     virtual const core::Property<bool>& can_play() const = 0;
     virtual const core::Property<bool>& can_pause() const = 0;

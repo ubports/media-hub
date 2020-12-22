@@ -42,6 +42,7 @@ public:
     bool stop(bool use_main_thread = false);
     bool pause();
     bool seek_to(const std::chrono::microseconds& ts);
+    void equalizer_set_band(int band, double gain);
 
     const core::Property<bool>& is_video_source() const;
     const core::Property<bool>& is_audio_source() const;

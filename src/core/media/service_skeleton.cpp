@@ -63,7 +63,8 @@ struct media::ServiceSkeleton::Private
           object(impl->access_service()->add_object_for_path(
                      dbus::traits::Service<media::Service>::object_path())),
           configuration(config),
-          exported(impl->access_bus(), config.cover_art_resolver, impl, configuration)
+          exported(impl->access_bus(), config.cover_art_resolver, impl, configuration),
+          dbus_signals{object->template get_signal<mpris::Service::Signals::EqualizerBandChanged>()}
     {
         object->install_method_handler<mpris::Service::CreateSession>(
                     std::bind(
@@ -98,6 +99,16 @@ struct media::ServiceSkeleton::Private
         object->install_method_handler<mpris::Service::PauseOtherSessions>(
                     std::bind(
                         &Private::handle_pause_other_sessions,
+                        this,
+                        std::placeholders::_1));
+        object->install_method_handler<mpris::Service::EqualizerGetBands>(
+                    std::bind(
+                        &Private::handle_equalizer_get_bands,
+                        this,
+                        std::placeholders::_1));
+        object->install_method_handler<mpris::Service::EqualizerSetBand>(
+                    std::bind(
+                        &Private::handle_equalizer_set_band,
                         this,
                         std::placeholders::_1));
     }
@@ -496,6 +507,44 @@ struct media::ServiceSkeleton::Private
         impl->access_bus()->send(reply);
     }
 
+    void handle_equalizer_get_bands(const core::dbus::Message::Ptr& msg) {
+        MH_INFO("");
+        core::dbus::Message::Ptr reply;
+        try {
+            reply = dbus::Message::make_method_return(msg);
+            map<int, double>& bands = impl->equalizer_get_bands();
+            reply->writer() << bands;
+        } catch(const std::runtime_error& e) {
+            reply = dbus::Message::make_error(
+                    msg,
+                    mpris::Service::Errors::EqualizerSetBand::name(),
+                    e.what());
+        }
+        impl->access_bus()->send(reply);
+    }
+
+    void handle_equalizer_set_band(const core::dbus::Message::Ptr& msg) {
+
+        core::dbus::Message::Ptr reply;
+        try {
+            int band = 0;    //   0 .. 9
+            double gain = 0; // -24 .. 12
+
+            msg->reader() >> band >> gain;
+
+            impl->equalizer_set_band(band, gain);
+            reply = dbus::Message::make_method_return(msg);
+
+        } catch(const std::runtime_error& e) {
+            reply = dbus::Message::make_error(
+                    msg,
+                    mpris::Service::Errors::EqualizerSetBand::name(),
+                    e.what());
+        }
+
+        impl->access_bus()->send(reply);
+    }
+
     media::apparmor::ubuntu::RequestContextResolver::Ptr request_context_resolver;
     media::ServiceSkeleton* impl;
     dbus::Object::Ptr object;
@@ -858,6 +907,14 @@ struct media::ServiceSkeleton::Private
             };
         } connections;
     } exported;
+
+    struct
+    {
+
+        typename core::dbus::Signal<mpris::Service::Signals::EqualizerBandChanged, mpris::Service::Signals::EqualizerBandChanged::ArgumentType>::Ptr dbusEqualizerBandChanged;
+
+    } dbus_signals;
+
 };
 
 media::ServiceSkeleton::ServiceSkeleton(const Configuration& configuration)
@@ -898,6 +955,23 @@ std::shared_ptr<media::Player> media::ServiceSkeleton::create_fixed_session(cons
 std::shared_ptr<media::Player> media::ServiceSkeleton::resume_session(media::Player::PlayerKey key)
 {
     return d->configuration.impl->resume_session(key);
+}
+
+std::map<int, double>& media::ServiceSkeleton::equalizer_get_bands() {
+    return d->configuration.impl->equalizer_get_bands();
+}
+
+void media::ServiceSkeleton::equalizer_set_band(int band, double gain) {
+    d->configuration.impl->equalizer_set_band(band, gain);
+    //media::Service::EqualizerBand * eb = new media::Service::EqualizerBand( band, gain);
+    media::Service::EqualizerBand eb( band, gain);
+    MH_INFO("will emit EqualizerBandChanged for (%d, %g)", band, gain);
+    d->dbus_signals.dbusEqualizerBandChanged->emit(eb);
+}
+
+const core::Signal<media::Service::EqualizerBand>& media::ServiceSkeleton::equalizer_band_changed() const
+{
+    return d->configuration.impl->equalizer_band_changed();
 }
 
 void media::ServiceSkeleton::set_current_player(media::Player::PlayerKey key)

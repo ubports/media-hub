@@ -86,6 +86,7 @@ public:
     virtual bool stop(bool use_main_context = false)  = 0;
     virtual bool pause() = 0;
     virtual bool seek_to(const std::chrono::microseconds& ts) = 0;
+    virtual void equalizer_set_band(int band, double gain) = 0;
 
     virtual const core::Property<bool>& is_video_source() const = 0;
     virtual const core::Property<bool>& is_audio_source() const = 0;

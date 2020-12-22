@@ -107,6 +107,7 @@ struct Playbin
     // pipeline's new_state in the main thread context.
     bool set_state_and_wait(GstState new_state, bool use_main_thread = false);
     bool seek(const std::chrono::microseconds& ms);
+    void equalizer_set_band(int band, double gain);
 
     core::ubuntu::media::video::Dimensions get_video_dimensions() const;
     void emit_video_dimensions_changed_if_changed(const core::ubuntu::media::video::Dimensions &new_dimensions);
@@ -128,6 +129,7 @@ struct Playbin
     MediaFileType file_type;
     GstElement* video_sink;
     GstElement* audio_sink;
+    GstElement* equalizer;
     core::Connection on_new_message_connection_async;
     bool is_seeking;
     mutable uint64_t previous_position;

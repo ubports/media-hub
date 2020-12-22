@@ -172,6 +172,21 @@ void media::ServiceStub::pause_other_sessions(media::Player::PlayerKey key)
         throw std::runtime_error("Problem pausing other sessions: " + op.error());
 }
 
+std::map<int, double>& media::ServiceStub::equalizer_get_bands() {
+  MH_INFO("not implemented");
+}
+
+void media::ServiceStub::equalizer_set_band(int band, double gain) {
+  MH_INFO("not implemented");
+}
+
+const core::Signal<media::Service::EqualizerBand>& media::ServiceStub::equalizer_band_changed() const
+{
+    throw std::runtime_error("This signal is not implemented");
+    static const core::Signal<media::Service::EqualizerBand> s;
+    return s;
+}
+
 const core::Signal<void>& media::ServiceStub::service_disconnected() const
 {
     return signals.service_disconnected;

@@ -20,7 +20,9 @@
 
 #include <core/media/player.h>
 
+#include <map>
 #include <memory>
+#include <tuple>
 
 namespace core
 {
@@ -31,6 +33,9 @@ namespace media
 class Service : public std::enable_shared_from_this<Service>
 {
   public:
+
+    typedef std::tuple<int, double> EqualizerBand;
+
     struct Client
     {
         static const std::shared_ptr<Service> instance();
@@ -62,6 +67,13 @@ class Service : public std::enable_shared_from_this<Service>
 
     /** @brief Pauses sessions other than the supplied one. */
     virtual void pause_other_sessions(Player::PlayerKey) = 0;
+
+    /** @brief Set equalizer band for all multimedia players. */
+    virtual std::map<int, double>& equalizer_get_bands() = 0;
+    /** @brief Set equalizer band for all multimedia players. */
+    virtual void equalizer_set_band(int band, double gain) = 0;
+    /** @brief Signals when an equalizer band changes **/
+    virtual const core::Signal<EqualizerBand>& equalizer_band_changed() const = 0;
 
     /** @brief Signals when the media-hub server disappears from the bus **/
     virtual const core::Signal<void>& service_disconnected() const = 0;

@@ -48,6 +48,8 @@
 
 #include <pulse/pulseaudio.h>
 
+#define EQUALIZER_NUMBER_OF_BANDS 10
+
 namespace media = core::ubuntu::media;
 
 using namespace std;
@@ -70,6 +72,8 @@ struct media::ServiceImplementation::Private
           audio_output_state(media::audio::OutputState::Speaker),
           call_monitor(media::telephony::make_platform_default_call_monitor())
     {
+        for(int i=0;i<EQUALIZER_NUMBER_OF_BANDS;i++)
+            equalizer_bands[i] = 0.0;
     }
 
     media::ServiceImplementation::Configuration configuration;
@@ -90,6 +94,9 @@ struct media::ServiceImplementation::Private
     // Holds a pair of a Player key denoting what player to resume playback, and a bool
     // for if it should be resumed after a phone call is hung up
     std::list<std::pair<media::Player::PlayerKey, bool>> paused_sessions;
+
+    map<int, double> equalizer_bands;
+
 };
 
 media::ServiceImplementation::ServiceImplementation(const Configuration& configuration)
@@ -230,6 +237,9 @@ std::shared_ptr<media::Player> media::ServiceImplementation::create_session(
         });
     });
 
+    for(int i=0;i<EQUALIZER_NUMBER_OF_BANDS;i++)
+        player->equalizer_set_band(i, d->equalizer_bands[i]);
+
     return player;
 }
 
@@ -360,6 +370,38 @@ void media::ServiceImplementation::resume_multimedia_session()
         player->play();
         d->resume_key = std::numeric_limits<std::uint32_t>::max();
     }
+}
+
+std::map<int, double>& media::ServiceImplementation::equalizer_get_bands() {
+    return d->equalizer_bands;
+}
+
+void media::ServiceImplementation::equalizer_set_band(int band, double gain) {
+    if(band < 0 || band >= EQUALIZER_NUMBER_OF_BANDS) {
+        MH_INFO("invalid equalizer band: %d", band);
+        return;
+    }
+
+    d->equalizer_bands[band] = gain;
+
+    d->configuration.player_store->enumerate_players([this, band, gain]
+            (const media::Player::PlayerKey& key,
+             const std::shared_ptr<media::Player>& player)
+    {
+        // Only set eualizer if player has an audio stream role set to multimedia
+        if (player->audio_stream_role() == media::Player::multimedia)
+        {
+            MH_INFO("Set Equalizer Band for Player with key: %d", key);
+            player->equalizer_set_band(band, gain);
+        }
+    });
+}
+
+const core::Signal<media::Service::EqualizerBand>& media::ServiceImplementation::equalizer_band_changed() const
+{
+    throw std::runtime_error("This signal is not to used from here");
+    static const core::Signal<media::Service::EqualizerBand> s;
+    return s;
 }
 
 const core::Signal<void>& media::ServiceImplementation::service_disconnected() const
