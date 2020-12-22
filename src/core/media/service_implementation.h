@@ -21,6 +21,7 @@
 
 #include "service_skeleton.h"
 #include "external_services.h"
+#include "mpris/service.h"
 
 namespace core
 {
@@ -52,6 +53,7 @@ public:
     void pause_other_sessions(Player::PlayerKey key);
     std::map<int, double>& equalizer_get_bands();
     void equalizer_set_band(int band, double gain);
+    const core::Signal<EqualizerBand>& equalizer_band_changed() const;
 
     const core::Signal<void>& service_disconnected() const;
     const core::Signal<void>& service_reconnected() const;
@@ -63,6 +65,7 @@ private:
 
     struct Private;
     std::shared_ptr<Private> d;
+
 };
 }
 }

@@ -63,7 +63,8 @@ struct media::ServiceSkeleton::Private
           object(impl->access_service()->add_object_for_path(
                      dbus::traits::Service<media::Service>::object_path())),
           configuration(config),
-          exported(impl->access_bus(), config.cover_art_resolver, impl, configuration)
+          exported(impl->access_bus(), config.cover_art_resolver, impl, configuration),
+          dbus_signals{object->template get_signal<mpris::Service::Signals::EqualizerBandChanged>()}
     {
         object->install_method_handler<mpris::Service::CreateSession>(
                     std::bind(
@@ -906,6 +907,14 @@ struct media::ServiceSkeleton::Private
             };
         } connections;
     } exported;
+
+    struct
+    {
+
+        typename core::dbus::Signal<mpris::Service::Signals::EqualizerBandChanged, mpris::Service::Signals::EqualizerBandChanged::ArgumentType>::Ptr dbusEqualizerBandChanged;
+
+    } dbus_signals;
+
 };
 
 media::ServiceSkeleton::ServiceSkeleton(const Configuration& configuration)
@@ -954,6 +963,15 @@ std::map<int, double>& media::ServiceSkeleton::equalizer_get_bands() {
 
 void media::ServiceSkeleton::equalizer_set_band(int band, double gain) {
     d->configuration.impl->equalizer_set_band(band, gain);
+    //media::Service::EqualizerBand * eb = new media::Service::EqualizerBand( band, gain);
+    media::Service::EqualizerBand eb( band, gain);
+    MH_INFO("will emit EqualizerBandChanged for (%d, %g)", band, gain);
+    d->dbus_signals.dbusEqualizerBandChanged->emit(eb);
+}
+
+const core::Signal<media::Service::EqualizerBand>& media::ServiceSkeleton::equalizer_band_changed() const
+{
+    return d->configuration.impl->equalizer_band_changed();
 }
 
 void media::ServiceSkeleton::set_current_player(media::Player::PlayerKey key)

@@ -65,6 +65,7 @@ public:
     void pause_other_sessions(Player::PlayerKey key);
     std::map<int, double>& equalizer_get_bands();
     void equalizer_set_band(int band, double gain);
+    virtual const core::Signal<EqualizerBand>& equalizer_band_changed() const;
 
     void run();
     void stop();

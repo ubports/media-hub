@@ -20,6 +20,7 @@
 #define MPRIS_SERVICE_H_
 
 #include <core/dbus/macros.h>
+#include <core/media/service.h>
 
 #include <chrono>
 #include <string>
@@ -142,6 +143,11 @@ struct Service
     DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(PauseOtherSessions, Service, 1000)
     DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(EqualizerGetBands, Service, 1000)
     DBUS_CPP_METHOD_WITH_TIMEOUT_DEF(EqualizerSetBand, Service, 1000)
+
+    struct Signals
+    {
+        DBUS_CPP_SIGNAL_DEF(EqualizerBandChanged, Service, core::ubuntu::media::Service::EqualizerBand)
+    };
 };
 }
 

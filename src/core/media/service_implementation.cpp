@@ -96,6 +96,7 @@ struct media::ServiceImplementation::Private
     std::list<std::pair<media::Player::PlayerKey, bool>> paused_sessions;
 
     map<int, double> equalizer_bands;
+
 };
 
 media::ServiceImplementation::ServiceImplementation(const Configuration& configuration)
@@ -394,6 +395,13 @@ void media::ServiceImplementation::equalizer_set_band(int band, double gain) {
             player->equalizer_set_band(band, gain);
         }
     });
+}
+
+const core::Signal<media::Service::EqualizerBand>& media::ServiceImplementation::equalizer_band_changed() const
+{
+    throw std::runtime_error("This signal is not to used from here");
+    static const core::Signal<media::Service::EqualizerBand> s;
+    return s;
 }
 
 const core::Signal<void>& media::ServiceImplementation::service_disconnected() const

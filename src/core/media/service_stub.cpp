@@ -180,6 +180,13 @@ void media::ServiceStub::equalizer_set_band(int band, double gain) {
   MH_INFO("not implemented");
 }
 
+const core::Signal<media::Service::EqualizerBand>& media::ServiceStub::equalizer_band_changed() const
+{
+    throw std::runtime_error("This signal is not implemented");
+    static const core::Signal<media::Service::EqualizerBand> s;
+    return s;
+}
+
 const core::Signal<void>& media::ServiceStub::service_disconnected() const
 {
     return signals.service_disconnected;
