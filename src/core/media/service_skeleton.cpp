@@ -35,8 +35,6 @@
 #include <core/dbus/object.h>
 #include <core/dbus/types/object_path.h>
 
-#include <core/posix/this_process.h>
-
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>

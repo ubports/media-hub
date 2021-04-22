@@ -29,6 +29,7 @@ target_link_libraries(
   ${DBUS_LIBRARIES}
   ${DBUS_CPP_LDFLAGS}
   ${PC_GSTREAMER_1_0_LIBRARIES}
+  Qt5::Core
 )
 set_target_properties(
   media-hub-common

@@ -24,9 +24,9 @@
 #include "core/media/logger/logger.h"
 #include "core/media/service_implementation.h"
 
-#include <hybris/media/media_codec_layer.h>
+#include <QCoreApplication>
 
-#include <core/posix/signal.h>
+#include <hybris/media/media_codec_layer.h>
 
 #include <iostream>
 
@@ -90,23 +90,14 @@ void platform_init()
 }
 }
 
-int main()
+int main(int argc, char **argv)
 {
-    auto trap = core::posix::trap_signals_for_all_subsequent_threads(
-    {
-        core::posix::Signal::sig_int,
-        core::posix::Signal::sig_term
-    });
-
-    trap->signal_raised().connect([trap](core::posix::Signal)
-    {
-        trap->stop();
-    });
-
     logger_init();
 
     // Init platform-specific functionality.
     platform_init();
+
+    QCoreApplication app(argc, argv);
 
     // We keep track of our state.
     bool shutdown_requested{false};
@@ -188,10 +179,7 @@ int main()
         }
     };
 
-    // We block on waiting for signals telling us to gracefully shutdown.
-    // Incoming signals are handled in a lambda connected to signal_raised()
-    // which is setup at the beginning of main(...).
-    trap->run();
+    app.exec();
 
     // Inform our workers that we should shutdown gracefully
     shutdown_requested = true;
