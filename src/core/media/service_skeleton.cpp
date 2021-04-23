@@ -438,40 +438,6 @@ struct media::ServiceSkeleton::Private
         }
     }
 
-    void handle_set_current_player(const core::dbus::Message::Ptr& msg)
-    {
-        Player::PlayerKey key;
-        msg->reader() >> key;
-
-        core::dbus::Message::Ptr reply;
-        if (not configuration.player_store->has_player_for_key(key))
-        {
-            MH_WARNING("Player key not found: %d", key);
-            reply = dbus::Message::make_error(
-                            msg,
-                            mpris::Service::Errors::PlayerKeyNotFound::name(),
-                            "Player key not found");
-        }
-        else
-        {
-            try {
-                impl->set_current_player(key);
-                reply = dbus::Message::make_method_return(msg);
-            }
-            catch (const std::out_of_range &e) {
-                MH_WARNING("Failed to look up Player instance for key %d\
-                    , no valid Player instance for that key value and cannot set current player.\
-                    This most likely means that media-hub-server has crashed and restarted.", key);
-                reply = dbus::Message::make_error(
-                            msg,
-                            mpris::Service::Errors::PlayerKeyNotFound::name(),
-                            "Player key not found");
-            }
-        }
-
-        impl->access_bus()->send(reply);
-    }
-
     void handle_pause_other_sessions(const core::dbus::Message::Ptr& msg)
     {
         Player::PlayerKey key;
