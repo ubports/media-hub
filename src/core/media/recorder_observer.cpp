@@ -16,31 +16,53 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#include "core/media/logger/logger.h"
+#include "recorder_observer.h"
+
+#include "logging.h"
 
 #include <core/media/player.h>
-#include <core/media/recorder_observer.h>
 
 #include <core/media/hybris_recorder_observer.h>
 #include <core/media/stub_recorder_observer.h>
 
 namespace media = core::ubuntu::media;
 
-media::RecorderObserver::Ptr media::make_platform_default_recorder_observer()
+using namespace media;
+
+namespace {
+
+RecorderObserverPrivate *
+make_platform_default_recorder_observer(RecorderObserver *q)
 {
     const media::AVBackend::Backend b {media::AVBackend::get_backend_type()};
     switch (b)
     {
         case media::AVBackend::Backend::hybris:
-            return media::HybrisRecorderObserver::create();
+            return new media::HybrisRecorderObserver(q);
         case media::AVBackend::Backend::mir:
         case media::AVBackend::Backend::none:
             MH_WARNING(
                 "No video backend selected. Video recording functionality won't work."
             );
-            return media::StubRecorderObserver::create();
+            return new media::StubRecorderObserver(q);
         default:
             MH_INFO("Invalid or no A/V backend specified, using \"hybris\" as a default.");
-            return media::HybrisRecorderObserver::create();
+            return new media::HybrisRecorderObserver(q);
     }
+}
+
+} // namespace
+
+RecorderObserver::RecorderObserver(QObject *parent):
+    QObject(parent),
+    d_ptr(make_platform_default_recorder_observer(this))
+{
+}
+
+RecorderObserver::~RecorderObserver() = default;
+
+RecordingState RecorderObserver::recordingState() const
+{
+    Q_D(const RecorderObserver);
+    return d->recordingState();
 }

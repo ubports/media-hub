@@ -20,15 +20,15 @@
 
 namespace apparmor = core::ubuntu::media::apparmor;
 
-apparmor::Context::Context(const std::string& name) : name{name}
+apparmor::Context::Context(const QString &name) : name{name}
 {
-    if (name.empty()) throw std::runtime_error
+    if (name.isEmpty()) throw std::runtime_error
     {
         "apparmor::Context cannot be created for empty name."
     };
 }
 
-const std::string& apparmor::Context::str() const
+const QString &apparmor::Context::str() const
 {
     return name;
 }

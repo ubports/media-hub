@@ -20,12 +20,15 @@
 
 #include "apparmor/ubuntu.h"
 
-#include <core/media/track_list.h>
+#include <QDBusContext>
+#include <QDBusObjectPath>
+#include <QList>
+#include <QObject>
+#include <QScopedPointer>
+#include <QStringList>
+#include <QMap>
 
-#include <core/media/player.h>
-
-#include <core/dbus/object.h>
-#include <core/dbus/skeleton.h>
+class QDBusConnection;
 
 namespace core
 {
@@ -33,81 +36,66 @@ namespace ubuntu
 {
 namespace media
 {
-class TrackListSkeleton : public core::ubuntu::media::TrackList
+
+class TrackListImplementation;
+
+class TrackListSkeletonPrivate;
+class TrackListSkeleton: public QObject, protected QDBusContext
 {
+    Q_OBJECT
+    Q_CLASSINFO("D-Bus Interface", "org.mpris.MediaPlayer2.TrackList")
+    // FIXME: this should be QDBusObjectPath, and not QString!
+    Q_PROPERTY(QStringList Tracks READ tracks)
+    Q_PROPERTY(bool CanEditTracks READ canEditTracks)
+
 public:
-    TrackListSkeleton(const core::dbus::Bus::Ptr& bus, const core::dbus::Object::Ptr& object,
+    TrackListSkeleton(const QDBusConnection &bus,
         const core::ubuntu::media::apparmor::ubuntu::RequestContextResolver::Ptr& request_context_resolver,
-        const core::ubuntu::media::apparmor::ubuntu::RequestAuthenticator::Ptr& request_authenticator);
+        const core::ubuntu::media::apparmor::ubuntu::RequestAuthenticator::Ptr& request_authenticator,
+        TrackListImplementation *impl,
+        QObject *parent = nullptr);
     ~TrackListSkeleton();
 
-    bool has_next();
-    bool has_previous();
-    Track::Id next();
-    Track::Id previous();
-    const Track::Id& current();
+    QStringList tracks() const;
+    bool canEditTracks() const;
 
-    const core::Property<bool>& can_edit_tracks() const;
-    const core::Property<Container>& tracks() const;
+public Q_SLOTS:
+    // FIXME: these should all be QDBusObjectPath, and not QStrings!
+    // FIXME: this should take a list, not just a single track;
+    // and it should return an aa{sv}, not a{ss}
+    QMap<QString,QString> GetTracksMetadata(const QString &id);
+    void AddTrack(const QString &uri, const QString &after, bool makeCurrent);
+    void RemoveTrack(const QString &id);
+    void GoTo(const QString &id);
 
-    const core::Signal<ContainerTrackIdTuple>& on_track_list_replaced() const;
-    core::Signal<ContainerTrackIdTuple>& on_track_list_replaced();
-    const core::Signal<Track::Id>& on_track_added() const;
-    core::Signal<Track::Id>& on_track_added();
-    const core::Signal<ContainerURI>& on_tracks_added() const;
-    core::Signal<ContainerURI>& on_tracks_added();
-    const core::Signal<TrackIdTuple>& on_track_moved() const;
-    core::Signal<TrackIdTuple>& on_track_moved();
-    const core::Signal<Track::Id>& on_track_removed() const;
-    const core::Signal<void>& on_track_list_reset() const;
-    const core::Signal<Track::Id>& on_track_changed() const;
-    core::Signal<Track::Id>& on_track_changed();
-    const core::Signal<Track::Id>& on_go_to_track() const;
-    core::Signal<Track::Id>& on_go_to_track();
-    const core::Signal<void>& on_end_of_tracklist() const;
-    core::Signal<void>& on_end_of_tracklist();
-    core::Signal<Track::Id>& on_track_removed();
-    core::Signal<void>& on_track_list_reset();
+    // Not in MPRIS:
+    QString GetTracksUri(const QString &id);
+    void AddTracks(const QStringList &uris, const QString &after);
+    void MoveTrack(const QString &id, const QString &to);
+    void Reset();
 
-    core::Property<Container>& tracks();
-    void on_loop_status_changed(const core::ubuntu::media::Player::LoopStatus& loop_status);
-    core::ubuntu::media::Player::LoopStatus loop_status() const;
+Q_SIGNALS:
+    // FIXME: these should all be QDBusObjectPath, and not QStrings!
+    Q_SCRIPTABLE void TrackListReplaced(const QStringList &tracks,
+                                        const QString &currentTrack);
+    // FIXME: For this reason the signature of this signal does not
+    // match the MPRIS specification: the metadata is missing.
+    Q_SCRIPTABLE void TrackAdded(const QString &id);
+    Q_SCRIPTABLE void TrackRemoved(const QString &id);
+    // FIXME: the order of parameters is incorrect!
+    Q_SCRIPTABLE void TrackMetadataChanged(const QVariantMap &metadata,
+                                           const QDBusObjectPath &path);
 
-    void on_position_changed(uint64_t position);
-
-    /** Gets called when the shuffle property on the Player interface is changed
-     * by the client */
-    void on_shuffle_changed(bool shuffle);
-
-    virtual void set_shuffle(bool shuffle) = 0;
-    virtual bool shuffle() = 0;
-    virtual const media::TrackList::Container& shuffled_tracks() = 0;
-
-protected:
-    inline bool is_first_track(const ConstIterator &it)
-    { return it == std::begin(tracks().get()); }
-    inline bool is_last_track(const ConstIterator &it)
-    { return it == std::end(tracks().get()); }
-    const TrackList::ConstIterator& current_iterator();
-    bool update_current_iterator(const TrackList::ConstIterator &it);
-    void reset_current_iterator_if_needed();
-    media::Track::Id get_current_track(void);
-    void set_current_track(const media::Track::Id& id);
-    TrackList::ConstIterator get_current_shuffled();
-
-    core::Property<bool>& can_edit_tracks();
-
-    void emit_on_end_of_tracklist();
-
-    void reset();
+    // Not in MPRIS:
+    Q_SCRIPTABLE void TracksAdded(const QStringList &trackURIs);
+    Q_SCRIPTABLE void TrackMoved(const QString &id, const QString &to);
+    Q_SCRIPTABLE void TrackChanged(const QString &id);
+    Q_SCRIPTABLE void TrackListReset();
 
 private:
-    struct Private;
-    std::unique_ptr<Private> d;
+    Q_DECLARE_PRIVATE(TrackListSkeleton)
+    QScopedPointer<TrackListSkeletonPrivate> d_ptr;
 };
-
-// operator<< pretty prints the given TrackList status to the given output stream.
-std::ostream& operator<<(std::ostream& out, const core::ubuntu::media::TrackList& tracklist);
 
 }
 }

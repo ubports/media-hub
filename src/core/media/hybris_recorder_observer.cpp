@@ -24,20 +24,12 @@ namespace media = core::ubuntu::media;
 
 struct media::HybrisRecorderObserver::Private
 {
-    struct Holder
-    {
-        std::weak_ptr<media::HybrisRecorderObserver::Private> wp;
-    };
-
     // The fringe that we hand over to hybris.
     static void on_media_recording_state_changed(bool started, void* context)
     {
-        if (auto holder = static_cast<Holder*>(context))
+        if (auto thiz = static_cast<HybrisRecorderObserver*>(context))
         {
-            if (auto sp = holder->wp.lock())
-            {
-                sp->recording_state = started ? media::RecordingState::started : media::RecordingState::stopped;
-            }
+            thiz->setRecordingState(started ? media::RecordingState::started : media::RecordingState::stopped);
         }
     }
 
@@ -47,24 +39,16 @@ struct media::HybrisRecorderObserver::Private
     {
         android_media_recorder_observer_new()
     };
-
-    core::Property<media::RecordingState> recording_state
-    {
-        media::RecordingState::stopped
-    };
-
-    Holder* holder
-    {
-        nullptr
-    };
 };
 
-media::HybrisRecorderObserver::HybrisRecorderObserver() : d{new Private{}}
+media::HybrisRecorderObserver::HybrisRecorderObserver(RecorderObserver *q):
+    RecorderObserverPrivate(q),
+    d{new Private{}}
 {
     android_media_recorder_observer_set_cb(
                 d->observer,
                 &Private::on_media_recording_state_changed,
-                d->holder = new Private::Holder{d});
+                this);
 }
 
 media::HybrisRecorderObserver::~HybrisRecorderObserver()
@@ -74,16 +58,4 @@ media::HybrisRecorderObserver::~HybrisRecorderObserver()
                 d->observer,
                 &Private::on_media_recording_state_changed,
                 nullptr);
-
-    delete d->holder;
-}
-
-const core::Property<media::RecordingState>& media::HybrisRecorderObserver::recording_state() const
-{
-    return d->recording_state;
-}
-
-media::RecorderObserver::Ptr media::HybrisRecorderObserver::create()
-{
-    return media::RecorderObserver::Ptr{new media::HybrisRecorderObserver{}};
 }

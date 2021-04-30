@@ -20,16 +20,15 @@
 #define CORE_UBUNTU_MEDIA_SERVICE_SKELETON_H_
 
 #include "apparmor/ubuntu.h"
-
-#include <core/media/service.h>
+#include "player.h"
 
 #include "cover_art_resolver.h"
-#include "keyed_player_store.h"
-#include "service_traits.h"
 
-#include <core/dbus/skeleton.h>
-
-#include <memory>
+#include <QDBusConnection>
+#include <QDBusContext>
+#include <QDBusObjectPath>
+#include <QObject>
+#include <QScopedPointer>
 
 namespace core
 {
@@ -37,42 +36,39 @@ namespace ubuntu
 {
 namespace media
 {
-class ServiceSkeleton : public core::dbus::Skeleton<core::ubuntu::media::Service>
+class ServiceImplementation;
+
+class ServiceSkeletonPrivate;
+class ServiceSkeleton: public QObject, protected QDBusContext
 {
+    Q_OBJECT
+    Q_CLASSINFO("D-Bus Interface", "core.ubuntu.media.Service")
+
 public:
     // Creation time arguments go here.
     struct Configuration
     {
-        std::shared_ptr<Service> impl;
-        KeyedPlayerStore::Ptr player_store;
-        helper::ExternalServices& external_services;
+        QDBusConnection connection;
         CoverArtResolver cover_art_resolver;
     };
 
-    ServiceSkeleton(const Configuration& configuration);
+    ServiceSkeleton(const Configuration &configuration,
+                    ServiceImplementation *impl,
+                    QObject *parent = nullptr);
     ~ServiceSkeleton();
 
-    // From media::Service
-    std::shared_ptr<Player> create_session(const Player::Configuration&);
-    void detach_session(const std::string&, const Player::Configuration&);
-    std::shared_ptr<Player> reattach_session(const std::string&, const Player::Configuration&);
-    void destroy_session(const std::string&, const media::Player::Configuration&);
-    std::shared_ptr<Player> create_fixed_session(const std::string& name, const Player::Configuration&);
-    std::shared_ptr<Player> resume_session(Player::PlayerKey);
-    void set_current_player(Player::PlayerKey key);
-    bool is_current_player(Player::PlayerKey key) const;
-    void reset_current_player();
-    void pause_other_sessions(Player::PlayerKey key);
+public Q_SLOTS:
+    void CreateSession(QDBusObjectPath &op, QString &uuid);
+    void DetachSession(const QString &uuid);
+    void ReattachSession(const QString &uuid);
+    void DestroySession(const QString &uuid);
+    QDBusObjectPath CreateFixedSession(const QString &name);
+    QDBusObjectPath ResumeSession(Player::PlayerKey key);
+    void PauseOtherSessions(Player::PlayerKey key);
 
-    void run();
-    void stop();
-
-    virtual const core::Signal<void>& service_disconnected() const;
-    virtual const core::Signal<void>& service_reconnected() const;
-
-  private:
-    struct Private;
-    std::shared_ptr<Private> d;
+private:
+    Q_DECLARE_PRIVATE(ServiceSkeleton)
+    QScopedPointer<ServiceSkeletonPrivate> d_ptr;
 };
 }
 }

@@ -18,11 +18,18 @@
 
 #include <core/media/apparmor/ubuntu.h>
 
-#include <core/media/external_services.h>
+#include "core/media/logging.h"
 
-#include "core/media/logger/logger.h"
+#include <QDBusMessage>
+#include <QDBusPendingCall>
+#include <QDBusPendingCallWatcher>
+#include <QDBusReply>
+#include <QDebug>
+#include <QString>
+#include <QUrl>
+#include <QVariantList>
+#include <QVariantMap>
 
-#include <regex>
 #include <unistd.h> // geteuid()
 
 namespace apparmor = core::ubuntu::media::apparmor;
@@ -31,75 +38,34 @@ namespace ubuntu = apparmor::ubuntu;
 
 namespace
 {
-struct Uri
-{
-    std::string scheme;
-    std::string authority;
-    std::string path;
-    std::string query;
-    std::string fragment;
-};
 
-// Poor mans version of a uri parser.
-// See https://tools.ietf.org/html/rfc3986#appendix-B
-Uri parse_uri(const std::string& s)
-{
-    // Indices into the regex match go here.
-    struct Index
-    {
-        const std::size_t scheme{2};
-        const std::size_t authority{4};
-        const std::size_t path{5};
-        const std::size_t query{7};
-        const std::size_t fragment{9};
-    } static index;
-
-    static const std::regex regex{R"delim(^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?)delim"};
-    std::smatch match;
-
-    if (not std::regex_match(s, match, regex)) throw std::runtime_error
-    {
-        "Not a valid URI: " + s
-    };
-
-    return Uri
-    {
-        match.str(index.scheme),
-        match.str(index.authority),
-        match.str(index.path),
-        match.str(index.query),
-        match.str(index.fragment)
-    };
-}
-
-static constexpr std::size_t index_package{1};
-static constexpr std::size_t index_app{2};
-static const std::string unity_name{"unity8-dash"};
-static const std::string unity8_snap_name{"snap.unity8-session.unity8-session"};
+static constexpr std::size_t index_package{0};
+static constexpr std::size_t index_app{1};
+static const char unity_name[] = "unity8-dash";
+static const char unity8_snap_name[] = "snap.unity8-session.unity8-session";
 
 // ad-hoc for mediaplayer-app/music-app until it settles down with proper handling
 // Bug #1642611
-static const std::string mediaplayer_snap_name{"snap.mediaplayer-app.mediaplayer-app"};
-static const std::string music_snap_name{"snap.music-app.music-app"};
+static const char mediaplayer_snap_name[] = "snap.mediaplayer-app.mediaplayer-app";
+static const char music_snap_name[] = "snap.music-app.music-app";
 // Returns true if the context name is a valid Ubuntu app id.
 // If it is, out is populated with the package and app name.
-bool process_context_name(const std::string& s, std::smatch& out,
-        std::string& pkg_name)
+bool process_context_name(const QString &s, QStringList &out,
+                          QString &pkg_name)
 {
     // See https://wiki.ubuntu.com/AppStore/Interfaces/ApplicationId.
-    static const std::regex short_re{"(.*)_(.*)"};
-    static const std::regex full_re{"(.*)_(.*)_(.*)"};
-    static const std::regex trust_store_re{"(.*)-(.*)"};
 
     if ((s == "messaging-app" or s == unity_name or s == unity8_snap_name or
             s == mediaplayer_snap_name or s == music_snap_name)
-            and std::regex_match(s, out, trust_store_re))
+            and s.contains('-'))
     {
         pkg_name = s;
         return true;
     }
 
-    if (std::regex_match(s, out, full_re) or std::regex_match(s, out, short_re))
+
+    out = s.split('_');
+    if (out.count() == 2 || out.count() == 3)
     {
         pkg_name = out[index_package];
         return true;
@@ -109,20 +75,18 @@ bool process_context_name(const std::string& s, std::smatch& out,
 }
 }
 
-apparmor::ubuntu::Context::Context(const std::string& name)
+apparmor::ubuntu::Context::Context(const QString &name)
     : apparmor::Context{name},
       unconfined_{str() == ubuntu::unconfined},
       unity_{name == unity_name || name == unity8_snap_name},
-      has_package_name_{process_context_name(str(), match_, pkg_name_)}
+      has_package_name_{process_context_name(str(), app_id_parts, pkg_name_)}
 {
-    MH_DEBUG("apparmor profile name: %s", name);
+    MH_DEBUG("apparmor profile name: %s", qUtf8Printable(name));
     MH_DEBUG("is_unconfined(): %s", (is_unconfined() ? "true" : "false"));
     MH_DEBUG("has_package_name(): %s", (has_package_name() ? "true" : "false"));
-    if (not is_unconfined() and not is_unity() and not has_package_name())
-        throw std::logic_error
-        {
-            "apparmor::ubuntu::Context: Invalid profile name " + str()
-        };
+    if (not is_unconfined() and not is_unity() and not has_package_name()) {
+        MH_FATAL("apparmor::ubuntu::Context: Invalid profile name %s", qUtf8Printable(str()));
+    }
 }
 
 bool apparmor::ubuntu::Context::is_unconfined() const
@@ -140,44 +104,63 @@ bool apparmor::ubuntu::Context::has_package_name() const
     return has_package_name_;
 }
 
-std::string apparmor::ubuntu::Context::package_name() const
+QString apparmor::ubuntu::Context::package_name() const
 {
     return pkg_name_;
 }
 
-std::string apparmor::ubuntu::Context::profile_name() const
+QString apparmor::ubuntu::Context::profile_name() const
 {
-    return std::string{match_[index_package]} + "-" + std::string{match_[index_app]};
+    return app_id_parts[index_package] + "-" + app_id_parts[index_app];
 }
 
-apparmor::ubuntu::DBusDaemonRequestContextResolver::DBusDaemonRequestContextResolver(const core::dbus::Bus::Ptr& bus) : dbus_daemon{bus}
+apparmor::ubuntu::DBusDaemonRequestContextResolver::DBusDaemonRequestContextResolver():
+    m_connection(QDBusConnection::sessionBus())
 {
 }
 
 void apparmor::ubuntu::DBusDaemonRequestContextResolver::resolve_context_for_dbus_name_async(
-        const std::string& name,
+        const QString &name,
         apparmor::ubuntu::RequestContextResolver::ResolveCallback cb)
 {
-    dbus_daemon.get_connection_app_armor_security_async(name, [cb](const std::string& context_name)
-    {
-        cb(apparmor::ubuntu::Context{context_name});
+    QDBusMessage msg =
+        QDBusMessage::createMethodCall("org.freedesktop.DBus",
+                                       "/org/freedesktop/DBus",
+                                       "org.freedesktop.DBus",
+                                       "GetConnectionCredentials");
+    msg.setArguments({ name });
+    QDBusPendingCall call = QDBusConnection::sessionBus().asyncCall(msg);
+    QDBusPendingCallWatcher *callWatcher = new QDBusPendingCallWatcher(call);
+    QObject::connect(callWatcher, &QDBusPendingCallWatcher::finished,
+                     [cb](QDBusPendingCallWatcher *callWatcher) {
+        QDBusReply<QVariantMap> reply(*callWatcher);
+        QByteArray context;
+        if (reply.isValid()) {
+            QVariantMap map = reply.value();
+            context = map.value("LinuxSecurityLabel").toByteArray();
+        } else {
+            QDBusError error = reply.error();
+            qWarning() << "Error getting app ID:" << error.name() <<
+                error.message();
+        }
+        cb(apparmor::ubuntu::Context(context));
+        callWatcher->deleteLater();
     });
 }
 
-apparmor::ubuntu::RequestAuthenticator::Result apparmor::ubuntu::ExistingAuthenticator::authenticate_open_uri_request(const apparmor::ubuntu::Context& context, const std::string& uri)
+apparmor::ubuntu::RequestAuthenticator::Result apparmor::ubuntu::ExistingAuthenticator::authenticate_open_uri_request(const apparmor::ubuntu::Context& context, const QUrl &uri)
 {
     if (context.is_unconfined())
         return Result{true, "Client allowed access since it's unconfined"};
 
-    Uri parsed_uri = parse_uri(uri);
-
-    MH_DEBUG("context.profile_name(): %s", context.profile_name());
-    MH_DEBUG("parsed_uri.path: %s", parsed_uri.path);
+    QString path = uri.path();
+    MH_DEBUG("context.profile_name(): %s", qUtf8Printable(context.profile_name()));
+    MH_DEBUG("parsed_uri.path: %s", qUtf8Printable(path));
 
     // All confined apps can access their own files
-    if (parsed_uri.path.find(std::string(".local/share/" + context.package_name() + "/")) != std::string::npos ||
-        parsed_uri.path.find(std::string(".cache/" + context.package_name() + "/")) != std::string::npos ||
-        parsed_uri.path.find(std::string("/run/user/" + std::to_string(geteuid()) + "/confined/" + context.package_name())) != std::string::npos)
+    if (path.contains(".local/share/" + context.package_name() + "/") ||
+        path.contains(".cache/" + context.package_name() + "/") ||
+        path.contains("/run/user/" + QString::number(geteuid()) + "/confined/" + context.package_name()))
     {
         return Result
         {
@@ -188,8 +171,8 @@ apparmor::ubuntu::RequestAuthenticator::Result apparmor::ubuntu::ExistingAuthent
     // Check for trust-store compatible path name using full messaging-app profile_name
     else if (context.profile_name() == "messaging-app" &&
              /* Since the full APP_ID is not available yet (see aa_query_file_path()), add an exception: */
-             (parsed_uri.path.find(std::string(".local/share/com.ubuntu." + context.profile_name() + "/")) != std::string::npos ||
-             parsed_uri.path.find(std::string(".cache/com.ubuntu." + context.profile_name() + "/")) != std::string::npos))
+             (path.contains(".local/share/com.ubuntu." + context.profile_name() + "/") ||
+             path.contains(".cache/com.ubuntu." + context.profile_name() + "/")))
     {
         return Result
         {
@@ -197,13 +180,13 @@ apparmor::ubuntu::RequestAuthenticator::Result apparmor::ubuntu::ExistingAuthent
             "Client can access content in ~/.local/share/" + context.profile_name() + " or ~/.cache/" + context.profile_name()
         };
     }
-    else if (parsed_uri.path.find(std::string("opt/click.ubuntu.com/")) != std::string::npos &&
-             parsed_uri.path.find(context.package_name()) != std::string::npos)
+    else if (path.contains("opt/click.ubuntu.com/") &&
+             path.contains(context.package_name()))
     {
         return Result{true, "Client can access content in own opt directory"};
     }
-    else if ((parsed_uri.path.find(std::string("/system/media/audio/ui/")) != std::string::npos ||
-              parsed_uri.path.find(std::string("/android/system/media/audio/ui/")) != std::string::npos) &&
+    else if ((path.contains("/system/media/audio/ui/") ||
+              path.contains("/android/system/media/audio/ui/")) &&
               context.package_name() == "com.ubuntu.camera")
     {
         return Result{true, "Camera app can access ui sounds"};
@@ -217,34 +200,22 @@ apparmor::ubuntu::RequestAuthenticator::Result apparmor::ubuntu::ExistingAuthent
     else if ((context.package_name() == "com.ubuntu.music" || context.package_name() == "com.ubuntu.gallery" ||
               context.profile_name() == unity_name || context.profile_name() == unity8_snap_name ||
               context.profile_name() == mediaplayer_snap_name || context.profile_name() == music_snap_name) &&
-            (parsed_uri.path.find(std::string("Music/")) != std::string::npos ||
-             parsed_uri.path.find(std::string("Videos/")) != std::string::npos ||
-             parsed_uri.path.find(std::string("/media")) != std::string::npos))
+            (path.contains("Music/") ||
+             path.contains("Videos/") ||
+             path.contains("/media")))
     {
         return Result{true, "Client can access content in ~/Music or ~/Videos"};
     }
-    else if (parsed_uri.path.find(std::string("/usr/share/sounds")) != std::string::npos)
+    else if (path.contains("/usr/share/sounds"))
     {
         return Result{true, "Client can access content in /usr/share/sounds"};
     }
-    else if (parsed_uri.scheme == "http" ||
-             parsed_uri.scheme == "https" ||
-             parsed_uri.scheme == "rtsp")
+    else if (uri.scheme() == "http" ||
+             uri.scheme() == "https" ||
+             uri.scheme() == "rtsp")
     {
         return Result{true, "Client can access streaming content"};
     }
 
-    return Result{false, "Client is not allowed to access: " + uri};
-}
-
-// Returns the platform-default implementation of RequestContextResolver.
-apparmor::ubuntu::RequestContextResolver::Ptr apparmor::ubuntu::make_platform_default_request_context_resolver(media::helper::ExternalServices& es)
-{
-    return std::make_shared<apparmor::ubuntu::DBusDaemonRequestContextResolver>(es.session);
-}
-
-// Returns the platform-default implementation of RequestAuthenticator.
-apparmor::ubuntu::RequestAuthenticator::Ptr apparmor::ubuntu::make_platform_default_request_authenticator()
-{
-    return std::make_shared<apparmor::ubuntu::ExistingAuthenticator>();
+    return Result{false, "Client is not allowed to access: " + uri.toString()};
 }

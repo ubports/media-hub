@@ -19,13 +19,16 @@
 #ifndef CORE_UBUNTU_MEDIA_PLAYER_IMPLEMENTATION_H_
 #define CORE_UBUNTU_MEDIA_PLAYER_IMPLEMENTATION_H_
 
-#include <core/media/player.h>
-
 #include "apparmor/ubuntu.h"
 #include "client_death_observer.h"
+#include "player.h"
 #include "power/state_controller.h"
+#include "track.h"
 
-#include <memory>
+#include <QMap>
+#include <QObject>
+#include <QScopedPointer>
+#include <QString>
 
 namespace core
 {
@@ -36,51 +39,109 @@ namespace media
 class Engine;
 class Service;
 
-template<typename Parent>
-class PlayerImplementation : public Parent
+class PlayerImplementationPrivate;
+class PlayerImplementation : public QObject
 {
+    Q_OBJECT
+
 public:
+    using Headers = Player::HeadersType;
+
     // All creation time arguments go here
     struct Configuration
     {
-        // All creation time configuration options of the Parent class.
-        typename Parent::Configuration parent;
         // The unique key identifying the player instance.
         Player::PlayerKey key;
         // Functional dependencies
         ClientDeathObserver::Ptr client_death_observer;
-        power::StateController::Ptr power_state_controller;
     };
 
-    PlayerImplementation(const Configuration& configuration);
+    PlayerImplementation(const Configuration& configuration,
+                         QObject *parent = nullptr);
     ~PlayerImplementation();
 
-    virtual std::string uuid() const;
-    virtual void reconnect();
-    virtual void abandon();
+    AVBackend::Backend backend() const;
 
-    virtual std::shared_ptr<TrackList> track_list();
-    virtual Player::PlayerKey key() const;
+    bool canPlay() const;
+    bool canPause() const;
+    bool canSeek() const;
+    bool canGoPrevious() const;
+    bool canGoNext() const;
 
-    virtual video::Sink::Ptr create_gl_texture_video_sink(std::uint32_t texture_id);
+    void setPlaybackRate(double rate);
+    double playbackRate() const;
+    double minimumRate() const;
+    double maximumRate() const;
 
-    virtual bool open_uri(const Track::UriType& uri);
-    virtual bool open_uri(const Track::UriType& uri, const Player::HeadersType& headers);
-    virtual void next();
-    virtual void previous();
-    virtual void play();
-    virtual void pause();
-    virtual void stop();
-    virtual void seek_to(const std::chrono::microseconds& offset);
+    void setLoopStatus(Player::LoopStatus status);
+    Player::LoopStatus loopStatus() const;
 
-    const core::Signal<>& on_client_disconnected() const;
+    void setShuffle(bool shuffle);
+    bool shuffle() const;
 
-protected:
-    void emit_playback_status_changed(const Player::PlaybackStatus &status);
+    void setVolume(double volume);
+    double volume() const;
+
+    Player::PlaybackStatus playbackStatus() const;
+
+    bool isVideoSource() const;
+    bool isAudioSource() const;
+    QSize videoDimension() const;
+    Player::Orientation orientation() const;
+    Track::MetaData metadataForCurrentTrack() const;
+
+    uint64_t position() const;
+    uint64_t duration() const;
+
+    void setAudioStreamRole(Player::AudioStreamRole role);
+    Player::AudioStreamRole audioStreamRole() const;
+
+    void setLifetime(Player::Lifetime lifetime);
+    Player::Lifetime lifetime() const;
+
+    void reconnect();
+    void abandon();
+
+    QSharedPointer<TrackListImplementation> trackList();
+    Player::PlayerKey key() const;
+
+    void create_gl_texture_video_sink(std::uint32_t texture_id);
+
+    bool open_uri(const QUrl &uri);
+    bool open_uri(const QUrl &uri, const Headers &headers);
+    void next();
+    void previous();
+    void play();
+    void pause();
+    void stop();
+    void seek_to(const std::chrono::microseconds& offset);
+
+Q_SIGNALS:
+    void isVideoSourceChanged();
+    void isAudioSourceChanged();
+    void metadataForCurrentTrackChanged();
+    void mprisPropertiesChanged();
+
+    void positionChanged();
+    void durationChanged();
+    void volumeChanged();
+    void playbackStatusChanged();
+
+    void orientationChanged();
+    void videoDimensionChanged();
+
+    void aboutToFinish();
+    void clientDisconnected();
+    void seekedTo(uint64_t offset);
+    void bufferingChanged(int);
+    void endOfStream();
+    void errorOccurred(Player::Error error);
+    /* TODO: the Service should pause all other players and set this one as the current one */
+    void playbackRequested();
 
 private:
-    struct Private;
-    std::shared_ptr<Private> d;
+    Q_DECLARE_PRIVATE(PlayerImplementation)
+    QScopedPointer<PlayerImplementationPrivate> d_ptr;
 };
 
 }

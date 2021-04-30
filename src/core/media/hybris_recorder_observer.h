@@ -19,7 +19,9 @@
 #ifndef CORE_UBUNTU_MEDIA_HYBRIS_RECORDER_OBSERVER_H_
 #define CORE_UBUNTU_MEDIA_HYBRIS_RECORDER_OBSERVER_H_
 
-#include <core/media/recorder_observer.h>
+#include <core/media/recorder_observer_p.h>
+
+#include <QScopedPointer>
 
 namespace core
 {
@@ -27,23 +29,15 @@ namespace ubuntu
 {
 namespace media
 {
-class HybrisRecorderObserver : public RecorderObserver
+class HybrisRecorderObserver : public RecorderObserverPrivate
 {
 public:
-    // Creates a new instance of the HybrisRecorderObserver or throws
-    // if hybris is not available.
-    static RecorderObserver::Ptr create();
-
+    HybrisRecorderObserver(RecorderObserver *q);
     ~HybrisRecorderObserver();
-
-    // Getable/observable property describing the recording state of the system.
-    const core::Property<RecordingState>& recording_state() const override;
 
 private:
     struct Private;
-
-    HybrisRecorderObserver();
-    std::shared_ptr<Private> d;
+    QScopedPointer<Private> d;
 };
 }
 }

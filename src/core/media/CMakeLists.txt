@@ -1,6 +1,6 @@
 pkg_check_modules(PC_GSTREAMER_1_0 REQUIRED gstreamer-1.0)
 pkg_check_modules(PC_GSTREAMER_PBUTILS_1_0 REQUIRED gstreamer-pbutils-1.0)
-pkg_check_modules(PC_PULSE_AUDIO REQUIRED libpulse)
+pkg_check_modules(PC_PULSE_AUDIO REQUIRED libpulse libpulse-mainloop-glib)
 include_directories(${PC_GSTREAMER_1_0_INCLUDE_DIRS} ${HYBRIS_MEDIA_CFLAGS} ${PC_PULSE_AUDIO_INCLUDE_DIRS})
 
 # We compile with all symbols visible by default. For the shipping library, we strip
@@ -11,6 +11,9 @@ file(GLOB_RECURSE MEDIA_HUB_HEADERS ${CMAKE_SOURCE_DIR}/include/*.h)
 file(GLOB MPRIS_HEADERS mpris/*.h)
 
 message(STATUS ${MEDIA_HUB_HEADERS})
+
+SET (CMAKE_INCLUDE_CURRENT_DIR ON)
+SET (CMAKE_AUTOMOC ON)
 
 add_subdirectory(telephony)
 
@@ -31,6 +34,18 @@ target_link_libraries(
   ${PC_GSTREAMER_1_0_LIBRARIES}
   Qt5::Core
 )
+
+target_include_directories(media-hub-common PUBLIC
+  ${Boost_INCLUDE_DIRS}
+  ${DBUS_INCLUDE_DIRS}
+  ${DBUS_CPP_INCLUDE_DIRS}
+  ${GLog_INCLUDE_DIR}
+  ${PROCESS_CPP_INCLUDE_DIRS}
+  ${PROPERTIES_CPP_INCLUDE_DIRS}
+
+  ${PROJECT_SOURCE_DIR}/include/
+)
+
 set_target_properties(
   media-hub-common
 
@@ -61,6 +76,11 @@ add_library(
   video/hybris_gl_sink.cpp
   video/egl_sink.cpp
   video/platform_default_sink.cpp
+)
+
+target_include_directories(media-hub-client PUBLIC
+  ${PROJECT_SOURCE_DIR}/include/
+  ${PROJECT_SOURCE_DIR}/src/
 )
 
 set_target_properties(
@@ -97,18 +117,14 @@ install(
 add_library(
   media-hub-service
 
-  ${MEDIA_HUB_HEADERS}
-  ${MPRIS_HEADERS}
-
-  logger/logger.cpp
+  logging.cpp
 
   client_death_observer.cpp
-  hashed_keyed_player_store.cpp
   hybris_client_death_observer.cpp
   stub_client_death_observer.cpp
   cover_art_resolver.cpp
   engine.cpp
-  metadata.cpp
+  track_metadata.cpp
 
   apparmor/context.cpp
   apparmor/ubuntu.cpp
@@ -138,23 +154,21 @@ add_library(
 target_link_libraries(
   media-hub-service
 
-  media-hub-client
-  media-hub-common
   call-monitor
-  ${Boost_LDFLAGS}
-  ${Boost_LIBRARIES}
-  ${DBUS_LIBRARIES}
-  ${DBUS_CPP_LDFLAGS}
-  ${GLog_LIBRARY}
   ${PC_GSTREAMER_1_0_LIBRARIES}
   ${PC_GSTREAMER_PBUTILS_1_0_LIBRARIES}
-  ${PROCESS_CPP_LDFLAGS}
   ${GIO_LIBRARIES}
   ${HYBRIS_MEDIA_LIBRARIES}
   ${PC_PULSE_AUDIO_LIBRARIES}
+  Qt5::Core
+  Qt5::DBus
 )
 
-include_directories(${PROJECT_SOURCE_DIR}/src/ ${HYBRIS_MEDIA_CFLAGS} ${PC_GSTREAMER_1_0_INCLUDE_DIRS})
+target_include_directories(media-hub-service PRIVATE
+  ${PROJECT_SOURCE_DIR}/src/
+  ${HYBRIS_MEDIA_CFLAGS}
+  ${PC_GSTREAMER_1_0_INCLUDE_DIRS}
+)
 
 add_executable(
   media-hub-server
@@ -167,14 +181,14 @@ target_link_libraries(
   media-hub-server
 
   media-hub-service
-  media-hub-client
   call-monitor
 
-  ${DBUS_LIBRARIES}
-  ${DBUS_CPP_LDFLAGS}
-  ${GLog_LIBRARY}
   ${PC_GSTREAMER_1_0_LIBRARIES}
   ${HYBRIS_MEDIA_LIBRARIES}
+)
+
+target_include_directories(media-hub-server PRIVATE
+  ${PROJECT_SOURCE_DIR}/src/
 )
 
 install(

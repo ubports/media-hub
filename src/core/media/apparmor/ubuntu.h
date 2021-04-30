@@ -19,29 +19,21 @@
 #define CORE_UBUNTU_MEDIA_APPARMOR_UBUNTU_H_
 
 #include <core/media/apparmor/context.h>
-#include <core/media/apparmor/dbus.h>
+
+#include <QDBusConnection>
+#include <QSharedPointer>
+#include <QStringList>
 
 #include <functional>
-#include <memory>
-#include <regex>
-#include <string>
-#include <vector>
+
+class QUrl;
 
 namespace core
 {
-namespace dbus
-{
-class Bus;
-}
-
 namespace ubuntu
 {
 namespace media
 {
-namespace helper
-{
-struct ExternalServices;
-}
 namespace apparmor
 {
 // Collects Ubuntu-specific apparmor conventions, e.g., format
@@ -62,25 +54,25 @@ public:
     // Constructs a new Context instance for the given raw name.
     // Throws std::logic_error for empty names or for names not
     // complying to Ubuntu conventions.
-    Context(const std::string& name);
+    Context(const QString &name);
 
     // Returns true iff the context is unconfined.
-    virtual bool is_unconfined() const;
+    bool is_unconfined() const;
 
     // Returns true iff the context matches Unity.
-    virtual bool is_unity() const;
+    bool is_unity() const;
 
     // Returns true iff the context contains a package name.
-    virtual bool has_package_name() const;
+    bool has_package_name() const;
 
     // Returns the package name or throws if no package name can be found.
-    virtual std::string package_name() const;
+    QString package_name() const;
 
-    virtual std::string profile_name() const;
+    QString profile_name() const;
 
 private:
-    std::smatch match_;
-    std::string pkg_name_;
+    QStringList app_id_parts;
+    QString pkg_name_;
     const bool unconfined_;
     const bool unity_;
     const bool has_package_name_;
@@ -91,14 +83,14 @@ class RequestContextResolver
 {
 public:
     // To save us some typing.
-    typedef std::shared_ptr<RequestContextResolver> Ptr;
+    typedef QSharedPointer<RequestContextResolver> Ptr;
 
     // Callback for resolve context operations.
     typedef std::function<void(const Context&)> ResolveCallback;
 
     // Resolves the given name (of a dbus participant) to its apparmor context,
     // invoking the callback whenever a result is available.
-    virtual void resolve_context_for_dbus_name_async(const std::string& name, ResolveCallback cb) = 0;
+    virtual void resolve_context_for_dbus_name_async(const QString &name, ResolveCallback cb) = 0;
 
 protected:
     RequestContextResolver() = default;
@@ -112,17 +104,14 @@ protected:
 class DBusDaemonRequestContextResolver : public RequestContextResolver
 {
 public:
-    // To save us some typing.
-    typedef std::shared_ptr<DBusDaemonRequestContextResolver> Ptr;
-
     // Constructs a new instance for the given bus connection.
-    DBusDaemonRequestContextResolver(const core::dbus::Bus::Ptr &);
+    DBusDaemonRequestContextResolver();
 
     // From RequestContextResolver
-    void resolve_context_for_dbus_name_async(const std::string& name, ResolveCallback) override;
+    void resolve_context_for_dbus_name_async(const QString &name, ResolveCallback) override;
 
 private:
-    org::freedesktop::dbus::DBus::Stub dbus_daemon;
+    QDBusConnection m_connection;
 };
 
 // Abstracts an apparmor-based authentication of
@@ -131,20 +120,20 @@ class RequestAuthenticator
 {
 public:
     // To save us some typing.
-    typedef std::shared_ptr<RequestAuthenticator> Ptr;
+    typedef QSharedPointer<RequestAuthenticator> Ptr;
 
     // Return type of an authentication call.
     typedef std::tuple
     <
         bool,       // True if authenticated, false if not.
-        std::string // Reason for the result.
+        QString // Reason for the result.
     > Result;
 
     virtual ~RequestAuthenticator() = default;
 
     // Returns true iff the client identified by the given apparmor::Context is allowed
     // to access the given uri, false otherwise.
-    virtual Result authenticate_open_uri_request(const Context&, const std::string& uri) = 0;
+    virtual Result authenticate_open_uri_request(const Context&, const QUrl &uri) = 0;
 
 protected:
     RequestAuthenticator() = default;
@@ -158,13 +147,9 @@ struct ExistingAuthenticator : public RequestAuthenticator
 {
     ExistingAuthenticator() = default;
     // From RequestAuthenticator
-    Result authenticate_open_uri_request(const Context&, const std::string& uri) override;
+    Result authenticate_open_uri_request(const Context&, const QUrl &uri) override;
 };
 
-// Returns the platform-default implementation of RequestContextResolver.
-RequestContextResolver::Ptr make_platform_default_request_context_resolver(helper::ExternalServices& es);
-// Returns the platform-default implementation of RequestAuthenticator.
-RequestAuthenticator::Ptr make_platform_default_request_authenticator();
 }
 }
 }

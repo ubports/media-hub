@@ -16,31 +16,52 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#include "core/media/logger/logger.h"
+#include "core/media/logging.h"
 
 #include <core/media/client_death_observer.h>
 #include <core/media/hybris_client_death_observer.h>
 #include <core/media/stub_client_death_observer.h>
-#include <core/media/hybris_client_death_observer.h>
 
 namespace media = core::ubuntu::media;
 
+using namespace media;
+
+namespace {
+
 // Accesses the default client death observer implementation for the platform.
-media::ClientDeathObserver::Ptr media::platform_default_client_death_observer()
+ClientDeathObserverPrivate *
+platform_default_client_death_observer(ClientDeathObserver *q)
 {
     const media::AVBackend::Backend b {media::AVBackend::get_backend_type()};
     switch (b)
     {
         case media::AVBackend::Backend::hybris:
-            return media::HybrisClientDeathObserver::create();
+            return new media::HybrisClientDeathObserver(q);
         case media::AVBackend::Backend::mir:
         case media::AVBackend::Backend::none:
             MH_WARNING(
                 "No video backend selected. Client disconnect functionality won't work."
             );
-            return media::StubClientDeathObserver::create();
+            return new media::StubClientDeathObserver(q);
         default:
             MH_INFO("Invalid or no A/V backend specified, using \"hybris\" as a default.");
-            return media::HybrisClientDeathObserver::create();
+            return new media::HybrisClientDeathObserver(q);
     }
+}
+
+} // namespace
+
+ClientDeathObserver::ClientDeathObserver(QObject *parent):
+    QObject(parent),
+    d_ptr(platform_default_client_death_observer(this))
+{
+    qRegisterMetaType<Player::PlayerKey>("Player::PlayerKey");
+}
+
+ClientDeathObserver::~ClientDeathObserver() = default;
+
+void ClientDeathObserver::registerForDeathNotificationsWithKey(const Player::PlayerKey &key)
+{
+    Q_D(ClientDeathObserver);
+    d->registerForDeathNotificationsWithKey(key);
 }

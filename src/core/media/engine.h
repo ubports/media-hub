@@ -19,12 +19,19 @@
 #ifndef CORE_UBUNTU_MEDIA_ENGINE_H_
 #define CORE_UBUNTU_MEDIA_ENGINE_H_
 
-#include <core/media/player.h>
-#include <core/media/track.h>
+#include "player.h"
+#include "track.h"
 
-#include <core/property.h>
+#include <QObject>
+#include <QPair>
+#include <QSharedPointer>
+#include <QSize>
+#include <QUrl>
+#include <QVariantMap>
 
 #include <chrono>
+
+class QSize;
 
 namespace core
 {
@@ -32,8 +39,11 @@ namespace ubuntu
 {
 namespace media
 {
-class Engine
+class EnginePrivate;
+class Engine: public QObject
 {
+    Q_OBJECT
+
 public:
 
     enum class State
@@ -45,24 +55,14 @@ public:
         paused,
         stopped
     };
-
-    struct Volume
-    {
-        static double min();
-        static double max();
-
-        explicit Volume(double v = max());
-
-        bool operator!=(const Volume& rhs) const;
-        bool operator==(const Volume& rhs) const;
-
-        double value;
-    };
+    Q_ENUM(State)
 
     class MetaDataExtractor
     {
     public:
-        virtual Track::MetaData meta_data_for_track_with_uri(const Track::UriType& uri) = 0;
+        typedef std::function<void(const QVariantMap &)> Callback;
+        virtual void meta_data_for_track_with_uri(const QUrl &uri,
+                                                  const Callback &cb) = 0;
 
     protected:
         MetaDataExtractor() = default;
@@ -72,51 +72,88 @@ public:
         MetaDataExtractor& operator=(const MetaDataExtractor&) = delete;
     };
 
-    virtual const std::shared_ptr<MetaDataExtractor>& meta_data_extractor() const = 0;
+    Engine(QObject *parent = nullptr);
+    virtual ~Engine();
 
-    virtual const core::Property<State>& state() const = 0;
+    const QSharedPointer<MetaDataExtractor> &metadataExtractor() const;
 
-    virtual bool open_resource_for_uri(const core::ubuntu::media::Track::UriType& uri, bool do_pipeline_reset) = 0;
-    virtual bool open_resource_for_uri(const core::ubuntu::media::Track::UriType& uri, const Player::HeadersType&) = 0;
+    virtual bool open_resource_for_uri(const QUrl &uri, bool do_pipeline_reset) = 0;
+    virtual bool open_resource_for_uri(const QUrl &uri, const Player::HeadersType&) = 0;
     // Throws core::ubuntu::media::Player::Error::OutOfProcessBufferStreamingNotSupported if the implementation does not
     // support this feature.
     virtual void create_video_sink(uint32_t texture_id) = 0;
 
-    virtual bool play(bool use_main_context = false) = 0;
-    virtual bool stop(bool use_main_context = false)  = 0;
+    virtual bool play() = 0;
+    virtual bool stop() = 0;
     virtual bool pause() = 0;
     virtual bool seek_to(const std::chrono::microseconds& ts) = 0;
 
-    virtual const core::Property<bool>& is_video_source() const = 0;
-    virtual const core::Property<bool>& is_audio_source() const = 0;
+    State state() const;
 
-    virtual const core::Property<uint64_t>& position() const = 0;
-    virtual const core::Property<uint64_t>& duration() const = 0;
+    bool isVideoSource() const;
+    bool isAudioSource() const;
 
-    virtual const core::Property<Volume>& volume() const = 0;
-    virtual core::Property<Volume>& volume() = 0;
+    virtual uint64_t position() const = 0;
+    virtual uint64_t duration() const = 0;
 
-    virtual const core::Property<core::ubuntu::media::Player::AudioStreamRole>& audio_stream_role() const = 0;
-    virtual core::Property<core::ubuntu::media::Player::AudioStreamRole>& audio_stream_role() = 0;
+    void setAudioStreamRole(Player::AudioStreamRole role);
+    Player::AudioStreamRole audioStreamRole() const;
 
-    virtual const core::Property<core::ubuntu::media::Player::Orientation>& orientation() const = 0;
+    void setLifetime(Player::Lifetime lifetime);
+    Player::Lifetime lifetime() const;
 
-    virtual const core::Property<core::ubuntu::media::Player::Lifetime>& lifetime() const = 0;
-    virtual core::Property<core::ubuntu::media::Player::Lifetime>& lifetime() = 0;
+    Player::Orientation orientation() const;
+    QPair<QUrl,Track::MetaData> trackMetadata() const;
+    Player::PlaybackStatus playbackStatus() const;
+    QSize videoDimension() const;
 
-    virtual const core::Property<std::tuple<Track::UriType, Track::MetaData>>& track_meta_data() const = 0;
-
-    virtual const core::Signal<void>& about_to_finish_signal() const = 0;
-    virtual const core::Signal<uint64_t>& seeked_to_signal() const = 0;
-    virtual const core::Signal<void>& client_disconnected_signal() const = 0;
-    virtual const core::Signal<void>& end_of_stream_signal() const = 0;
-    virtual const core::Signal<core::ubuntu::media::Player::PlaybackStatus>& playback_status_changed_signal() const = 0;
-    virtual const core::Signal<video::Dimensions>& video_dimension_changed_signal() const = 0;
-    virtual const core::Signal<core::ubuntu::media::Player::Error>& error_signal() const = 0;
-    virtual const core::Signal<int>& on_buffering_changed_signal() const = 0;
+    void setVolume(double volume);
+    double volume() const;
 
     virtual void reset() = 0;
+
+Q_SIGNALS:
+    void stateChanged();
+
+    void isVideoSourceChanged();
+    void isAudioSourceChanged();
+
+    // TODO These two are actually not emitted, decide whether to remove them
+    void positionChanged();
+    void durationChanged();
+
+    void orientationChanged();
+
+    void trackMetadataChanged();
+
+    void aboutToFinish();
+    void seekedTo(uint64_t offset);
+    void clientDisconnected();
+    void endOfStream();
+    void playbackStatusChanged();
+    void videoDimensionChanged();
+    void errorOccurred(Player::Error error);
+    void bufferingChanged(int);
+
+protected:
+    void setMetadataExtractor(const QSharedPointer<MetaDataExtractor> &extractor);
+    void setState(State state);
+    void setIsVideoSource(bool value);
+    void setIsAudioSource(bool value);
+    void setOrientation(Player::Orientation o);
+    void setTrackMetadata(const QPair<QUrl,Track::MetaData> &metadata);
+    void setVideoDimension(const QSize &size);
+    void setPlaybackStatus(Player::PlaybackStatus status);
+
+    virtual void doSetAudioStreamRole(Player::AudioStreamRole role) = 0;
+    virtual void doSetLifetime(Player::Lifetime lifetime) = 0;
+    virtual void doSetVolume(double volume) = 0;
+
+private:
+    Q_DECLARE_PRIVATE(Engine)
+    QScopedPointer<EnginePrivate> d_ptr;
 };
+
 }
 }
 }

@@ -19,7 +19,7 @@
 #ifndef CORE_UBUNTU_MEDIA_STUB_RECORDER_OBSERVER_H_
 #define CORE_UBUNTU_MEDIA_STUB_RECORDER_OBSERVER_H_
 
-#include <core/media/recorder_observer.h>
+#include <core/media/recorder_observer_p.h>
 
 namespace core
 {
@@ -27,21 +27,11 @@ namespace ubuntu
 {
 namespace media
 {
-class StubRecorderObserver : public RecorderObserver
+class StubRecorderObserver : public RecorderObserverPrivate
 {
 public:
-    // Creates a new instance of the StubRecorderObserver
-    static RecorderObserver::Ptr create();
-
+    StubRecorderObserver(RecorderObserver *q);
     ~StubRecorderObserver();
-
-    // Getable/observable property describing the recording state of the system.
-    const core::Property<RecordingState>& recording_state() const override;
-
-private:
-    StubRecorderObserver();
-
-    core::Property<media::RecordingState> current_recording_state;
 };
 }
 }

@@ -16,55 +16,48 @@
  * Authored by: Jim Hodapp <jim.hodapp@canonical.com>
  */
 
-#include <core/media/service.h>
-#include <core/media/player.h>
-#include <core/media/track_list.h>
-
-#include "core/media/hashed_keyed_player_store.h"
-#include "core/media/logger/logger.h"
-#include "core/media/service_implementation.h"
+#include "logging.h"
+#include "service_implementation.h"
+#include "service_skeleton.h"
 
 #include <QCoreApplication>
+#include <QDBusConnection>
+#include <QSharedPointer>
+#include <QTextStream>
 
 #include <hybris/media/media_codec_layer.h>
 
-#include <iostream>
-
 namespace media = core::ubuntu::media;
-
-using namespace std;
 
 namespace
 {
 void logger_init()
 {
+    QTextStream out(stdout);
+    QTextStream err(stderr);
+
     const char *level = ::getenv("MH_LOG_LEVEL");
-    // Default level is kInfo
-    media::Logger::Severity severity{media::Logger::Severity::kInfo};
+    // Default level is info
+    QString severity = "info";
     if (level)
     {
         if (strcmp(level, "trace") == 0)
-            severity = media::Logger::Severity::kTrace;
-        else if (strcmp(level, "debug") == 0)
-            severity = media::Logger::Severity::kDebug;
-        else if (strcmp(level, "info") == 0)
-            severity = media::Logger::Severity::kInfo;
-        else if (strcmp(level, "warning") == 0)
-            severity = media::Logger::Severity::kWarning;
+            severity = "debug";
+        else if (strcmp(level, "info") == 0 ||
+                 strcmp(level, "debug") == 0 ||
+                 strcmp(level, "warning") == 0 ||
+                 strcmp(level, "fatal") == 0)
+            severity = level;
         else if (strcmp(level, "error") == 0)
-            severity = media::Logger::Severity::kError;
-        else if (strcmp(level, "fatal") == 0)
-            severity = media::Logger::Severity::kFatal;
+            severity = "critical";
         else
-            std::cerr << "Invalid log level \"" << level
-                << "\", setting to info. Valid options: [trace, debug, info, warning, error, fatal]."
-                << std::endl;
+            err << "Invalid log level \"" << level
+                << "\", setting to info. Valid options: [trace, debug, info, warning, error, fatal].\n";
     }
     else
-        std::cout << "Using default log level: info" << std::endl;
+        out << "Using default log level: info\n";
 
-    media::Log().Init(severity);
-    cout << "Log level: " << severity << std::endl;
+    out << "Log level: " << severity << '\n';
 }
 
 // All platform-specific initialization routines go here.
@@ -99,101 +92,34 @@ int main(int argc, char **argv)
 
     QCoreApplication app(argc, argv);
 
-    // We keep track of our state.
-    bool shutdown_requested{false};
+    auto bus = QDBusConnection::sessionBus();
 
-    // Our helper for connecting to external services.
-    core::ubuntu::media::helper::ExternalServices external_services;
+    media::ServiceImplementation impl;
 
-    // We move communication with all external services to its own worker thread
-    // to keep the actual service thread free from such operations.
-    std::thread external_services_worker
-    {
-        // We keep on running until shutdown has been explicitly requested.
-        // All exceptions thrown on this thread are caught, and reported to
-        // the terminal for post-mortem debugging purposes.
-        [&shutdown_requested, &external_services]()
-        {
-            while (not shutdown_requested)
-            {
-                try
-                {
-                    // Blocking call to the underlying reactor implementation.
-                    // Only returns cleanly when explicitly stopped.
-                    external_services.io_service.run();
-                }
-                catch (const std::exception& e)
-                {
-                    std::cerr << "Error while executing the underlying io_service: " << e.what() << std::endl;
-                }
-                catch (...)
-                {
-                    std::cerr << "Error while executing the underlying io_service." << std::endl;
-                }
-            }
-        }
-    };
-
-    // Our common player store instance for tracking player instances.
-    auto player_store = std::make_shared<media::HashedKeyedPlayerStore>();
-    // We assemble the configuration for executing the service now.
-    media::ServiceImplementation::Configuration service_config
-    {
-        std::make_shared<media::HashedKeyedPlayerStore>(),
-        external_services
-    };
-
-    auto impl = std::make_shared<media::ServiceImplementation>(media::ServiceImplementation::Configuration
-    {
-        player_store,
-        external_services
-    });
-
-    auto skeleton = std::make_shared<media::ServiceSkeleton>(media::ServiceSkeleton::Configuration
-    {
-        impl,
-        player_store,
-        external_services,
+    auto skeleton = new media::ServiceSkeleton(
+            media::ServiceSkeleton::Configuration {
+        bus,
         nullptr
-    });
+    }, &impl, &impl);
 
-    std::thread service_worker
-    {
-        [&shutdown_requested, skeleton]()
-        {
-            while (not shutdown_requested)
-            {
-                try
-                {
-                    skeleton->run();
-                }
-                catch (const std::exception& e)
-                {
-                    std::cerr << "Recoverable error while executing the service: " << e.what() << std::endl;
-                }
-                catch (...)
-                {
-                    std::cerr << "Recoverable error while executing the service." << std::endl;
-                }
-            }
-        }
-    };
+    bool ok =
+        bus.registerObject(QStringLiteral("/core/ubuntu/media/Service"),
+                           skeleton,
+                           QDBusConnection::ExportAllSlots |
+                           QDBusConnection::ExportScriptableSignals |
+                           QDBusConnection::ExportAllProperties);
+    if (!ok) {
+        MH_ERROR("Failed to register service object");
+        return EXIT_FAILURE;
+    }
+
+    ok = bus.registerService("core.ubuntu.media.Service");
+    if (!ok) {
+        MH_ERROR("Failed to register service name");
+        return EXIT_FAILURE;
+    }
 
     app.exec();
-
-    // Inform our workers that we should shutdown gracefully
-    shutdown_requested = true;
-
-    // And stop execution of helper and actual service.
-    skeleton->stop();
-
-    if (service_worker.joinable())
-        service_worker.join();
-
-    external_services.stop();
-
-    if (external_services_worker.joinable())
-        external_services_worker.join();
 
     return 0;
 }

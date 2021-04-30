@@ -20,17 +20,18 @@
 #ifndef CORE_UBUNTU_MEDIA_PLAYER_SKELETON_H_
 #define CORE_UBUNTU_MEDIA_PLAYER_SKELETON_H_
 
-#include <core/media/player.h>
-
-#include "player_traits.h"
+#include "player.h"
 
 #include "apparmor/ubuntu.h"
-#include "mpris/player.h"
 
-#include <core/dbus/skeleton.h>
-#include <core/dbus/types/object_path.h>
+#include <QDBusAbstractAdaptor>
+#include <QDBusConnection>
+#include <QDBusContext>
+#include <QMap>
+#include <QString>
 
-#include <memory>
+class QDBusObjectPath;
+class QUrl;
 
 namespace core
 {
@@ -38,100 +39,146 @@ namespace ubuntu
 {
 namespace media
 {
-namespace helper
-{
-struct ExternalServices;
-}
 
+class PlayerImplementation;
 class Service;
 
-class PlayerSkeleton : public core::ubuntu::media::Player
+class PlayerSkeletonPrivate;
+class PlayerSkeleton: public QDBusAbstractAdaptor
 {
-  public:
+    Q_OBJECT
+    Q_CLASSINFO("D-Bus Interface", "org.mpris.MediaPlayer2.Player")
+    Q_PROPERTY(bool CanPlay READ canPlay NOTIFY canPlayChanged)
+    Q_PROPERTY(bool CanPause READ canPause NOTIFY canPauseChanged)
+    Q_PROPERTY(bool CanSeek READ canSeek)
+    Q_PROPERTY(bool CanGoPrevious READ canGoPrevious
+               NOTIFY canGoPreviousChanged)
+    Q_PROPERTY(bool CanGoNext READ canGoNext NOTIFY canGoNextChanged)
+    Q_PROPERTY(bool CanControl READ canControl NOTIFY canControlChanged)
+    Q_PROPERTY(bool IsVideoSource READ isVideoSource)
+    Q_PROPERTY(bool IsAudioSource READ isAudioSource)
+    Q_PROPERTY(QString PlaybackStatus READ playbackStatus
+               NOTIFY PlaybackStatusChanged)
+    Q_PROPERTY(QString LoopStatus READ loopStatus WRITE setLoopStatus)
+    Q_PROPERTY(double PlaybackRate READ playbackRate WRITE setPlaybackRate)
+    Q_PROPERTY(bool Shuffle READ shuffle WRITE setShuffle)
+    Q_PROPERTY(QVariantMap Metadata READ metadata NOTIFY metadataChanged)
+    Q_PROPERTY(double Volume READ volume WRITE setVolume NOTIFY volumeChanged)
+    Q_PROPERTY(double MinimumRate READ minimumRate)
+    Q_PROPERTY(double MaximumRate READ maximumRate)
+    Q_PROPERTY(int64_t Position READ position)
+    Q_PROPERTY(int64_t Duration READ duration)
+    Q_PROPERTY(int16_t TypedBackend READ backend)
+    Q_PROPERTY(int16_t Orientation READ orientation NOTIFY orientationChanged)
+    Q_PROPERTY(int16_t Lifetime READ lifetime)
+    Q_PROPERTY(int16_t AudioStreamRole READ audioStreamRole)
+    Q_PROPERTY(int16_t TypedLoopStatus READ typedLoopStatus
+               WRITE setTypedLoopStatus)
+
+public:
+    typedef QMap<QString,QString> Headers;
+
+    enum LoopStatus {
+        None = Player::LoopStatus::none,
+        Track = Player::LoopStatus::track,
+        Playlist = Player::LoopStatus::playlist,
+    };
+    Q_ENUM(LoopStatus)
+
     // All creation time arguments go here.
     struct Configuration
     {
-        // The bus connection we are associated with.
-        std::shared_ptr<core::dbus::Bus> bus;
-        // The service instance we are exposed under.
-        std::shared_ptr<core::dbus::Service> service;
-        // The session object that we want to expose the skeleton upon.
-        std::shared_ptr<core::dbus::Object> session;
-        // The Service instance that manages Player instances
-        core::ubuntu::media::Service* player_service;
+        QDBusConnection connection;
         // Our functional dependencies.
         apparmor::ubuntu::RequestContextResolver::Ptr request_context_resolver;
         apparmor::ubuntu::RequestAuthenticator::Ptr request_authenticator;
     };
 
-    PlayerSkeleton(const Configuration& configuration);
+    PlayerSkeleton(const Configuration& configuration, QObject *parent = nullptr);
     ~PlayerSkeleton();
 
-    virtual const core::Property<bool>& can_play() const;
-    virtual const core::Property<bool>& can_pause() const;
-    virtual const core::Property<bool>& can_seek() const;
-    virtual const core::Property<bool>& can_go_previous() const;
-    virtual const core::Property<bool>& can_go_next() const;
-    virtual const core::Property<bool>& is_video_source() const;
-    virtual const core::Property<bool>& is_audio_source() const;
-    virtual const core::Property<PlaybackStatus>& playback_status() const;
-    virtual const core::Property<AVBackend::Backend>& backend() const;
-    virtual const core::Property<LoopStatus>& loop_status() const;
-    virtual const core::Property<PlaybackRate>& playback_rate() const;
-    virtual const core::Property<bool>& shuffle() const;
-    virtual const core::Property<Track::MetaData>& meta_data_for_current_track() const;
-    virtual const core::Property<Volume>& volume() const;
-    virtual const core::Property<PlaybackRate>& minimum_playback_rate() const;
-    virtual const core::Property<PlaybackRate>& maximum_playback_rate() const;
-    virtual const core::Property<int64_t>& position() const;
-    virtual const core::Property<int64_t>& duration() const;
-    virtual const core::Property<AudioStreamRole>& audio_stream_role() const;
-    virtual const core::Property<Orientation>& orientation() const;
-    virtual const core::Property<Lifetime>& lifetime() const;
+    void setPlayer(PlayerImplementation *impl);
+    PlayerImplementation *player();
+    const PlayerImplementation *player() const;
 
-    virtual core::Property<LoopStatus>& loop_status();
-    virtual core::Property<PlaybackRate>& playback_rate();
-    virtual core::Property<bool>& shuffle();
-    virtual core::Property<Volume>& volume();
-    virtual core::Property<AudioStreamRole>& audio_stream_role();
-    virtual core::Property<Lifetime>& lifetime();
+    bool canPlay() const;
+    bool canPause() const;
+    bool canSeek() const;
+    bool canGoPrevious() const;
+    bool canGoNext() const;
+    bool canControl() const;
+    bool isVideoSource() const;
+    bool isAudioSource() const;
+    QString playbackStatus() const;
+    void setLoopStatus(const QString &status);
+    QString loopStatus() const;
+    void setTypedLoopStatus(int16_t status);
+    int16_t typedLoopStatus() const;
+    void setPlaybackRate(double rate);
+    double playbackRate() const;
+    void setShuffle(bool shuffle);
+    bool shuffle() const;
+    QVariantMap metadata() const;
+    void setVolume(double volume);
+    double volume() const;
+    double minimumRate() const;
+    double maximumRate() const;
+    int64_t position() const;
+    int64_t duration() const;
+    int16_t backend() const;
+    int16_t orientation() const;
+    int16_t lifetime() const;
+    int16_t audioStreamRole() const;
 
-    virtual const core::Signal<int64_t>& seeked_to() const;
-    virtual const core::Signal<void>& about_to_finish() const;
-    virtual const core::Signal<void>& end_of_stream() const;
-    virtual const core::Signal<video::Dimensions>& video_dimension_changed() const;
-    virtual const core::Signal<Error>& error() const;
-    virtual const core::Signal<int>& buffering_changed() const;
+public Q_SLOTS:
+    void Next();
+    void Previous();
+    void Pause();
+    void PlayPause();
+    void Stop();
+    void Play();
+    void Seek(uint64_t microSeconds);
+    void SetPosition(const QDBusObjectPath &trackObject,
+                     uint64_t microSeconds);
+    void CreateVideoSink(uint32_t textureId);
+    uint32_t Key() const;
+    /* The OpenUri should not return anything, but since the previous
+     * implementation was returning a boolean, let's keep doing that. */
+    void OpenUri(const QDBusMessage &);
+    void OpenUriExtended(const QDBusMessage &);
 
-    // These properties are not exposed to the client, but still need to be
-    // able to be settable from within the Player:
-    virtual core::Property<PlaybackStatus>& playback_status();
-    virtual core::Property<AVBackend::Backend>& backend();
-    virtual core::Property<bool>& can_play();
-    virtual core::Property<bool>& can_pause();
-    virtual core::Property<bool>& can_seek();
-    virtual core::Property<bool>& can_go_previous();
-    virtual core::Property<bool>& can_go_next();
-    virtual core::Property<bool>& is_video_source();
-    virtual core::Property<bool>& is_audio_source();
-    virtual core::Property<Track::MetaData>& meta_data_for_current_track();
-    virtual core::Property<PlaybackRate>& minimum_playback_rate();
-    virtual core::Property<PlaybackRate>& maximum_playback_rate();
-    virtual core::Property<int64_t>& position();
-    virtual core::Property<int64_t>& duration();
-    virtual core::Property<Orientation>& orientation();
+Q_SIGNALS:
+    Q_SCRIPTABLE void Seeked(uint64_t microSeconds);
+    Q_SCRIPTABLE void AboutToFinish();
+    Q_SCRIPTABLE void EndOfStream();
+    Q_SCRIPTABLE void PlaybackStatusChanged(int16_t status); // TODO: remove, we have PropertiesChanged already
+    Q_SCRIPTABLE void VideoDimensionChanged(uint32_t height, uint32_t width);
+    Q_SCRIPTABLE void Error(int16_t code);
+    Q_SCRIPTABLE void Buffering(int percent); // TODO: set a fixed type
 
-    virtual core::Signal<int64_t>& seeked_to();
-    virtual core::Signal<void>& about_to_finish();
-    virtual core::Signal<void>& end_of_stream();
-    virtual core::Signal<PlaybackStatus>& playback_status_changed();
-    virtual core::Signal<video::Dimensions>& video_dimension_changed();
-    virtual core::Signal<Error>& error();
-    virtual core::Signal<int>& buffering_changed();
+    void canControlChanged();
+    void canPlayChanged();
+    void canPauseChanged();
+    void canGoPreviousChanged();
+    void canGoNextChanged();
+    void metadataChanged();
+    void volumeChanged();
+    void orientationChanged();
 
-  private:
-    struct Private;
-    std::shared_ptr<Private> d;
+protected: // proxy QDBusContext
+    inline const QDBusContext *context() const {
+        return reinterpret_cast<QDBusContext *>(
+            parent()->qt_metacast("QDBusContext"));
+    }
+    QDBusConnection connection() const { return context()->connection(); }
+    const QDBusMessage &message() const { return context()->message(); }
+    void sendErrorReply(const QString &name, const QString &msg) const {
+        return context()->sendErrorReply(name, msg);
+    }
+
+private:
+    Q_DECLARE_PRIVATE(PlayerSkeleton)
+    QScopedPointer<PlayerSkeletonPrivate> d_ptr;
 };
 }
 }

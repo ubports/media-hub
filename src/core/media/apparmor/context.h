@@ -18,8 +18,7 @@
 #ifndef CORE_UBUNTU_MEDIA_APPARMOR_AUTHENTICATOR_H_
 #define CORE_UBUNTU_MEDIA_APPARMOR_AUTHENTICATOR_H_
 
-#include <memory>
-#include <string>
+#include <QString>
 
 namespace core
 {
@@ -36,13 +35,13 @@ class Context
 public:
     // Constructs a new Context instance for the given raw name.
     // Throws std::logic_error for empty names.
-    explicit Context(const std::string& name);
+    explicit Context(const QString &name);
     virtual ~Context() = default;
     // Returns the raw string describing the context.
-    const std::string& str() const;
+    const QString &str() const;
 
 private:
-    const std::string name;
+    const QString name;
 };
 }
 }

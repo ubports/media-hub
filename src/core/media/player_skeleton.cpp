@@ -17,691 +17,479 @@
  *              Jim Hodapp <jim.hodapp@canonical.com>
  */
 
-#include "codec.h"
-#include "engine.h"
-#include "external_services.h"
 #include "player_skeleton.h"
-#include "player_traits.h"
-#include "property_stub.h"
-#include "the_session_bus.h"
+
+#include "engine.h"
+#include "logging.h"
+#include "mpris.h"
+#include "player_implementation.h"
 #include "xesam.h"
 
 #include "apparmor/ubuntu.h"
-#include "mpris/media_player2.h"
-#include "mpris/metadata.h"
-#include "mpris/player.h"
-#include "mpris/playlists.h"
 
-#include "core/media/logger/logger.h"
 #include "util/uri_check.h"
 
-#include <core/dbus/object.h>
-#include <core/dbus/property.h>
-#include <core/dbus/stub.h>
+#include <QDBusMessage>
+#include <QMetaEnum>
 
-#include <core/dbus/asio/executor.h>
-#include <core/dbus/interfaces/properties.h>
+using namespace core::ubuntu::media;
 
-namespace dbus = core::dbus;
-namespace media = core::ubuntu::media;
+namespace core {
+namespace ubuntu {
+namespace media {
 
-struct media::PlayerSkeleton::Private
+class PlayerSkeletonPrivate
 {
-    Private(media::PlayerSkeleton* player,
-            const std::shared_ptr<core::dbus::Bus>& bus,
-            const std::shared_ptr<core::dbus::Object>& session,
-            const apparmor::ubuntu::RequestContextResolver::Ptr& request_context_resolver,
-            const apparmor::ubuntu::RequestAuthenticator::Ptr& request_authenticator)
-        : impl(player),
-          bus(bus),
-          object(session),
-          request_context_resolver{request_context_resolver},
-          request_authenticator{request_authenticator},
-          uri_check(std::make_shared<UriCheck>()),
-          skeleton{mpris::Player::Skeleton::Configuration{bus, session, mpris::Player::Skeleton::Configuration::Defaults{}}},
-          signals
-          {
-              skeleton.signals.seeked_to,
-              skeleton.signals.about_to_finish,
-              skeleton.signals.end_of_stream,
-              skeleton.signals.playback_status_changed,
-              skeleton.signals.video_dimension_changed,
-              skeleton.signals.error,
-              skeleton.signals.buffering_changed
-          }
+public:
+    PlayerSkeletonPrivate(const QDBusConnection &connection,
+                          const apparmor::ubuntu::RequestContextResolver::Ptr &request_context_resolver,
+                          const apparmor::ubuntu::RequestAuthenticator::Ptr &request_authenticator,
+                          media::PlayerSkeleton *q):
+        m_player(nullptr),
+        m_connection(connection),
+        request_context_resolver{request_context_resolver},
+        request_authenticator{request_authenticator},
+        q_ptr(q)
     {
     }
 
-    void handle_next(const core::dbus::Message::Ptr& msg)
-    {
-        impl->next();
-        auto reply = dbus::Message::make_method_return(msg);
-        bus->send(reply);
-    }
-
-    void handle_previous(const core::dbus::Message::Ptr& msg)
-    {
-        impl->previous();
-        auto reply = dbus::Message::make_method_return(msg);
-        bus->send(reply);
-    }
-
-    void handle_pause(const core::dbus::Message::Ptr& msg)
-    {
-        impl->pause();
-        auto reply = dbus::Message::make_method_return(msg);
-        bus->send(reply);
-    }
-
-    void handle_stop(const core::dbus::Message::Ptr& msg)
-    {
-        impl->stop();
-        auto reply = dbus::Message::make_method_return(msg);
-        bus->send(reply);
-    }
-
-    void handle_play(const core::dbus::Message::Ptr& msg)
-    {
-        impl->play();
-        auto reply = dbus::Message::make_method_return(msg);
-        bus->send(reply);
-    }
-
-    void handle_play_pause(const core::dbus::Message::Ptr& msg)
-    {
-        switch(impl->playback_status().get())
-        {
-        case core::ubuntu::media::Player::PlaybackStatus::ready:
-        case core::ubuntu::media::Player::PlaybackStatus::paused:
-        case core::ubuntu::media::Player::PlaybackStatus::stopped:
-            impl->play();
-            break;
-        case core::ubuntu::media::Player::PlaybackStatus::playing:
-            impl->pause();
-            break;
-        default:
-            break;
-        }
-
-        bus->send(dbus::Message::make_method_return(msg));
-    }
-
-    void handle_seek(const core::dbus::Message::Ptr& in)
-    {
-        uint64_t ticks;
-        in->reader() >> ticks;
-        impl->seek_to(std::chrono::microseconds(ticks));
-
-        auto reply = dbus::Message::make_method_return(in);
-        bus->send(reply);
-    }
-
-    void handle_set_position(const core::dbus::Message::Ptr&)
-    {
-    }
-
-    void handle_create_video_sink(const core::dbus::Message::Ptr& in)
-    {
-        uint32_t texture_id;
-        in->reader() >> texture_id;
-
-        core::dbus::Message::Ptr reply;
-
-        try
-        {
-            impl->create_gl_texture_video_sink(texture_id);
-            reply = dbus::Message::make_method_return(in);
-        }
-        catch (const media::Player::Errors::OutOfProcessBufferStreamingNotSupported& e)
-        {
-            reply = dbus::Message::make_error(
-                        in,
-                        mpris::Player::Error::OutOfProcessBufferStreamingNotSupported::name,
-                        e.what());
-        }
-        catch (...)
-        {
-            reply = dbus::Message::make_error(
-                        in,
-                        mpris::Player::Error::OutOfProcessBufferStreamingNotSupported::name,
-                        std::string{});
-        }
-
-        bus->send(reply);
-    }
-
-    void handle_key(const core::dbus::Message::Ptr& in)
-    {
-        auto reply = dbus::Message::make_method_return(in);
-        reply->writer() << impl->key();
-        bus->send(reply);
-    }
-
-    void handle_open_uri(const core::dbus::Message::Ptr& in)
-    {
-        request_context_resolver->resolve_context_for_dbus_name_async(in->sender(), [this, in](const media::apparmor::ubuntu::Context& context)
-        {
-            Track::UriType uri;
-            in->reader() >> uri;
-
-            auto reply = dbus::Message::make_method_return(in);
-            uri_check->set(uri);
-            const bool valid_uri = !uri_check->is_local_file() or
-                    (uri_check->is_local_file() and uri_check->file_exists());
-            if (!valid_uri)
-            {
-                const std::string err_str = {"Warning: Failed to open uri " + uri +
-                     " because it can't be found."};
-                MH_ERROR("%s", err_str);
-                reply = dbus::Message::make_error(
-                            in,
-                            mpris::Player::Error::UriNotFound::name,
-                            err_str);
-            }
-            else
-            {
-                // Make sure the client has adequate apparmor permissions to open the URI
-                const auto result = request_authenticator->authenticate_open_uri_request(context, uri);
-                if (std::get<0>(result))
-                {
-                    reply->writer() << (std::get<0>(result) ? impl->open_uri(uri) : false);
-                }
-                else
-                {
-                    const std::string err_str = {"Warning: Failed to authenticate necessary "
-                        "apparmor permissions to open uri: " + std::get<1>(result)};
-                    MH_ERROR("%s", err_str);
-                    reply = dbus::Message::make_error(
-                                in,
-                                mpris::Player::Error::InsufficientAppArmorPermissions::name,
-                                err_str);
-                }
-            }
-
-            bus->send(reply);
-        });
-    }
-
-    void handle_open_uri_extended(const core::dbus::Message::Ptr& in)
-    {
-        request_context_resolver->resolve_context_for_dbus_name_async(in->sender(), [this, in](const media::apparmor::ubuntu::Context& context)
-        {
-            Track::UriType uri;
-            Player::HeadersType headers;
-
-            in->reader() >> uri >> headers;
-
-            auto reply = dbus::Message::make_method_return(in);
-            uri_check->set(uri);
-            const bool valid_uri = !uri_check->is_local_file() or
-                    (uri_check->is_local_file() and uri_check->file_exists());
-            if (!valid_uri)
-            {
-                const std::string err_str = {"Warning: Failed to open uri " + uri +
-                     " because it can't be found."};
-                MH_ERROR("%s", err_str);
-                reply = dbus::Message::make_error(
-                            in,
-                            mpris::Player::Error::UriNotFound::name,
-                            err_str);
-            }
-            else
-            {
-                // Make sure the client has adequate apparmor permissions to open the URI
-                const auto result = request_authenticator->authenticate_open_uri_request(context, uri);
-                if (std::get<0>(result))
-                {
-                    reply->writer() << (std::get<0>(result) ? impl->open_uri(uri, headers) : false);
-                }
-                else
-                {
-                    const std::string err_str = {"Warning: Failed to authenticate necessary "
-                        "apparmor permissions to open uri: " + std::get<1>(result)};
-                    MH_ERROR("%s", err_str);
-                    reply = dbus::Message::make_error(
-                                in,
-                                mpris::Player::Error::InsufficientAppArmorPermissions::name,
-                                err_str);
-                }
-            }
-
-            bus->send(reply);
-        });
-    }
-
-    template<typename Property>
-    void on_property_value_changed(
-            const typename Property::ValueType& value,
-            const dbus::Signal
-            <
-                core::dbus::interfaces::Properties::Signals::PropertiesChanged,
-                core::dbus::interfaces::Properties::Signals::PropertiesChanged::ArgumentType
-            >::Ptr& signal)
-    {
-        typedef std::map<std::string, dbus::types::Variant> Dictionary;
-
-        static const std::vector<std::string> the_empty_list_of_invalidated_properties;
-
-        Dictionary dict; dict[Property::name()] = dbus::types::Variant::encode(value);
-
-        signal->emit(std::make_tuple(
-                        dbus::traits::Service<typename Property::Interface>::interface_name(),
-                        dict,
-                        the_empty_list_of_invalidated_properties));
-    }
-
-    media::PlayerSkeleton* impl;
-    dbus::Bus::Ptr bus;
-    dbus::Object::Ptr object;
+private:
+    friend class PlayerSkeleton;
+    PlayerImplementation *m_player;
+    QDBusConnection m_connection;
     media::apparmor::ubuntu::RequestContextResolver::Ptr request_context_resolver;
     media::apparmor::ubuntu::RequestAuthenticator::Ptr request_authenticator;
-    media::UriCheck::Ptr uri_check;
-
-    mpris::Player::Skeleton skeleton;
-
-    struct Signals
-    {
-        typedef core::dbus::Signal<mpris::Player::Signals::Seeked, mpris::Player::Signals::Seeked::ArgumentType> DBusSeekedToSignal;
-        typedef core::dbus::Signal<mpris::Player::Signals::EndOfStream, mpris::Player::Signals::EndOfStream::ArgumentType> DBusEndOfStreamSignal;
-        typedef core::dbus::Signal<mpris::Player::Signals::AboutToFinish, mpris::Player::Signals::AboutToFinish::ArgumentType> DBusAboutToFinishSignal;
-        typedef core::dbus::Signal<mpris::Player::Signals::PlaybackStatusChanged, mpris::Player::Signals::PlaybackStatusChanged::ArgumentType> DBusPlaybackStatusChangedSignal;
-        typedef core::dbus::Signal<mpris::Player::Signals::VideoDimensionChanged, mpris::Player::Signals::VideoDimensionChanged::ArgumentType> DBusVideoDimensionChangedSignal;
-        typedef core::dbus::Signal<mpris::Player::Signals::Error, mpris::Player::Signals::Error::ArgumentType> DBusErrorSignal;
-        typedef core::dbus::Signal<mpris::Player::Signals::Buffering, mpris::Player::Signals::Buffering::ArgumentType> DBusBufferingChangedSignal;
-
-        Signals(const std::shared_ptr<DBusSeekedToSignal>& remote_seeked,
-                const std::shared_ptr<DBusAboutToFinishSignal>& remote_atf,
-                const std::shared_ptr<DBusEndOfStreamSignal>& remote_eos,
-                const std::shared_ptr<DBusPlaybackStatusChangedSignal>& remote_playback_status_changed,
-                const std::shared_ptr<DBusVideoDimensionChangedSignal>& remote_video_dimension_changed,
-                const std::shared_ptr<DBusErrorSignal>& remote_error,
-                const std::shared_ptr<DBusBufferingChangedSignal>& remote_buffering_changed)
-        {
-            seeked_to.connect([remote_seeked](std::uint64_t value)
-            {
-                remote_seeked->emit(value);
-            });
-
-            about_to_finish.connect([remote_atf]()
-            {
-                remote_atf->emit();
-            });
-
-            end_of_stream.connect([remote_eos]()
-            {
-                remote_eos->emit();
-            });
-
-            playback_status_changed.connect([remote_playback_status_changed](const media::Player::PlaybackStatus& status)
-            {
-                remote_playback_status_changed->emit(status);
-            });
-
-            video_dimension_changed.connect([remote_video_dimension_changed](const media::video::Dimensions& dimensions)
-            {
-                remote_video_dimension_changed->emit(dimensions);
-            });
-
-            error.connect([remote_error](const media::Player::Error& e)
-            {
-                remote_error->emit(e);
-            });
-
-            buffering_changed.connect([remote_buffering_changed](int value)
-            {
-                remote_buffering_changed->emit(value);
-            });
-
-        }
-
-        core::Signal<int64_t> seeked_to;
-        core::Signal<void> about_to_finish;
-        core::Signal<void> end_of_stream;
-        core::Signal<media::Player::PlaybackStatus> playback_status_changed;
-        core::Signal<media::video::Dimensions> video_dimension_changed;
-        core::Signal<media::Player::Error> error;
-        core::Signal<int> buffering_changed;
-    } signals;
-
+    PlayerSkeleton *q_ptr;
 };
 
-media::PlayerSkeleton::PlayerSkeleton(const media::PlayerSkeleton::Configuration& config)
-        : d(new Private{this, config.bus, config.session, config.request_context_resolver, config.request_authenticator})
+}}} // namespace
+
+PlayerSkeleton::PlayerSkeleton(const Configuration& configuration,
+                               QObject *parent):
+    QDBusAbstractAdaptor(parent),
+    d_ptr(new PlayerSkeletonPrivate(configuration.connection,
+                                    configuration.request_context_resolver,
+                                    configuration.request_authenticator,
+                                    this))
 {
-    // Setup method handlers for mpris::Player methods.
-    auto next = std::bind(&Private::handle_next, d, std::placeholders::_1);
-    d->object->install_method_handler<mpris::Player::Next>(next);
-
-    auto previous = std::bind(&Private::handle_previous, d, std::placeholders::_1);
-    d->object->install_method_handler<mpris::Player::Previous>(previous);
-
-    auto pause = std::bind(&Private::handle_pause, d, std::placeholders::_1);
-    d->object->install_method_handler<mpris::Player::Pause>(pause);
-
-    auto stop = std::bind(&Private::handle_stop, d, std::placeholders::_1);
-    d->object->install_method_handler<mpris::Player::Stop>(stop);
-
-    auto play = std::bind(&Private::handle_play, d, std::placeholders::_1);
-    d->object->install_method_handler<mpris::Player::Play>(play);
-
-    auto play_pause = std::bind(&Private::handle_play_pause, d, std::placeholders::_1);
-    d->object->install_method_handler<mpris::Player::PlayPause>(play_pause);
-
-    auto seek = std::bind(&Private::handle_seek, d, std::placeholders::_1);
-    d->object->install_method_handler<mpris::Player::Seek>(seek);
-
-    auto set_position = std::bind(&Private::handle_set_position, d, std::placeholders::_1);
-    d->object->install_method_handler<mpris::Player::SetPosition>(set_position);
-
-    auto open_uri = std::bind(&Private::handle_open_uri, d, std::placeholders::_1);
-    d->object->install_method_handler<mpris::Player::OpenUri>(open_uri);
-
-    // All the method handlers that exceed the mpris spec go here.
-    d->object->install_method_handler<mpris::Player::CreateVideoSink>(
-        std::bind(&Private::handle_create_video_sink,
-                  d,
-                  std::placeholders::_1));
-
-    d->object->install_method_handler<mpris::Player::Key>(
-        std::bind(&Private::handle_key,
-                  d,
-                  std::placeholders::_1));
-
-    d->object->install_method_handler<mpris::Player::OpenUriExtended>(
-        std::bind(&Private::handle_open_uri_extended,
-                  d,
-                  std::placeholders::_1));
 }
 
-media::PlayerSkeleton::~PlayerSkeleton()
+PlayerSkeleton::~PlayerSkeleton() = default;
+
+void PlayerSkeleton::setPlayer(PlayerImplementation *impl)
 {
-   // The session object may outlive the private instance
-   // so uninstall all method handlers.
-   d->object->uninstall_method_handler<mpris::Player::Next>();
-   d->object->uninstall_method_handler<mpris::Player::Previous>();
-   d->object->uninstall_method_handler<mpris::Player::Pause>();
-   d->object->uninstall_method_handler<mpris::Player::Stop>();
-   d->object->uninstall_method_handler<mpris::Player::Play>();
-   d->object->uninstall_method_handler<mpris::Player::PlayPause>();
-   d->object->uninstall_method_handler<mpris::Player::Seek>();
-   d->object->uninstall_method_handler<mpris::Player::SetPosition>();
-   d->object->uninstall_method_handler<mpris::Player::OpenUri>();
-   d->object->uninstall_method_handler<mpris::Player::CreateVideoSink>();
-   d->object->uninstall_method_handler<mpris::Player::Key>();
-   d->object->uninstall_method_handler<mpris::Player::OpenUriExtended>();
+    Q_D(PlayerSkeleton);
+
+    if (d->m_player == impl) return;
+
+    if (d->m_player) {
+        d->m_player->disconnect(this);
+    }
+
+    d->m_player = impl;
+    if (impl) {
+        QObject::connect(impl, &PlayerImplementation::seekedTo,
+                         this, &PlayerSkeleton::Seeked);
+        QObject::connect(impl, &PlayerImplementation::aboutToFinish,
+                         this, &PlayerSkeleton::AboutToFinish);
+        QObject::connect(impl, &PlayerImplementation::endOfStream,
+                         this, &PlayerSkeleton::EndOfStream);
+        QObject::connect(impl, &PlayerImplementation::playbackStatusChanged,
+                         this, [this,impl]() {
+            Q_EMIT PlaybackStatusChanged(impl->playbackStatus());
+        });
+        QObject::connect(impl, &PlayerImplementation::videoDimensionChanged,
+                         this, [this,impl]() {
+            const QSize size = impl->videoDimension();
+            Q_EMIT VideoDimensionChanged(size.height(), size.width());
+        });
+        QObject::connect(impl, &PlayerImplementation::errorOccurred,
+                         this, [this,impl](Player::Error error) {
+            Q_EMIT Error(error);
+        });
+        QObject::connect(impl, &PlayerImplementation::bufferingChanged,
+                         this, &PlayerSkeleton::Buffering);
+
+        QObject::connect(impl, &PlayerImplementation::volumeChanged,
+                         this, &PlayerSkeleton::volumeChanged);
+
+        /* Property signals */
+        QObject::connect(impl, &PlayerImplementation::mprisPropertiesChanged,
+                         this, &PlayerSkeleton::canPlayChanged);
+        QObject::connect(impl, &PlayerImplementation::mprisPropertiesChanged,
+                         this, &PlayerSkeleton::canPauseChanged);
+        QObject::connect(impl, &PlayerImplementation::mprisPropertiesChanged,
+                         this, &PlayerSkeleton::canGoPreviousChanged);
+        QObject::connect(impl, &PlayerImplementation::mprisPropertiesChanged,
+                         this, &PlayerSkeleton::canGoNextChanged);
+        QObject::connect(impl, &PlayerImplementation::metadataForCurrentTrackChanged,
+                         this, &PlayerSkeleton::metadataChanged);
+        QObject::connect(impl, &PlayerImplementation::orientationChanged,
+                         this, &PlayerSkeleton::orientationChanged);
+    }
+
+    Q_EMIT canControlChanged();
 }
 
-const core::Property<bool>& media::PlayerSkeleton::can_play() const
-{
-    return *d->skeleton.properties.can_play;
+PlayerImplementation *PlayerSkeleton::player() {
+    Q_D(PlayerSkeleton);
+    return d->m_player;
 }
 
-const core::Property<bool>& media::PlayerSkeleton::can_pause() const
-{
-    return *d->skeleton.properties.can_pause;
+const PlayerImplementation *PlayerSkeleton::player() const {
+    Q_D(const PlayerSkeleton);
+    return d->m_player;
 }
 
-const core::Property<bool>& media::PlayerSkeleton::can_seek() const
+bool PlayerSkeleton::canPlay() const
 {
-    return *d->skeleton.properties.can_seek;
+    return player() ? player()->canPlay() : false;
 }
 
-const core::Property<bool>& media::PlayerSkeleton::can_go_previous() const
+bool PlayerSkeleton::canPause() const
 {
-    return *d->skeleton.properties.can_go_previous;
+    return player() ? player()->canPause() : false;
 }
 
-const core::Property<bool>& media::PlayerSkeleton::can_go_next() const
+bool PlayerSkeleton::canSeek() const
 {
-    return *d->skeleton.properties.can_go_next;
+    return player() ? player()->canSeek() : false;
 }
 
-const core::Property<bool>& media::PlayerSkeleton::is_video_source() const
+bool PlayerSkeleton::canGoPrevious() const
 {
-    return *d->skeleton.properties.is_video_source;
+    return player() ? player()->canGoPrevious() : false;
 }
 
-const core::Property<bool>& media::PlayerSkeleton::is_audio_source() const
+bool PlayerSkeleton::canGoNext() const
 {
-    return *d->skeleton.properties.is_audio_source;
+    return player() ? player()->canGoNext() : false;
 }
 
-const core::Property<media::Player::PlaybackStatus>& media::PlayerSkeleton::playback_status() const
+bool PlayerSkeleton::canControl() const
 {
-    return *d->skeleton.properties.typed_playback_status;
+    return player() ? true : false;
 }
 
-const core::Property<media::AVBackend::Backend>& media::PlayerSkeleton::backend() const
+bool PlayerSkeleton::isVideoSource() const
 {
-    return *d->skeleton.properties.typed_backend;
+    return player() ? player()->isVideoSource() : false;
 }
 
-const core::Property<media::Player::LoopStatus>& media::PlayerSkeleton::loop_status() const
+bool PlayerSkeleton::isAudioSource() const
 {
-    return *d->skeleton.properties.typed_loop_status;
+    return player() ? player()->isAudioSource() : false;
 }
 
-const core::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::playback_rate() const
+QString PlayerSkeleton::playbackStatus() const
 {
-    return *d->skeleton.properties.playback_rate;
+    const Player::PlaybackStatus s = player() ?
+        player()->playbackStatus() : Player::PlaybackStatus::stopped;
+    switch (s) {
+    case Player::PlaybackStatus::playing:
+        return QStringLiteral("Playing");
+    case Player::PlaybackStatus::paused:
+        return QStringLiteral("Paused");
+    default:
+        return QStringLiteral("Stopped");
+    }
 }
 
-const core::Property<bool>& media::PlayerSkeleton::shuffle() const
+void PlayerSkeleton::setLoopStatus(const QString &status)
 {
-    return *d->skeleton.properties.shuffle;
+    if (!player()) return;
+    bool ok;
+    int value = QMetaEnum::fromType<LoopStatus>().
+        keyToValue(status.toUtf8().constData(), &ok);
+    if (!ok) {
+        MH_ERROR("Invalid loop status: %s", qUtf8Printable(status));
+        return;
+    }
+    player()->setLoopStatus(static_cast<Player::LoopStatus>(value));
 }
 
-const core::Property<media::Track::MetaData>& media::PlayerSkeleton::meta_data_for_current_track() const
+QString PlayerSkeleton::loopStatus() const
 {
-    return *d->skeleton.properties.meta_data_for_current_track;
+    int value = player() ? static_cast<LoopStatus>(player()->loopStatus()) : None;
+    return QMetaEnum::fromType<LoopStatus>().valueToKey(value);
 }
 
-const core::Property<media::Player::Volume>& media::PlayerSkeleton::volume() const
+void PlayerSkeleton::setTypedLoopStatus(int16_t status)
 {
-    return *d->skeleton.properties.volume;
+    if (!player()) return;
+    player()->setLoopStatus(static_cast<Player::LoopStatus>(status));
 }
 
-const core::Property<int64_t>& media::PlayerSkeleton::position() const
+int16_t PlayerSkeleton::typedLoopStatus() const
 {
-    return *d->skeleton.properties.position;
+    return player() ? static_cast<LoopStatus>(player()->loopStatus()) : None;
 }
 
-const core::Property<int64_t>& media::PlayerSkeleton::duration() const
+void PlayerSkeleton::setPlaybackRate(double rate)
 {
-    return *d->skeleton.properties.duration;
+    if (!player()) return;
+    return player()->setPlaybackRate(rate);
 }
 
-const core::Property<media::Player::AudioStreamRole>& media::PlayerSkeleton::audio_stream_role() const
+double PlayerSkeleton::playbackRate() const
 {
-    return *d->skeleton.properties.audio_stream_role;
+    return player() ? player()->playbackRate() : 1.0;
 }
 
-const core::Property<media::Player::Orientation>& media::PlayerSkeleton::orientation() const
+void PlayerSkeleton::setShuffle(bool shuffle)
 {
-    return *d->skeleton.properties.orientation;
+    if (!player()) return;
+    return player()->setShuffle(shuffle);
 }
 
-const core::Property<media::Player::Lifetime>& media::PlayerSkeleton::lifetime() const
+bool PlayerSkeleton::shuffle() const
 {
-    return *d->skeleton.properties.lifetime;
+    return player() ? player()->shuffle() : false;
 }
 
-const core::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::minimum_playback_rate() const
+QVariantMap PlayerSkeleton::metadata() const
 {
-    return *d->skeleton.properties.minimum_playback_rate;
+    if (!player()) return QVariantMap();
+    return player()->metadataForCurrentTrack();
 }
 
-const core::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::maximum_playback_rate() const
+void PlayerSkeleton::setVolume(double volume)
 {
-    return *d->skeleton.properties.maximum_playback_rate;
+    if (!player()) return;
+    return player()->setVolume(volume);
 }
 
-core::Property<media::Player::LoopStatus>& media::PlayerSkeleton::loop_status()
+double PlayerSkeleton::volume() const
 {
-    return *d->skeleton.properties.typed_loop_status;
+    return player() ? player()->volume() : 1.0;
 }
 
-core::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::playback_rate()
+double PlayerSkeleton::minimumRate() const
 {
-    return *d->skeleton.properties.playback_rate;
+    return player() ? player()->minimumRate() : 1.0;
 }
 
-core::Property<bool>& media::PlayerSkeleton::shuffle()
+double PlayerSkeleton::maximumRate() const
 {
-    return *d->skeleton.properties.shuffle;
+    return player() ? player()->maximumRate() : 1.0;
 }
 
-core::Property<media::Player::Volume>& media::PlayerSkeleton::volume()
+int64_t PlayerSkeleton::position() const
 {
-    return *d->skeleton.properties.volume;
+    return player() ? player()->position() : 0;
 }
 
-core::Property<int64_t>& media::PlayerSkeleton::position()
+int64_t PlayerSkeleton::duration() const
 {
-    return *d->skeleton.properties.position;
+    return player() ? player()->duration() : 0;
 }
 
-core::Property<int64_t>& media::PlayerSkeleton::duration()
+int16_t PlayerSkeleton::backend() const
 {
-    return *d->skeleton.properties.duration;
+    return player() ? player()->backend() : 0;
 }
 
-core::Property<media::Player::AudioStreamRole>& media::PlayerSkeleton::audio_stream_role()
+int16_t PlayerSkeleton::orientation() const
 {
-    return *d->skeleton.properties.audio_stream_role;
+    return player() ? player()->orientation() : 0;
 }
 
-core::Property<media::Player::Orientation>& media::PlayerSkeleton::orientation()
+int16_t PlayerSkeleton::lifetime() const
 {
-    return *d->skeleton.properties.orientation;
+    return player() ? player()->lifetime() : 0;
 }
 
-core::Property<media::Player::Lifetime>& media::PlayerSkeleton::lifetime()
+int16_t PlayerSkeleton::audioStreamRole() const
 {
-    return *d->skeleton.properties.lifetime;
+    return player() ? player()->audioStreamRole() : 0;
 }
 
-core::Property<media::Player::PlaybackStatus>& media::PlayerSkeleton::playback_status()
+void PlayerSkeleton::Next()
 {
-    return *d->skeleton.properties.typed_playback_status;
+    if (!player()) return;
+    player()->next();
 }
 
-core::Property<media::AVBackend::Backend>& media::PlayerSkeleton::backend()
+void PlayerSkeleton::Previous()
 {
-    return *d->skeleton.properties.typed_backend;
+    if (!player()) return;
+    player()->previous();
 }
 
-core::Property<bool>& media::PlayerSkeleton::can_play()
+void PlayerSkeleton::Pause()
 {
-    return *d->skeleton.properties.can_play;
+    if (!player()) return;
+    player()->pause();
 }
 
-core::Property<bool>& media::PlayerSkeleton::can_pause()
+void PlayerSkeleton::PlayPause()
 {
-    return *d->skeleton.properties.can_pause;
+    Q_D(PlayerSkeleton);
+
+    if (!player()) return;
+
+    PlayerImplementation *impl = player();
+    switch (impl->playbackStatus()) {
+    case core::ubuntu::media::Player::PlaybackStatus::ready:
+    case core::ubuntu::media::Player::PlaybackStatus::paused:
+    case core::ubuntu::media::Player::PlaybackStatus::stopped:
+        impl->play();
+        break;
+    case core::ubuntu::media::Player::PlaybackStatus::playing:
+        impl->pause();
+        break;
+    default:
+        break;
+    }
 }
 
-core::Property<bool>& media::PlayerSkeleton::can_seek()
+void PlayerSkeleton::Stop()
 {
-    return *d->skeleton.properties.can_seek;
+    if (!player()) return;
+    player()->stop();
 }
 
-core::Property<bool>& media::PlayerSkeleton::can_go_previous()
+void PlayerSkeleton::Play()
 {
-    return *d->skeleton.properties.can_go_previous;
+    if (!player()) return;
+    player()->play();
 }
 
-core::Property<bool>& media::PlayerSkeleton::can_go_next()
+void PlayerSkeleton::Seek(uint64_t microSeconds)
 {
-    return *d->skeleton.properties.can_go_next;
+    if (!player()) return;
+    player()->seek_to(std::chrono::microseconds(microSeconds));
 }
 
-core::Property<bool>& media::PlayerSkeleton::is_video_source()
+void PlayerSkeleton::SetPosition(const QDBusObjectPath &, uint64_t)
 {
-    return *d->skeleton.properties.is_video_source;
+    // TODO: implement (this was never implemented in media-hub)
 }
 
-core::Property<bool>& media::PlayerSkeleton::is_audio_source()
+void PlayerSkeleton::CreateVideoSink(uint32_t textureId)
 {
-    return *d->skeleton.properties.is_audio_source;
+    if (!player()) return;
+
+    try
+    {
+        player()->create_gl_texture_video_sink(textureId);
+    }
+    catch (const media::Player::Errors::OutOfProcessBufferStreamingNotSupported& e)
+    {
+        sendErrorReply(
+                    mpris::Player::Error::OutOfProcessBufferStreamingNotSupported::name,
+                    e.what());
+    }
+    catch (...)
+    {
+        sendErrorReply(
+                    mpris::Player::Error::OutOfProcessBufferStreamingNotSupported::name,
+                    QString());
+    }
 }
 
-core::Property<media::Track::MetaData>& media::PlayerSkeleton::meta_data_for_current_track()
+uint32_t PlayerSkeleton::Key() const
 {
-    return *d->skeleton.properties.meta_data_for_current_track;
+    if (!player()) return 0;
+    return player()->key();
 }
 
-core::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::minimum_playback_rate()
+void PlayerSkeleton::OpenUri(const QDBusMessage &)
 {
-    return *d->skeleton.properties.minimum_playback_rate;
+    Q_D(PlayerSkeleton);
+    QDBusMessage in = message();
+    QDBusConnection bus = connection();
+    in.setDelayedReply(true);
+    d->request_context_resolver->resolve_context_for_dbus_name_async(in.service(),
+        [=](const media::apparmor::ubuntu::Context& context)
+    {
+        QUrl uri = QUrl::fromUserInput(in.arguments()[0].toString());
+
+        QDBusMessage reply;
+        UriCheck uri_check(uri);
+        const bool valid_uri = !uri_check.is_local_file() or
+                (uri_check.is_local_file() and uri_check.file_exists());
+        if (!valid_uri)
+        {
+            const QString err_str = {"Warning: Failed to open uri " + uri.toString() +
+                 " because it can't be found."};
+            MH_ERROR("%s", qUtf8Printable(err_str));
+            reply = in.createErrorReply(
+                        mpris::Player::Error::UriNotFound::name,
+                        err_str);
+        }
+        else
+        {
+            // Make sure the client has adequate apparmor permissions to open the URI
+            const auto result = d->request_authenticator->authenticate_open_uri_request(context, uri);
+            if (std::get<0>(result))
+            {
+                reply = in.createReply();
+                reply << (std::get<0>(result) ? player()->open_uri(uri) : false);
+            }
+            else
+            {
+                const QString err_str = {"Warning: Failed to authenticate necessary "
+                    "apparmor permissions to open uri: " + std::get<1>(result)};
+                MH_ERROR("%s", qUtf8Printable(err_str));
+                reply = in.createErrorReply(
+                            mpris::Player::Error::InsufficientAppArmorPermissions::name,
+                            err_str);
+            }
+        }
+
+        bus.send(reply);
+    });
 }
 
-core::Property<media::Player::PlaybackRate>& media::PlayerSkeleton::maximum_playback_rate()
+void PlayerSkeleton::OpenUriExtended(const QDBusMessage &)
 {
-    return *d->skeleton.properties.maximum_playback_rate;
-}
+    Q_D(PlayerSkeleton);
+    QDBusMessage in = message();
+    QDBusConnection bus = connection();
+    in.setDelayedReply(true);
+    d->request_context_resolver->resolve_context_for_dbus_name_async(in.service(),
+        [=](const media::apparmor::ubuntu::Context& context)
+    {
+        using Headers = Player::HeadersType;
 
-const core::Signal<int64_t>& media::PlayerSkeleton::seeked_to() const
-{
-    return d->signals.seeked_to;
-}
+        const auto args = in.arguments();
+        QUrl uri = QUrl::fromUserInput(args[0].toString());
+        Headers headers = args[1].value<Headers>();
 
-core::Signal<int64_t>& media::PlayerSkeleton::seeked_to()
-{
-    return d->signals.seeked_to;
-}
+        QDBusMessage reply;
+        UriCheck uri_check(uri);
+        const bool valid_uri = !uri_check.is_local_file() or
+                (uri_check.is_local_file() and uri_check.file_exists());
+        if (!valid_uri)
+        {
+            const QString err_str = {"Warning: Failed to open uri " + uri.toString() +
+                 " because it can't be found."};
+            MH_ERROR("%s", qUtf8Printable(err_str));
+            reply = in.createErrorReply(
+                        mpris::Player::Error::UriNotFound::name,
+                        err_str);
+        }
+        else
+        {
+            // Make sure the client has adequate apparmor permissions to open the URI
+            const auto result = d->request_authenticator->authenticate_open_uri_request(context, uri);
+            if (std::get<0>(result))
+            {
+                reply = in.createReply();
+                reply << (std::get<0>(result) ? player()->open_uri(uri, headers) : false);
+            }
+            else
+            {
+                const QString err_str = {"Warning: Failed to authenticate necessary "
+                    "apparmor permissions to open uri: " + std::get<1>(result)};
+                MH_ERROR("%s", qUtf8Printable(err_str));
+                reply = in.createErrorReply(
+                            mpris::Player::Error::InsufficientAppArmorPermissions::name,
+                            err_str);
+            }
+        }
 
-const core::Signal<void>& media::PlayerSkeleton::about_to_finish() const
-{
-    return d->signals.about_to_finish;
-}
-
-core::Signal<void>& media::PlayerSkeleton::about_to_finish()
-{
-    return d->signals.about_to_finish;
-}
-
-const core::Signal<void>& media::PlayerSkeleton::end_of_stream() const
-{
-    return d->signals.end_of_stream;
-}
-
-core::Signal<void>& media::PlayerSkeleton::end_of_stream()
-{
-    return d->signals.end_of_stream;
-}
-
-core::Signal<media::Player::PlaybackStatus>& media::PlayerSkeleton::playback_status_changed()
-{
-    return d->signals.playback_status_changed;
-}
-
-const core::Signal<media::video::Dimensions>& media::PlayerSkeleton::video_dimension_changed() const
-{
-    return d->signals.video_dimension_changed;
-}
-
-core::Signal<media::video::Dimensions>& media::PlayerSkeleton::video_dimension_changed()
-{
-    return d->signals.video_dimension_changed;
-}
-
-core::Signal<media::Player::Error>& media::PlayerSkeleton::error()
-{
-    return d->signals.error;
-}
-
-const core::Signal<media::Player::Error>& media::PlayerSkeleton::error() const
-{
-    return d->signals.error;
-}
-
-const core::Signal<int>& media::PlayerSkeleton::buffering_changed() const
-{
-    return d->signals.buffering_changed;
-}
-
-core::Signal<int>& media::PlayerSkeleton::buffering_changed()
-{
-    return d->signals.buffering_changed;
+        bus.send(reply);
+    });
 }

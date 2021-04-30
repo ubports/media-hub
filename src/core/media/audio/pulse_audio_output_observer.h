@@ -19,11 +19,14 @@
 #ifndef CORE_UBUNTU_MEDIA_AUDIO_PULSE_AUDIO_OUTPUT_OBSERVER_H_
 #define CORE_UBUNTU_MEDIA_AUDIO_PULSE_AUDIO_OUTPUT_OBSERVER_H_
 
-#include <core/media/audio/output_observer.h>
+#include <core/media/audio/output_observer_p.h>
 
 #include <iosfwd>
 #include <memory>
-#include <regex>
+#include <set>
+#include <string>
+
+class QStringList;
 
 namespace core
 {
@@ -36,12 +39,9 @@ namespace audio
 // Implements the audio::OutputObserver interface
 // relying on pulse to query the connected ports
 // of the primary card of the system.
-class PulseAudioOutputObserver : public OutputObserver
+class PulseAudioOutputObserver : public OutputObserverPrivate
 {
 public:
-    // Save us some typing.
-    typedef std::shared_ptr<PulseAudioOutputObserver> Ptr;
-
     // Reporter is responsible for surfacing events from the implementation
     // that help in resolving/tracking down issues. Default implementation is empty.
     struct Reporter
@@ -79,42 +79,21 @@ public:
         virtual void sink_event_with_index(std::uint32_t index);
     };
 
-    // Construction time arguments go here
-    struct Configuration
-    {
-        // Name of the sink that we should consider.
-        std::string sink
-        {
-            // A special value that requests the implementation to
-            // query pulseaudio for the default configured sink.
-            "query.from.server"
-        };
-        // Output port name patterns that should be observed on the configured sink.
-        // All patterns have to be valid regular expressions.
-        std::vector<std::regex> output_port_patterns
-        {
-            // Any port is considered with this special value.
-            std::regex{".+"}
-        };
-        // The Reporter instance that the implementation reports
-        // events to. Must not be null.
-        Reporter::Ptr reporter{std::make_shared<Reporter>()};
-    };
-
     // Constructs a new instance, throws:
     //   * std::runtime_error if connection to pulseaudio fails.
     //   * std::runtime_error if reporter instance is null.
-    PulseAudioOutputObserver(const Configuration&);
+    PulseAudioOutputObserver(const QString &sink,
+                             const QStringList &outputPortPatterns,
+                             Reporter::Ptr reporter,
+                             OutputObserver *q);
 
     // We provide the name of the sink we are connecting to as a
-    // getable/observable property. This is specifically meant for
+    // getable property. This is specifically meant for
     // consumption by test code.
-    const core::Property<std::string>& sink() const;
+    QString sink() const;
     // The set of ports that have been identified on the configured sink.
     // Specifically meant for consumption by test code.
-    const core::Property<std::set<Reporter::Port>>& known_ports() const;
-    // Getable/observable property holding the state of external outputs.
-    const core::Property<OutputState>& external_output_state() const override;
+    std::set<Reporter::Port>& knownPorts() const;
 
 private:
     struct Private;

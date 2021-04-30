@@ -20,10 +20,8 @@
 #ifndef CORE_UBUNTU_MEDIA_TELEPHONY_CALL_MONITOR_H_
 #define CORE_UBUNTU_MEDIA_TELEPHONY_CALL_MONITOR_H_
 
-#include <core/signal.h>
-
-#include <functional>
-#include <memory>
+#include <QObject>
+#include <QScopedPointer>
 
 namespace core
 {
@@ -35,11 +33,12 @@ namespace telephony
 {
 // CallMonitor models the ability to observe and react
 // to changes of the overall call state of the system.
-struct CallMonitor
+class CallMonitorPrivate;
+class CallMonitor: public QObject
 {
-    // Save us some typing.
-    typedef std::shared_ptr<CallMonitor> Ptr;
+    Q_OBJECT
 
+public:
     // All known call states
     enum class State
     {
@@ -49,15 +48,19 @@ struct CallMonitor
         OnHook
     };
 
-    CallMonitor() = default;
-    virtual ~CallMonitor() = default;
+    CallMonitor(QObject *parent = nullptr);
+    virtual ~CallMonitor();
 
-    // Emitted whenever the current call state of the system changes.
-    virtual const core::Signal<State>& on_call_state_changed() const = 0;
+    State callState() const;
+
+Q_SIGNALS:
+    void callStateChanged();
+
+private:
+    QScopedPointer<CallMonitorPrivate> d_ptr;
+    Q_DECLARE_PRIVATE(CallMonitor)
 };
 
-// Returns a platform default implementation of CallMonitor.
-CallMonitor::Ptr make_platform_default_call_monitor();
 }
 }
 }

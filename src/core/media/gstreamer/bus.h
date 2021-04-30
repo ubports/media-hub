@@ -19,16 +19,14 @@
 #ifndef GSTREAMER_BUS_H_
 #define GSTREAMER_BUS_H_
 
-#include <core/property.h>
-
 #include <gst/gst.h>
 
-#include <boost/flyweight.hpp>
+#include <QByteArray>
+#include <QHash>
 
 #include <exception>
 #include <functional>
 #include <memory>
-#include <tuple>
 
 namespace gstreamer
 {
@@ -179,11 +177,13 @@ public:
 
         GstMessage* message;
         GstMessageType type;
-        boost::flyweight<std::string> source;
+        QByteArray source; // TODO compute it only when needed
         uint32_t sequence_number;
 
         union Detail
         {
+            Detail() {}
+            ~Detail() {}
             struct ErrorWarningInfo
             {
                 GError* error;
@@ -191,6 +191,8 @@ public:
             } error_warning_info;
             struct Tag
             {
+                Tag(const Tag &t): tag_list(gst_tag_list_ref(t.tag_list)) {}
+                ~Tag() { gst_tag_list_unref(tag_list); }
                 GstTagList* tag_list;
             } tag;
             struct
@@ -268,21 +270,6 @@ public:
         std::function<void()> cleanup;
     };
 
-    static GstBusSyncReply sync_handler(
-            GstBus* bus,
-            GstMessage* msg,
-            gpointer data)
-    {
-        (void) bus;
-
-        auto thiz = static_cast<Bus*>(data);
-        Message message(msg);
-        if (message.type == GST_MESSAGE_TAG || message.type == GST_MESSAGE_ASYNC_DONE)
-            thiz->on_new_message(message);
-
-        return GST_BUS_PASS;
-    }
-
     static gboolean bus_watch_handler(
             GstBus* bus,
             GstMessage* msg,
@@ -292,12 +279,15 @@ public:
 
         auto thiz = static_cast<Bus*>(data);
         Message message(msg);
-        thiz->on_new_message_async(message);
+        thiz->notifyNewMessage(message);
 
         return true;
     }
 
-    Bus(GstBus* bus) : bus(bus), bus_watch_id(0)
+    Bus(GstBus* bus):
+        bus(bus),
+        m_onNewMessageNextId(1),
+        bus_watch_id(0)
     {
         set_bus(bus);
     }
@@ -313,12 +303,6 @@ public:
         if (!bus)
             throw std::runtime_error("Cannot create Bus instance if underlying instance is NULL.");
 
-        gst_bus_set_sync_handler(
-                    bus,
-                    Bus::sync_handler,
-                    this,
-                    nullptr);
-
         // Use a watch for most messages instead of the sync handler so that our context is not
         // the same as the streaming thread, which can cause deadlocks in GStreamer
         // if, for example, attempting to change the pipeline state from this context.
@@ -328,9 +312,26 @@ public:
                             this);
     }
 
+    typedef std::function<void(const Message &)> MessageCallback;
+
+    int onNewMessage(const MessageCallback &cb) {
+        m_onNewMessage[m_onNewMessageNextId] = cb;
+        return m_onNewMessageNextId++;
+    }
+
+    void unsubscribeFromNewMessage(int id) {
+        m_onNewMessage.remove(id);
+    }
+
+    void notifyNewMessage(const Message &msg) const {
+        for (auto cb: m_onNewMessage) {
+            cb(msg);
+        }
+    }
+
     GstBus* bus;
-    core::Signal<Message> on_new_message;
-    core::Signal<Message> on_new_message_async;
+    QHash<int,MessageCallback> m_onNewMessage;
+    int m_onNewMessageNextId;
     guint bus_watch_id;
 };
 }
