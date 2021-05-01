@@ -119,6 +119,8 @@ add_library(
 
   logging.cpp
 
+  dbus_property_notifier.cpp
+
   client_death_observer.cpp
   hybris_client_death_observer.cpp
   stub_client_death_observer.cpp
