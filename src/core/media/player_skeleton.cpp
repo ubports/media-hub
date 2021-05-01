@@ -19,6 +19,7 @@
 
 #include "player_skeleton.h"
 
+#include "dbus_property_notifier.h"
 #include "engine.h"
 #include "logging.h"
 #include "mpris.h"
@@ -144,6 +145,7 @@ const PlayerImplementation *PlayerSkeleton::player() const {
 bool PlayerSkeleton::registerAt(const QString &objectPath)
 {
     Q_D(PlayerSkeleton);
+    new DBusPropertyNotifier(d->m_connection, objectPath, this);
     return d->m_connection.registerObject(
             objectPath,
             this,
