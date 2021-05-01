@@ -164,12 +164,7 @@ void ServiceSkeletonPrivate::exportPlayer(const SessionInfo &info)
     adaptor->setPlayer(player);
     player->setObjectName(info.objectPath);
 
-    bool ok =
-        m_connection.registerObject(info.objectPath,
-                                    adaptor,
-                                    QDBusConnection::ExportAllSlots |
-                                    QDBusConnection::ExportScriptableSignals |
-                                    QDBusConnection::ExportAllProperties);
+    bool ok = adaptor->registerAt(info.objectPath);
     if (!ok) {
         MH_ERROR("Failed to export player %d", info.key);
         return;

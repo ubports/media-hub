@@ -141,6 +141,17 @@ const PlayerImplementation *PlayerSkeleton::player() const {
     return d->m_player;
 }
 
+bool PlayerSkeleton::registerAt(const QString &objectPath)
+{
+    Q_D(PlayerSkeleton);
+    return d->m_connection.registerObject(
+            objectPath,
+            this,
+            QDBusConnection::ExportAllSlots |
+            QDBusConnection::ExportScriptableSignals |
+            QDBusConnection::ExportAllProperties);
+}
+
 bool PlayerSkeleton::canPlay() const
 {
     return player() ? player()->canPlay() : false;

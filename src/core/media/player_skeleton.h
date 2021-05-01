@@ -101,6 +101,8 @@ public:
     PlayerImplementation *player();
     const PlayerImplementation *player() const;
 
+    bool registerAt(const QString &objectPath);
+
     bool canPlay() const;
     bool canPause() const;
     bool canSeek() const;
