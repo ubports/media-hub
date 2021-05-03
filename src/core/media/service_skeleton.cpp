@@ -19,7 +19,9 @@
 
 #include "service_skeleton.h"
 
+#include "dbus_property_notifier.h"
 #include "mpris.h"
+#include "mpris/media_player2.h"
 #include "player_implementation.h"
 #include "player_skeleton.h"
 #include "service_implementation.h"
@@ -117,7 +119,19 @@ ServiceSkeletonPrivate::ServiceSkeletonPrivate(
 {
     QObject::connect(impl, &ServiceImplementation::currentPlayerChanged,
                      q, [this]() { onCurrentPlayerChanged(); });
-    m_mprisAdaptor.registerAt(QStringLiteral("/org/mpris/MediaPlayer2"));
+    const QString mprisObjectPath = QStringLiteral("/org/mpris/MediaPlayer2");
+    new mpris::RootAdaptor(q);
+    new mpris::PlaylistsAdaptor(q);
+    bool ok =
+        m_connection.registerObject(
+                mprisObjectPath,
+                q,
+                QDBusConnection::ExportAdaptors);
+    if (ok) {
+        new DBusPropertyNotifier(m_connection, mprisObjectPath, &m_mprisAdaptor);
+    } else {
+        MH_ERROR() << "Failed to register MPRIS object";
+    }
 }
 
 void ServiceSkeletonPrivate::onCurrentPlayerChanged()

@@ -25,6 +25,7 @@
 #include "power/state_controller.h"
 #include "track.h"
 
+#include <QDBusContext>
 #include <QMap>
 #include <QObject>
 #include <QScopedPointer>
@@ -40,7 +41,7 @@ class Engine;
 class Service;
 
 class PlayerImplementationPrivate;
-class PlayerImplementation : public QObject
+class PlayerImplementation : public QObject, protected QDBusContext
 {
     Q_OBJECT
 

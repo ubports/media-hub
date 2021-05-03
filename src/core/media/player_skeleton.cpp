@@ -148,10 +148,7 @@ bool PlayerSkeleton::registerAt(const QString &objectPath)
     new DBusPropertyNotifier(d->m_connection, objectPath, this);
     return d->m_connection.registerObject(
             objectPath,
-            this,
-            QDBusConnection::ExportAllSlots |
-            QDBusConnection::ExportScriptableSignals |
-            QDBusConnection::ExportAllProperties);
+            d->m_player);
 }
 
 bool PlayerSkeleton::canPlay() const

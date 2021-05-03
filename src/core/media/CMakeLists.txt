@@ -145,6 +145,8 @@ add_library(
   gstreamer/engine.cpp
   gstreamer/playbin.cpp
 
+  mpris/media_player2.cpp
+
   player_skeleton.cpp
   player_implementation.cpp
   service_skeleton.cpp
