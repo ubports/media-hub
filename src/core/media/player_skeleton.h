@@ -44,7 +44,7 @@ class PlayerImplementation;
 class Service;
 
 class PlayerSkeletonPrivate;
-class PlayerSkeleton: public QDBusAbstractAdaptor
+class PlayerSkeleton: public QObject, protected QDBusContext
 {
     Q_OBJECT
     Q_CLASSINFO("D-Bus Interface", "org.mpris.MediaPlayer2.Player")
@@ -166,17 +166,6 @@ Q_SIGNALS:
     void metadataChanged();
     void volumeChanged();
     void orientationChanged();
-
-protected: // proxy QDBusContext
-    inline const QDBusContext *context() const {
-        return reinterpret_cast<QDBusContext *>(
-            parent()->qt_metacast("QDBusContext"));
-    }
-    QDBusConnection connection() const { return context()->connection(); }
-    const QDBusMessage &message() const { return context()->message(); }
-    void sendErrorReply(const QString &name, const QString &msg) const {
-        return context()->sendErrorReply(name, msg);
-    }
 
 private:
     Q_DECLARE_PRIVATE(PlayerSkeleton)

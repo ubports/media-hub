@@ -20,6 +20,7 @@
 #define DBUS_PROPERTY_NOTIFIER_H
 
 #include <QObject>
+#include <QStringList>
 
 class QDBusConnection;
 
@@ -33,6 +34,8 @@ public:
                          const QString &objectPath,
                          QObject *target);
     virtual ~DBusPropertyNotifier();
+
+    void notify(const QStringList &propertyFilter = {});
 
 private:
     Q_DECLARE_PRIVATE(DBusPropertyNotifier)

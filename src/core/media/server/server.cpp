@@ -119,6 +119,12 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
+    ok = bus.registerService("org.mpris.MediaPlayer2.MediaHub");
+    if (!ok) {
+        MH_ERROR("Failed to register MPRIS service name");
+        return EXIT_FAILURE;
+    }
+
     app.exec();
 
     return 0;

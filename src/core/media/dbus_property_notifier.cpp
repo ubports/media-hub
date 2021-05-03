@@ -41,6 +41,7 @@ public:
     void findInterfaceName(const QMetaObject *mo);
     void connectAllProperties(const QMetaObject *mo);
     void deliverNotifySignal();
+    void notify(const QStringList &propertyFilter);
 
 private Q_SLOTS:
     void onChanged(int propertyIndex);
@@ -72,6 +73,7 @@ private:
     QObject *m_target;
     QVector<int> m_changedPropertyIndexes;
     QVector<QMetaProperty> m_properties;
+    QVariantMap m_lastValues;
 };
 
 DBusPropertyNotifierPrivate::DBusPropertyNotifierPrivate(
@@ -159,6 +161,37 @@ void DBusPropertyNotifierPrivate::deliverNotifySignal()
     m_changedPropertyIndexes.clear();
 }
 
+void DBusPropertyNotifierPrivate::notify(const QStringList &propertyFilter)
+{
+    QVariantMap changedProperties;
+    const QMetaObject *mo = m_target->metaObject();
+    for (int i = mo->propertyOffset(); i < mo->propertyCount(); i++) {
+        const QMetaProperty p = mo->property(i);
+        const QString propertyName = p.name();
+        if (!propertyFilter.isEmpty() &&
+            !propertyFilter.contains(propertyName)) {
+            continue;
+        }
+        const QVariant value = p.read(m_target);
+        if (m_lastValues.value(propertyName) != value) {
+            changedProperties.insert(propertyName, value);
+            m_lastValues.insert(propertyName, value);
+        }
+    }
+
+    if (!changedProperties.isEmpty()) {
+        QDBusMessage msg = QDBusMessage::createSignal(m_objectPath,
+                QStringLiteral("org.freedesktop.DBus.Properties"),
+                QStringLiteral("PropertiesChanged"));
+        msg.setArguments({
+            m_interface,
+            changedProperties,
+            QStringList {},
+        });
+        m_connection.send(msg);
+    }
+}
+
 DBusPropertyNotifier::DBusPropertyNotifier(const QDBusConnection &connection,
                                            const QString &objectPath,
                                            QObject *target):
@@ -168,5 +201,11 @@ DBusPropertyNotifier::DBusPropertyNotifier(const QDBusConnection &connection,
 }
 
 DBusPropertyNotifier::~DBusPropertyNotifier() = default;
+
+void DBusPropertyNotifier::notify(const QStringList &propertyFilter)
+{
+    Q_D(DBusPropertyNotifier);
+    d->notify(propertyFilter);
+}
 
 #include "dbus_property_notifier.moc"

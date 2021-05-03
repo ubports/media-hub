@@ -67,7 +67,7 @@ private:
 
 PlayerSkeleton::PlayerSkeleton(const Configuration& configuration,
                                QObject *parent):
-    QDBusAbstractAdaptor(parent),
+    QObject(parent),
     d_ptr(new PlayerSkeletonPrivate(configuration.connection,
                                     configuration.request_context_resolver,
                                     configuration.request_authenticator,
@@ -148,7 +148,10 @@ bool PlayerSkeleton::registerAt(const QString &objectPath)
     new DBusPropertyNotifier(d->m_connection, objectPath, this);
     return d->m_connection.registerObject(
             objectPath,
-            d->m_player);
+            this,
+            QDBusConnection::ExportAllSlots |
+            QDBusConnection::ExportScriptableSignals |
+            QDBusConnection::ExportAllProperties);
 }
 
 bool PlayerSkeleton::canPlay() const

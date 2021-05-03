@@ -19,74 +19,43 @@
 #ifndef MPRIS_MEDIA_PLAYER2_H_
 #define MPRIS_MEDIA_PLAYER2_H_
 
-#include <QDBusAbstractAdaptor>
-#include <QDBusConnection>
 #include <QDBusContext>
-#include <QString>
-#include <QStringList>
+#include <QObject>
 
-#include <string>
-#include <vector>
+namespace core {
+namespace ubuntu {
+namespace media {
+
+class PlayerImplementation;
+
+}}}
 
 namespace mpris
 {
-// Models interface org.mpris.MediaPlayer2, see:
-//   http://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html
-// for detailed documentation
-class RootAdaptor: public QDBusAbstractAdaptor
+
+/* Adaptor class exposing the media-hub service through the D-Bus MPRIS
+ * interface.
+ */
+class MediaPlayer2Private;
+class MediaPlayer2: public QObject, protected QDBusContext
 {
     Q_OBJECT
-    Q_CLASSINFO("D-Bus Interface", "org.mpris.MediaPlayer2")
-    Q_PROPERTY(bool CanQuit READ falseProperty)
-    Q_PROPERTY(bool Fullscreen READ falseProperty)
-    Q_PROPERTY(bool CanSetFullscreen READ falseProperty)
-    Q_PROPERTY(bool CanRaise READ falseProperty)
-    Q_PROPERTY(bool HasTrackList READ falseProperty)
-    Q_PROPERTY(QString Identity READ identity)
-    Q_PROPERTY(QString DesktopEntry READ desktopEntry)
-    Q_PROPERTY(QStringList SupportedUriSchemes READ supportedUriSchemes)
-    Q_PROPERTY(QStringList SupportedMimeTypes READ supportedMimeTypes)
 
 public:
-    RootAdaptor(QObject *parent = nullptr): QDBusAbstractAdaptor(parent) {}
-    virtual ~RootAdaptor() = default;
+    MediaPlayer2(QObject *parent = nullptr);
+    virtual ~MediaPlayer2();
 
-    bool falseProperty() const { return false; }
-    QString identity() const { return QStringLiteral("core::media::Hub"); }
-    QString desktopEntry() const { return QStringLiteral("mediaplayer-app"); }
-    QStringList supportedUriSchemes() const { return {}; }
-    QStringList supportedMimeTypes() const {
-        return {"audio/mpeg3", "video/mpeg4"};
-    }
+    void setPlayer(core::ubuntu::media::PlayerImplementation *impl);
+    core::ubuntu::media::PlayerImplementation *player();
+    const core::ubuntu::media::PlayerImplementation *player() const;
 
-public Q_SLOTS:
-    void Raise() {}
-    void Quit() {}
+    bool registerObject();
+
+private:
+    Q_DECLARE_PRIVATE(MediaPlayer2)
+    QScopedPointer<MediaPlayer2Private> d_ptr;
 };
 
-// Models interface org.mpris.MediaPlayer2.Playlists, see:
-//   http://specifications.freedesktop.org/mpris-spec/latest/Playlists_Interface.html
-// for detailed documentation
-class PlaylistsAdaptor: public QDBusAbstractAdaptor
-{
-    Q_OBJECT
-    Q_CLASSINFO("D-Bus Interface", "org.mpris.MediaPlayer2.Playlists")
-    Q_PROPERTY(uint32_t PlaylistCount READ playlistCount)
-    Q_PROPERTY(QStringList Orderings READ orderings)
-    // FIXME: There's also an ActivePlaylist property in the specs
-
-public:
-    PlaylistsAdaptor(QObject *parent = nullptr): QDBusAbstractAdaptor(parent) {}
-    virtual ~PlaylistsAdaptor() = default;
-
-    uint32_t playlistCount() const { return 0; }
-    QStringList orderings() const { return {"Alphabetical"}; }
-
-public Q_SLOTS:
-    void ActivePlaylist() {}
-    void GetPlaylists() {}
-};
-
-}
+} // namespace
 
 #endif // MPRIS_MEDIA_PLAYER2_H_

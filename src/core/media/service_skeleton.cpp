@@ -94,7 +94,7 @@ public:
     QMap<QString, Player::PlayerKey> uuid_player_map;
     // We keep a list of keys and their respective owners and states.
     QMap<media::Player::PlayerKey, OwnerInfo> player_owner_map;
-    PlayerSkeleton m_mprisAdaptor;
+    mpris::MediaPlayer2 m_mprisAdaptor;
 
     ServiceImplementation *impl;
     ServiceSkeleton *q_ptr;
@@ -109,27 +109,13 @@ ServiceSkeletonPrivate::ServiceSkeletonPrivate(
     request_context_resolver(QSharedPointer<apparmor::ubuntu::DBusDaemonRequestContextResolver>::create()),
     request_authenticator(QSharedPointer<apparmor::ubuntu::ExistingAuthenticator>::create()),
     m_connection(config.connection),
-    m_mprisAdaptor({
-                       m_connection,
-                       request_context_resolver,
-                       request_authenticator,
-                   }, q),
     impl(impl),
     q_ptr(q)
 {
     QObject::connect(impl, &ServiceImplementation::currentPlayerChanged,
                      q, [this]() { onCurrentPlayerChanged(); });
-    const QString mprisObjectPath = QStringLiteral("/org/mpris/MediaPlayer2");
-    new mpris::RootAdaptor(q);
-    new mpris::PlaylistsAdaptor(q);
-    bool ok =
-        m_connection.registerObject(
-                mprisObjectPath,
-                q,
-                QDBusConnection::ExportAdaptors);
-    if (ok) {
-        new DBusPropertyNotifier(m_connection, mprisObjectPath, &m_mprisAdaptor);
-    } else {
+    bool ok = m_mprisAdaptor.registerObject();
+    if (!ok) {
         MH_ERROR() << "Failed to register MPRIS object";
     }
 }
