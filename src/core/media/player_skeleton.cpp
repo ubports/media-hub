@@ -42,17 +42,8 @@ namespace media {
 class PlayerSkeletonPrivate
 {
 public:
-    PlayerSkeletonPrivate(const QDBusConnection &connection,
-                          const apparmor::ubuntu::RequestContextResolver::Ptr &request_context_resolver,
-                          const apparmor::ubuntu::RequestAuthenticator::Ptr &request_authenticator,
-                          media::PlayerSkeleton *q):
-        m_player(nullptr),
-        m_connection(connection),
-        request_context_resolver{request_context_resolver},
-        request_authenticator{request_authenticator},
-        q_ptr(q)
-    {
-    }
+    PlayerSkeletonPrivate(const PlayerSkeleton::Configuration &conf,
+                          media::PlayerSkeleton *q);
 
 private:
     friend class PlayerSkeleton;
@@ -65,72 +56,64 @@ private:
 
 }}} // namespace
 
+PlayerSkeletonPrivate::PlayerSkeletonPrivate(
+        const PlayerSkeleton::Configuration &conf,
+        media::PlayerSkeleton *q):
+    m_player(conf.player),
+    m_connection(conf.connection),
+    request_context_resolver{conf.request_context_resolver},
+    request_authenticator{conf.request_authenticator},
+    q_ptr(q)
+{
+    auto impl = m_player;
+    QObject::connect(impl, &PlayerImplementation::seekedTo,
+                     q, &PlayerSkeleton::Seeked);
+    QObject::connect(impl, &PlayerImplementation::aboutToFinish,
+                     q, &PlayerSkeleton::AboutToFinish);
+    QObject::connect(impl, &PlayerImplementation::endOfStream,
+                     q, &PlayerSkeleton::EndOfStream);
+    QObject::connect(impl, &PlayerImplementation::playbackStatusChanged,
+                     q, [q,impl]() {
+        Q_EMIT q->PlaybackStatusChanged(impl->playbackStatus());
+    });
+    QObject::connect(impl, &PlayerImplementation::videoDimensionChanged,
+                     q, [q,impl]() {
+        const QSize size = impl->videoDimension();
+        Q_EMIT q->VideoDimensionChanged(size.height(), size.width());
+    });
+    QObject::connect(impl, &PlayerImplementation::errorOccurred,
+                     q, [q](Player::Error error) {
+        Q_EMIT q->Error(error);
+    });
+    QObject::connect(impl, &PlayerImplementation::bufferingChanged,
+                     q, &PlayerSkeleton::Buffering);
+
+    QObject::connect(impl, &PlayerImplementation::volumeChanged,
+                     q, &PlayerSkeleton::volumeChanged);
+
+    /* Property signals */
+    QObject::connect(impl, &PlayerImplementation::mprisPropertiesChanged,
+                     q, &PlayerSkeleton::canPlayChanged);
+    QObject::connect(impl, &PlayerImplementation::mprisPropertiesChanged,
+                     q, &PlayerSkeleton::canPauseChanged);
+    QObject::connect(impl, &PlayerImplementation::mprisPropertiesChanged,
+                     q, &PlayerSkeleton::canGoPreviousChanged);
+    QObject::connect(impl, &PlayerImplementation::mprisPropertiesChanged,
+                     q, &PlayerSkeleton::canGoNextChanged);
+    QObject::connect(impl, &PlayerImplementation::metadataForCurrentTrackChanged,
+                     q, &PlayerSkeleton::metadataChanged);
+    QObject::connect(impl, &PlayerImplementation::orientationChanged,
+                     q, &PlayerSkeleton::orientationChanged);
+}
+
 PlayerSkeleton::PlayerSkeleton(const Configuration& configuration,
                                QObject *parent):
     QObject(parent),
-    d_ptr(new PlayerSkeletonPrivate(configuration.connection,
-                                    configuration.request_context_resolver,
-                                    configuration.request_authenticator,
-                                    this))
+    d_ptr(new PlayerSkeletonPrivate(configuration, this))
 {
 }
 
 PlayerSkeleton::~PlayerSkeleton() = default;
-
-void PlayerSkeleton::setPlayer(PlayerImplementation *impl)
-{
-    Q_D(PlayerSkeleton);
-
-    if (d->m_player == impl) return;
-
-    if (d->m_player) {
-        d->m_player->disconnect(this);
-    }
-
-    d->m_player = impl;
-    if (impl) {
-        QObject::connect(impl, &PlayerImplementation::seekedTo,
-                         this, &PlayerSkeleton::Seeked);
-        QObject::connect(impl, &PlayerImplementation::aboutToFinish,
-                         this, &PlayerSkeleton::AboutToFinish);
-        QObject::connect(impl, &PlayerImplementation::endOfStream,
-                         this, &PlayerSkeleton::EndOfStream);
-        QObject::connect(impl, &PlayerImplementation::playbackStatusChanged,
-                         this, [this,impl]() {
-            Q_EMIT PlaybackStatusChanged(impl->playbackStatus());
-        });
-        QObject::connect(impl, &PlayerImplementation::videoDimensionChanged,
-                         this, [this,impl]() {
-            const QSize size = impl->videoDimension();
-            Q_EMIT VideoDimensionChanged(size.height(), size.width());
-        });
-        QObject::connect(impl, &PlayerImplementation::errorOccurred,
-                         this, [this,impl](Player::Error error) {
-            Q_EMIT Error(error);
-        });
-        QObject::connect(impl, &PlayerImplementation::bufferingChanged,
-                         this, &PlayerSkeleton::Buffering);
-
-        QObject::connect(impl, &PlayerImplementation::volumeChanged,
-                         this, &PlayerSkeleton::volumeChanged);
-
-        /* Property signals */
-        QObject::connect(impl, &PlayerImplementation::mprisPropertiesChanged,
-                         this, &PlayerSkeleton::canPlayChanged);
-        QObject::connect(impl, &PlayerImplementation::mprisPropertiesChanged,
-                         this, &PlayerSkeleton::canPauseChanged);
-        QObject::connect(impl, &PlayerImplementation::mprisPropertiesChanged,
-                         this, &PlayerSkeleton::canGoPreviousChanged);
-        QObject::connect(impl, &PlayerImplementation::mprisPropertiesChanged,
-                         this, &PlayerSkeleton::canGoNextChanged);
-        QObject::connect(impl, &PlayerImplementation::metadataForCurrentTrackChanged,
-                         this, &PlayerSkeleton::metadataChanged);
-        QObject::connect(impl, &PlayerImplementation::orientationChanged,
-                         this, &PlayerSkeleton::orientationChanged);
-    }
-
-    Q_EMIT canControlChanged();
-}
 
 PlayerImplementation *PlayerSkeleton::player() {
     Q_D(PlayerSkeleton);
@@ -156,48 +139,42 @@ bool PlayerSkeleton::registerAt(const QString &objectPath)
 
 bool PlayerSkeleton::canPlay() const
 {
-    return player() ? player()->canPlay() : false;
+    return player()->canPlay();
 }
 
 bool PlayerSkeleton::canPause() const
 {
-    return player() ? player()->canPause() : false;
+    return player()->canPause();
 }
 
 bool PlayerSkeleton::canSeek() const
 {
-    return player() ? player()->canSeek() : false;
+    return player()->canSeek();
 }
 
 bool PlayerSkeleton::canGoPrevious() const
 {
-    return player() ? player()->canGoPrevious() : false;
+    return player()->canGoPrevious();
 }
 
 bool PlayerSkeleton::canGoNext() const
 {
-    return player() ? player()->canGoNext() : false;
-}
-
-bool PlayerSkeleton::canControl() const
-{
-    return player() ? true : false;
+    return player()->canGoNext();
 }
 
 bool PlayerSkeleton::isVideoSource() const
 {
-    return player() ? player()->isVideoSource() : false;
+    return player()->isVideoSource();
 }
 
 bool PlayerSkeleton::isAudioSource() const
 {
-    return player() ? player()->isAudioSource() : false;
+    return player()->isAudioSource();
 }
 
 QString PlayerSkeleton::playbackStatus() const
 {
-    const Player::PlaybackStatus s = player() ?
-        player()->playbackStatus() : Player::PlaybackStatus::stopped;
+    const Player::PlaybackStatus s = player()->playbackStatus();
     switch (s) {
     case Player::PlaybackStatus::playing:
         return QStringLiteral("Playing");
@@ -210,7 +187,6 @@ QString PlayerSkeleton::playbackStatus() const
 
 void PlayerSkeleton::setLoopStatus(const QString &status)
 {
-    if (!player()) return;
     bool ok;
     int value = QMetaEnum::fromType<LoopStatus>().
         keyToValue(status.toUtf8().constData(), &ok);
@@ -223,123 +199,113 @@ void PlayerSkeleton::setLoopStatus(const QString &status)
 
 QString PlayerSkeleton::loopStatus() const
 {
-    int value = player() ? static_cast<LoopStatus>(player()->loopStatus()) : None;
+    int value = static_cast<LoopStatus>(player()->loopStatus());
     return QMetaEnum::fromType<LoopStatus>().valueToKey(value);
 }
 
 void PlayerSkeleton::setTypedLoopStatus(int16_t status)
 {
-    if (!player()) return;
     player()->setLoopStatus(static_cast<Player::LoopStatus>(status));
 }
 
 int16_t PlayerSkeleton::typedLoopStatus() const
 {
-    return player() ? static_cast<LoopStatus>(player()->loopStatus()) : None;
+    return static_cast<LoopStatus>(player()->loopStatus());
 }
 
 void PlayerSkeleton::setPlaybackRate(double rate)
 {
-    if (!player()) return;
     return player()->setPlaybackRate(rate);
 }
 
 double PlayerSkeleton::playbackRate() const
 {
-    return player() ? player()->playbackRate() : 1.0;
+    return player()->playbackRate();
 }
 
 void PlayerSkeleton::setShuffle(bool shuffle)
 {
-    if (!player()) return;
     return player()->setShuffle(shuffle);
 }
 
 bool PlayerSkeleton::shuffle() const
 {
-    return player() ? player()->shuffle() : false;
+    return player()->shuffle();
 }
 
 QVariantMap PlayerSkeleton::metadata() const
 {
-    if (!player()) return QVariantMap();
     return player()->metadataForCurrentTrack();
 }
 
 void PlayerSkeleton::setVolume(double volume)
 {
-    if (!player()) return;
-    return player()->setVolume(volume);
+    player()->setVolume(volume);
 }
 
 double PlayerSkeleton::volume() const
 {
-    return player() ? player()->volume() : 1.0;
+    return player()->volume();
 }
 
 double PlayerSkeleton::minimumRate() const
 {
-    return player() ? player()->minimumRate() : 1.0;
+    return player()->minimumRate();
 }
 
 double PlayerSkeleton::maximumRate() const
 {
-    return player() ? player()->maximumRate() : 1.0;
+    return player()->maximumRate();
 }
 
 int64_t PlayerSkeleton::position() const
 {
-    return player() ? player()->position() : 0;
+    return player()->position();
 }
 
 int64_t PlayerSkeleton::duration() const
 {
-    return player() ? player()->duration() : 0;
+    return player()->duration();
 }
 
 int16_t PlayerSkeleton::backend() const
 {
-    return player() ? player()->backend() : 0;
+    return player()->backend();
 }
 
 int16_t PlayerSkeleton::orientation() const
 {
-    return player() ? player()->orientation() : 0;
+    return player()->orientation();
 }
 
 int16_t PlayerSkeleton::lifetime() const
 {
-    return player() ? player()->lifetime() : 0;
+    return player()->lifetime();
 }
 
 int16_t PlayerSkeleton::audioStreamRole() const
 {
-    return player() ? player()->audioStreamRole() : 0;
+    return player()->audioStreamRole();
 }
 
 void PlayerSkeleton::Next()
 {
-    if (!player()) return;
     player()->next();
 }
 
 void PlayerSkeleton::Previous()
 {
-    if (!player()) return;
     player()->previous();
 }
 
 void PlayerSkeleton::Pause()
 {
-    if (!player()) return;
     player()->pause();
 }
 
 void PlayerSkeleton::PlayPause()
 {
     Q_D(PlayerSkeleton);
-
-    if (!player()) return;
 
     PlayerImplementation *impl = player();
     switch (impl->playbackStatus()) {
@@ -358,19 +324,16 @@ void PlayerSkeleton::PlayPause()
 
 void PlayerSkeleton::Stop()
 {
-    if (!player()) return;
     player()->stop();
 }
 
 void PlayerSkeleton::Play()
 {
-    if (!player()) return;
     player()->play();
 }
 
 void PlayerSkeleton::Seek(uint64_t microSeconds)
 {
-    if (!player()) return;
     player()->seek_to(std::chrono::microseconds(microSeconds));
 }
 
@@ -381,8 +344,6 @@ void PlayerSkeleton::SetPosition(const QDBusObjectPath &, uint64_t)
 
 void PlayerSkeleton::CreateVideoSink(uint32_t textureId)
 {
-    if (!player()) return;
-
     try
     {
         player()->create_gl_texture_video_sink(textureId);
@@ -403,7 +364,6 @@ void PlayerSkeleton::CreateVideoSink(uint32_t textureId)
 
 uint32_t PlayerSkeleton::Key() const
 {
-    if (!player()) return 0;
     return player()->key();
 }
 

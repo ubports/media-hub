@@ -54,7 +54,6 @@ class PlayerSkeleton: public QObject, protected QDBusContext
     Q_PROPERTY(bool CanGoPrevious READ canGoPrevious
                NOTIFY canGoPreviousChanged)
     Q_PROPERTY(bool CanGoNext READ canGoNext NOTIFY canGoNextChanged)
-    Q_PROPERTY(bool CanControl READ canControl NOTIFY canControlChanged)
     Q_PROPERTY(bool IsVideoSource READ isVideoSource)
     Q_PROPERTY(bool IsAudioSource READ isAudioSource)
     Q_PROPERTY(QString PlaybackStatus READ playbackStatus
@@ -89,6 +88,7 @@ public:
     struct Configuration
     {
         QDBusConnection connection;
+        PlayerImplementation *player;
         // Our functional dependencies.
         apparmor::ubuntu::RequestContextResolver::Ptr request_context_resolver;
         apparmor::ubuntu::RequestAuthenticator::Ptr request_authenticator;
@@ -97,7 +97,6 @@ public:
     PlayerSkeleton(const Configuration& configuration, QObject *parent = nullptr);
     ~PlayerSkeleton();
 
-    void setPlayer(PlayerImplementation *impl);
     PlayerImplementation *player();
     const PlayerImplementation *player() const;
 
@@ -108,7 +107,6 @@ public:
     bool canSeek() const;
     bool canGoPrevious() const;
     bool canGoNext() const;
-    bool canControl() const;
     bool isVideoSource() const;
     bool isAudioSource() const;
     QString playbackStatus() const;
@@ -158,7 +156,6 @@ Q_SIGNALS:
     Q_SCRIPTABLE void Error(int16_t code);
     Q_SCRIPTABLE void Buffering(int percent); // TODO: set a fixed type
 
-    void canControlChanged();
     void canPlayChanged();
     void canPauseChanged();
     void canGoPreviousChanged();

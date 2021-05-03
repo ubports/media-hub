@@ -153,6 +153,7 @@ void ServiceSkeletonPrivate::exportPlayer(const SessionInfo &info)
 
     PlayerSkeleton::Configuration conf {
         m_connection,
+        player,
         request_context_resolver,
         request_authenticator,
     };
@@ -161,7 +162,6 @@ void ServiceSkeletonPrivate::exportPlayer(const SessionInfo &info)
      * distruction of the adaptor when the player dies.
      */
     auto *adaptor = new PlayerSkeleton(conf, player);
-    adaptor->setPlayer(player);
     player->setObjectName(info.objectPath);
 
     bool ok = adaptor->registerAt(info.objectPath);
