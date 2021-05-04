@@ -297,6 +297,10 @@ public:
             metadata.setTrackLength(m_engine->duration() / 1000);
         }
 
+        // not needed, and change frequently:
+        metadata.remove(QStringLiteral("minimum-bitrate"));
+        metadata.remove(QStringLiteral("maximum-bitrate"));
+
         m_metadataForCurrentTrack = metadata;
         Q_EMIT q->metadataForCurrentTrackChanged();
     }
