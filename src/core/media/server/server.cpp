@@ -83,6 +83,19 @@ void platform_init()
 }
 }
 
+class Server: public QCoreApplication
+{
+    Q_OBJECT
+public:
+    using QCoreApplication::QCoreApplication;
+
+public Q_SLOTS:
+    void onDisconnected() {
+        MH_INFO() << "Got disconnected from D-Bus, terminating...";
+        QCoreApplication::exit(EXIT_FAILURE);
+    }
+};
+
 int main(int argc, char **argv)
 {
     logger_init();
@@ -90,7 +103,7 @@ int main(int argc, char **argv)
     // Init platform-specific functionality.
     platform_init();
 
-    QCoreApplication app(argc, argv);
+    Server app(argc, argv);
 
     auto bus = QDBusConnection::sessionBus();
 
@@ -125,7 +138,15 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    app.exec();
+    bus.connect(QString(),
+                QStringLiteral("/org/freedesktop/DBus/Local"),
+                QStringLiteral("org.freedesktop.DBus.Local"),
+                QStringLiteral("Disconnected"),
+                &app, SLOT(onDisconnected()));
 
-    return 0;
+    int exitCode = app.exec();
+
+    return exitCode;
 }
+
+#include "server.moc"
