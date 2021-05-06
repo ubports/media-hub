@@ -112,7 +112,6 @@ int main(int argc, char **argv)
     auto skeleton = new media::ServiceSkeleton(
             media::ServiceSkeleton::Configuration {
         bus,
-        nullptr
     }, &impl, &impl);
 
     bool ok =

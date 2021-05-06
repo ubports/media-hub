@@ -124,7 +124,6 @@ add_library(
   client_death_observer.cpp
   hybris_client_death_observer.cpp
   stub_client_death_observer.cpp
-  cover_art_resolver.cpp
   engine.cpp
   track_metadata.cpp
 

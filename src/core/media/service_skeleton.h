@@ -22,8 +22,6 @@
 #include "apparmor/ubuntu.h"
 #include "player.h"
 
-#include "cover_art_resolver.h"
-
 #include <QDBusConnection>
 #include <QDBusContext>
 #include <QDBusObjectPath>
@@ -49,7 +47,6 @@ public:
     struct Configuration
     {
         QDBusConnection connection;
-        CoverArtResolver cover_art_resolver;
     };
 
     ServiceSkeleton(const Configuration &configuration,
