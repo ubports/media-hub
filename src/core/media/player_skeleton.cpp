@@ -380,8 +380,8 @@ void PlayerSkeleton::OpenUri(const QDBusMessage &)
 
         QDBusMessage reply;
         UriCheck uri_check(uri);
-        const bool valid_uri = !uri.isEmpty() and (!uri_check.is_local_file() or
-                (uri_check.is_local_file() and uri_check.file_exists()));
+        const bool valid_uri = !uri.isEmpty() and
+            (!uri_check.is_local_file() or uri_check.file_exists());
         if (!valid_uri)
         {
             const QString err_str = {"Warning: Failed to open uri " + uri.toString() +
@@ -432,8 +432,8 @@ void PlayerSkeleton::OpenUriExtended(const QDBusMessage &)
 
         QDBusMessage reply;
         UriCheck uri_check(uri);
-        const bool valid_uri = !uri.isEmpty() and (!uri_check.is_local_file() or
-                (uri_check.is_local_file() and uri_check.file_exists()));
+        const bool valid_uri = !uri.isEmpty() and
+            (!uri_check.is_local_file() or uri_check.file_exists());
         if (!valid_uri)
         {
             const QString err_str = {"Warning: Failed to open uri " + uri.toString() +
