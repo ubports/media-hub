@@ -3,11 +3,9 @@ Priority: optional
 Section: libs
 Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
 Build-Depends: cmake,
-               dbus-test-runner <!nocheck>,
                debhelper (>= 9),
                dh-apparmor,
                doxygen <!nodoc>,
-               google-mock <!nocheck>,
                graphviz <!nodoc>,
                gstreamer1.0-plugins-good,
                libboost-dev (>=1.53),
@@ -30,6 +28,10 @@ Build-Depends: cmake,
                libtelepathy-qt5-dev,
                libegl1-mesa-dev,
                libgl1-mesa-dev,
+               python3-dbus <!nocheck>,
+               python3-dbusmock <!nocheck>,
+               python3-gi <!nocheck>,
+               python3-pytest <!nocheck>,
 Standards-Version: 3.9.6
 Homepage: https://launchpad.net/media-hub
 # If you aren't a member of ~phablet-team but need to upload packaging changes,
