@@ -376,12 +376,12 @@ void PlayerSkeleton::OpenUri(const QDBusMessage &)
     d->request_context_resolver->resolve_context_for_dbus_name_async(in.service(),
         [=](const media::apparmor::ubuntu::Context& context)
     {
-        QUrl uri = QUrl::fromUserInput(in.arguments()[0].toString());
+        QUrl uri = QUrl::fromUserInput(in.arguments().value(0).toString());
 
         QDBusMessage reply;
         UriCheck uri_check(uri);
-        const bool valid_uri = !uri_check.is_local_file() or
-                (uri_check.is_local_file() and uri_check.file_exists());
+        const bool valid_uri = !uri.isEmpty() and (!uri_check.is_local_file() or
+                (uri_check.is_local_file() and uri_check.file_exists()));
         if (!valid_uri)
         {
             const QString err_str = {"Warning: Failed to open uri " + uri.toString() +
@@ -427,13 +427,13 @@ void PlayerSkeleton::OpenUriExtended(const QDBusMessage &)
         using Headers = Player::HeadersType;
 
         const auto args = in.arguments();
-        QUrl uri = QUrl::fromUserInput(args[0].toString());
-        Headers headers = args[1].value<Headers>();
+        QUrl uri = QUrl::fromUserInput(args.value(0).toString());
+        Headers headers = args.value(1).value<Headers>();
 
         QDBusMessage reply;
         UriCheck uri_check(uri);
-        const bool valid_uri = !uri_check.is_local_file() or
-                (uri_check.is_local_file() and uri_check.file_exists());
+        const bool valid_uri = !uri.isEmpty() and (!uri_check.is_local_file() or
+                (uri_check.is_local_file() and uri_check.file_exists()));
         if (!valid_uri)
         {
             const QString err_str = {"Warning: Failed to open uri " + uri.toString() +
