@@ -216,8 +216,8 @@ ServiceSkeleton::ServiceSkeleton(const Configuration &configuration,
     qRegisterMetaType<uint16_t>("uint16_t");
     qRegisterMetaType<int32_t>("int32_t");
     qRegisterMetaType<uint32_t>("uint32_t");
-    qRegisterMetaType<int64_t>("int64_t");
-    qRegisterMetaType<uint64_t>("uint64_t");
+    qRegisterMetaType<qint64>("int64_t");
+    qRegisterMetaType<qint64>("uint64_t");
 }
 
 media::ServiceSkeleton::~ServiceSkeleton()

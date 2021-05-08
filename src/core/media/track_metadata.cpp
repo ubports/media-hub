@@ -44,7 +44,7 @@ void media::Track::MetaData::setTrackId(const QString &id)
 void media::Track::MetaData::setTrackLength(int64_t length)
 {
     insert(media::Track::MetaData::TrackLengthKey,
-           QVariant::fromValue(length));
+           QVariant(qint64(length)));
 }
 
 void media::Track::MetaData::setArtUrl(const QUrl &url)

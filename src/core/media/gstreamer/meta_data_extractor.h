@@ -104,14 +104,14 @@ public:
             {
                 gint64 value;
                 if (gst_tag_list_get_int64(list, tag, &value))
-                    v = QVariant::fromValue(value);
+                    v = QVariant(qint64(value));
                 break;
             }
             case G_TYPE_UINT64:
             {
                 guint64 value;
                 if (gst_tag_list_get_uint64(list, tag, &value))
-                    v = QVariant::fromValue(value);
+                    v = QVariant(quint64(value));
                 break;
             }
             case G_TYPE_FLOAT:
