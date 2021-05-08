@@ -474,8 +474,7 @@ PlayerImplementationPrivate::PlayerImplementationPrivate(
     QObject::connect(m_trackList.data(), &TrackListImplementation::endOfTrackList,
                      q, [this]()
     {
-        if (m_engine->state() != gstreamer::Engine::State::ready &&
-            m_engine->state() != gstreamer::Engine::State::stopped)
+        if (m_engine->state() != gstreamer::Engine::State::stopped)
         {
             MH_INFO("End of tracklist reached, stopping playback");
             m_engine->stop();
