@@ -123,8 +123,10 @@ void apparmor::ubuntu::DBusDaemonRequestContextResolver::resolve_context_for_dbu
         const QString &name,
         apparmor::ubuntu::RequestContextResolver::ResolveCallback cb)
 {
+    const QString dbusServiceName =
+        qEnvironmentVariable("MEDIA_HUB_MOCKED_DBUS", "org.freedesktop.DBus");
     QDBusMessage msg =
-        QDBusMessage::createMethodCall("org.freedesktop.DBus",
+        QDBusMessage::createMethodCall(dbusServiceName,
                                        "/org/freedesktop/DBus",
                                        "org.freedesktop.DBus",
                                        "GetConnectionCredentials");

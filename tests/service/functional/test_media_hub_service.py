@@ -81,6 +81,22 @@ class TestMediaHub:
         playing_index = playback_statuses.index('Playing')
         assert playback_statuses[playing_index + 1] == 'Stopped'
 
+    @pytest.mark.parametrize('apparmor_reply', [
+        ('ret = { "LinuxSecurityLabel": "my_app_1.0"}'),
+    ])
+    def test_play_audio_unauthorized(
+            self, bus_obj, apparmor_reply, media_hub_service_full,
+            data_path):
+        media_hub = MediaHub.Service(bus_obj)
+        (object_path, uuid) = media_hub.create_session()
+        player = MediaHub.Player(bus_obj, object_path)
+
+        audio_file = 'file://' + str(data_path.joinpath('test-audio.ogg'))
+        with pytest.raises(dbus.exceptions.DBusException) as exception:
+            player.open_uri(audio_file)
+        assert exception.value.get_dbus_name() == \
+            MediaHub.Error.PermissionDenied
+
     @pytest.mark.skipif('True')
     def test_client_disconnection(
             self, bus_obj, media_hub_service_full, current_path,

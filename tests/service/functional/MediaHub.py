@@ -12,6 +12,7 @@ class Error:
     CreatingFixedSession = 'core.ubuntu.media.Service.Error.CreatingFixedSession'
     ResumingSession = 'core.ubuntu.media.Service.Error.ResumingSession'
     PlayerKeyNotFound = 'core.ubuntu.media.Service.Error.PlayerKeyNotFound'
+    PermissionDenied = 'mpris.Player.Error.InsufficientAppArmorPermissions'
 
 
 class Service(object):
