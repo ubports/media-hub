@@ -49,13 +49,13 @@ public:
 
     ClientDeathObserver& operator=(const ClientDeathObserver&) = delete;
 
-    // Registers the client with the given key for death notifications.
-    void registerForDeathNotificationsWithKey(const Player::PlayerKey&);
+    // Registers the given client for death notifications.
+    void registerForDeathNotifications(const Player::Client &client);
 
 Q_SIGNALS:
     // Emitted whenever a client dies, reporting the key under which the
     // respective client was known.
-    void clientWithKeyDied(Player::PlayerKey key);
+    void clientDied(const Player::Client &client);
 
 private:
     Q_DECLARE_PRIVATE(ClientDeathObserver);

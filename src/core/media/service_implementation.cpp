@@ -313,18 +313,18 @@ ServiceImplementation::~ServiceImplementation()
 }
 
 PlayerImplementation *ServiceImplementation::create_session(
-        Player::PlayerKey key)
+        const Player::Client &client)
 {
     Q_D(ServiceImplementation);
 
     // Create a new Player
     auto player = new PlayerImplementation({
-        key,
+        client,
         d->client_death_observer,
     }, this);
 
     QObject::connect(player, &PlayerImplementation::clientDisconnected,
-                     this, [this, key]()
+                     this, [this, key=client.key]()
     {
         Q_D(ServiceImplementation);
         /* Update the current player if needed */
@@ -344,11 +344,11 @@ PlayerImplementation *ServiceImplementation::create_session(
     });
 
     QObject::connect(player, &PlayerImplementation::playbackRequested,
-                     this, [d, key]() {
+                     this, [d, key=client.key]() {
         d->onPlaybackRequested(key);
     });
 
-    d->m_players[key] = player;
+    d->m_players[client.key] = player;
     return player;
 }
 

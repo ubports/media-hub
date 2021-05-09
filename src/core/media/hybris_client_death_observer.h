@@ -45,8 +45,8 @@ public:
     HybrisClientDeathObserver(ClientDeathObserver *q);
     ~HybrisClientDeathObserver();
 
-    // Registers the client with the given key for death notifications.
-    void registerForDeathNotificationsWithKey(const Player::PlayerKey&) override;
+    // Registers the given client for death notifications.
+    void registerForDeathNotifications(const Player::Client &) override;
 };
 
 }

@@ -310,7 +310,7 @@ public:
         return m_engine->audioStreamRole() == media::Player::AudioStreamRole::multimedia;
     }
 
-    Player::PlayerKey m_key;
+    Player::Client m_client;
     ClientDeathObserver::Ptr m_clientDeathObserver;
     media::power::StateController::Ptr power_state_controller;
 
@@ -345,10 +345,10 @@ public:
 PlayerImplementationPrivate::PlayerImplementationPrivate(
         const media::PlayerImplementation::Configuration &config,
         PlayerImplementation *q):
-    m_key(config.key),
+    m_client(config.client),
     m_clientDeathObserver(config.client_death_observer),
     power_state_controller(media::power::StateController::instance()),
-    m_engine(new gstreamer::Engine(config.key)),
+    m_engine(new gstreamer::Engine(config.client.key)),
     // TODO: set the path on the TrackListSkeleton!
     // dbus::types::ObjectPath(config.parent.session->path().as_string() + "/TrackList")),
     m_trackList(QSharedPointer<TrackListImplementation>::create(
@@ -547,15 +547,15 @@ PlayerImplementationPrivate::PlayerImplementationPrivate(
                      q, [this]() { update_mpris_properties(); });
 
     // Everything is setup, we now subscribe to death notifications.
-    m_clientDeathObserver->registerForDeathNotificationsWithKey(m_key);
+    m_clientDeathObserver->registerForDeathNotifications(m_client);
     QObject::connect(m_clientDeathObserver.data(),
-                     &ClientDeathObserver::clientWithKeyDied,
-                     q, [this](const media::Player::PlayerKey& died)
+                     &ClientDeathObserver::clientDied,
+                     q, [this](const media::Player::Client &died)
     {
         if (doing_abandon)
             return;
 
-        if (died != m_key)
+        if (died.key != m_client.key)
             return;
 
         m_abandonTimer.start();
@@ -766,7 +766,7 @@ Player::Lifetime PlayerImplementation::lifetime() const
 void media::PlayerImplementation::reconnect()
 {
     Q_D(PlayerImplementation);
-    d->m_clientDeathObserver->registerForDeathNotificationsWithKey(d->m_key);
+    d->m_clientDeathObserver->registerForDeathNotifications(d->m_client);
 }
 
 void media::PlayerImplementation::abandon()
@@ -786,7 +786,7 @@ QSharedPointer<TrackListImplementation> media::PlayerImplementation::trackList()
 media::Player::PlayerKey media::PlayerImplementation::key() const
 {
     Q_D(const PlayerImplementation);
-    return d->m_key;
+    return d->m_client.key;
 }
 
 void media::PlayerImplementation::create_gl_texture_video_sink(std::uint32_t texture_id)

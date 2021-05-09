@@ -232,23 +232,22 @@ void ServiceSkeleton::CreateSession(QDBusObjectPath &op, QString &uuid)
     QDBusConnection bus = connection();
 
     const auto sessionInfo = d->createSessionInfo();
-    const Player::PlayerKey key = sessionInfo.key;
+    const Player::Client client = { sessionInfo.key, msg.service() };
 
     MH_DEBUG("Session created by request of: %s, key: %d, uuid: %s",
-             qUtf8Printable(msg.service()), key, qUtf8Printable(sessionInfo.uuid));
+             qUtf8Printable(client.name), client.key, qUtf8Printable(sessionInfo.uuid));
 
     try
     {
-        d->impl->create_session(key);
-        d->uuid_player_map[sessionInfo.uuid] = key;
+        d->impl->create_session(client);
+        d->uuid_player_map[sessionInfo.uuid] = client.key;
 
-        QString sender = msg.service();
-        d->request_context_resolver->resolve_context_for_dbus_name_async(sender,
-                [this, key, sender](const media::apparmor::ubuntu::Context& context)
+        d->request_context_resolver->resolve_context_for_dbus_name_async(client.name,
+                [this, client](const media::apparmor::ubuntu::Context& context)
         {
             Q_D(ServiceSkeleton);
             MH_DEBUG(" -- app_name='%s', attached", qUtf8Printable(context.str()));
-            d->player_owner_map[key] = OwnerInfo { context.str(), true, sender };
+            d->player_owner_map[client.key] = OwnerInfo { context.str(), true, client.name };
         });
     } catch(const std::runtime_error& e)
     {
@@ -412,14 +411,15 @@ QDBusObjectPath ServiceSkeleton::CreateFixedSession(const QString &name)
             // Create new session
             auto sessionInfo = d->createSessionInfo();
 
+            QDBusMessage msg = message();
+            const Player::Client client = { sessionInfo.key, msg.service() };
             QDBusObjectPath op(sessionInfo.objectPath);
-            Player::PlayerKey key = sessionInfo.key;
 
-            auto session = d->impl->create_session(key);
+            auto session = d->impl->create_session(client);
             session->setLifetime(media::Player::Lifetime::resumable);
 
             d->exportPlayer(sessionInfo);
-            d->named_player_map.insert(name, key);
+            d->named_player_map.insert(name, client.key);
             return op;
         } else {
             // Resume previous session

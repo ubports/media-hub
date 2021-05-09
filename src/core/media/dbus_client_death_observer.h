@@ -16,38 +16,41 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CORE_UBUNTU_MEDIA_CLIENT_DEATH_OBSERVER_PRIVATE_H_
-#define CORE_UBUNTU_MEDIA_CLIENT_DEATH_OBSERVER_PRIVATE_H_
+#ifndef CORE_UBUNTU_MEDIA_DBUS_CLIENT_DEATH_OBSERVER_H_
+#define CORE_UBUNTU_MEDIA_DBUS_CLIENT_DEATH_OBSERVER_H_
 
-#include <core/media/client_death_observer.h>
+#include <core/media/client_death_observer_p.h>
+
+#include <QDBusServiceWatcher>
+#include <QObject>
+#include <QVector>
 
 namespace core {
 namespace ubuntu {
 namespace media {
 
-class ClientDeathObserverPrivate
+class DBusClientDeathObserver: public QObject,
+                               public ClientDeathObserverPrivate
 {
-    Q_DECLARE_PUBLIC(ClientDeathObserver)
+    Q_OBJECT
 
 public:
-    ClientDeathObserverPrivate(ClientDeathObserver *q):
-        q_ptr(q)
-    {
-    }
-    virtual ~ClientDeathObserverPrivate() = default;
+    DBusClientDeathObserver(ClientDeathObserver *q);
+    ~DBusClientDeathObserver();
 
-    virtual void registerForDeathNotifications(const Player::Client &client) = 0;
+    // Registers the given client for death notifications.
+    void registerForDeathNotifications(const Player::Client &) override;
 
 protected:
-    void notifyClientDeath(const Player::Client &client) {
-        Q_Q(ClientDeathObserver);
-        Q_EMIT q->clientDied(client);
-    }
+    void onServiceDied(const QString &serviceName);
 
 private:
-    ClientDeathObserver *q_ptr;
+    QVector<Player::Client> m_clients;
+    QDBusServiceWatcher m_watcher;
 };
 
-}}} // namespace
+}
+}
+}
 
-#endif
+#endif // CORE_UBUNTU_MEDIA_DBUS_CLIENT_DEATH_OBSERVER_H_

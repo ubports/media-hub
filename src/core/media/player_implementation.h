@@ -50,8 +50,8 @@ public:
     // All creation time arguments go here
     struct Configuration
     {
-        // The unique key identifying the player instance.
-        Player::PlayerKey key;
+        // The unique client identifying the player instance.
+        Player::Client client;
         // Functional dependencies
         ClientDeathObserver::Ptr client_death_observer;
     };

@@ -19,6 +19,7 @@
 #define CORE_UBUNTU_MEDIA_PLAYER_H_
 
 #include <QMap>
+#include <QMetaType>
 #include <QString>
 
 #include <cstdint>
@@ -57,6 +58,15 @@ public:
     typedef QMap<QString,QString> HeadersType;
 
     static const PlayerKey invalidKey = 0xffffffff;
+
+    struct Client {
+        PlayerKey key;
+        QString name; // D-Bus unique connection ID
+
+        bool operator==(const Client &o) const {
+            return key == o.key && name == o.name;
+        }
+    };
 
     struct Errors
     {
@@ -137,5 +147,7 @@ public:
 }
 }
 }
+
+Q_DECLARE_METATYPE(core::ubuntu::media::Player::Client)
 
 #endif // CORE_UBUNTU_MEDIA_PLAYER_H_

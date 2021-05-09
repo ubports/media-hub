@@ -19,8 +19,8 @@
 #include "core/media/logging.h"
 
 #include <core/media/client_death_observer.h>
+#include <core/media/dbus_client_death_observer.h>
 #include <core/media/hybris_client_death_observer.h>
-#include <core/media/stub_client_death_observer.h>
 
 namespace media = core::ubuntu::media;
 
@@ -39,10 +39,7 @@ platform_default_client_death_observer(ClientDeathObserver *q)
             return new media::HybrisClientDeathObserver(q);
         case media::AVBackend::Backend::mir:
         case media::AVBackend::Backend::none:
-            MH_WARNING(
-                "No video backend selected. Client disconnect functionality won't work."
-            );
-            return new media::StubClientDeathObserver(q);
+            return new media::DBusClientDeathObserver(q);
         default:
             MH_INFO("Invalid or no A/V backend specified, using \"hybris\" as a default.");
             return new media::HybrisClientDeathObserver(q);
@@ -60,8 +57,8 @@ ClientDeathObserver::ClientDeathObserver(QObject *parent):
 
 ClientDeathObserver::~ClientDeathObserver() = default;
 
-void ClientDeathObserver::registerForDeathNotificationsWithKey(const Player::PlayerKey &key)
+void ClientDeathObserver::registerForDeathNotifications(const Player::Client &client)
 {
     Q_D(ClientDeathObserver);
-    d->registerForDeathNotificationsWithKey(key);
+    d->registerForDeathNotifications(client);
 }

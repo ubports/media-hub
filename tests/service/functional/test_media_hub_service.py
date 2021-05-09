@@ -97,7 +97,6 @@ class TestMediaHub:
         assert exception.value.get_dbus_name() == \
             MediaHub.Error.PermissionDenied
 
-    @pytest.mark.skipif('True')
     def test_client_disconnection(
             self, bus_obj, media_hub_service_full, current_path,
             data_path):

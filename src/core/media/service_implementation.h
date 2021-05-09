@@ -43,7 +43,7 @@ public:
 
     Player::PlayerKey currentPlayer() const;
 
-    PlayerImplementation *create_session(Player::PlayerKey key);
+    PlayerImplementation *create_session(const Player::Client &client);
     PlayerImplementation *playerByKey(Player::PlayerKey key) const;
     void pause_other_sessions(Player::PlayerKey key);
 

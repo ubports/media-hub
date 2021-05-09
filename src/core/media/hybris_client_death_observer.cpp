@@ -29,7 +29,7 @@ namespace media = core::ubuntu::media;
 
 namespace
 {
-typedef QPair<media::Player::PlayerKey, QPointer<media::HybrisClientDeathObserver>> Holder;
+typedef QPair<media::Player::Client, QPointer<media::HybrisClientDeathObserver>> Holder;
 }
 
 void media::HybrisClientDeathObserver::on_client_died_cb(void* context)
@@ -58,9 +58,9 @@ media::HybrisClientDeathObserver::~HybrisClientDeathObserver()
 {
 }
 
-void media::HybrisClientDeathObserver::registerForDeathNotificationsWithKey(const media::Player::PlayerKey& key)
+void media::HybrisClientDeathObserver::registerForDeathNotifications(const media::Player::Client &client)
 {
     decoding_service_set_client_death_cb(
             &media::HybrisClientDeathObserver::on_client_died_cb,
-            key, new Holder{key, this});
+            client.key, new Holder{client, this});
 }
