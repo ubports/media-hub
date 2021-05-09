@@ -418,10 +418,14 @@ void gstreamer::Playbin::setup_pipeline_for_audio_video()
         asink_name = PULSE_SINK;
 
     audio_sink = gst_element_factory_make (asink_name, "audio-sink");
-    if (audio_sink)
+    if (audio_sink) {
         g_object_set (pipeline, "audio-sink", audio_sink, NULL);
-    else
+        if (strcmp(asink_name, "fakesink") == 0) {
+            g_object_set(audio_sink, "sync", TRUE, NULL);
+        }
+    } else {
         MH_ERROR("Error trying to create audio sink %s", asink_name);
+    }
 
     const char *vsink_name = ::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME");
 
