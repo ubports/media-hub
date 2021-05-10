@@ -194,6 +194,9 @@ target_include_directories(media-hub-server PRIVATE
   ${PROJECT_SOURCE_DIR}/src/
 )
 
+enable_coverage_report(
+    TARGETS media-hub-server media-hub-service)
+
 install(
   TARGETS media-hub-server
   DESTINATION ${CMAKE_INSTALL_BINDIR}
