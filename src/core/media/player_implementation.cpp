@@ -199,7 +199,16 @@ public:
 
     void on_client_died()
     {
+        Q_Q(PlayerImplementation);
         m_engine->reset();
+
+        // If the client disconnects, make sure both wakelock types
+        // are cleared
+        clear_wakelocks();
+        m_trackList->reset();
+
+        // And tell the outside world that the client has gone away
+        Q_EMIT q->clientDisconnected();
     }
 
     void open_first_track_from_tracklist(const media::Track::Id& id)
@@ -448,15 +457,9 @@ PlayerImplementationPrivate::PlayerImplementationPrivate(
     });
 
     QObject::connect(m_engine.data(), &Engine::clientDisconnected,
-                     q, [q, this]()
+                     q, [this]()
     {
-        // If the client disconnects, make sure both wakelock types
-        // are cleared
-        clear_wakelocks();
-        m_trackList->reset();
-
-        // And tell the outside world that the client has gone away
-        Q_EMIT q->clientDisconnected();
+        on_client_died();
     });
 
     QObject::connect(m_engine.data(), &Engine::seekedTo,

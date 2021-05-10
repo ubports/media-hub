@@ -209,8 +209,8 @@ gstreamer::Playbin::~Playbin()
 
 void gstreamer::Playbin::reset()
 {
-    MH_INFO("Client died, resetting pipeline");
-    // When the client dies, tear down the current pipeline and get it
+    MH_INFO("Resetting pipeline");
+    // Tear down the current pipeline and get it
     // in a state that is ready for the next client that connects to the
     // service
 
@@ -218,8 +218,6 @@ void gstreamer::Playbin::reset()
     if (player_lifetime != media::Player::Lifetime::resumable) {
         reset_pipeline();
     }
-    // Signal to the Player class that the client side has disconnected
-    Q_EMIT clientDisconnected();
 }
 
 void gstreamer::Playbin::reset_pipeline()
