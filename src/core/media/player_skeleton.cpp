@@ -31,7 +31,9 @@
 #include "util/uri_check.h"
 
 #include <QDBusMessage>
+#include <QDateTime>
 #include <QMetaEnum>
+#include <QTimer>
 
 using namespace core::ubuntu::media;
 
@@ -51,6 +53,9 @@ private:
     QDBusConnection m_connection;
     media::apparmor::ubuntu::RequestContextResolver::Ptr request_context_resolver;
     media::apparmor::ubuntu::RequestAuthenticator::Ptr request_authenticator;
+    QTimer m_bufferingTimer;
+    QDateTime m_bufferingLastEmission;
+    int m_bufferingValue;
     PlayerSkeleton *q_ptr;
 };
 
@@ -86,7 +91,25 @@ PlayerSkeletonPrivate::PlayerSkeletonPrivate(
         Q_EMIT q->Error(error);
     });
     QObject::connect(impl, &PlayerImplementation::bufferingChanged,
-                     q, &PlayerSkeleton::Buffering);
+                     q, [this, q](int buffering) {
+        QDateTime now = QDateTime::currentDateTime();
+        if (!m_bufferingLastEmission.isValid() ||
+            m_bufferingLastEmission.msecsTo(now) > 500) {
+            /* More than 0.5 seconds have passed, emit immediately */
+            Q_EMIT q->Buffering(buffering);
+            m_bufferingLastEmission = now;
+        } else {
+            /* wait 0.5 seconds since the previous emission */
+            QDateTime nextEmission = m_bufferingLastEmission.addMSecs(500);
+            m_bufferingValue = buffering;
+            m_bufferingTimer.start(now.msecsTo(nextEmission));
+        }
+    });
+    m_bufferingTimer.setSingleShot(true);
+    m_bufferingTimer.callOnTimeout(q, [this, q]() {
+        Q_EMIT q->Buffering(m_bufferingValue);
+        m_bufferingLastEmission = QDateTime::currentDateTime();
+    });
 
     QObject::connect(impl, &PlayerImplementation::volumeChanged,
                      q, &PlayerSkeleton::volumeChanged);
