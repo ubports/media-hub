@@ -26,6 +26,7 @@
 #include <QTextStream>
 
 #include <hybris/media/media_codec_layer.h>
+#include <signal.h>
 
 namespace media = core::ubuntu::media;
 
@@ -87,7 +88,19 @@ class Server: public QCoreApplication
 {
     Q_OBJECT
 public:
-    using QCoreApplication::QCoreApplication;
+    Server(int &argc, char **argv): QCoreApplication(argc, argv) {
+        struct sigaction sa;
+        sa.sa_flags = 0;
+        sa.sa_handler = signalHandler;
+        sigemptyset(&sa.sa_mask);
+        sigaction(SIGTERM, &sa, 0);
+    }
+
+    static void signalHandler(int signum) {
+        if (signum == SIGTERM) {
+            QCoreApplication::quit();
+        }
+    }
 
 public Q_SLOTS:
     void onDisconnected() {
