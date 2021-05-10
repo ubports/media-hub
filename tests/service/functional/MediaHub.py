@@ -49,6 +49,10 @@ class Service(object):
 
 
 class Player(object):
+    Ready = 1
+    Playing = 2
+    Paused = 3
+    Stopped = 4
 
     def __init__(self, bus_obj, object_path):
         service_name = ServiceName

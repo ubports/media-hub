@@ -181,16 +181,52 @@ def powerd(request, bus_obj):
 
 
 @pytest.fixture(scope="function")
+def battery(request, bus_obj):
+    """Mocks the power indicator"""
+    bus_name = 'com.canonical.indicator.power'
+    object_path = '/com/canonical/indicator/power/Battery'
+    interface_name = 'com.canonical.indicator.power.Battery'
+    mock = dbusmock.DBusTestCase.spawn_server(bus_name,
+                                              object_path,
+                                              interface_name,
+                                              system_bus=False)
+    dbus_object = bus_obj.get_object(bus_name, object_path)
+    mock_iface = dbus.Interface(dbus_object, dbusmock.MOCK_IFACE)
+    mock_iface.AddProperties(interface_name, {
+            'PowerLevel': 'ok',
+            'IsWarning': False,
+        })
+
+    class BatteryController:
+        def __init__(self, obj, interface_name):
+            self.props = dbus.Interface(obj, dbus.PROPERTIES_IFACE)
+            self.iface = interface_name
+        def set_power_level(self, level):
+            self.props.Set(self.iface, 'PowerLevel', level)
+        def set_is_warning(self, is_warning):
+            self.props.Set(self.iface, 'IsWarning', is_warning)
+
+    def teardown():
+        mock.terminate()
+        mock.wait()
+    request.addfinalizer(teardown)
+
+    controller = BatteryController(dbus_object, interface_name)
+    return (mock_iface, controller)
+
+
+@pytest.fixture(scope="function")
 def media_hub_service_full(request, dbus_apparmor, powerd, telepathy,
-                           media_hub_service):
+                           battery, media_hub_service):
     class Services:
         def __init__(self, media_hub_service, dbus_apparmor, powerd,
-                     telepathy):
+                     telepathy, battery):
             self.media_hub_service = media_hub_service
             self.dbus_apparmor = dbus_apparmor
             self.powerd = powerd
             self.telepathy = telepathy
-    return Services(media_hub_service, dbus_apparmor, powerd, telepathy)
+            self.battery = battery
+    return Services(media_hub_service, dbus_apparmor, powerd, telepathy, battery)
 
 
 @pytest.fixture(scope="session")

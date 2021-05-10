@@ -166,3 +166,49 @@ class TestMediaHub:
         assert 'Stopped' in playback_statuses
         playing_index = playback_statuses.index('Playing')
         assert playback_statuses[playing_index + 1] == 'Stopped'
+
+    def test_low_battery(
+            self, bus_obj, media_hub_service_full, data_path, dbus_monitor):
+        media_hub = MediaHub.Service(bus_obj)
+        (object_path, uuid) = media_hub.create_session()
+        player = MediaHub.Player(bus_obj, object_path)
+
+        audio_file = 'file://' + str(data_path.joinpath('test-audio-1.ogg'))
+        player.open_uri(audio_file)
+
+        # Watch for PlaybackStatusChanged:
+        loop = GLib.MainLoop()
+        is_playing = False
+
+        def check_playing(status):
+            nonlocal is_playing
+            if status == MediaHub.Player.Playing:
+                print('Quitting loop')
+                is_playing = True
+                loop.quit()
+        player.on_playback_status_changed(check_playing)
+
+        player.play()
+        timer_id = GLib.timeout_add(3000, loop.quit)
+        loop.run()
+        GLib.source_remove(timer_id)
+        assert is_playing
+
+        # Now pretend that the system is in low power
+        (battery_mock, battery_ctrl) = media_hub_service_full.battery
+        is_paused = False
+
+        def check_playing(status):
+            nonlocal is_paused
+            if status == MediaHub.Player.Paused:
+                is_paused = True
+                loop.quit()
+        player.on_playback_status_changed(check_playing)
+
+        battery_ctrl.set_is_warning(True)
+        battery_ctrl.set_power_level('low')
+
+        timer_id = GLib.timeout_add(3000, loop.quit)
+        loop.run()
+        GLib.source_remove(timer_id)
+        assert is_paused
