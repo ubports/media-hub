@@ -79,7 +79,7 @@ class PlaylistsAdaptor: public QDBusAbstractAdaptor
 {
     Q_OBJECT
     Q_CLASSINFO("D-Bus Interface", "org.mpris.MediaPlayer2.Playlists")
-    Q_PROPERTY(uint32_t PlaylistCount READ playlistCount)
+    Q_PROPERTY(quint32 PlaylistCount READ playlistCount)
     Q_PROPERTY(QStringList Orderings READ orderings)
     // FIXME: There's also an ActivePlaylist property in the specs
 
@@ -87,7 +87,7 @@ public:
     PlaylistsAdaptor(QObject *parent): QDBusAbstractAdaptor(parent) {}
     virtual ~PlaylistsAdaptor() = default;
 
-    uint32_t playlistCount() const { return 0; }
+    quint32 playlistCount() const { return 0; }
     QStringList orderings() const { return {"Alphabetical"}; }
 
 public Q_SLOTS:
@@ -115,13 +115,13 @@ class PlayerAdaptor: public QDBusAbstractAdaptor
     Q_PROPERTY(double Volume READ volume WRITE setVolume)
     Q_PROPERTY(double MinimumRate READ minimumRate)
     Q_PROPERTY(double MaximumRate READ maximumRate)
-    Q_PROPERTY(int64_t Position READ position)
-    Q_PROPERTY(int64_t Duration READ duration)
-    Q_PROPERTY(int16_t TypedBackend READ backend)
-    Q_PROPERTY(int16_t Orientation READ orientation)
-    Q_PROPERTY(int16_t Lifetime READ lifetime)
-    Q_PROPERTY(int16_t AudioStreamRole READ audioStreamRole)
-    Q_PROPERTY(int16_t TypedLoopStatus READ typedLoopStatus
+    Q_PROPERTY(qint64 Position READ position)
+    Q_PROPERTY(qint64 Duration READ duration)
+    Q_PROPERTY(qint16 TypedBackend READ backend)
+    Q_PROPERTY(qint16 Orientation READ orientation)
+    Q_PROPERTY(qint16 Lifetime READ lifetime)
+    Q_PROPERTY(qint16 AudioStreamRole READ audioStreamRole)
+    Q_PROPERTY(qint16 TypedLoopStatus READ typedLoopStatus
                WRITE setTypedLoopStatus)
 
 public:
@@ -149,8 +149,8 @@ public:
     QString playbackStatus() const;
     void setLoopStatus(const QString &status);
     QString loopStatus() const;
-    void setTypedLoopStatus(int16_t status);
-    int16_t typedLoopStatus() const;
+    void setTypedLoopStatus(qint16 status);
+    qint16 typedLoopStatus() const;
     void setPlaybackRate(double rate) { if (m_player) m_player->setPlaybackRate(rate); }
     double playbackRate() const { return m_player ? m_player->playbackRate() : 1.0; }
     void setShuffle(bool shuffle) { if (m_player) m_player->setShuffle(shuffle); }
@@ -160,12 +160,12 @@ public:
     double volume() const { return m_player ? m_player->volume() : 1.0; }
     double minimumRate() const { return m_player ? m_player->minimumRate() : 1.0; }
     double maximumRate() const { return m_player ? m_player->maximumRate() : 1.0; }
-    int64_t position() const { return m_player ? m_player->position() : 0; }
-    int64_t duration() const { return m_player ? m_player->duration() : 0; }
-    int16_t backend() const { return m_player ? m_player->backend() : 0; }
-    int16_t orientation() const { return m_player ? m_player->orientation() : 0; }
-    int16_t lifetime() const { return m_player ? m_player->lifetime() : 0; }
-    int16_t audioStreamRole() const { return m_player ? m_player->audioStreamRole() : 0; }
+    qint64 position() const { return m_player ? m_player->position() : 0; }
+    qint64 duration() const { return m_player ? m_player->duration() : 0; }
+    qint16 backend() const { return m_player ? m_player->backend() : 0; }
+    qint16 orientation() const { return m_player ? m_player->orientation() : 0; }
+    qint16 lifetime() const { return m_player ? m_player->lifetime() : 0; }
+    qint16 audioStreamRole() const { return m_player ? m_player->audioStreamRole() : 0; }
 
 public Q_SLOTS:
     void Next() { if (m_player) m_player->next(); }
@@ -174,19 +174,19 @@ public Q_SLOTS:
     void PlayPause();
     void Stop() { if (m_player) m_player->stop(); }
     void Play() { if (m_player) m_player->play(); }
-    void Seek(uint64_t microSeconds);
-    void SetPosition(const QDBusObjectPath &, uint64_t) {} // Never implemented
+    void Seek(quint64 microSeconds);
+    void SetPosition(const QDBusObjectPath &, quint64) {} // Never implemented
     /* The OpenUri should not return anything, but since the previous
      * implementation was returning a boolean, let's keep doing that. */
     void OpenUri(const QDBusMessage &);
 
 Q_SIGNALS:
-    void Seeked(uint64_t microSeconds);
+    void Seeked(quint64 microSeconds);
     void AboutToFinish();
     void EndOfStream();
-    void PlaybackStatusChanged(uint16_t status); // TODO: remove, we have PropertiesChanged already
-    void VideoDimensionChanged(uint32_t height, uint32_t width);
-    void Error(int16_t code);
+    void PlaybackStatusChanged(quint16 status); // TODO: remove, we have PropertiesChanged already
+    void VideoDimensionChanged(quint32 height, quint32 width);
+    void Error(qint16 code);
     void Buffering(int percent); // TODO: set a fixed type
 
 private:
@@ -284,13 +284,13 @@ QString PlayerAdaptor::loopStatus() const
     return QMetaEnum::fromType<LoopStatus>().valueToKey(value);
 }
 
-void PlayerAdaptor::setTypedLoopStatus(int16_t status)
+void PlayerAdaptor::setTypedLoopStatus(qint16 status)
 {
     if (!player()) return;
     player()->setLoopStatus(static_cast<media::Player::LoopStatus>(status));
 }
 
-int16_t PlayerAdaptor::typedLoopStatus() const
+qint16 PlayerAdaptor::typedLoopStatus() const
 {
     return player() ? static_cast<LoopStatus>(player()->loopStatus()) : None;
 }
@@ -318,7 +318,7 @@ void PlayerAdaptor::OpenUri(const QDBusMessage &)
     // FIXME: unused, but we should implement it anyway
 }
 
-void PlayerAdaptor::Seek(uint64_t microSeconds)
+void PlayerAdaptor::Seek(quint64 microSeconds)
 {
     if (!player()) return;
     player()->seek_to(std::chrono::microseconds(microSeconds));

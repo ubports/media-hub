@@ -208,7 +208,7 @@ void PlayerSkeleton::setTypedLoopStatus(int16_t status)
     player()->setLoopStatus(static_cast<Player::LoopStatus>(status));
 }
 
-int16_t PlayerSkeleton::typedLoopStatus() const
+qint16 PlayerSkeleton::typedLoopStatus() const
 {
     return static_cast<LoopStatus>(player()->loopStatus());
 }
@@ -258,32 +258,32 @@ double PlayerSkeleton::maximumRate() const
     return player()->maximumRate();
 }
 
-int64_t PlayerSkeleton::position() const
+qint64 PlayerSkeleton::position() const
 {
     return player()->position();
 }
 
-int64_t PlayerSkeleton::duration() const
+qint64 PlayerSkeleton::duration() const
 {
     return player()->duration();
 }
 
-int16_t PlayerSkeleton::backend() const
+qint16 PlayerSkeleton::backend() const
 {
     return player()->backend();
 }
 
-int16_t PlayerSkeleton::orientation() const
+qint16 PlayerSkeleton::orientation() const
 {
     return player()->orientation();
 }
 
-int16_t PlayerSkeleton::lifetime() const
+qint16 PlayerSkeleton::lifetime() const
 {
     return player()->lifetime();
 }
 
-int16_t PlayerSkeleton::audioStreamRole() const
+qint16 PlayerSkeleton::audioStreamRole() const
 {
     return player()->audioStreamRole();
 }
@@ -332,17 +332,17 @@ void PlayerSkeleton::Play()
     player()->play();
 }
 
-void PlayerSkeleton::Seek(uint64_t microSeconds)
+void PlayerSkeleton::Seek(quint64 microSeconds)
 {
     player()->seek_to(std::chrono::microseconds(microSeconds));
 }
 
-void PlayerSkeleton::SetPosition(const QDBusObjectPath &, uint64_t)
+void PlayerSkeleton::SetPosition(const QDBusObjectPath &, quint64)
 {
     // TODO: implement (this was never implemented in media-hub)
 }
 
-void PlayerSkeleton::CreateVideoSink(uint32_t textureId)
+void PlayerSkeleton::CreateVideoSink(quint32 textureId)
 {
     try
     {

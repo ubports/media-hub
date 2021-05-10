@@ -211,13 +211,6 @@ ServiceSkeleton::ServiceSkeleton(const Configuration &configuration,
     QObject(parent),
     d_ptr(new ServiceSkeletonPrivate(configuration, impl, this))
 {
-    /* We register all the types used in the D-Bus interfaces here */
-    qRegisterMetaType<int16_t>("int16_t");
-    qRegisterMetaType<uint16_t>("uint16_t");
-    qRegisterMetaType<int32_t>("int32_t");
-    qRegisterMetaType<uint32_t>("uint32_t");
-    qRegisterMetaType<qint64>("int64_t");
-    qRegisterMetaType<qint64>("uint64_t");
 }
 
 media::ServiceSkeleton::~ServiceSkeleton()

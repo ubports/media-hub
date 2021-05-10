@@ -65,13 +65,13 @@ class PlayerSkeleton: public QObject, protected QDBusContext
     Q_PROPERTY(double Volume READ volume WRITE setVolume NOTIFY volumeChanged)
     Q_PROPERTY(double MinimumRate READ minimumRate)
     Q_PROPERTY(double MaximumRate READ maximumRate)
-    Q_PROPERTY(int64_t Position READ position)
-    Q_PROPERTY(int64_t Duration READ duration)
-    Q_PROPERTY(int16_t TypedBackend READ backend)
-    Q_PROPERTY(int16_t Orientation READ orientation NOTIFY orientationChanged)
-    Q_PROPERTY(int16_t Lifetime READ lifetime)
-    Q_PROPERTY(int16_t AudioStreamRole READ audioStreamRole)
-    Q_PROPERTY(int16_t TypedLoopStatus READ typedLoopStatus
+    Q_PROPERTY(qint64 Position READ position)
+    Q_PROPERTY(qint64 Duration READ duration)
+    Q_PROPERTY(qint16 TypedBackend READ backend)
+    Q_PROPERTY(qint16 Orientation READ orientation NOTIFY orientationChanged)
+    Q_PROPERTY(qint16 Lifetime READ lifetime)
+    Q_PROPERTY(qint16 AudioStreamRole READ audioStreamRole)
+    Q_PROPERTY(qint16 TypedLoopStatus READ typedLoopStatus
                WRITE setTypedLoopStatus)
 
 public:
@@ -112,8 +112,8 @@ public:
     QString playbackStatus() const;
     void setLoopStatus(const QString &status);
     QString loopStatus() const;
-    void setTypedLoopStatus(int16_t status);
-    int16_t typedLoopStatus() const;
+    void setTypedLoopStatus(qint16 status);
+    qint16 typedLoopStatus() const;
     void setPlaybackRate(double rate);
     double playbackRate() const;
     void setShuffle(bool shuffle);
@@ -123,12 +123,12 @@ public:
     double volume() const;
     double minimumRate() const;
     double maximumRate() const;
-    int64_t position() const;
-    int64_t duration() const;
-    int16_t backend() const;
-    int16_t orientation() const;
-    int16_t lifetime() const;
-    int16_t audioStreamRole() const;
+    qint64 position() const;
+    qint64 duration() const;
+    qint16 backend() const;
+    qint16 orientation() const;
+    qint16 lifetime() const;
+    qint16 audioStreamRole() const;
 
 public Q_SLOTS:
     void Next();
@@ -137,23 +137,23 @@ public Q_SLOTS:
     void PlayPause();
     void Stop();
     void Play();
-    void Seek(uint64_t microSeconds);
+    void Seek(quint64 microSeconds);
     void SetPosition(const QDBusObjectPath &trackObject,
-                     uint64_t microSeconds);
-    void CreateVideoSink(uint32_t textureId);
-    uint32_t Key() const;
+                     quint64 microSeconds);
+    void CreateVideoSink(quint32 textureId);
+    quint32 Key() const;
     /* The OpenUri should not return anything, but since the previous
      * implementation was returning a boolean, let's keep doing that. */
     void OpenUri(const QDBusMessage &);
     void OpenUriExtended(const QDBusMessage &);
 
 Q_SIGNALS:
-    Q_SCRIPTABLE void Seeked(uint64_t microSeconds);
+    Q_SCRIPTABLE void Seeked(quint64 microSeconds);
     Q_SCRIPTABLE void AboutToFinish();
     Q_SCRIPTABLE void EndOfStream();
-    Q_SCRIPTABLE void PlaybackStatusChanged(int16_t status); // TODO: remove, we have PropertiesChanged already
-    Q_SCRIPTABLE void VideoDimensionChanged(uint32_t height, uint32_t width);
-    Q_SCRIPTABLE void Error(int16_t code);
+    Q_SCRIPTABLE void PlaybackStatusChanged(qint16 status); // TODO: remove, we have PropertiesChanged already
+    Q_SCRIPTABLE void VideoDimensionChanged(quint32 height, quint32 width);
+    Q_SCRIPTABLE void Error(qint16 code);
     Q_SCRIPTABLE void Buffering(int percent); // TODO: set a fixed type
 
     void canPlayChanged();

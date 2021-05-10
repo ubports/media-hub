@@ -128,6 +128,13 @@ void DBusPropertyNotifierPrivate::onChanged(int propertyIndex)
 {
     if (m_changedPropertyIndexes.contains(propertyIndex)) return;
 
+    /* If the property value didn't really change, do nothing */
+    const QMetaProperty &p = m_properties[propertyIndex];
+    const QVariant value = p.read(m_target);
+    if (m_lastValues.value(p.name()) == value) {
+        return;
+    }
+
     /* If the list of properties is empty it means we haven't queued the
      * emission of the notify signal.
      */
@@ -146,6 +153,7 @@ void DBusPropertyNotifierPrivate::deliverNotifySignal()
         const QMetaProperty &p = m_properties[propertyIndex];
         const QVariant value = p.read(m_target);
         changedProperties.insert(p.name(), value);
+        m_lastValues.insert(p.name(), value);
     }
 
     QDBusMessage msg = QDBusMessage::createSignal(m_objectPath,
