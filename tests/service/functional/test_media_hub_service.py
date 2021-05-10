@@ -81,6 +81,21 @@ class TestMediaHub:
         playing_index = playback_statuses.index('Playing')
         assert playback_statuses[playing_index + 1] == 'Stopped'
 
+        # Check that powerd was invoked
+        powerd = media_hub_service_full.powerd
+        calls = powerd.GetMethodCalls('requestSysState')
+        assert len(calls) == 1
+        args = calls[0][1]
+        assert args[0] == "media-hub-playback_lock"
+        assert args[1] == 1
+        for i in range(0, 50):
+            calls = powerd.GetMethodCalls('clearSysState')
+            if calls: break
+            sleep(0.1)
+        assert len(calls) == 1
+        args = calls[0][1]
+        assert args[0] == "powerd-cookie"
+
     @pytest.mark.parametrize('apparmor_reply', [
         ('ret = { "LinuxSecurityLabel": "my_app_1.0"}'),
     ])

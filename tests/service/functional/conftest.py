@@ -33,6 +33,7 @@ def media_hub_service(request):
         "mock.org.freedesktop.dbus"
     environment['CORE_UBUNTU_MEDIA_SERVICE_AUDIO_SINK_NAME'] = 'fakesink'
     environment['CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME'] = 'fakesink'
+    environment['MEDIA_HUB_WAKELOCK_TIMEOUT'] = '0'  # milliseconds
 
     # Spawn the service, and wait for it to appear on the bus
     args = [os.environ['SERVICE_BINARY']]
@@ -155,9 +156,41 @@ def telepathy(request, bus_obj):
 
 
 @pytest.fixture(scope="function")
-def media_hub_service_full(request, dbus_apparmor, telepathy,
+def powerd(request, bus_obj):
+    """Mocks the powerd service"""
+    bus_name = interface_name = 'com.canonical.powerd'
+    object_path = '/com/canonical/powerd'
+    mock = dbusmock.DBusTestCase.spawn_server(bus_name,
+                                              object_path,
+                                              interface_name,
+                                              system_bus=True)
+    mock_iface = dbus.Interface(bus_obj.get_object(bus_name, object_path),
+                                dbusmock.MOCK_IFACE)
+    mock_iface.AddMethod(interface_name,
+                         'requestSysState', 'si', 's',
+                         'ret = "powerd-cookie"')
+    mock_iface.AddMethod(interface_name,
+                         'clearSysState', 's', '', '')
+
+    def teardown():
+        mock.terminate()
+        mock.wait()
+    request.addfinalizer(teardown)
+
+    return mock_iface
+
+
+@pytest.fixture(scope="function")
+def media_hub_service_full(request, dbus_apparmor, powerd, telepathy,
                            media_hub_service):
-    return media_hub_service
+    class Services:
+        def __init__(self, media_hub_service, dbus_apparmor, powerd,
+                     telepathy):
+            self.media_hub_service = media_hub_service
+            self.dbus_apparmor = dbus_apparmor
+            self.powerd = powerd
+            self.telepathy = telepathy
+    return Services(media_hub_service, dbus_apparmor, powerd, telepathy)
 
 
 @pytest.fixture(scope="session")

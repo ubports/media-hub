@@ -566,7 +566,10 @@ PlayerImplementationPrivate::PlayerImplementationPrivate(
     m_abandonTimer.callOnTimeout(q, [this]() { on_client_died(); });
 
     m_wakeLockTimer.setSingleShot(true);
-    m_wakeLockTimer.setInterval(4000);
+    int wakelockTimeout =
+        qEnvironmentVariableIsSet("MEDIA_HUB_WAKELOCK_TIMEOUT") ?
+        qEnvironmentVariableIntValue("MEDIA_HUB_WAKELOCK_TIMEOUT") : 4000;
+    m_wakeLockTimer.setInterval(wakelockTimeout);
     m_wakeLockTimer.setTimerType(Qt::VeryCoarseTimer);
     m_wakeLockTimer.callOnTimeout(q, [this]() {
         auto wakelock_type = current_wakelock_type();
