@@ -298,6 +298,7 @@ public:
         }
 
         // not needed, and change frequently:
+        metadata.remove(QStringLiteral("bitrate"));
         metadata.remove(QStringLiteral("minimum-bitrate"));
         metadata.remove(QStringLiteral("maximum-bitrate"));
 
