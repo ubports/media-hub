@@ -1,5 +1,6 @@
 import dbus
 
+from gi.repository import GLib
 
 ServiceName = 'core.ubuntu.media.Service'
 
@@ -58,12 +59,36 @@ class Player(object):
         service_name = ServiceName
         session = bus_obj.get_object(service_name, object_path,
                                      introspect=False)
-        self.__player = dbus.Interface(
-            session,
-            'org.mpris.MediaPlayer2.Player')
+        self.interface_name = 'org.mpris.MediaPlayer2.Player'
+        self.__player = dbus.Interface(session, self.interface_name)
         self.__properties = dbus.Interface(
             session,
             'org.freedesktop.DBus.Properties')
+        self.props = {}
+        self.__prop_callbacks = []
+
+        self.loop = GLib.MainLoop()
+        self.__properties.connect_to_signal('PropertiesChanged',
+                                            self.__on_properties_changed)
+
+    def __on_properties_changed(self, interface, changed, invalidated):
+        assert interface == self.interface_name
+        self.props.update(changed)
+        for cb in self.__prop_callbacks:
+            cb(interface, changed, invalidated)
+
+    def wait_for_prop(self, name, value, timeout=3000):
+        if self.props.get(name) == value:
+            return True
+        timer_id = GLib.timeout_add(timeout, self.loop.quit)
+        def check_value(interface, changed, invalidated):
+            if self.props.get(name) == value:
+                GLib.source_remove(timer_id)
+                self.loop.quit()
+        self.on_properties_changed(check_value)
+        self.loop.run()
+        self.unsubscribe_properties_changed(check_value)
+        return True if self.props.get(name) == value else False
 
     def open_uri(self, uri):
         return self.__player.OpenUri(uri)
@@ -72,10 +97,10 @@ class Player(object):
         self.__player.Play()
 
     def on_properties_changed(self, callback):
-        self.__properties.connect_to_signal('PropertiesChanged', callback)
+        self.__prop_callbacks.append(callback)
 
-    def on_playback_status_changed(self, callback):
-        self.__player.connect_to_signal('PlaybackStatusChanged', callback)
+    def unsubscribe_properties_changed(self, callback):
+        self.__prop_callbacks.remove(callback)
 
 
 class MprisPlayer(Player):

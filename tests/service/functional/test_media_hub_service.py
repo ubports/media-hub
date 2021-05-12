@@ -58,28 +58,8 @@ class TestMediaHub:
         player.open_uri(audio_file)
         player.play()
 
-        # Watch for PlaybackStatusChanged:
-        player = MediaHub.MprisPlayer(bus_obj)
-        loop = GLib.MainLoop()
-        playback_statuses = []
-
-        def propertis_changed_cb(interface, changed, invalidated):
-            if 'PlaybackStatus' not in changed:
-                return
-            playback_status = str(changed['PlaybackStatus'])
-            playback_statuses.append(playback_status)
-            if len(playback_statuses) > 2 and playback_status == 'Stopped':
-                loop.quit()
-        player.on_properties_changed(propertis_changed_cb)
-
-        # Wait for the signal up to 3 seconds
-        timer_id = GLib.timeout_add(3000, loop.quit)
-        loop.run()
-        GLib.source_remove(timer_id)
-        assert 'Playing' in playback_statuses
-        assert 'Stopped' in playback_statuses
-        playing_index = playback_statuses.index('Playing')
-        assert playback_statuses[playing_index + 1] == 'Stopped'
+        assert player.wait_for_prop('PlaybackStatus', 'Playing')
+        assert player.wait_for_prop('PlaybackStatus', 'Stopped')
 
         # Check that powerd was invoked
         powerd = media_hub_service_full.powerd
@@ -129,20 +109,7 @@ class TestMediaHub:
         def readline(stream):
             return stream.readline().strip().decode('utf-8')
 
-        # Watch for PlaybackStatusChanged:
         player = MediaHub.MprisPlayer(bus_obj)
-        loop = GLib.MainLoop()
-        playback_statuses = []
-
-        def propertis_changed_cb(interface, changed, invalidated):
-            if 'PlaybackStatus' not in changed:
-                return
-            playback_status = str(changed['PlaybackStatus'])
-            playback_statuses.append(playback_status)
-            if len(playback_statuses) > 2 and playback_status == 'Stopped':
-                print('Quitting main loop')
-                loop.quit()
-        player.on_properties_changed(propertis_changed_cb)
 
         # Tell the client to play a song
         audio_file = 'file://' + str(data_path.joinpath('test-audio-1.ogg'))
@@ -152,20 +119,10 @@ class TestMediaHub:
             line = readline(client.stdout)
 
         # Wait a bit, then kill the client
-        sleep(0.5)
+        assert player.wait_for_prop('PlaybackStatus', 'Playing')
         client.stdin.close()
         client.wait(3)
-
-        # Verify that the file is no longer playing
-        # Wait for the signal up to 3 seconds
-        timer_id = GLib.timeout_add(3000, loop.quit)
-        loop.run()
-        GLib.source_remove(timer_id)
-
-        assert 'Playing' in playback_statuses
-        assert 'Stopped' in playback_statuses
-        playing_index = playback_statuses.index('Playing')
-        assert playback_statuses[playing_index + 1] == 'Stopped'
+        assert player.wait_for_prop('PlaybackStatus', 'Stopped')
 
     def test_low_battery(
             self, bus_obj, media_hub_service_full, data_path, dbus_monitor):
@@ -176,39 +133,13 @@ class TestMediaHub:
         audio_file = 'file://' + str(data_path.joinpath('test-audio-1.ogg'))
         player.open_uri(audio_file)
 
-        # Watch for PlaybackStatusChanged:
-        loop = GLib.MainLoop()
-        is_playing = False
-
-        def check_playing(status):
-            nonlocal is_playing
-            if status == MediaHub.Player.Playing:
-                print('Quitting loop')
-                is_playing = True
-                loop.quit()
-        player.on_playback_status_changed(check_playing)
-
         player.play()
-        timer_id = GLib.timeout_add(3000, loop.quit)
-        loop.run()
-        GLib.source_remove(timer_id)
-        assert is_playing
+        assert player.wait_for_prop('PlaybackStatus', 'Playing')
 
         # Now pretend that the system is in low power
         (battery_mock, battery_ctrl) = media_hub_service_full.battery
-        is_paused = False
-
-        def check_playing(status):
-            nonlocal is_paused
-            if status == MediaHub.Player.Paused:
-                is_paused = True
-                loop.quit()
-        player.on_playback_status_changed(check_playing)
 
         battery_ctrl.set_is_warning(True)
         battery_ctrl.set_power_level('low')
 
-        timer_id = GLib.timeout_add(3000, loop.quit)
-        loop.run()
-        GLib.source_remove(timer_id)
-        assert is_paused
+        assert player.wait_for_prop('PlaybackStatus', 'Paused')

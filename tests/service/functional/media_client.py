@@ -1,5 +1,6 @@
 import dbus
 
+from dbus.mainloop.glib import DBusGMainLoop
 from time import sleep
 
 import MediaHub
@@ -9,6 +10,7 @@ class Client:
     """ This is a client app to test that the media-hub properly monitors its
     clients' lifetime"""
     def __init__(self):
+        DBusGMainLoop(set_as_default=True)
         self.bus = dbus.SessionBus()
         self.media_hub = MediaHub.Service(self.bus)
 
