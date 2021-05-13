@@ -93,6 +93,9 @@ class Player(object):
     def open_uri(self, uri):
         return self.__player.OpenUri(uri)
 
+    def open_uri_extended(self, uri, http_headers):
+        return self.__player.OpenUriExtended(uri, http_headers)
+
     def play(self):
         self.__player.Play()
 
