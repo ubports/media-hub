@@ -602,6 +602,29 @@ void gstreamer::Playbin::setup_source(GstElement *source)
                          qUtf8Printable(request_headers["User-Agent"]), NULL);
         }
     }
+
+    // Re-interpret "Authorization" header into user and password properties
+    if (request_headers.find("Authorization") != request_headers.end()) {
+        QString authString = request_headers["Authorization"];
+
+        if (authString.startsWith("Basic ")) {
+            authString = authString.mid(6);
+        }
+
+        QByteArray decodedAuth = QByteArray::fromBase64(authString.toUtf8());
+        int colonPos = decodedAuth.indexOf(':');
+        if (colonPos >= 0) {
+            const QByteArray user = decodedAuth.left(colonPos);
+            const QByteArray pass = decodedAuth.mid(colonPos + 1);
+
+            if (g_object_class_find_property(G_OBJECT_GET_CLASS(source), "user-id") != NULL) {
+                g_object_set(source, "user-id", user.constData(), NULL);
+            }
+            if (g_object_class_find_property(G_OBJECT_GET_CLASS(source), "user-pw") != NULL) {
+                g_object_set(source, "user-pw", pass.constData(), NULL);
+            }
+        }
+    }
 }
 
 QUrl gstreamer::Playbin::uri() const

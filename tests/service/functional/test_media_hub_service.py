@@ -164,11 +164,47 @@ class TestMediaHub:
         player = MediaHub.Player(bus_obj, object_path)
 
         audio_file = 'http://localhost:8000/some-file.mp3'
-        player.open_uri_extended(audio_file, {
-            'Cookie': 'biscuit', 'User-Agent': 'MediaHub'})
+        player.open_uri_extended(audio_file, { 'Cookie': 'biscuit', 'User-Agent': 'MediaHub' })
         player.play()
         httpd.handle_request()
         assert request.path == '/some-file.mp3'
         assert 'Cookie' in request.headers
         assert request.headers['Cookie'] == 'biscuit'
         assert request.headers['User-Agent'] == 'MediaHub'
+
+    def test_http_authorization(self, bus_obj, media_hub_service_full):
+        from http.server import HTTPServer, BaseHTTPRequestHandler
+        request = None
+
+        class HttpHandler(BaseHTTPRequestHandler):
+            def __init(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+
+            def do_GET(self):
+                print('HTTP server captured GET request!')
+                nonlocal request
+                request = self
+                self.send_response(401)
+                self.send_header('WWW-Authenticate', 'Basic realm="mp3z"')
+                self.end_headers()
+
+        httpd = HTTPServer(('', 8000), HttpHandler)
+
+        media_hub = MediaHub.Service(bus_obj)
+        (object_path, uuid) = media_hub.create_session()
+        player = MediaHub.Player(bus_obj, object_path)
+
+        audio_file = 'http://localhost:8000/some-file.mp3'
+        player.open_uri_extended(audio_file, {
+            'Authorization': 'Basic dG9tOlA0c3M6dyVyZCQ=',
+        })
+        player.play()
+        # The first request will send the 401 error, which will cause the
+        # GstSoupHTTPSrc element to retry with user and password
+        httpd.handle_request()
+        # Here we handle the second request
+        httpd.handle_request()
+
+        assert request.path == '/some-file.mp3'
+        assert 'Authorization' in request.headers
+        assert request.headers['Authorization'] == 'Basic dG9tOlA0c3M6dyVyZCQ='
