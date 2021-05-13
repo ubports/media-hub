@@ -351,6 +351,11 @@ void gstreamer::Playbin::on_new_message(const Bus::Message& message)
         if (message.source == "playbin") {
             g_object_get(G_OBJECT(pipeline), "current-audio", &audio_stream_id, NULL);
             g_object_get(G_OBJECT(pipeline), "current-video", &video_stream_id, NULL);
+#ifdef DEBUG_GST_PIPELINE
+            MH_DEBUG("Dumping pipeline dot file");
+            GST_DEBUG_BIN_TO_DOT_FILE((GstBin*)pipeline, GST_DEBUG_GRAPH_SHOW_ALL, "pipeline");
+#endif
+
             // TODO: move here the stateChange() signal handling
             // from gstreamer::Engine
         } else if (message.source == "video-sink") {
