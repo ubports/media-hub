@@ -30,6 +30,7 @@
 
 #include "util/uri_check.h"
 
+#include <QDBusArgument>
 #include <QDBusMessage>
 #include <QDateTime>
 #include <QMetaEnum>
@@ -41,11 +42,19 @@ namespace core {
 namespace ubuntu {
 namespace media {
 
+enum class OpenUriCall {
+    OnlyUri,
+    UriWithHeaders,
+};
+
 class PlayerSkeletonPrivate
 {
 public:
     PlayerSkeletonPrivate(const PlayerSkeleton::Configuration &conf,
                           media::PlayerSkeleton *q);
+
+    void openUri(const QDBusMessage &in, const QDBusConnection &bus,
+                 OpenUriCall callType);
 
 private:
     friend class PlayerSkeleton;
@@ -127,6 +136,61 @@ PlayerSkeletonPrivate::PlayerSkeletonPrivate(
                      q, &PlayerSkeleton::metadataChanged);
     QObject::connect(impl, &PlayerImplementation::orientationChanged,
                      q, &PlayerSkeleton::orientationChanged);
+}
+
+void PlayerSkeletonPrivate::openUri(const QDBusMessage &in,
+                                    const QDBusConnection &bus,
+                                    OpenUriCall callType)
+{
+    in.setDelayedReply(true);
+    request_context_resolver->resolve_context_for_dbus_name_async(in.service(),
+        [=](const media::apparmor::ubuntu::Context& context)
+    {
+        using Headers = Player::HeadersType;
+
+        const auto args = in.arguments();
+        QUrl uri = QUrl::fromUserInput(args.value(0).toString());
+        Headers headers;
+        if (callType == OpenUriCall::UriWithHeaders) {
+            const QDBusArgument dbusHeaders = args.value(1).value<QDBusArgument>();
+            dbusHeaders >> headers;
+        }
+
+        QDBusMessage reply;
+        UriCheck uri_check(uri);
+        const bool valid_uri = !uri.isEmpty() and
+            (!uri_check.is_local_file() or uri_check.file_exists());
+        if (!valid_uri)
+        {
+            const QString err_str = {"Warning: Failed to open uri " + uri.toString() +
+                 " because it can't be found."};
+            MH_ERROR("%s", qUtf8Printable(err_str));
+            reply = in.createErrorReply(
+                        mpris::Player::Error::UriNotFound::name,
+                        err_str);
+        }
+        else
+        {
+            // Make sure the client has adequate apparmor permissions to open the URI
+            const auto result = request_authenticator->authenticate_open_uri_request(context, uri);
+            if (std::get<0>(result))
+            {
+                reply = in.createReply();
+                reply << (std::get<0>(result) ? m_player->open_uri(uri, headers) : false);
+            }
+            else
+            {
+                const QString err_str = {"Warning: Failed to authenticate necessary "
+                    "apparmor permissions to open uri: " + std::get<1>(result)};
+                MH_ERROR("%s", qUtf8Printable(err_str));
+                reply = in.createErrorReply(
+                            mpris::Player::Error::InsufficientAppArmorPermissions::name,
+                            err_str);
+            }
+        }
+
+        bus.send(reply);
+    });
 }
 
 PlayerSkeleton::PlayerSkeleton(const Configuration& configuration,
@@ -393,99 +457,11 @@ uint32_t PlayerSkeleton::Key() const
 void PlayerSkeleton::OpenUri(const QDBusMessage &)
 {
     Q_D(PlayerSkeleton);
-    QDBusMessage in = message();
-    QDBusConnection bus = connection();
-    in.setDelayedReply(true);
-    d->request_context_resolver->resolve_context_for_dbus_name_async(in.service(),
-        [=](const media::apparmor::ubuntu::Context& context)
-    {
-        QUrl uri = QUrl::fromUserInput(in.arguments().value(0).toString());
-
-        QDBusMessage reply;
-        UriCheck uri_check(uri);
-        const bool valid_uri = !uri.isEmpty() and
-            (!uri_check.is_local_file() or uri_check.file_exists());
-        if (!valid_uri)
-        {
-            const QString err_str = {"Warning: Failed to open uri " + uri.toString() +
-                 " because it can't be found."};
-            MH_ERROR("%s", qUtf8Printable(err_str));
-            reply = in.createErrorReply(
-                        mpris::Player::Error::UriNotFound::name,
-                        err_str);
-        }
-        else
-        {
-            // Make sure the client has adequate apparmor permissions to open the URI
-            const auto result = d->request_authenticator->authenticate_open_uri_request(context, uri);
-            if (std::get<0>(result))
-            {
-                reply = in.createReply();
-                reply << (std::get<0>(result) ? player()->open_uri(uri) : false);
-            }
-            else
-            {
-                const QString err_str = {"Warning: Failed to authenticate necessary "
-                    "apparmor permissions to open uri: " + std::get<1>(result)};
-                MH_ERROR("%s", qUtf8Printable(err_str));
-                reply = in.createErrorReply(
-                            mpris::Player::Error::InsufficientAppArmorPermissions::name,
-                            err_str);
-            }
-        }
-
-        bus.send(reply);
-    });
+    d->openUri(message(), connection(), OpenUriCall::OnlyUri);
 }
 
 void PlayerSkeleton::OpenUriExtended(const QDBusMessage &)
 {
     Q_D(PlayerSkeleton);
-    QDBusMessage in = message();
-    QDBusConnection bus = connection();
-    in.setDelayedReply(true);
-    d->request_context_resolver->resolve_context_for_dbus_name_async(in.service(),
-        [=](const media::apparmor::ubuntu::Context& context)
-    {
-        using Headers = Player::HeadersType;
-
-        const auto args = in.arguments();
-        QUrl uri = QUrl::fromUserInput(args.value(0).toString());
-        Headers headers = args.value(1).value<Headers>();
-
-        QDBusMessage reply;
-        UriCheck uri_check(uri);
-        const bool valid_uri = !uri.isEmpty() and
-            (!uri_check.is_local_file() or uri_check.file_exists());
-        if (!valid_uri)
-        {
-            const QString err_str = {"Warning: Failed to open uri " + uri.toString() +
-                 " because it can't be found."};
-            MH_ERROR("%s", qUtf8Printable(err_str));
-            reply = in.createErrorReply(
-                        mpris::Player::Error::UriNotFound::name,
-                        err_str);
-        }
-        else
-        {
-            // Make sure the client has adequate apparmor permissions to open the URI
-            const auto result = d->request_authenticator->authenticate_open_uri_request(context, uri);
-            if (std::get<0>(result))
-            {
-                reply = in.createReply();
-                reply << (std::get<0>(result) ? player()->open_uri(uri, headers) : false);
-            }
-            else
-            {
-                const QString err_str = {"Warning: Failed to authenticate necessary "
-                    "apparmor permissions to open uri: " + std::get<1>(result)};
-                MH_ERROR("%s", qUtf8Printable(err_str));
-                reply = in.createErrorReply(
-                            mpris::Player::Error::InsufficientAppArmorPermissions::name,
-                            err_str);
-            }
-        }
-
-        bus.send(reply);
-    });
+    d->openUri(message(), connection(), OpenUriCall::UriWithHeaders);
 }
