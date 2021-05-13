@@ -342,6 +342,7 @@ public:
     Player::LoopStatus m_loopStatus = Player::LoopStatus::none;
     int64_t m_position = 0;
     int64_t m_duration = 0;
+    bool m_doingOpenUri = false;
     Player::AudioStreamRole m_audioStreamRole = Player::AudioStreamRole::multimedia;
     Player::Lifetime m_lifetime = Player::Lifetime::normal;
     QTimer m_abandonTimer;
@@ -512,7 +513,7 @@ PlayerImplementationPrivate::PlayerImplementationPrivate(
                      q, [this](const media::Track::Id &id)
     {
         MH_TRACE("** Track was added, handling in PlayerImplementation");
-        if (m_trackList->tracks().count() == 1)
+        if (!m_doingOpenUri && m_trackList->tracks().count() == 1)
             open_first_track_from_tracklist(id);
 
         update_mpris_properties();
@@ -804,7 +805,13 @@ void media::PlayerImplementation::create_gl_texture_video_sink(std::uint32_t tex
 
 bool PlayerImplementation::open_uri(const QUrl &uri)
 {
+    return open_uri(uri, Headers());
+}
+
+bool PlayerImplementation::open_uri(const QUrl &uri, const Headers &headers)
+{
     Q_D(PlayerImplementation);
+    d->m_doingOpenUri = true;
     d->m_trackList->reset();
 
     // If empty uri, give the same meaning as QMediaPlayer::setMedia("")
@@ -814,19 +821,13 @@ bool PlayerImplementation::open_uri(const QUrl &uri)
         return true;
     }
 
-    static const bool do_pipeline_reset = false;
-    const bool ret = d->m_engine->open_resource_for_uri(uri, do_pipeline_reset);
+    const bool ret = d->m_engine->open_resource_for_uri(uri, headers);
     // Don't set new track as the current track to play since we're calling open_resource_for_uri above
     static const bool make_current = false;
     d->m_trackList->add_track_with_uri_at(uri, TrackListImplementation::afterEmptyTrack(), make_current);
+    d->m_doingOpenUri = false;
 
     return ret;
-}
-
-bool PlayerImplementation::open_uri(const QUrl &uri, const Headers &headers)
-{
-    Q_D(PlayerImplementation);
-    return d->m_engine->open_resource_for_uri(uri, headers);
 }
 
 void PlayerImplementation::next()
