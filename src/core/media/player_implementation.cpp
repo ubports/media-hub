@@ -429,7 +429,7 @@ PlayerImplementationPrivate::PlayerImplementationPrivate(
         update_mpris_metadata(md.first, md.second);
     });
 
-    QObject::connect(m_engine.data(), &Engine::aboutToFinish,
+    QObject::connect(m_engine.data(), &Engine::endOfStream,
                      q, [q, this]()
     {
         if (doing_abandon)
@@ -440,7 +440,7 @@ PlayerImplementationPrivate::PlayerImplementationPrivate(
         // the about_to_finish condition
         m_autoMovingToNextTrack = true;
 
-        Q_EMIT q->aboutToFinish();
+        Q_EMIT q->endOfStream();
 
         const media::Track::Id prev_track_id = m_trackList->current();
         // Make sure that the TrackList keeps advancing. The logic for what gets played next,
@@ -468,8 +468,8 @@ PlayerImplementationPrivate::PlayerImplementationPrivate(
                      q, &PlayerImplementation::bufferingChanged);
     QObject::connect(m_engine.data(), &Engine::playbackStatusChanged,
                      q, &PlayerImplementation::playbackStatusChanged);
-    QObject::connect(m_engine.data(), &Engine::endOfStream,
-                     q, &PlayerImplementation::endOfStream);
+    QObject::connect(m_engine.data(), &Engine::aboutToFinish,
+                     q, &PlayerImplementation::aboutToFinish);
     QObject::connect(m_engine.data(), &Engine::videoDimensionChanged,
                      q, &PlayerImplementation::videoDimensionChanged);
     QObject::connect(m_engine.data(), &Engine::errorOccurred,
