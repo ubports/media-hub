@@ -281,6 +281,7 @@ bool ServiceImplementationPrivate::pause_other_sessions(media::Player::PlayerKey
         // 4) has an audio stream role set to multimedia
         if (other_player->playbackStatus() == Player::playing &&
             other_key != key &&
+            other_player->client().name != current_player->client().name &&
             current_player->audioStreamRole() == media::Player::multimedia &&
             other_player->audioStreamRole() == media::Player::multimedia)
         {

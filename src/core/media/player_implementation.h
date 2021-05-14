@@ -61,6 +61,7 @@ public:
     ~PlayerImplementation();
 
     AVBackend::Backend backend() const;
+    const Player::Client &client() const;
 
     bool canPlay() const;
     bool canPause() const;

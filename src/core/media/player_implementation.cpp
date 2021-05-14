@@ -611,6 +611,12 @@ AVBackend::Backend PlayerImplementation::backend() const
     return media::AVBackend::get_backend_type();
 }
 
+const Player::Client &PlayerImplementation::client() const
+{
+    Q_D(const PlayerImplementation);
+    return d->m_client;
+}
+
 bool PlayerImplementation::canPlay() const
 {
     Q_D(const PlayerImplementation);
