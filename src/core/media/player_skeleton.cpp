@@ -417,6 +417,10 @@ void PlayerSkeleton::Stop()
 void PlayerSkeleton::Play()
 {
     player()->play();
+    /* FIXME: workaround for the client library: if we don't emit the signal
+     * right away, it gets confused and will pause the playback.
+     */
+    Q_EMIT PlaybackStatusChanged(Player::PlaybackStatus::playing);
 }
 
 void PlayerSkeleton::Seek(quint64 microSeconds)
