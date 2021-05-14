@@ -144,7 +144,7 @@ class TestMediaHub:
 
         assert player.wait_for_prop('PlaybackStatus', 'Paused')
 
-    def test_http_headers(self, bus_obj, dbus_monitor, media_hub_service_full):
+    def test_http_headers(self, bus_obj, media_hub_service_full):
         from http.server import HTTPServer, BaseHTTPRequestHandler
         request = None
 
