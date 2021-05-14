@@ -329,8 +329,7 @@ public:
     std::atomic<int> system_wakelock_count;
     std::atomic<int> display_wakelock_count;
     Engine::State previous_state;
-    // Prevent the TrackList from auto advancing to the next track
-    std::mutex doing_go_to_track;
+    bool m_autoMovingToNextTrack = false;
     std::atomic<bool> doing_abandon;
     // Initialize default values for Player interface properties
     bool m_canPlay = false;
@@ -439,7 +438,7 @@ PlayerImplementationPrivate::PlayerImplementationPrivate(
         // Prevent on_go_to_track from executing as it's not needed in this case. on_go_to_track
         // (see the lambda below) is only needed when the client explicitly calls next() not during
         // the about_to_finish condition
-        doing_go_to_track.lock();
+        m_autoMovingToNextTrack = true;
 
         Q_EMIT q->aboutToFinish();
 
@@ -454,7 +453,7 @@ PlayerImplementationPrivate::PlayerImplementationPrivate(
             m_engine->open_resource_for_uri(uri, do_pipeline_reset);
         }
 
-        doing_go_to_track.unlock();
+        m_autoMovingToNextTrack = false;
     });
 
     QObject::connect(m_engine.data(), &Engine::clientDisconnected,
@@ -489,6 +488,8 @@ PlayerImplementationPrivate::PlayerImplementationPrivate(
     QObject::connect(m_trackList.data(), &TrackListImplementation::onGoToTrack,
                      q, [this](const media::Track::Id &id)
     {
+        if (m_autoMovingToNextTrack) return;
+
         // Store whether we should restore the current playing state after loading the new uri
         const bool auto_play = m_engine->playbackStatus() == media::Player::playing;
 
