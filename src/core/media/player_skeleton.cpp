@@ -370,6 +370,11 @@ qint16 PlayerSkeleton::lifetime() const
     return player()->lifetime();
 }
 
+void PlayerSkeleton::setAudioStreamRole(qint16 role)
+{
+    player()->setAudioStreamRole(static_cast<Player::AudioStreamRole>(role));
+}
+
 qint16 PlayerSkeleton::audioStreamRole() const
 {
     return player()->audioStreamRole();

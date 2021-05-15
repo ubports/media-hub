@@ -70,7 +70,8 @@ class PlayerSkeleton: public QObject, protected QDBusContext
     Q_PROPERTY(qint16 TypedBackend READ backend)
     Q_PROPERTY(qint16 Orientation READ orientation NOTIFY orientationChanged)
     Q_PROPERTY(qint16 Lifetime READ lifetime)
-    Q_PROPERTY(qint16 AudioStreamRole READ audioStreamRole)
+    Q_PROPERTY(qint16 AudioStreamRole READ audioStreamRole
+               WRITE setAudioStreamRole)
     Q_PROPERTY(qint16 TypedLoopStatus READ typedLoopStatus
                WRITE setTypedLoopStatus)
 
@@ -128,6 +129,7 @@ public:
     qint16 backend() const;
     qint16 orientation() const;
     qint16 lifetime() const;
+    void setAudioStreamRole(qint16 role);
     qint16 audioStreamRole() const;
 
 public Q_SLOTS:
