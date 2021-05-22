@@ -372,26 +372,26 @@ PlayerImplementationPrivate::PlayerImplementationPrivate(
     // Poor man's logging of release/acquire events.
     QObject::connect(power_state_controller.data(),
                      &power::StateController::displayOnAcquired,
-                     []() {
+                     q, []() {
         MH_INFO("Acquired display ON state");
     });
 
     QObject::connect(power_state_controller.data(),
                      &power::StateController::displayOnReleased,
-                     []() {
+                     q, []() {
         MH_INFO("Released display ON state");
     });
 
     QObject::connect(power_state_controller.data(),
                      &power::StateController::systemStateAcquired,
-                     [](media::power::SystemState state)
+                     q, [](media::power::SystemState state)
     {
         MH_INFO() << "Acquired new system state:" << state;
     });
 
     QObject::connect(power_state_controller.data(),
                      &power::StateController::systemStateAcquired,
-                     [](media::power::SystemState state)
+                     q, [](media::power::SystemState state)
     {
         MH_INFO() << "Released system state:" << state;
     });
