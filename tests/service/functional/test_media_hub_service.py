@@ -160,7 +160,7 @@ class TestMediaHub:
         (object_path, uuid) = media_hub.create_session()
         player = MediaHub.Player(bus_obj, object_path)
 
-        audio_file = 'http://localhost:8000/some-file.mp3'
+        audio_file = 'http://127.0.0.1:8000/some-file.mp3'
         player.open_uri_extended(audio_file, { 'Cookie': 'biscuit', 'User-Agent': 'MediaHub' })
         player.play()
         httpd.handle_request()
@@ -188,7 +188,7 @@ class TestMediaHub:
         (object_path, uuid) = media_hub.create_session()
         player = MediaHub.Player(bus_obj, object_path)
 
-        audio_file = 'http://localhost:8000/some-file.mp3'
+        audio_file = 'http://127.0.0.1:8000/some-file.mp3'
         player.open_uri_extended(audio_file, {
             'Authorization': 'Basic dG9tOlA0c3M6dyVyZCQ=',
         })
