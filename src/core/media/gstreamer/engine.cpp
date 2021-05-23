@@ -191,7 +191,7 @@ public:
         }
 
         if (ret_error != media::Player::Error::no_error) {
-            MH_ERROR("Resetting playbin pipeline after unrecoverable error");
+            MH_ERROR("Resetting playbin pipeline after unrecoverable error: %s", ewi.debug);
             playbin.reset();
         }
         return ret_error;
