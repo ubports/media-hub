@@ -69,6 +69,7 @@ public:
     static void source_setup(GstElement*,
                              GstElement *source,
                              gpointer user_data);
+    static void streams_changed(GstElement*, gpointer user_data);
 
     Playbin(const core::ubuntu::media::Player::PlayerKey key);
     ~Playbin();
@@ -103,6 +104,7 @@ public:
     QUrl uri() const;
 
     void setup_source(GstElement *source);
+    void updateMediaFileType();
 
     // Sets the pipeline's state (stopped, playing, paused, etc).
     bool set_state(GstState new_state);
@@ -131,6 +133,8 @@ public:
     core::ubuntu::media::Player::Lifetime player_lifetime;
     gulong about_to_finish_handler_id;
     gulong source_setup_handler_id;
+    gulong m_audioChangedHandlerId;
+    gulong m_videoChangedHandlerId;
     bool is_missing_audio_codec;
     bool is_missing_video_codec;
     gint audio_stream_id;

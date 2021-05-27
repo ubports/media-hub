@@ -121,6 +121,16 @@ void gstreamer::Playbin::source_setup(GstElement*,
     static_cast<Playbin*>(user_data)->setup_source(source);
 }
 
+void gstreamer::Playbin::streams_changed(GstElement *pipeline,
+                                         gpointer /*user_data*/)
+{
+    /* We are possibly in a GStreamer working thread, so we notify the main
+     * thread of this event through a message in the bus */
+    gst_element_post_message(pipeline,
+        gst_message_new_application(GST_OBJECT(pipeline),
+            gst_structure_new_empty("streams-changed")));
+}
+
 gstreamer::Playbin::Playbin(const core::ubuntu::media::Player::PlayerKey key_in)
     : pipeline(gst_element_factory_make("playbin", pipeline_name().c_str())),
       bus{gst_element_get_bus(pipeline)},
@@ -165,6 +175,14 @@ gstreamer::Playbin::Playbin(const core::ubuntu::media::Player::PlayerKey key_in)
         G_CALLBACK(source_setup),
         this
         );
+
+    m_audioChangedHandlerId = g_signal_connect(
+        pipeline, "audio-changed",
+        G_CALLBACK(streams_changed), this);
+
+    m_videoChangedHandlerId = g_signal_connect(
+        pipeline, "video-changed",
+        G_CALLBACK(streams_changed), this);
 }
 
 // Note that we might be accessing freed memory here, so activate DEBUG_REFS
@@ -193,6 +211,8 @@ gstreamer::Playbin::~Playbin()
 
     g_signal_handler_disconnect(pipeline, about_to_finish_handler_id);
     g_signal_handler_disconnect(pipeline, source_setup_handler_id);
+    g_signal_handler_disconnect(pipeline, m_audioChangedHandlerId);
+    g_signal_handler_disconnect(pipeline, m_videoChangedHandlerId);
 
     if (pipeline)
         gst_object_unref(pipeline);
@@ -328,6 +348,10 @@ void gstreamer::Playbin::process_message_element(GstMessage *message)
     {
         send_frame_ready();
     }
+    else if (g_strcmp0("streams-changed", struct_name) == 0)
+    {
+        updateMediaFileType();
+    }
     else
     {
         MH_ERROR("Unknown GST_MESSAGE_ELEMENT with struct %s", struct_name);
@@ -363,6 +387,7 @@ void gstreamer::Playbin::on_new_message(const Bus::Message& message)
         }
         Q_EMIT stateChanged(message.detail.state_changed, message.source);
         break;
+    case GST_MESSAGE_APPLICATION:
     case GST_MESSAGE_ELEMENT:
         if (gst_is_missing_plugin_message(message.message))
             process_missing_plugin_message(message.message);
@@ -625,6 +650,20 @@ void gstreamer::Playbin::setup_source(GstElement *source)
             }
         }
     }
+}
+
+void gstreamer::Playbin::updateMediaFileType()
+{
+    int videoStreamCount = 0, audioStreamCount = 0;
+    g_object_get(pipeline, "n-video", &videoStreamCount, NULL);
+    g_object_get(pipeline, "n-audio", &audioStreamCount, NULL);
+    MH_DEBUG("streams changed: file has %d video streams and %d audio streams",
+             videoStreamCount, audioStreamCount);
+
+    if (videoStreamCount > 0)
+        setMediaFileType(MEDIA_FILE_TYPE_VIDEO);
+    else if (audioStreamCount > 0)
+        setMediaFileType(MEDIA_FILE_TYPE_AUDIO);
 }
 
 QUrl gstreamer::Playbin::uri() const

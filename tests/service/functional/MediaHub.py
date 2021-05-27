@@ -90,6 +90,9 @@ class Player(object):
         self.unsubscribe_properties_changed(check_value)
         return True if self.props.get(name) == value else False
 
+    def get_prop(self, name):
+        return self.__properties.Get(self.interface_name, name)
+
     def open_uri(self, uri):
         return self.__player.OpenUri(uri)
 

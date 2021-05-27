@@ -203,3 +203,40 @@ class TestMediaHub:
         assert 'Authorization' in request.headers
         assert request.headers['Authorization'] == 'Basic dG9tOlA0c3M6dyVyZCQ='
         httpd.server_close()
+
+    @pytest.mark.parametrize('file_name,expected_is_video,expected_is_audio',
+        [
+            ('test-audio.ogg', False, True),
+            ('test-video.ogg', True, False),
+        ])
+    def test_play_remote_media(self, bus_obj, media_hub_service_full,
+                               data_path, file_name,
+                               expected_is_video, expected_is_audio):
+        request = None
+
+        class HttpHandler(HttpServer.HttpRequestHandler):
+            def do_GET(self):
+                print('HTTP server captured request!')
+                self.send_response(200)
+                self.send_header('Content-type', 'application/octet-stream')
+                self.send_header('Content-Disposition', 'attachment; filename="song.ogg"')
+                self.end_headers()
+
+                audio_file = data_path.joinpath(self.path[1:])
+                with audio_file.open('rb') as f:
+                    self.wfile.write(f.read())
+
+        httpd = HttpServer.HttpServer(HttpHandler)
+
+        media_hub = MediaHub.Service(bus_obj)
+        (object_path, uuid) = media_hub.create_session()
+        player = MediaHub.Player(bus_obj, object_path)
+
+        audio_file = 'http://127.0.0.1:8000/' + file_name
+        player.open_uri(audio_file)
+        player.play()
+        httpd.handle_request()
+        assert player.wait_for_prop('PlaybackStatus', 'Playing')
+        assert player.get_prop('IsAudioSource') == expected_is_audio
+        assert player.get_prop('IsVideoSource') == expected_is_video
+        httpd.server_close()
