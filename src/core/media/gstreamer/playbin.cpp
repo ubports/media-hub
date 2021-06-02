@@ -753,7 +753,7 @@ QString gstreamer::Playbin::get_file_content_type(const QUrl &uri) const
     if (uri.isEmpty())
         return QString();
 
-    const QString content_type {file_info_from_uri(uri)};
+    QString content_type {file_info_from_uri(uri)};
     if (content_type.isEmpty())
     {
         MH_WARNING("Failed to get actual track content type");
@@ -762,6 +762,12 @@ QString gstreamer::Playbin::get_file_content_type(const QUrl &uri) const
 
     MH_INFO("Found content type: %s", qUtf8Printable(content_type));
 
+    if (content_type == "video/3gpp") {
+        /* ogg files recorded by messaging app as detected as video/3gpp,
+         * which causes the playback to fail. Hack around it: */
+        MH_INFO("Hack: remapping to audio/3gpp");
+        content_type = "audio/3gpp";
+    }
     return content_type;
 }
 
