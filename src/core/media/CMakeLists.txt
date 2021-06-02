@@ -1,6 +1,7 @@
 pkg_check_modules(PC_GSTREAMER_1_0 REQUIRED gstreamer-1.0)
 pkg_check_modules(PC_GSTREAMER_PBUTILS_1_0 REQUIRED gstreamer-pbutils-1.0)
 pkg_check_modules(PC_PULSE_AUDIO REQUIRED libpulse libpulse-mainloop-glib)
+pkg_check_modules(APPARMOR REQUIRED libapparmor)
 include_directories(${PC_GSTREAMER_1_0_INCLUDE_DIRS} ${HYBRIS_MEDIA_CFLAGS} ${PC_PULSE_AUDIO_INCLUDE_DIRS})
 
 # We compile with all symbols visible by default. For the shipping library, we strip
@@ -158,6 +159,7 @@ target_link_libraries(
   media-hub-service
 
   call-monitor
+  ${APPARMOR_LIBRARIES}
   ${PC_GSTREAMER_1_0_LIBRARIES}
   ${PC_GSTREAMER_PBUTILS_1_0_LIBRARIES}
   ${GIO_LIBRARIES}
@@ -169,6 +171,7 @@ target_link_libraries(
 
 target_include_directories(media-hub-service PRIVATE
   ${PROJECT_SOURCE_DIR}/src/
+  ${APPARMOR_INCLUDE_DIRS}
   ${HYBRIS_MEDIA_CFLAGS}
   ${PC_GSTREAMER_1_0_INCLUDE_DIRS}
 )

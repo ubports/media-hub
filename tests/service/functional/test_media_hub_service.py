@@ -79,6 +79,9 @@ class TestMediaHub:
 
     @pytest.mark.parametrize('apparmor_reply', [
         ('ret = { "LinuxSecurityLabel": "my_app_1.0"}'),
+        # Regression test for
+        # https://github.com/ubports/media-hub/pull/28#issuecomment-851699674
+        ('ret = { "LinuxSecurityLabel": "messaging-app (enforce)"}'),
     ])
     def test_play_audio_unauthorized(
             self, bus_obj, apparmor_reply, media_hub_service_full,

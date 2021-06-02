@@ -30,6 +30,7 @@
 #include <QVariantList>
 #include <QVariantMap>
 
+#include <sys/apparmor.h>
 #include <unistd.h> // geteuid()
 
 namespace apparmor = core::ubuntu::media::apparmor;
@@ -111,7 +112,8 @@ QString apparmor::ubuntu::Context::package_name() const
 
 QString apparmor::ubuntu::Context::profile_name() const
 {
-    return app_id_parts[index_package] + "-" + app_id_parts[index_app];
+    return app_id_parts.isEmpty() ?
+        str() : (app_id_parts[index_package] + "-" + app_id_parts[index_app]);
 }
 
 apparmor::ubuntu::DBusDaemonRequestContextResolver::DBusDaemonRequestContextResolver():
@@ -136,16 +138,20 @@ void apparmor::ubuntu::DBusDaemonRequestContextResolver::resolve_context_for_dbu
     QObject::connect(callWatcher, &QDBusPendingCallWatcher::finished,
                      [cb](QDBusPendingCallWatcher *callWatcher) {
         QDBusReply<QVariantMap> reply(*callWatcher);
-        QByteArray context;
+        QString appId;
         if (reply.isValid()) {
             QVariantMap map = reply.value();
-            context = map.value("LinuxSecurityLabel").toByteArray();
+            QByteArray context = map.value("LinuxSecurityLabel").toByteArray();
+            if (!context.isEmpty()) {
+                aa_splitcon(context.data(), NULL);
+                appId = QString::fromUtf8(context);
+            }
         } else {
             QDBusError error = reply.error();
             qWarning() << "Error getting app ID:" << error.name() <<
                 error.message();
         }
-        cb(apparmor::ubuntu::Context(context));
+        cb(apparmor::ubuntu::Context(appId));
         callWatcher->deleteLater();
     });
 }
@@ -171,7 +177,7 @@ apparmor::ubuntu::RequestAuthenticator::Result apparmor::ubuntu::ExistingAuthent
         };
     }
     // Check for trust-store compatible path name using full messaging-app profile_name
-    else if (context.profile_name() == "messaging-app" &&
+    else if (context.package_name() == "messaging-app" &&
              /* Since the full APP_ID is not available yet (see aa_query_file_path()), add an exception: */
              (path.contains(".local/share/com.ubuntu." + context.profile_name() + "/") ||
              path.contains(".cache/com.ubuntu." + context.profile_name() + "/")))
