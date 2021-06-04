@@ -16,388 +16,242 @@
  * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#include "core/media/logger/logger.h"
+#include "core/media/logging.h"
 
 #include <core/media/power/state_controller.h>
 
-#include <core/dbus/macros.h>
-#include <core/dbus/object.h>
+#include <QDBusInterface>
+#include <QDBusPendingCall>
+#include <QDBusPendingCallWatcher>
+#include <QDBusPendingReply>
+#include <QTimer>
+#include <QWeakPointer>
 
-namespace media = core::ubuntu::media;
+#include <functional>
 
-namespace com { namespace canonical {
-struct Unity
-{
-    struct Screen
+// We allow the tests to reconfigure this value
+#ifndef DISPLAY_RELEASE_INTERVAL
+#define DISPLAY_RELEASE_INTERVAL 4000
+#endif
+
+using namespace core::ubuntu::media::power;
+
+namespace core {
+namespace ubuntu {
+namespace media {
+namespace power {
+
+uint qHash(SystemState state, uint seed) {
+    return ::qHash(static_cast<uint>(state), seed);
+}
+
+class DisplayInterface {
+public:
+    DisplayInterface():
+        m_interface(QStringLiteral("com.canonical.Unity.Screen"),
+                    QStringLiteral("/com/canonical/Unity/Screen"),
+                    QStringLiteral("com.canonical.Unity.Screen"),
+                    QDBusConnection::systemBus()),
+        m_requestId(-1)
     {
-        static const std::string& name()
-        {
-            static std::string s = "com.canonical.Unity.Screen";
-            return s;
+    }
+
+    using Callback = std::function<void(void)>;
+
+    void requestDisplayOn(const Callback &cb) {
+        if (m_requestId >= 0) {
+            MH_ERROR("Display ON was already requested!");
+            return;
         }
 
-        static const core::dbus::types::ObjectPath& path()
-        {
-            static core::dbus::types::ObjectPath p{"/com/canonical/Unity/Screen"};
-            return p;
-        }
-
-        DBUS_CPP_METHOD_DEF(keepDisplayOn, Screen)
-        DBUS_CPP_METHOD_DEF(removeDisplayOnRequest, Screen)
-    };
-};
-namespace powerd {
-struct Interface
-{
-    static std::string& name()
-    {
-        static std::string s = "com.canonical.powerd";
-        return s;
-    }
-
-    static const core::dbus::types::ObjectPath& path()
-    {
-        static core::dbus::types::ObjectPath p{"/com/canonical/powerd"};
-        return p;
-    }
-
-    DBUS_CPP_METHOD_DEF(requestSysState, com::canonical::powerd::Interface)
-    DBUS_CPP_METHOD_DEF(clearSysState, com::canonical::powerd::Interface)
-};
-}}}
-
-namespace
-{
-namespace impl
-{
-struct DisplayStateLock : public media::power::StateController::Lock<media::power::DisplayState>,
-                          public std::enable_shared_from_this<DisplayStateLock>
-{
-    // To safe us some typing
-    typedef std::shared_ptr<DisplayStateLock> Ptr;
-
-    // We postpone releasing the display for this amount of time.
-    static boost::posix_time::seconds timeout_for_release()
-    {
-        return boost::posix_time::seconds{4};
-    }
-
-    // The invalid cookie marker.
-    static constexpr const std::int32_t the_invalid_cookie{-1};
-
-    DisplayStateLock(const media::power::StateController::Ptr& parent,
-                     boost::asio::io_service& io_service,
-                     const core::dbus::Object::Ptr& object)
-        : parent{parent},
-          timeout{io_service},
-          object{object},
-          cookie{the_invalid_cookie}
-    {
-    }
-
-    // From core::ubuntu::media::power::StateController::Lock<DisplayState>
-    void request_acquire(media::power::DisplayState state) override
-    {
-        MH_TRACE("");
-
-        if (state == media::power::DisplayState::off)
-            return;
-
-        std::weak_ptr<DisplayStateLock> wp{shared_from_this()};
-
-        object->invoke_method_asynchronously_with_callback<com::canonical::Unity::Screen::keepDisplayOn, std::int32_t>(
-                    [wp, state](const core::dbus::Result<std::int32_t>& result)
-                    {
-                        if (result.is_error())
-                        {
-                            MH_ERROR("%s", result.error().print());
-                            return;
-                        }
-
-                        if (auto sp = wp.lock())
-                        {
-                            sp->cookie = result.value();
-                            sp->signals.acquired(state);
-                        }
-                    });
-    }
-
-    void request_release(media::power::DisplayState state) override
-    {
-        if (state == media::power::DisplayState::off)
-            return;
-
-        if (cookie == the_invalid_cookie)
-            return;
-
-        // We make sure that we keep ourselves alive to make sure
-        // that release requests are always correctly issued.
-        auto sp = shared_from_this();
-
-        auto current_cookie(cookie);
-
-        timeout.expires_from_now(timeout_for_release());
-        timeout.async_wait([sp, state, current_cookie](const boost::system::error_code& ec)
-        {
-            // We only return early from the timeout handler if the operation has been
-            // explicitly aborted before.
-            if (ec == boost::asio::error::operation_aborted)
-                return;
-
-            sp->object->invoke_method_asynchronously_with_callback<com::canonical::Unity::Screen::removeDisplayOnRequest, void>(
-                        [sp, state, current_cookie](const core::dbus::Result<void>& result)
-                        {
-                            if (result.is_error())
-                            {
-                                MH_ERROR("%s", result.error().print());
-                                return;
-                            }
-
-                            sp->signals.released(state);
-
-                            // We might have issued a different request before and
-                            // only call the display state done if the original cookie
-                            // corresponds to the one we just gave up.
-                            if (sp->cookie == current_cookie)
-                                sp->cookie = the_invalid_cookie;
-
-                        }, current_cookie);
+        QDBusPendingCall call = m_interface.asyncCall("keepDisplayOn");
+        auto watcher = new QDBusPendingCallWatcher(call);
+        QObject::connect(watcher, &QDBusPendingCallWatcher::finished,
+                         [this, cb](QDBusPendingCallWatcher *watcher) {
+            QDBusPendingReply<int32_t> reply = *watcher;
+            if (reply.isError()) {
+                MH_ERROR() << "Error requesting display ON:" << reply.error().message();
+            } else {
+                m_requestId = reply.value();
+                cb();
+            }
+            watcher->deleteLater();
         });
     }
 
-    // Emitted whenever the acquire request completes.
-    const core::Signal<media::power::DisplayState>& acquired() const override
-    {
-        return signals.acquired;
+    void releaseDisplayOn(const Callback &cb) {
+        if (m_requestId < 0) {
+            MH_WARNING("Display ON was not requested!");
+            return;
+        }
+
+        QDBusPendingCall call = m_interface.asyncCall("removeDisplayOnRequest", m_requestId);
+        auto watcher = new QDBusPendingCallWatcher(call);
+        QObject::connect(watcher, &QDBusPendingCallWatcher::finished,
+                         [this, cb](QDBusPendingCallWatcher *watcher) {
+            QDBusPendingReply<void> reply = *watcher;
+            if (reply.isError()) {
+                MH_ERROR() << "Error releasing display ON:" << reply.error().message();
+            } else {
+                m_requestId = -1;
+                cb();
+            }
+            watcher->deleteLater();
+        });
     }
 
-    // Emitted whenever the release request completes.
-    const core::Signal<media::power::DisplayState>& released() const override
-    {
-        return signals.released;
-    }
-
-    media::power::StateController::Ptr parent;
-    boost::asio::deadline_timer timeout;
-    core::dbus::Object::Ptr object;
-    std::int32_t cookie;
-
-    struct
-    {
-        core::Signal<media::power::DisplayState> acquired;
-        core::Signal<media::power::DisplayState> released;
-    } signals;
+private:
+    QDBusInterface m_interface;
+    int32_t m_requestId;
 };
 
-struct SystemStateLock : public media::power::StateController::Lock<media::power::SystemState>,
-                         public std::enable_shared_from_this<SystemStateLock>
-{
-    static constexpr const char* wake_lock_name
-    {
-        "media-hub-playback_lock"
-    };
-
-    SystemStateLock(const media::power::StateController::Ptr& parent, const core::dbus::Object::Ptr& object)
-        : parent{parent},
-          object{object}
+class SystemStateInterface {
+public:
+    SystemStateInterface():
+        m_interface(QStringLiteral("com.canonical.powerd"),
+                    QStringLiteral("/com/canonical/powerd"),
+                    QStringLiteral("com.canonical.powerd"),
+                    QDBusConnection::systemBus())
     {
     }
 
-    // Informs the system that the caller would like
-    // the system to stay active.
-    void request_acquire(media::power::SystemState state) override
+    using Callback = std::function<void(SystemState state)>;
+
+    void requestSystemState(SystemState state,
+                            const Callback &cb)
     {
         MH_TRACE("");
 
-        if (state == media::power::SystemState::suspend)
+        if (state == media::power::SystemState::suspend) {
             return;
-
-        // Tighten the scope on the unique_lock
-        {
-            // Using a unique_lock instead of lock_guard to avoid deadlocks and instead, gracefully fail
-            std::unique_lock<std::mutex> ul{system_state_cookie_store_guard, std::try_to_lock};
-            if (ul.owns_lock())
-            {
-                if (system_state_cookie_store.count(state) > 0)
-                    return;
-            }
-            else
-            {
-                MH_WARNING("Failed to lock system_state_cookie_store_guard and check system lock state");
-                // Prevent system_state_cookie_store.count(state) and the actual call to requestSysState below from
-                // getting out of sync.
-                return;
-            }
         }
 
-        std::weak_ptr<SystemStateLock> wp{shared_from_this()};
-
-        object->invoke_method_asynchronously_with_callback<com::canonical::powerd::Interface::requestSysState, std::string>([wp, state, this](const core::dbus::Result<std::string>& result)
-        {
-            if (result.is_error())
-            {
-                MH_ERROR("%s", result.error().print());
-                return;
+        QDBusPendingCall call =
+            m_interface.asyncCall("requestSysState",
+                                  QStringLiteral("media-hub-playback_lock"),
+                                  static_cast<int32_t>(state));
+        auto watcher = new QDBusPendingCallWatcher(call);
+        QObject::connect(watcher, &QDBusPendingCallWatcher::finished,
+                         [this, state, cb](QDBusPendingCallWatcher *watcher) {
+            QDBusPendingReply<QString> reply = *watcher;
+            if (reply.isError()) {
+                MH_ERROR() << "Error requesting system state:" << reply.error().message();
+            } else {
+                m_cookieStore.insert(state, reply.value());
+                cb(state);
             }
-
-            if (auto sp = wp.lock())
-            {
-                // Tighten the scope on the unique_lock
-                {
-                    // Using a unique_lock instead of lock_guard to avoid deadlocks and instead, gracefully fail
-                    std::unique_lock<std::mutex> ul{system_state_cookie_store_guard, std::try_to_lock};
-                    if (ul.owns_lock())
-                        sp->system_state_cookie_store[state] = result.value();
-                    else
-                        MH_WARNING("Failed to lock system_state_cookie_store_guard and update system lock state");
-                }
-
-                sp->signals.acquired(state);
-            }
-        }, std::string{wake_lock_name}, static_cast<std::int32_t>(state));
+            watcher->deleteLater();
+        });
     }
 
-    // Informs the system that the caller does not
-    // require the system to stay active anymore.
-    void request_release(media::power::SystemState state) override
+    void releaseSystemState(media::power::SystemState state,
+                            const Callback &cb)
     {
-        if (state == media::power::SystemState::suspend)
+        if (state == media::power::SystemState::suspend) {
             return;
-
-        // Tighten the scope on the unique_lock
-        {
-            // Using a unique_lock instead of lock_guard to avoid deadlocks and instead, gracefully fail
-            std::unique_lock<std::mutex> ul{system_state_cookie_store_guard, std::try_to_lock};
-            if (ul.owns_lock())
-            {
-                if (system_state_cookie_store.count(state) == 0)
-                    return;
-            }
-            else
-            {
-                MH_WARNING("Failed to lock system_state_cookie_store_guard and check system lock state");
-                // Prevent system_state_cookie_store.count(state) and the actual call to clearSysState below from
-                // getting out of sync.
-                return;
-            }
+        }
+        const auto i = m_cookieStore.find(state);
+        if (i == m_cookieStore.end()) {
+            return; // state was never requested
         }
 
-        std::weak_ptr<SystemStateLock> wp{shared_from_this()};
-
-        object->invoke_method_asynchronously_with_callback<com::canonical::powerd::Interface::clearSysState, void>([this, wp, state](const core::dbus::Result<void>& result)
-        {
-            if (result.is_error())
-                MH_ERROR("%s", result.error().print());
-
-            if (auto sp = wp.lock())
-            {
-                // Tighten the scope on the unique_lock
-                {
-                    std::unique_lock<std::mutex> ul{system_state_cookie_store_guard, std::try_to_lock};
-                    if (ul.owns_lock())
-                        sp->system_state_cookie_store.erase(state);
-                    else
-                        MH_WARNING("Failed to lock system_state_cookie_store_guard and erase system lock state");
-                }
-
-                sp->signals.released(state);
+        QDBusPendingCall call = m_interface.asyncCall("clearSysState", i.value());
+        auto watcher = new QDBusPendingCallWatcher(call);
+        QObject::connect(watcher, &QDBusPendingCallWatcher::finished,
+                         [this, state, cb](QDBusPendingCallWatcher *watcher) {
+            QDBusPendingReply<void> reply = *watcher;
+            if (reply.isError()) {
+                MH_ERROR() << "Error releasing system state:" << reply.error().message();
+            } else {
+                m_cookieStore.remove(state);
+                cb(state);
             }
-        }, system_state_cookie_store.at(state));
+            watcher->deleteLater();
+        });
     }
 
-    // Emitted whenever the acquire request completes.
-    const core::Signal<media::power::SystemState>& acquired() const override
-    {
-        return signals.acquired;
-    }
-
-    // Emitted whenever the release request completes.
-    const core::Signal<media::power::SystemState>& released() const override
-    {
-        return signals.released;
-    }
-
-    // Guards concurrent accesses to the cookie store.
-    std::mutex system_state_cookie_store_guard;
-    // Maps previously requested system states to the cookies returned
-    // by the remote end. Used for keeping track of acquired states and
-    // associated cookies to be able to release previously granted acquisitions.
-    std::map<media::power::SystemState, std::string> system_state_cookie_store;
-    media::power::StateController::Ptr parent;
-    core::dbus::Object::Ptr object;
-    struct
-    {
-        core::Signal<media::power::SystemState> acquired;
-        core::Signal<media::power::SystemState> released;
-    } signals;
+private:
+    QDBusInterface m_interface;
+    QHash<SystemState, QString> m_cookieStore;
 };
 
-struct StateController : public media::power::StateController,
-                         public std::enable_shared_from_this<impl::StateController>
-{
-    StateController(media::helper::ExternalServices& es)
-        : external_services{es},
-          powerd
-          {
-              core::dbus::Service::use_service<com::canonical::powerd::Interface>(external_services.system)
-                  ->object_for_path(com::canonical::powerd::Interface::path())
-          },
-          unity_screen
-          {
-              core::dbus::Service::use_service<com::canonical::Unity::Screen>(external_services.system)
-                  ->object_for_path(com::canonical::Unity::Screen::path())
-          }
-    {
-    }
+class StateControllerPrivate {
+public:
+    StateControllerPrivate(StateController *q);
 
-    media::power::StateController::Lock<media::power::SystemState>::Ptr system_state_lock() override
-    {
-        return std::make_shared<impl::SystemStateLock>(shared_from_this(), powerd);
-    }
-
-    media::power::StateController::Lock<media::power::DisplayState>::Ptr display_state_lock() override
-    {
-        return std::make_shared<impl::DisplayStateLock>(shared_from_this(), external_services.io_service, unity_screen);
-    }
-
-    media::helper::ExternalServices& external_services;
-    core::dbus::Object::Ptr powerd;
-    core::dbus::Object::Ptr unity_screen;
+private:
+    friend class StateController;
+    DisplayInterface m_display;
+    SystemStateInterface m_system;
+    QTimer m_displayReleaseTimer;
 };
-}
+
+struct CreatableStateController: public StateController
+{
+    using StateController::StateController;
+};
+
+}}}} // namespace
+
+StateControllerPrivate::StateControllerPrivate(StateController *q)
+{
+    m_displayReleaseTimer.setSingleShot(true);
+    m_displayReleaseTimer.setTimerType(Qt::VeryCoarseTimer);
+    m_displayReleaseTimer.setInterval(DISPLAY_RELEASE_INTERVAL);
+    m_displayReleaseTimer.callOnTimeout(q, [this, q]() {
+        auto emitReleaseSignal = [q]() {
+            Q_EMIT q->displayOnReleased();
+        };
+        m_display.releaseDisplayOn(emitReleaseSignal);
+    });
 }
 
-media::power::StateController::Ptr media::power::make_platform_default_state_controller(core::ubuntu::media::helper::ExternalServices& external_services)
+StateController::StateController():
+    QObject(),
+    d_ptr(new StateControllerPrivate(this))
 {
-    return std::make_shared<::impl::StateController>(external_services);
 }
 
-// operator<< pretty prints the given display state to the given output stream.
-std::ostream& media::power::operator<<(std::ostream& out, media::power::DisplayState state)
+StateController::~StateController() = default;
+
+QSharedPointer<StateController> StateController::instance()
 {
-    switch (state)
-    {
-    case media::power::DisplayState::off:
-        return out << "DisplayState::off";
-    case media::power::DisplayState::on:
-        return out << "DisplayState::on";
+    static QWeakPointer<CreatableStateController> weakRef;
+
+    QSharedPointer<CreatableStateController> strong = weakRef.toStrongRef();
+    if (!strong) {
+        strong = QSharedPointer<CreatableStateController>::create();
+        weakRef = strong;
     }
-
-    return out;
+    return strong;
 }
 
-// operator<< pretty prints the given system state to the given output stream.
-std::ostream& media::power::operator<<(std::ostream& out, media::power::SystemState state)
+void StateController::requestDisplayOn()
 {
-    switch (state)
-    {
-    case media::power::SystemState::active:
-        return out << "SystemState::active";
-    case media::power::SystemState::blank_on_proximity:
-        return out << "SystemState::blank_on_proximity";
-    case media::power::SystemState::suspend:
-        return out << "SystemState::suspend";
-    }
+    Q_D(StateController);
+    d->m_display.requestDisplayOn([this]() {
+        Q_EMIT displayOnAcquired();
+    });
+}
 
-    return out;
+void StateController::releaseDisplayOn()
+{
+    Q_D(StateController);
+    d->m_displayReleaseTimer.start();
+}
+
+void StateController::requestSystemState(SystemState state)
+{
+    Q_D(StateController);
+    d->m_system.requestSystemState(state, [this](SystemState state) {
+        Q_EMIT systemStateAcquired(state);
+    });
+}
+
+void StateController::releaseSystemState(SystemState state)
+{
+    Q_D(StateController);
+    d->m_system.releaseSystemState(state, [this](SystemState state) {
+        Q_EMIT systemStateReleased(state);
+    });
 }

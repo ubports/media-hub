@@ -19,33 +19,209 @@
 
 #include "engine.h"
 
+#include <QSize>
+
 #include <exception>
 #include <stdexcept>
 
 namespace media = core::ubuntu::media;
 
-double media::Engine::Volume::min()
+using namespace media;
+
+namespace core {
+namespace ubuntu {
+namespace media {
+
+class EnginePrivate
 {
-    return 0.;
+    Q_DECLARE_PUBLIC(Engine)
+
+public:
+    EnginePrivate(Engine *q);
+
+private:
+    QSharedPointer<Engine::MetaDataExtractor> m_metadataExtractor;
+    Engine::State m_state;
+    bool m_isVideoSource;
+    bool m_isAudioSource;
+    Player::AudioStreamRole m_audioStreamRole;
+    Player::Lifetime m_lifetime;
+    Player::Orientation m_orientation;
+    double m_volume;
+    QPair<QUrl,Track::MetaData> m_trackMetadata;
+    Player::PlaybackStatus m_playbackStatus;
+    QSize m_videoDimension;
+    Engine *q_ptr;
+};
+
+}}} // namespace
+
+EnginePrivate::EnginePrivate(Engine *q):
+    m_state(Engine::State::no_media),
+    m_isVideoSource(false),
+    m_isAudioSource(false),
+    m_audioStreamRole(Player::AudioStreamRole::multimedia),
+    m_lifetime(Player::Lifetime::normal),
+    m_orientation(Player::Orientation::rotate0),
+    m_volume(1.0),
+    q_ptr(q)
+{
 }
 
-double media::Engine::Volume::max()
+Engine::Engine(QObject *parent):
+    QObject(parent),
+    d_ptr(new EnginePrivate(this))
 {
-    return 1.;
 }
 
-media::Engine::Volume::Volume(double v) : value(v)
+Engine::~Engine() = default;
+
+void Engine::setMetadataExtractor(const QSharedPointer<MetaDataExtractor> &extractor)
 {
-    if (value < min() || value > max())
-        throw std::runtime_error("Value exceeds limits");
+    Q_D(Engine);
+    d->m_metadataExtractor = extractor;
 }
 
-bool media::Engine::Volume::operator!=(const media::Engine::Volume& rhs) const
+const QSharedPointer<Engine::MetaDataExtractor> &Engine::metadataExtractor() const
 {
-    return value != rhs.value;
+    Q_D(const Engine);
+    return d->m_metadataExtractor;
 }
 
-bool media::Engine::Volume::operator==(const media::Engine::Volume& rhs) const
+void Engine::setState(State state)
 {
-    return value == rhs.value;
+    Q_D(Engine);
+    if (state == d->m_state) return;
+    d->m_state = state;
+    Q_EMIT stateChanged();
+}
+
+Engine::State Engine::state() const
+{
+    Q_D(const Engine);
+    return d->m_state;
+}
+
+void Engine::setIsVideoSource(bool value)
+{
+    Q_D(Engine);
+    if (value == d->m_isVideoSource) return;
+    d->m_isVideoSource = value;
+    Q_EMIT isVideoSourceChanged();
+}
+
+bool Engine::isVideoSource() const
+{
+    Q_D(const Engine);
+    return d->m_isVideoSource;
+}
+
+void Engine::setIsAudioSource(bool value)
+{
+    Q_D(Engine);
+    if (value == d->m_isAudioSource) return;
+    d->m_isAudioSource = value;
+    Q_EMIT isAudioSourceChanged();
+}
+
+bool Engine::isAudioSource() const
+{
+    Q_D(const Engine);
+    return d->m_isAudioSource;
+}
+
+void Engine::setOrientation(Player::Orientation o)
+{
+    Q_D(Engine);
+    if (o == d->m_orientation) return;
+    d->m_orientation = o;
+    Q_EMIT orientationChanged();
+}
+
+Player::Orientation Engine::orientation() const
+{
+    Q_D(const Engine);
+    return d->m_orientation;
+}
+
+void Engine::setAudioStreamRole(Player::AudioStreamRole role)
+{
+    Q_D(Engine);
+    if (role == d->m_audioStreamRole) return;
+    d->m_audioStreamRole = role;
+    doSetAudioStreamRole(role);
+}
+
+Player::AudioStreamRole Engine::audioStreamRole() const
+{
+    Q_D(const Engine);
+    return d->m_audioStreamRole;
+}
+
+void Engine::setLifetime(Player::Lifetime lifetime)
+{
+    Q_D(Engine);
+    if (lifetime == d->m_lifetime) return;
+    d->m_lifetime = lifetime;
+    doSetLifetime(lifetime);
+}
+
+Player::Lifetime Engine::lifetime() const
+{
+    Q_D(const Engine);
+    return d->m_lifetime;
+}
+
+void Engine::setTrackMetadata(const QPair<QUrl,Track::MetaData> &metadata)
+{
+    Q_D(Engine);
+    d->m_trackMetadata = metadata;
+    Q_EMIT trackMetadataChanged();
+}
+
+QPair<QUrl,Track::MetaData> Engine::trackMetadata() const
+{
+    Q_D(const Engine);
+    return d->m_trackMetadata;
+}
+
+void Engine::setPlaybackStatus(Player::PlaybackStatus status)
+{
+    Q_D(Engine);
+    if (status == d->m_playbackStatus) return;
+    d->m_playbackStatus = status;
+    Q_EMIT playbackStatusChanged();
+}
+
+Player::PlaybackStatus Engine::playbackStatus() const
+{
+    Q_D(const Engine);
+    return d->m_playbackStatus;
+}
+
+void Engine::setVideoDimension(const QSize &size)
+{
+    Q_D(Engine);
+    if (size == d->m_videoDimension) return;
+    d->m_videoDimension = size;
+    Q_EMIT videoDimensionChanged();
+}
+
+QSize Engine::videoDimension() const
+{
+    Q_D(const Engine);
+    return d->m_videoDimension;
+}
+
+void Engine::setVolume(double volume)
+{
+    Q_D(Engine);
+    d->m_volume = qMax(qMin(volume, 1.0), 0.0);
+    doSetVolume(d->m_volume);
+}
+
+double Engine::volume() const
+{
+    Q_D(const Engine);
+    return d->m_volume;
 }

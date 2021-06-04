@@ -44,8 +44,6 @@
 
 #include <cstdint>
 
-#include "core/media/logger/logger.h"
-
 namespace dbus = core::dbus;
 
 namespace mpris

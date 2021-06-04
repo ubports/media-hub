@@ -20,13 +20,17 @@
 #include <core/media/audio/pulse_audio_output_observer.h>
 
 #include <pulse/pulseaudio.h>
+#include <pulse/glib-mainloop.h>
 
-#include "core/media/logger/logger.h"
+#include "core/media/logging.h"
+
+#include <QString>
+#include <QStringList>
+#include <QRegularExpression>
 
 #include <cstdint>
 
 #include <map>
-#include <regex>
 #include <string>
 
 namespace audio = core::ubuntu::media::audio;
@@ -35,36 +39,28 @@ namespace
 {
 // We wrap calls to the pulseaudio client api into its
 // own namespace and make sure that only managed types
-// can be passed to calls to pulseaudio. In addition,
-// we add guards to the function calls to ensure that
-// they are conly called on the correct thread.
+// can be passed to calls to pulseaudio.
 namespace pa
 {
-typedef std::shared_ptr<pa_threaded_mainloop> ThreadedMainLoopPtr;
-ThreadedMainLoopPtr make_threaded_main_loop()
+typedef std::shared_ptr<pa_glib_mainloop> MainLoopPtr;
+MainLoopPtr make_main_loop()
 {
-    return ThreadedMainLoopPtr
+    return MainLoopPtr
     {
-        pa_threaded_mainloop_new(),
-        [](pa_threaded_mainloop* ml)
+        pa_glib_mainloop_new(g_main_context_default()),
+        [](pa_glib_mainloop *ml)
         {
-            pa_threaded_mainloop_stop(ml);
-            pa_threaded_mainloop_free(ml);
+            pa_glib_mainloop_free(ml);
         }
     };
 }
 
-void start_main_loop(ThreadedMainLoopPtr ml)
-{
-    pa_threaded_mainloop_start(ml.get());
-}
-
 typedef std::shared_ptr<pa_context> ContextPtr;
-ContextPtr make_context(ThreadedMainLoopPtr main_loop)
+ContextPtr make_context(MainLoopPtr main_loop)
 {
     return ContextPtr
     {
-        pa_context_new(pa_threaded_mainloop_get_api(main_loop.get()), "MediaHubPulseContext"),
+        pa_context_new(pa_glib_mainloop_get_api(main_loop.get()), "MediaHubPulseContext"),
         pa_context_unref
     };
 }
@@ -79,15 +75,6 @@ void set_subscribe_callback(ContextPtr ctxt, pa_context_subscribe_cb_t cb, void*
     pa_context_set_subscribe_callback(ctxt.get(), cb, cookie);
 }
 
-void throw_if_not_on_main_loop(ThreadedMainLoopPtr ml)
-{
-    if (not pa_threaded_mainloop_in_thread(ml.get())) throw std::logic_error
-    {
-        "Attempted to call into a pulseaudio object from another"
-        "thread than the pulseaudio mainloop thread."
-    };
-}
-
 void throw_if_not_connected(ContextPtr ctxt)
 {
     if (pa_context_get_state(ctxt.get()) != PA_CONTEXT_READY ) throw std::logic_error
@@ -96,27 +83,27 @@ void throw_if_not_connected(ContextPtr ctxt)
     };
 }
 
-void get_server_info_async(ContextPtr ctxt, ThreadedMainLoopPtr ml, pa_server_info_cb_t cb, void* cookie)
+void get_server_info_async(ContextPtr ctxt, pa_server_info_cb_t cb, void* cookie)
 {
-    throw_if_not_on_main_loop(ml); throw_if_not_connected(ctxt);
+    throw_if_not_connected(ctxt);
     pa_operation_unref(pa_context_get_server_info(ctxt.get(), cb, cookie));
 }
 
-void subscribe_to_events(ContextPtr ctxt, ThreadedMainLoopPtr ml, pa_subscription_mask mask)
+void subscribe_to_events(ContextPtr ctxt, pa_subscription_mask mask)
 {
-    throw_if_not_on_main_loop(ml); throw_if_not_connected(ctxt);
+    throw_if_not_connected(ctxt);
     pa_operation_unref(pa_context_subscribe(ctxt.get(), mask, nullptr, nullptr));
 }
 
-void get_index_of_sink_by_name_async(ContextPtr ctxt, ThreadedMainLoopPtr ml, const std::string& name, pa_sink_info_cb_t cb, void* cookie)
+void get_index_of_sink_by_name_async(ContextPtr ctxt, const QString &name, pa_sink_info_cb_t cb, void* cookie)
 {
-    throw_if_not_on_main_loop(ml); throw_if_not_connected(ctxt);
-    pa_operation_unref(pa_context_get_sink_info_by_name(ctxt.get(), name.c_str(), cb, cookie));
+    throw_if_not_connected(ctxt);
+    pa_operation_unref(pa_context_get_sink_info_by_name(ctxt.get(), qUtf8Printable(name), cb, cookie));
 }
 
-void get_sink_info_by_index_async(ContextPtr ctxt, ThreadedMainLoopPtr ml, std::int32_t index, pa_sink_info_cb_t cb, void* cookie)
+void get_sink_info_by_index_async(ContextPtr ctxt, std::int32_t index, pa_sink_info_cb_t cb, void* cookie)
 {
-    throw_if_not_on_main_loop(ml); throw_if_not_connected(ctxt);
+    throw_if_not_connected(ctxt);
     pa_operation_unref(pa_context_get_sink_info_by_index(ctxt.get(), index, cb, cookie));
 }
 
@@ -125,7 +112,7 @@ void connect_async(ContextPtr ctxt)
     pa_context_connect(ctxt.get(), nullptr, static_cast<pa_context_flags_t>(PA_CONTEXT_NOAUTOSPAWN | PA_CONTEXT_NOFAIL), nullptr);
 }
 
-bool is_port_available_on_sink(const pa_sink_info* info, const std::regex& port_pattern)
+bool is_port_available_on_sink(const pa_sink_info* info, const QRegularExpression& port_pattern)
 {
     if (not info)
         return false;
@@ -136,7 +123,7 @@ bool is_port_available_on_sink(const pa_sink_info* info, const std::regex& port_
             info->ports[i]->available == PA_PORT_AVAILABLE_UNKNOWN)
             continue;
 
-        if (std::regex_match(std::string{info->ports[i]->name}, port_pattern))
+        if (port_pattern.match(QString(info->ports[i]->name)).hasMatch())
             return true;
     }
 
@@ -234,49 +221,58 @@ struct audio::PulseAudioOutputObserver::Private
         }
     }
 
-    Private(const audio::PulseAudioOutputObserver::Configuration& config)
-        : config(config),
-          main_loop{pa::make_threaded_main_loop()},
-          context{pa::make_context(main_loop)},
-          primary_sink_index(-1),
-          active_sink(std::make_tuple(-1, ""))
+    Private(const QString &sink,
+            const QStringList &outputPortPatterns,
+            Reporter::Ptr reporter,
+            PulseAudioOutputObserver *q):
+        main_loop{pa::make_main_loop()},
+        context{pa::make_context(main_loop)},
+        primary_sink_index(-1),
+        active_sink(std::make_tuple(-1, "")),
+        m_requestedSink(sink),
+        m_reporter(reporter),
+        q(q)
     {
-        for (const auto& pattern : config.output_port_patterns)
+        q->setOutputState(audio::OutputState::Speaker);
+        for (const auto& pattern : outputPortPatterns)
         {
-            outputs.emplace_back(pattern, core::Property<media::audio::OutputState>{media::audio::OutputState::Speaker});
-            std::get<1>(outputs.back()) | properties.external_output_state;
-            std::get<1>(outputs.back()).changed().connect([](media::audio::OutputState state)
-            {
-                MH_DEBUG("Connection state for port changed to: %s", state);
-            });
+            outputs.emplace_back(QRegularExpression(pattern),
+                                 media::audio::OutputState::Speaker);
         }
 
         pa::set_state_callback(context, Private::context_notification_cb, this);
         pa::set_subscribe_callback(context, Private::context_subscription_cb, this);
 
         pa::connect_async(context);
-        pa::start_main_loop(main_loop);
+    }
+
+    void setOutputState(std::tuple<QRegularExpression, media::audio::OutputState> &element,
+                        media::audio::OutputState state)
+    {
+        MH_DEBUG("Connection state for port changed to: %d", state);
+        std::get<1>(element) = state;
+        q->setOutputState(state);
     }
 
     // The connection attempt has been successful and we are connected
     // to pulseaudio now.
     void on_context_ready()
     {
-        config.reporter->connected_to_pulse_audio();
+        m_reporter->connected_to_pulse_audio();
 
-        pa::subscribe_to_events(context, main_loop, PA_SUBSCRIPTION_MASK_SINK);
+        pa::subscribe_to_events(context, PA_SUBSCRIPTION_MASK_SINK);
 
-        if (config.sink == "query.from.server")
+        if (m_requestedSink == "query.from.server")
         {
-            pa::get_server_info_async(context, main_loop, Private::query_for_server_info_finished, this);
+            pa::get_server_info_async(context, Private::query_for_server_info_finished, this);
         }
         else
         {
-            properties.sink = config.sink;
             // Get primary sink index (default)
-            pa::get_index_of_sink_by_name_async(context, main_loop, config.sink, Private::query_for_primary_sink_finished, this);
+            pa::get_index_of_sink_by_name_async(context, m_requestedSink,
+                                                Private::query_for_primary_sink_finished, this);
             // Update active sink (could be == default)
-            pa::get_server_info_async(context, main_loop, Private::query_for_server_info_finished, this);
+            pa::get_server_info_async(context, Private::query_for_server_info_finished, this);
         }
     }
 
@@ -290,10 +286,10 @@ struct audio::PulseAudioOutputObserver::Private
     // Something changed on the sink with index idx.
     void on_sink_event_with_index(std::int32_t index)
     {
-        config.reporter->sink_event_with_index(index);
+        m_reporter->sink_event_with_index(index);
 
         // Update server info (active sink)
-        pa::get_server_info_async(context, main_loop, Private::query_for_server_info_finished, this);
+        pa::get_server_info_async(context, Private::query_for_server_info_finished, this);
 
     }
 
@@ -306,7 +302,7 @@ struct audio::PulseAudioOutputObserver::Private
             std::get<1>(active_sink) = info->name;
             if (info->index != static_cast<std::uint32_t>(primary_sink_index))
                 for (auto& element : outputs)
-                    std::get<1>(element) = audio::OutputState::External;
+                    setOutputState(element, audio::OutputState::External);
         }
     }
 
@@ -319,7 +315,7 @@ struct audio::PulseAudioOutputObserver::Private
             if (std::get<0>(active_sink) != info->index)
                 continue;
 
-            MH_INFO("Checking if port is available -> %s",
+            MH_INFO("Checking if port is available -> %d",
                     pa::is_port_available_on_sink(info, std::get<0>(element)));
             const bool available = pa::is_port_available_on_sink(info, std::get<0>(element));
             if (available)
@@ -334,7 +330,7 @@ struct audio::PulseAudioOutputObserver::Private
             else
                 state = audio::OutputState::External;
 
-            std::get<1>(element) = state;
+            setOutputState(element, state);
         }
 
         std::set<Reporter::Port> known_ports;
@@ -343,7 +339,7 @@ struct audio::PulseAudioOutputObserver::Private
             bool is_monitored = false;
 
             for (auto& element : outputs)
-                is_monitored |= std::regex_match(info->ports[i]->name, std::get<0>(element));
+                is_monitored |= std::get<0>(element).match(info->ports[i]->name).hasMatch();
 
             known_ports.insert(Reporter::Port
             {
@@ -354,13 +350,13 @@ struct audio::PulseAudioOutputObserver::Private
             });
         }
 
-        properties.known_ports = known_ports;
+        m_knownPorts = known_ports;
 
         // Initialize sink of primary index (onboard)
         if (primary_sink_index == -1) 
             primary_sink_index = info->index;
 
-        config.reporter->query_for_sink_info_finished(info->name, info->index, known_ports);
+        m_reporter->query_for_sink_info_finished(info->name, info->index, known_ports);
     }
 
     void on_query_for_server_info_finished(const pa_server_info* info)
@@ -369,38 +365,36 @@ struct audio::PulseAudioOutputObserver::Private
         // In this case, we are not able to carry out audio output observation.
         if (not info->default_sink_name)
         {
-            config.reporter->query_for_default_sink_failed();
+            m_reporter->query_for_default_sink_failed();
             return;
         }
 
         // Update active sink
         if (info->default_sink_name != std::get<1>(active_sink))
-            pa::get_index_of_sink_by_name_async(context, main_loop, info->default_sink_name, Private::query_for_active_sink_finished, this);
+            pa::get_index_of_sink_by_name_async(context, info->default_sink_name, Private::query_for_active_sink_finished, this);
 
         // Update wired output for primary sink (onboard)
-        pa::get_sink_info_by_index_async(context, main_loop, primary_sink_index, Private::query_for_primary_sink_finished, this);
+        pa::get_sink_info_by_index_async(context, primary_sink_index, Private::query_for_primary_sink_finished, this);
 
-        if (properties.sink.get() != config.sink)
+        if (m_sink != m_requestedSink)
         {
-            config.reporter->query_for_default_sink_finished(info->default_sink_name);
-            properties.sink = config.sink = info->default_sink_name;
-            pa::get_index_of_sink_by_name_async(context, main_loop, config.sink, Private::query_for_primary_sink_finished, this);
+            m_reporter->query_for_default_sink_finished(info->default_sink_name);
+            m_sink = m_requestedSink = info->default_sink_name;
+            pa::get_index_of_sink_by_name_async(context, m_sink, Private::query_for_primary_sink_finished, this);
         }
     }
 
-    PulseAudioOutputObserver::Configuration config;
-    pa::ThreadedMainLoopPtr main_loop;
+    pa::MainLoopPtr main_loop;
     pa::ContextPtr context;
     std::int32_t primary_sink_index;
     std::tuple<uint32_t, std::string> active_sink;
-    std::vector<std::tuple<std::regex, core::Property<media::audio::OutputState>>> outputs;
+    std::vector<std::tuple<QRegularExpression, media::audio::OutputState>> outputs;
 
-    struct
-    {
-        core::Property<std::string> sink;
-        core::Property<std::set<audio::PulseAudioOutputObserver::Reporter::Port>> known_ports;
-        core::Property<audio::OutputState> external_output_state{audio::OutputState::Speaker};
-    } properties;
+    QString m_sink;
+    QString m_requestedSink;
+    Reporter::Ptr m_reporter;
+    std::set<audio::PulseAudioOutputObserver::Reporter::Port> m_knownPorts;
+    PulseAudioOutputObserver *q;
 };
 
 bool audio::PulseAudioOutputObserver::Reporter::Port::operator==(const audio::PulseAudioOutputObserver::Reporter::Port& rhs) const
@@ -439,31 +433,22 @@ void audio::PulseAudioOutputObserver::Reporter::sink_event_with_index(std::uint3
 
 // Constructs a new instance, or throws std::runtime_error
 // if connection to pulseaudio fails.
-audio::PulseAudioOutputObserver::PulseAudioOutputObserver(const Configuration& config) : d{new Private{config}}
+audio::PulseAudioOutputObserver::PulseAudioOutputObserver(
+        const QString &sink,
+        const QStringList &outputPortPatterns,
+        Reporter::Ptr reporter,
+        OutputObserver *q):
+    OutputObserverPrivate(q),
+    d(new Private(sink, outputPortPatterns, reporter, this))
 {
-    if (not d->config.reporter) throw std::runtime_error
-    {
-        "PulseAudioOutputObserver: Cannot construct for invalid reporter instance."
-    };
 }
 
-// We provide the name of the sink we are connecting to as a
-// getable/observable property. This is specifically meant for
-// consumption by test code.
-const core::Property<std::string>& audio::PulseAudioOutputObserver::sink() const
+QString audio::PulseAudioOutputObserver::sink() const
 {
-    return d->properties.sink;
+    return d->m_sink;
 }
 
-// The set of ports that have been identified on the configured sink.
-// Specifically meant for consumption by test code.
-const core::Property<std::set<audio::PulseAudioOutputObserver::Reporter::Port>>& audio::PulseAudioOutputObserver::known_ports() const
+std::set<audio::PulseAudioOutputObserver::Reporter::Port>& audio::PulseAudioOutputObserver::knownPorts() const
 {
-    return d->properties.known_ports;
-}
-
-// Getable/observable property holding the state of external outputs.
-const core::Property<audio::OutputState>& audio::PulseAudioOutputObserver::external_output_state() const
-{
-    return d->properties.external_output_state;
+    return d->m_knownPorts;
 }

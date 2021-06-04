@@ -18,110 +18,128 @@
 
 #include <core/media/power/battery_observer.h>
 
-#include <core/dbus/macros.h>
-#include <core/dbus/object.h>
-#include <core/dbus/property.h>
+#include "core/media/logging.h"
 
-namespace media = core::ubuntu::media;
+#include <QDBusConnection>
+#include <QDBusInterface>
+#include <QDBusPendingCall>
+#include <QDBusPendingReply>
 
-namespace com { namespace canonical { namespace indicator { namespace power {
-struct Battery
+using namespace core::ubuntu::media::power;
+
+namespace core {
+namespace ubuntu {
+namespace media {
+namespace power {
+
+class BatteryObserverPrivate: public QObject
 {
-    static std::string& name()
+    Q_OBJECT
+
+    static core::ubuntu::media::power::Level powerLevelFromString(const QString &s)
     {
-        static std::string s = "com.canonical.indicator.power.Battery";
-        return s;
+        using Level = core::ubuntu::media::power::Level;
+        if (s == "ok") return Level::ok;
+        if (s == "low") return Level::low;
+        if (s == "very_low") return Level::very_low;
+        if (s == "critical") return Level::critical;
+        return Level::unknown;
     }
 
-    static const core::dbus::types::ObjectPath& path()
+public:
+
+    BatteryObserverPrivate(BatteryObserver *q):
+        QObject(q),
+        m_powerLevel(Level::ok),
+        m_isWarningActive(false),
+        q_ptr(q)
     {
-        static core::dbus::types::ObjectPath p{"/com/canonical/indicator/power/Battery"};
-        return p;
+        QDBusConnection connection = QDBusConnection::sessionBus();
+        auto iface = new QDBusInterface(QStringLiteral("com.canonical.indicator.power"),
+                                        QStringLiteral("/com/canonical/indicator/power/Battery"),
+                                        QStringLiteral("org.freedesktop.DBus.Properties"),
+                                        connection, this);
+        iface->connection().connect(
+            iface->service(),
+            iface->path(),
+            iface->interface(),
+            QStringLiteral("PropertiesChanged"),
+            this,
+            SLOT(onPropertiesChanged(QString, QVariantMap, QStringList)));
+
+        QDBusPendingCall call =
+            iface->asyncCall(QStringLiteral("GetAll"),
+                             QStringLiteral("com.canonical.indicator.power.Battery"));
+        auto *watcher = new QDBusPendingCallWatcher(call);
+        QObject::connect(watcher, &QDBusPendingCallWatcher::finished,
+                         this, [this](QDBusPendingCallWatcher *watcher) {
+            QDBusPendingReply<QVariantMap> reply = *watcher;
+            updateProperties(reply.value());
+            watcher->deleteLater();
+        });
     }
 
-    // Possible values: "ok", "low", "very_low", "critical"
-    DBUS_CPP_READABLE_PROPERTY_DEF(PowerLevel, Battery, std::string)
-    DBUS_CPP_READABLE_PROPERTY_DEF(IsWarning, Battery, bool)
-}; // IndicatorPower
-}}}}
-
-namespace
-{
-namespace impl
-{
-struct BatteryObserver : public media::power::BatteryObserver
-{
-    static core::ubuntu::media::power::Level power_level_from_string(const std::string& s)
+    Q_INVOKABLE
+    void onPropertiesChanged(const QString &interface,
+                             const QVariantMap &changed,
+                             const QStringList &invalid)
     {
-        static const std::map<std::string, core::ubuntu::media::power::Level> lut =
-        {
-            {"ok", core::ubuntu::media::power::Level::ok},
-            {"low", core::ubuntu::media::power::Level::low},
-            {"very_low", core::ubuntu::media::power::Level::very_low},
-            {"critical", core::ubuntu::media::power::Level::critical}
-        };
+        Q_UNUSED(interface);
+        Q_UNUSED(invalid);
 
-        if (lut.count(s) == 0)
-            return core::ubuntu::media::power::Level::unknown;
-
-        return lut.at(s);
+        updateProperties(changed);
     }
 
-    BatteryObserver(const core::dbus::Object::Ptr& object)
-        : object{object},
-          properties
-          {
-              core::Property<core::ubuntu::media::power::Level>{core::ubuntu::media::power::Level::unknown},
-              object->get_property<com::canonical::indicator::power::Battery::PowerLevel>(),
-              object->get_property<com::canonical::indicator::power::Battery::IsWarning>(),
-          },
-          connections
-          {
-              properties.power_level->changed().connect([this](const std::string& value)
-              {
-                  properties.typed_power_level = BatteryObserver::power_level_from_string(value);
-              })
-          }
+    void updateProperties(const QVariantMap &properties)
     {
+        Q_Q(BatteryObserver);
+
+        auto i = properties.find(QStringLiteral("PowerLevel"));
+        if (i != properties.end()) {
+            auto oldPowerLevel = m_powerLevel;
+            m_powerLevel = powerLevelFromString(i->toString());
+            if (m_powerLevel != oldPowerLevel) {
+                Q_EMIT q->levelChanged();
+            }
+        }
+
+        i = properties.find(QStringLiteral("IsWarning"));
+        if (i != properties.end()) {
+            bool oldIsWarningActive = m_isWarningActive;
+            m_isWarningActive = i->toBool();
+            if (m_isWarningActive != oldIsWarningActive) {
+                Q_EMIT q->isWarningActiveChanged();
+            }
+        }
     }
 
-    const core::Property<core::ubuntu::media::power::Level>& level() const override
-    {
-        return properties.typed_power_level;
-    }
-
-    const core::Property<bool>& is_warning_active() const override
-    {
-        return *properties.is_warning;
-    }
-
-    // The object representing the remote indicator instance.
-    core::dbus::Object::Ptr object;
-    // All properties go here.
-    struct
-    {
-        // We have to translate from the raw strings coming in via the bus to
-        // the strongly typed enumeration exposed via the interface.
-        core::Property<core::ubuntu::media::power::Level> typed_power_level;
-        std::shared_ptr<core::dbus::Property<com::canonical::indicator::power::Battery::PowerLevel>> power_level;
-
-        std::shared_ptr<core::dbus::Property<com::canonical::indicator::power::Battery::IsWarning>> is_warning;
-    } properties;
-    // Our event connections
-    struct
-    {
-        core::ScopedConnection power_level;
-    } connections;
-
+private:
+    Q_DECLARE_PUBLIC(BatteryObserver)
+    core::ubuntu::media::power::Level m_powerLevel;
+    bool m_isWarningActive;
+    BatteryObserver *q_ptr;
 };
-}
-}
 
-media::power::BatteryObserver::Ptr media::power::make_platform_default_battery_observer(media::helper::ExternalServices& es)
+}}}} // namespace
+
+BatteryObserver::BatteryObserver(QObject *parent):
+    QObject(parent),
+    d_ptr(new BatteryObserverPrivate(this))
 {
-    auto service = core::dbus::Service::use_service<com::canonical::indicator::power::Battery>(es.session);
-    auto object = service->object_for_path(com::canonical::indicator::power::Battery::path());
-
-    return std::make_shared<impl::BatteryObserver>(object);
 }
 
+BatteryObserver::~BatteryObserver() = default;
+
+Level BatteryObserver::level() const
+{
+    Q_D(const BatteryObserver);
+    return d->m_powerLevel;
+}
+
+bool BatteryObserver::isWarningActive() const
+{
+    Q_D(const BatteryObserver);
+    return d->m_isWarningActive;
+}
+
+#include "battery_observer.moc"

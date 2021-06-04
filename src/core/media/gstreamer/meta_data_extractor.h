@@ -24,12 +24,11 @@
 
 #include "bus.h"
 
-#include "core/media/logger/logger.h"
+#include "core/media/logging.h"
 
 #include <gst/gst.h>
 
 #include <exception>
-#include <future>
 
 namespace gstreamer
 {
@@ -63,7 +62,7 @@ public:
 
     static void on_tag_available(
             const gstreamer::Bus::Message::Detail::Tag& tag,
-            core::ubuntu::media::Track::MetaData& md)
+            QVariantMap *md)
     {
         namespace media = core::ubuntu::media;
 
@@ -75,8 +74,8 @@ public:
         {
             (void) list;
 
-            auto md = static_cast<media::Track::MetaData*>(user_data);
-            std::stringstream ss;
+            auto md = static_cast<QVariantMap*>(user_data);
+            QVariant v;
 
             switch (gst_tag_get_type(tag))
             {
@@ -84,49 +83,49 @@ public:
             {
                 gboolean value;
                 if (gst_tag_list_get_boolean(list, tag, &value))
-                    ss << value;
+                    v = bool(value);
                 break;
             }
             case G_TYPE_INT:
             {
                 gint value;
                 if (gst_tag_list_get_int(list, tag, &value))
-                    ss << value;
+                    v = value;
                 break;
             }
             case G_TYPE_UINT:
             {
                 guint value;
                 if (gst_tag_list_get_uint(list, tag, &value))
-                    ss << value;
+                    v = value;
                 break;
             }
             case G_TYPE_INT64:
             {
                 gint64 value;
                 if (gst_tag_list_get_int64(list, tag, &value))
-                    ss << value;
+                    v = QVariant(qint64(value));
                 break;
             }
             case G_TYPE_UINT64:
             {
                 guint64 value;
                 if (gst_tag_list_get_uint64(list, tag, &value))
-                    ss << value;
+                    v = QVariant(quint64(value));
                 break;
             }
             case G_TYPE_FLOAT:
             {
                 gfloat value;
                 if (gst_tag_list_get_float(list, tag, &value))
-                    ss << value;
+                    v = value;
                 break;
             }
             case G_TYPE_DOUBLE:
             {
                 double value;
                 if (gst_tag_list_get_double(list, tag, &value))
-                    ss << value;
+                    v = value;
                 break;
             }
             case G_TYPE_STRING:
@@ -134,7 +133,7 @@ public:
                 gchar* value;
                 if (gst_tag_list_get_string(list, tag, &value))
                 {
-                    ss << value;
+                    v = QString::fromUtf8(value);
                     g_free(value);
                 }
                 break;
@@ -150,20 +149,22 @@ public:
 
             // Specific handling for the following tag types:
             if (tag_name == tags::PreviewImage::name)
-                ss << "true";
+                v = true;
             if (tag_name == tags::Image::name)
-                ss << "true";
+                v = true;
 
-            (*md).set((has_tag_from_lut ?
-                            gstreamer_to_mpris_tag_lut().at(tag) : tag), ss.str());
+            if (v.isValid()) {
+                md->insert(QString::fromStdString(tag_name), v);
+            }
         },
-        &md);
+        md);
     }
 
     MetaDataExtractor()
         : pipe(gst_pipeline_new("meta_data_extractor_pipeline")),
           decoder(gst_element_factory_make ("uridecodebin", NULL)),
-          bus(gst_element_get_bus(pipe))
+          bus(gst_element_get_bus(pipe)),
+          m_newMessageSubscriptionId(-1)
     {
         gst_bin_add(GST_BIN(pipe), decoder);
 
@@ -175,6 +176,9 @@ public:
 
     ~MetaDataExtractor()
     {
+        if (m_newMessageSubscriptionId >= 0) {
+            bus.unsubscribeFromNewMessage(m_newMessageSubscriptionId);
+        }
         set_state_and_wait(GST_STATE_NULL);
         gst_object_unref(pipe);
     }
@@ -211,44 +215,31 @@ public:
         return result;
     }
 
-    core::ubuntu::media::Track::MetaData meta_data_for_track_with_uri(const core::ubuntu::media::Track::UriType& uri)
+    void meta_data_for_track_with_uri(const QUrl &uri,
+                                      const Callback &cb)
     {
-        if (!gst_uri_is_valid(uri.c_str()))
+        if (!gst_uri_is_valid(qUtf8Printable(uri.toString())))
             throw std::runtime_error("Invalid uri");
 
-        core::ubuntu::media::Track::MetaData meta_data;
-        std::promise<core::ubuntu::media::Track::MetaData> promise;
-        std::future<core::ubuntu::media::Track::MetaData> future{promise.get_future()};
-
-        core::ScopedConnection on_new_message_connection
+        m_metadata.clear();
+        auto messageHandler = [this, cb](
+            const gstreamer::Bus::Message& msg)
         {
-            bus.on_new_message.connect(
-                    [&](const gstreamer::Bus::Message& msg)
-                    {
-                        //std::cout << __PRETTY_FUNCTION__ << gst_message_type_get_name(msg.type) << std::endl;
-                        if (msg.type == GST_MESSAGE_TAG)
-                        {
-                            MetaDataExtractor::on_tag_available(msg.detail.tag, meta_data);
-                        } else if (msg.type == GST_MESSAGE_ASYNC_DONE)
-                        {
-                            promise.set_value(meta_data);
-                        }
-                    })
+            if (msg.type == GST_MESSAGE_TAG)
+            {
+                MetaDataExtractor::on_tag_available(msg.detail.tag, &m_metadata);
+            } else if (msg.type == GST_MESSAGE_ASYNC_DONE)
+            {
+                set_state_and_wait(GST_STATE_NULL);
+                bus.unsubscribeFromNewMessage(m_newMessageSubscriptionId);
+                m_newMessageSubscriptionId = -1;
+                cb(m_metadata);
+            }
         };
+        m_newMessageSubscriptionId = bus.onNewMessage(messageHandler);
 
-        g_object_set(decoder, "uri", uri.c_str(), NULL);
+        g_object_set(decoder, "uri", qUtf8Printable(uri.toString()), NULL);
         gst_element_set_state(pipe, GST_STATE_PAUSED);
-
-        if (std::future_status::ready != future.wait_for(std::chrono::seconds(4)))
-        {
-            set_state_and_wait(GST_STATE_NULL);
-            throw std::runtime_error("Problem extracting meta data for track");
-        } else
-        {
-            set_state_and_wait(GST_STATE_NULL);
-        }
-
-        return future.get();
     }
 
 private:
@@ -269,6 +260,8 @@ private:
     GstElement* pipe;
     GstElement* decoder;
     Bus bus;
+    QVariantMap m_metadata;
+    int m_newMessageSubscriptionId;
 };
 }
 

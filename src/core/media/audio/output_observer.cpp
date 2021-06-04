@@ -25,6 +25,8 @@
 
 namespace audio = core::ubuntu::media::audio;
 
+using namespace audio;
+
 std::ostream& audio::operator<<(std::ostream& out, audio::OutputState state)
 {
     switch (state)
@@ -40,11 +42,19 @@ std::ostream& audio::operator<<(std::ostream& out, audio::OutputState state)
     return out;
 }
 
-audio::OutputObserver::Ptr audio::make_platform_default_output_observer()
+OutputObserver::OutputObserver(QObject *parent):
+    QObject(parent),
+    d_ptr(new PulseAudioOutputObserver("sink.primary",
+                                       {"output-wired_head.*|output-a2dp_headphones"},
+                                       std::make_shared<audio::OStreamReporter>(),
+                                       this))
 {
-    audio::PulseAudioOutputObserver::Configuration config;
-    config.sink = "sink.primary";
-    config.output_port_patterns = {std::regex{"output-wired_head.*|output-a2dp_headphones"}};
-    config.reporter = std::make_shared<audio::OStreamReporter>();
-    return std::make_shared<audio::PulseAudioOutputObserver>(config);
+}
+
+OutputObserver::~OutputObserver() = default;
+
+OutputState OutputObserver::outputState() const
+{
+    Q_D(const OutputObserver);
+    return d->outputState();
 }

@@ -21,6 +21,7 @@
 #include <core/media/audio/pulse_audio_output_observer.h>
 
 #include <iosfwd>
+#include <iostream>
 
 namespace core
 {

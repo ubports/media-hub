@@ -18,11 +18,8 @@
 #ifndef CORE_UBUNTU_MEDIA_POWER_STATE_OBSERVER_H_
 #define CORE_UBUNTU_MEDIA_POWER_STATE_OBSERVER_H_
 
-#include <core/media/external_services.h>
-
-#include <core/property.h>
-
-#include <memory>
+#include <QObject>
+#include <QScopedPointer>
 
 namespace core
 {
@@ -42,26 +39,29 @@ enum class Level
     critical
 };
 
+class BatteryObserverPrivate;
+
 // Interface that enables observation of the system power state.
-struct BatteryObserver
+class BatteryObserver: public QObject
 {
-    // To safe us some typing.
-    typedef std::shared_ptr<BatteryObserver> Ptr;
+    Q_OBJECT
 
-    BatteryObserver() = default;
-    virtual ~BatteryObserver() = default;
+public:
+    BatteryObserver(QObject *parent = nullptr);
+    virtual ~BatteryObserver();
 
-    // A getable/observable property reporting the current power-level
-    // of the system.
-    virtual const core::Property<Level>& level() const = 0;
-    // A getable/observable property indicating whether a power-level
-    // warning is currently presented to the user.
-    virtual const core::Property<bool>& is_warning_active() const = 0;
+    Level level() const;
+    bool isWarningActive() const;
+
+Q_SIGNALS:
+    void levelChanged();
+    void isWarningActiveChanged();
+
+private:
+    Q_DECLARE_PRIVATE(BatteryObserver);
+    QScopedPointer<BatteryObserverPrivate> d_ptr;
 };
 
-// Creates a BatteryObserver instance that connects to the platform default
-// services to observe battery levels.
-core::ubuntu::media::power::BatteryObserver::Ptr make_platform_default_battery_observer(core::ubuntu::media::helper::ExternalServices&);
 }
 }
 }

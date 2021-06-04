@@ -19,8 +19,10 @@
 #ifndef CORE_UBUNTU_MEDIA_SERVICE_IMPLEMENTATION_H_
 #define CORE_UBUNTU_MEDIA_SERVICE_IMPLEMENTATION_H_
 
-#include "service_skeleton.h"
-#include "external_services.h"
+#include "player.h"
+
+#include <QObject>
+#include <QScopedPointer>
 
 namespace core
 {
@@ -28,39 +30,29 @@ namespace ubuntu
 {
 namespace media
 {
-class Player;
+class PlayerImplementation;
 
-class ServiceImplementation : public Service
+class ServiceImplementationPrivate;
+class ServiceImplementation: public QObject
 {
+    Q_OBJECT
+
 public:
-    // All creation time arguments go here.
-    struct Configuration
-    {
-        KeyedPlayerStore::Ptr player_store;
-        helper::ExternalServices& external_services;
-    };
+    ServiceImplementation(QObject *parent = nullptr);
+    ~ServiceImplementation();
 
-    ServiceImplementation (const Configuration& configuration);
-    ~ServiceImplementation ();
+    Player::PlayerKey currentPlayer() const;
 
-    std::shared_ptr<Player> create_session(const Player::Configuration&);
-    void detach_session(const std::string&, const Player::Configuration&);
-    std::shared_ptr<Player> reattach_session(const std::string&, const Player::Configuration&);
-    void destroy_session(const std::string&, const Player::Configuration&);
-    std::shared_ptr<Player> create_fixed_session(const std::string& name, const Player::Configuration&);
-    std::shared_ptr<Player> resume_session(Player::PlayerKey key);
+    PlayerImplementation *create_session(const Player::Client &client);
+    PlayerImplementation *playerByKey(Player::PlayerKey key) const;
     void pause_other_sessions(Player::PlayerKey key);
 
-    const core::Signal<void>& service_disconnected() const;
-    const core::Signal<void>& service_reconnected() const;
+Q_SIGNALS:
+    void currentPlayerChanged();
 
 private:
-    void pause_all_multimedia_sessions(bool resume_play_after_phonecall);
-    void resume_paused_multimedia_sessions(bool resume_video_sessions = true);
-    void resume_multimedia_session();
-
-    struct Private;
-    std::shared_ptr<Private> d;
+    Q_DECLARE_PRIVATE(ServiceImplementation)
+    QScopedPointer<ServiceImplementationPrivate> d_ptr;
 };
 }
 }

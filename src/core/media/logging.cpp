@@ -1,5 +1,7 @@
 /*
- * Copyright © 2013 Canonical Ltd.
+ * Copyright © 2021 UBports Foundation.
+ *
+ * Contact: Alberto Mardegan <mardy@users.sourceforge.net>
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License version 3,
@@ -13,34 +15,22 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Authored by: Thomas Voß <thomas.voss@canonical.com>
  */
 
-#ifndef TRACK_LIST_TRAITS_H_
-#define TRACK_LIST_TRAITS_H_
+#include "logging.h"
 
-#include <core/dbus/traits/service.h>
+namespace core {
+namespace ubuntu {
+namespace media {
 
-namespace core
+// Log returns the core::ubuntu::media-wide configured logger instance.
+// Save to call before/after main.
+const QLoggingCategory &Log()
 {
-namespace dbus
-{
-namespace traits
-{
-template<>
-struct Service<core::ubuntu::media::TrackList>
-{
-    static const std::string& interface_name()
-    {
-        static const std::string s
-        {
-            "core.ubuntu.media.Service.Player.TrackList"
-        };
-        return s;
-    }
-};
-}
-}
+    static const QLoggingCategory category("media-hub");
+    return category;
 }
 
-#endif // TRACK_LIST_TRAITS_H_
+} // namespace media
+} // namespace ubuntu
+} // namespace core

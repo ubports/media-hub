@@ -17,39 +17,41 @@
  *              Jim Hodapp <jim.hodapp@canonical.com>
  */
 
-#include <core/media/service.h>
-
 #include "player_implementation.h"
-#include "service_skeleton.h"
-#include "util/timeout.h"
 
 #include <unistd.h>
 #include <ctime>
 
 #include "client_death_observer.h"
 #include "engine.h"
+#include "logging.h"
 #include "track_list_implementation.h"
 #include "xesam.h"
 
-#include "gstreamer/engine.h"
+#include <QDateTime>
+#include <QTimer>
+#include <QVector>
 
-#include "core/media/logger/logger.h"
+#include "gstreamer/engine.h"
 
 #include <memory>
 #include <exception>
 #include <mutex>
 
-#define UNUSED __attribute__((unused))
-
 namespace media = core::ubuntu::media;
-namespace dbus = core::dbus;
 
 using namespace std;
+using namespace media;
 
-template<typename Parent>
-struct media::PlayerImplementation<Parent>::Private :
-        public std::enable_shared_from_this<Private>
+namespace core {
+namespace ubuntu {
+namespace media {
+
+class PlayerImplementationPrivate
 {
+    Q_DECLARE_PUBLIC(PlayerImplementation)
+
+public:
     enum class wakelock_clear_t
     {
         WAKELOCK_CLEAR_INACTIVE,
@@ -58,212 +60,125 @@ struct media::PlayerImplementation<Parent>::Private :
         WAKELOCK_CLEAR_INVALID
     };
 
-    Private(PlayerImplementation* parent, const media::PlayerImplementation<Parent>::Configuration& config)
-        : parent(parent),
-          config(config),
-          display_state_lock(config.power_state_controller->display_state_lock()),
-          system_state_lock(config.power_state_controller->system_state_lock()),
-          engine(std::make_shared<gstreamer::Engine>(config.key)),
-          track_list(std::make_shared<TrackListImplementation>(
-              config.parent.bus,
-              config.parent.service->add_object_for_path(
-                  dbus::types::ObjectPath(config.parent.session->path().as_string() + "/TrackList")),
-              engine->meta_data_extractor(),
-              config.parent.request_context_resolver,
-              config.parent.request_authenticator)),
-          system_wakelock_count(0),
-          display_wakelock_count(0),
-          previous_state(Engine::State::stopped),
-          engine_state_change_connection(engine->state().changed().connect(make_state_change_handler())),
-          engine_playback_status_change_connection(engine->playback_status_changed_signal().connect(make_playback_status_change_handler())),
-          doing_abandon(false)
-    {
-        // Poor man's logging of release/acquire events.
-        display_state_lock->acquired().connect([](media::power::DisplayState state)
-        {
-            MH_INFO("Acquired new display state: %s", state);
-        });
+    PlayerImplementationPrivate(const media::PlayerImplementation::Configuration &config,
+                                PlayerImplementation *q);
+    ~PlayerImplementationPrivate();
 
-        display_state_lock->released().connect([](media::power::DisplayState state)
-        {
-            MH_INFO("Released display state: %s", state);
-        });
-
-        system_state_lock->acquired().connect([](media::power::SystemState state)
-        {
-            MH_INFO("Acquired new system state: %s", state);
-        });
-
-        system_state_lock->released().connect([](media::power::SystemState state)
-        {
-            MH_INFO("Released system state: %s", state);
-        });
-    }
-
-    ~Private()
-    {
-        // Make sure that we don't hold on to the wakelocks if media-hub-server
-        // ever gets restarted manually or automatically
-        clear_wakelocks();
-
-        // The engine destructor can lead to a stop change state which will
-        // trigger the state change handler. Ensure the handler is not called
-        // by disconnecting the state change signal
-        engine_state_change_connection.disconnect();
-
-        // The engine destructor can lead to a playback status change which will
-        // trigger the playback status change handler. Ensure the handler is not called
-        // by disconnecting the playback status change signal
-        engine_playback_status_change_connection.disconnect();
-    }
-
-    std::function<void(const Engine::State& state)> make_state_change_handler()
+    void onStateChanged(Engine::State state)
     {
         /*
          * Wakelock state logic:
          * PLAYING->READY or PLAYING->PAUSED or PLAYING->STOPPED: delay 4 seconds and try to clear current wakelock type
          * ANY STATE->PLAYING: request a new wakelock (system or display)
          */
-        return [this](const Engine::State& state)
+        MH_DEBUG() << "Setting state:" << state;
+        switch(state)
         {
-            MH_DEBUG("Setting state for parent: %s", parent);
-            switch(state)
-            {
-            case Engine::State::ready:
-            {
-                parent->playback_status().set(media::Player::ready);
-                if (previous_state == Engine::State::playing)
-                {
-                    timeout(4000, true, make_clear_wakelock_functor());
-                }
-                break;
-            }
-            case Engine::State::playing:
-            {
-                // We update the track metadata prior to updating the playback status.
-                // Some MPRIS clients expect this order of events.
-                time_t now;
-                time(&now);
-                char buf[sizeof("2011-10-08T07:07:09Z")];
-                strftime(buf, sizeof(buf), "%FT%TZ", gmtime(&now));
-                media::Track::MetaData metadata{std::get<1>(engine->track_meta_data().get())};
-                // Setting this with second resolution makes sure that the track_meta_data property changes
-                // and thus the track_meta_data().changed() signal gets sent out over dbus. Otherwise the
-                // Property caching mechanism would prevent this.
-                metadata.set_last_used(std::string{buf});
-                update_mpris_metadata(std::get<0>(engine->track_meta_data().get()), metadata);
-
-                // And update our playback status.
-                parent->playback_status().set(media::Player::playing);
-                MH_INFO("Requesting power state");
-                request_power_state();
-                break;
-            }
-            case Engine::State::stopped:
-            {
-                parent->playback_status().set(media::Player::stopped);
-                if (previous_state ==  Engine::State::playing)
-                {
-                    timeout(4000, true, make_clear_wakelock_functor());
-                }
-                break;
-            }
-            case Engine::State::paused:
-            {
-                parent->playback_status().set(media::Player::paused);
-                if (previous_state == Engine::State::playing)
-                {
-                    timeout(4000, true, make_clear_wakelock_functor());
-                }
-                break;
-            }
-            default:
-                break;
-            };
-
-            // Keep track of the previous Engine playback state:
-            previous_state = state;
-        };
-    }
-
-    std::function<void(const media::Player::PlaybackStatus& status)> make_playback_status_change_handler()
-    {
-        return [this](const media::Player::PlaybackStatus& status)
+        case Engine::State::ready:
         {
-            MH_INFO("Emiting playback_status_changed signal: %s", status);
-            parent->emit_playback_status_changed(status);
+            if (previous_state == Engine::State::playing)
+            {
+                m_wakeLockTimer.start();
+            }
+            break;
+        }
+        case Engine::State::playing:
+        {
+            // We update the track metadata prior to updating the playback status.
+            // Some MPRIS clients expect this order of events.
+            const auto trackMetadata = m_engine->trackMetadata();
+            media::Track::MetaData metadata = trackMetadata.second;
+            // Setting this with second resolution makes sure that the track_meta_data property changes
+            // and thus the track_meta_data().changed() signal gets sent out over dbus. Otherwise the
+            // Property caching mechanism would prevent this.
+            metadata.setLastUsed(QDateTime::currentDateTimeUtc().toString(Qt::ISODate));
+            update_mpris_metadata(trackMetadata.first, metadata);
+
+            MH_INFO("Requesting power state");
+            request_power_state();
+            break;
+        }
+        case Engine::State::stopped:
+        {
+            if (previous_state ==  Engine::State::playing)
+            {
+                m_wakeLockTimer.start();
+            }
+            break;
+        }
+        case Engine::State::paused:
+        {
+            if (previous_state == Engine::State::playing)
+            {
+                m_wakeLockTimer.start();
+            }
+            break;
+        }
+        default:
+            break;
         };
+
+        // Keep track of the previous Engine playback state:
+        previous_state = state;
     }
 
     void request_power_state()
     {
+        Q_Q(PlayerImplementation);
         MH_TRACE("");
-        try
+        if (q->isVideoSource())
         {
-            if (parent->is_video_source())
+            if (++display_wakelock_count == 1)
             {
-                if (++display_wakelock_count == 1)
-                {
-                    MH_INFO("Requesting new display wakelock.");
-                    display_state_lock->request_acquire(media::power::DisplayState::on);
-                    MH_INFO("Requested new display wakelock.");
-                }
-            }
-            else
-            {
-                if (++system_wakelock_count == 1)
-                {
-                    MH_INFO("Requesting new system wakelock.");
-                    system_state_lock->request_acquire(media::power::SystemState::active);
-                    MH_INFO("Requested new system wakelock.");
-                }
+                MH_INFO("Requesting new display wakelock.");
+                power_state_controller->requestDisplayOn();
+                MH_INFO("Requested new display wakelock.");
             }
         }
-        catch(const std::exception& e)
+        else
         {
-            MH_WARNING("Failed to request power state: %s", e.what());
+            if (++system_wakelock_count == 1)
+            {
+                MH_INFO("Requesting new system wakelock.");
+                power_state_controller->requestSystemState(media::power::SystemState::active);
+                MH_INFO("Requested new system wakelock.");
+            }
         }
     }
 
     void clear_wakelock(const wakelock_clear_t &wakelock)
     {
         MH_TRACE("");
-        try
+        switch (wakelock)
         {
-            switch (wakelock)
-            {
-                case wakelock_clear_t::WAKELOCK_CLEAR_INACTIVE:
-                    break;
-                case wakelock_clear_t::WAKELOCK_CLEAR_SYSTEM:
-                    // Only actually clear the system wakelock once the count reaches zero
-                    if (--system_wakelock_count == 0)
-                    {
-                        MH_INFO("Clearing system wakelock.");
-                        system_state_lock->request_release(media::power::SystemState::active);
-                    }
-                    break;
-                case wakelock_clear_t::WAKELOCK_CLEAR_DISPLAY:
-                    // Only actually clear the display wakelock once the count reaches zero
-                    if (--display_wakelock_count == 0)
-                    {
-                        MH_INFO("Clearing display wakelock.");
-                        display_state_lock->request_release(media::power::DisplayState::on);
-                    }
-                    break;
-                case wakelock_clear_t::WAKELOCK_CLEAR_INVALID:
-                default:
-                    MH_WARNING("Can't clear invalid wakelock type");
-            }
-        }
-        catch(const std::exception& e)
-        {
-            MH_WARNING("Failed to request clear power state: %s", e.what());
+            case wakelock_clear_t::WAKELOCK_CLEAR_INACTIVE:
+                break;
+            case wakelock_clear_t::WAKELOCK_CLEAR_SYSTEM:
+                // Only actually clear the system wakelock once the count reaches zero
+                if (--system_wakelock_count == 0)
+                {
+                    MH_INFO("Clearing system wakelock.");
+                    power_state_controller->releaseSystemState(media::power::SystemState::active);
+                }
+                break;
+            case wakelock_clear_t::WAKELOCK_CLEAR_DISPLAY:
+                // Only actually clear the display wakelock once the count reaches zero
+                if (--display_wakelock_count == 0)
+                {
+                    MH_INFO("Clearing display wakelock.");
+                    power_state_controller->releaseDisplayOn();
+                }
+                break;
+            case wakelock_clear_t::WAKELOCK_CLEAR_INVALID:
+            default:
+                MH_WARNING("Can't clear invalid wakelock type");
         }
     }
 
     wakelock_clear_t current_wakelock_type() const
     {
-        return (parent->is_video_source()) ?
+        Q_Q(const PlayerImplementation);
+        return q->isVideoSource() ?
             wakelock_clear_t::WAKELOCK_CLEAR_DISPLAY : wakelock_clear_t::WAKELOCK_CLEAR_SYSTEM;
     }
 
@@ -282,47 +197,43 @@ struct media::PlayerImplementation<Parent>::Private :
         }
     }
 
-    std::function<void()> make_clear_wakelock_functor()
-    {
-        // Since this functor will be executed on a separate detached thread
-        // the execution of the functor may surpass the lifetime of this Private
-        // object instance. By keeping a weak_ptr to the private object instance
-        // we can check if the object is dead before calling methods on it
-        std::weak_ptr<Private> weak_self{this->shared_from_this()};
-        auto wakelock_type = current_wakelock_type();
-        return [weak_self, wakelock_type] {
-            if (auto self = weak_self.lock())
-                self->clear_wakelock(wakelock_type);
-        };
-    }
-
     void on_client_died()
     {
-        engine->reset();
+        Q_Q(PlayerImplementation);
+        m_engine->reset();
+
+        // If the client disconnects, make sure both wakelock types
+        // are cleared
+        clear_wakelocks();
+        m_trackList->reset();
+
+        // And tell the outside world that the client has gone away
+        Q_EMIT q->clientDisconnected();
     }
 
     void open_first_track_from_tracklist(const media::Track::Id& id)
     {
-        const Track::UriType uri = track_list->query_uri_for_track(id);
-        if (!uri.empty())
+        const QUrl uri = m_trackList->query_uri_for_track(id);
+        if (!uri.isEmpty())
         {
             // Using a TrackList for playback, added tracks via add_track(), but open_uri hasn't
             // been called yet to load a media resource
-            MH_INFO("Calling d->engine->open_resource_for_uri() for first track added only: %s",
-                      uri);
-            MH_INFO("\twith a Track::Id: %s", id);
+            MH_INFO("Calling d->m_engine->open_resource_for_uri() for first track added only: %s",
+                    qUtf8Printable(uri.toString()));
+            MH_INFO("\twith a Track::Id: %s", qUtf8Printable(id));
             static const bool do_pipeline_reset = false;
-            engine->open_resource_for_uri(uri, do_pipeline_reset);
+            m_engine->open_resource_for_uri(uri, do_pipeline_reset);
         }
     }
 
     void update_mpris_properties()
     {
-        const bool has_previous = track_list->has_previous()
-                            or parent->Parent::loop_status() != Player::LoopStatus::none;
-        const bool has_next = track_list->has_next()
-                        or parent->Parent::loop_status() != Player::LoopStatus::none;
-        const auto n_tracks = track_list->tracks()->size();
+        Q_Q(PlayerImplementation);
+        const bool has_previous = m_trackList->hasPrevious()
+                            or m_trackList->loopStatus() != Player::LoopStatus::none;
+        const bool has_next = m_trackList->hasNext()
+                        or m_trackList->loopStatus() != Player::LoopStatus::none;
+        const auto n_tracks = m_trackList->tracks().count();
         const bool has_tracks = (n_tracks > 0) ? true : false;
 
         MH_INFO("Updating MPRIS TrackList properties:");
@@ -331,31 +242,29 @@ struct media::PlayerImplementation<Parent>::Private :
         MH_INFO("\thas_next: %d", has_next);
 
         // Update properties
-        parent->can_play().set(has_tracks);
-        parent->can_pause().set(has_tracks);
-        parent->can_go_previous().set(has_previous);
-        parent->can_go_next().set(has_next);
+        m_canPlay = has_tracks;
+        m_canPause = has_tracks;
+        m_canGoPrevious = has_previous;
+        m_canGoNext = has_next;
+        Q_EMIT q->mprisPropertiesChanged();
     }
 
-    std::string get_uri_for_album_artwork(const media::Track::UriType& uri,
+    QUrl get_uri_for_album_artwork(const QUrl &uri,
             const media::Track::MetaData& metadata)
     {
-        std::string art_uri;
-        static const std::string file_uri_prefix{"file://"};
+        QUrl art_uri;
         bool is_local_file = false;
-        if (not uri.empty())
-            is_local_file = (uri.substr(0, 7) == file_uri_prefix or uri.at(0) == '/');
+        if (not uri.isEmpty())
+            is_local_file = uri.isLocalFile();
 
         // If the track has a full image or preview image or is a video and it is a local file,
         // then use the thumbnailer cache
-        if (  (( metadata.count(tags::PreviewImage::name) > 0
-                 and metadata.get(tags::PreviewImage::name) == "true")
-           or ( metadata.count(tags::Image::name) > 0
-                 and metadata.get(tags::Image::name) == "true")
-           or parent->is_video_source().get())
+        if (  (metadata.value(tags::PreviewImage::name).toBool()
+           or (metadata.value(tags::Image::name).toBool())
+           or m_engine->isVideoSource())
            and is_local_file)
         {
-            art_uri = "image://thumbnailer/" + uri;
+            art_uri = "image://thumbnailer/" + uri.path();
         }
         // If all else fails, display a placeholder icon
         else
@@ -368,18 +277,19 @@ struct media::PlayerImplementation<Parent>::Private :
 
     // Makes sure all relevant metadata fields are set to current data and
     // will trigger the track_meta_data().changed() signal to go out over dbus
-    void update_mpris_metadata(const media::Track::UriType& uri, const media::Track::MetaData& md)
+    void update_mpris_metadata(const QUrl &uri, const media::Track::MetaData &md)
     {
+        Q_Q(PlayerImplementation);
         media::Track::MetaData metadata{md};
-        if (not metadata.is_set(media::Track::MetaData::TrackIdKey))
+        if (not metadata.isSet(media::Track::MetaData::TrackIdKey))
         {
-            const std::string current_track = track_list->current();
-            if (not current_track.empty())
+            const QString current_track = m_trackList->current();
+            if (not current_track.isEmpty())
             {
-                const std::size_t last_slash = current_track.find_last_of("/");
-                const std::string track_id = current_track.substr(last_slash + 1);
-                if (not track_id.empty())
-                    metadata.set_track_id("/org/mpris/MediaPlayer2/Track/" + track_id);
+                const int last_slash = current_track.lastIndexOf('/');
+                const QStringRef track_id = current_track.midRef(last_slash + 1);
+                if (not track_id.isEmpty())
+                    metadata.setTrackId("/org/mpris/MediaPlayer2/Track/" + track_id);
                 else
                     MH_WARNING("Failed to set MPRIS track id since the id value is NULL");
             }
@@ -387,544 +297,586 @@ struct media::PlayerImplementation<Parent>::Private :
                 MH_WARNING("Failed to set MPRIS track id since the id value is NULL");
         }
 
-        if (not metadata.is_set(media::Track::MetaData::TrackArtlUrlKey))
-            metadata.set_art_url(get_uri_for_album_artwork(uri, metadata));
+        if (not metadata.isSet(media::Track::MetaData::TrackArtlUrlKey))
+            metadata.setArtUrl(get_uri_for_album_artwork(uri, metadata));
 
-        if (not metadata.is_set(media::Track::MetaData::TrackLengthKey))
+        if (not metadata.isSet(media::Track::MetaData::TrackLengthKey))
         {
             // Duration is in nanoseconds, MPRIS spec requires microseconds
-            metadata.set_track_length(std::to_string(engine->duration().get() / 1000));
+            metadata.setTrackLength(m_engine->duration() / 1000);
         }
 
-        parent->meta_data_for_current_track().set(metadata);
-    }
+        // not needed, and change frequently:
+        metadata.remove(QStringLiteral("bitrate"));
+        metadata.remove(QStringLiteral("minimum-bitrate"));
+        metadata.remove(QStringLiteral("maximum-bitrate"));
 
-    bool pause_other_players(media::Player::PlayerKey key)
-    {
-        if (not config.parent.player_service)
-            return false;
-
-        media::ServiceSkeleton* skel {
-            reinterpret_cast<media::ServiceSkeleton*>(config.parent.player_service)
-        };
-        skel->pause_other_sessions(key);
-        return true;
-    }
-
-    bool update_current_player(media::Player::PlayerKey key)
-    {
-        if (not config.parent.player_service)
-            return false;
-
-        media::ServiceSkeleton* skel {
-            reinterpret_cast<media::ServiceSkeleton*>(config.parent.player_service)
-        };
-        skel->set_current_player(key);
-        return true;
-    }
-
-    bool is_current_player() const
-    {
-        if (not config.parent.player_service)
-            return false;
-
-        media::ServiceSkeleton* skel {
-            reinterpret_cast<media::ServiceSkeleton*>(config.parent.player_service)
-        };
-        return skel->is_current_player(parent->key());
+        m_metadataForCurrentTrack = metadata;
+        Q_EMIT q->metadataForCurrentTrackChanged();
     }
 
     bool is_multimedia_role() const
     {
-        return parent->audio_stream_role() == media::Player::AudioStreamRole::multimedia;
+        return m_engine->audioStreamRole() == media::Player::AudioStreamRole::multimedia;
     }
 
-    bool reset_current_player()
-    {
-        if (not config.parent.player_service)
-            return false;
+    Player::Client m_client;
+    ClientDeathObserver::Ptr m_clientDeathObserver;
+    media::power::StateController::Ptr power_state_controller;
 
-        media::ServiceSkeleton* skel {
-            reinterpret_cast<media::ServiceSkeleton*>(config.parent.player_service)
-        };
-        skel->reset_current_player();
-        return true;
-    }
-
-    // Our link back to our parent.
-    media::PlayerImplementation<Parent>* parent;
-    // We just store the parameters passed on construction.
-    media::PlayerImplementation<Parent>::Configuration config;
-    media::power::StateController::Lock<media::power::DisplayState>::Ptr display_state_lock;
-    media::power::StateController::Lock<media::power::SystemState>::Ptr system_state_lock;
-
-    std::shared_ptr<Engine> engine;
-    std::shared_ptr<media::TrackListImplementation> track_list;
+    QScopedPointer<Engine> m_engine;
+    QSharedPointer<TrackListImplementation> m_trackList;
     std::atomic<int> system_wakelock_count;
     std::atomic<int> display_wakelock_count;
     Engine::State previous_state;
-    core::Signal<> on_client_disconnected;
-    core::Connection engine_state_change_connection;
-    core::Connection engine_playback_status_change_connection;
-    // Prevent the TrackList from auto advancing to the next track
-    std::mutex doing_go_to_track;
+    bool m_autoMovingToNextTrack = false;
     std::atomic<bool> doing_abandon;
+    // Initialize default values for Player interface properties
+    bool m_canPlay = false;
+    bool m_canPause = false;
+    bool m_canGoPrevious = false;
+    bool m_canGoNext = false;
+    bool m_shuffle = false;
+    double m_playbackRate = 1.f;
+    Player::LoopStatus m_loopStatus = Player::LoopStatus::none;
+    int64_t m_position = 0;
+    int64_t m_duration = 0;
+    bool m_doingOpenUri = false;
+    Player::AudioStreamRole m_audioStreamRole = Player::AudioStreamRole::multimedia;
+    Player::Lifetime m_lifetime = Player::Lifetime::normal;
+    QTimer m_abandonTimer;
+    QTimer m_wakeLockTimer;
+    Track::MetaData m_metadataForCurrentTrack;
+    media::PlayerImplementation *q_ptr;
 };
 
-template<typename Parent>
-media::PlayerImplementation<Parent>::PlayerImplementation(const media::PlayerImplementation<Parent>::Configuration& config)
-    : Parent{config.parent},
-      d{std::make_shared<Private>(this, config)}
+}}} // namespace
+
+PlayerImplementationPrivate::PlayerImplementationPrivate(
+        const media::PlayerImplementation::Configuration &config,
+        PlayerImplementation *q):
+    m_client(config.client),
+    m_clientDeathObserver(config.client_death_observer),
+    power_state_controller(media::power::StateController::instance()),
+    m_engine(new gstreamer::Engine(config.client.key)),
+    // TODO: set the path on the TrackListSkeleton!
+    // dbus::types::ObjectPath(config.parent.session->path().as_string() + "/TrackList")),
+    m_trackList(QSharedPointer<TrackListImplementation>::create(
+        m_engine->metadataExtractor())),
+    system_wakelock_count(0),
+    display_wakelock_count(0),
+    previous_state(Engine::State::stopped),
+    doing_abandon(false),
+    q_ptr(q)
 {
+    // Poor man's logging of release/acquire events.
+    QObject::connect(power_state_controller.data(),
+                     &power::StateController::displayOnAcquired,
+                     q, []() {
+        MH_INFO("Acquired display ON state");
+    });
+
+    QObject::connect(power_state_controller.data(),
+                     &power::StateController::displayOnReleased,
+                     q, []() {
+        MH_INFO("Released display ON state");
+    });
+
+    QObject::connect(power_state_controller.data(),
+                     &power::StateController::systemStateAcquired,
+                     q, [](media::power::SystemState state)
+    {
+        MH_INFO() << "Acquired new system state:" << state;
+    });
+
+    QObject::connect(power_state_controller.data(),
+                     &power::StateController::systemStateAcquired,
+                     q, [](media::power::SystemState state)
+    {
+        MH_INFO() << "Released system state:" << state;
+    });
+
+    QObject::connect(m_engine.data(), &Engine::stateChanged,
+                     q, [this]() {
+        onStateChanged(m_engine->state());
+    });
+
     // Initialize default values for Player interface properties
-    Parent::can_play().set(false);
-    Parent::can_pause().set(false);
-    Parent::can_seek().set(true);
-    Parent::can_go_previous().set(false);
-    Parent::can_go_next().set(false);
-    Parent::is_video_source().set(false);
-    Parent::is_audio_source().set(false);
-    Parent::shuffle().set(false);
-    Parent::playback_rate().set(1.f);
-    Parent::playback_status().set(Player::PlaybackStatus::null);
-    Parent::backend().set(media::AVBackend::get_backend_type());
-    Parent::loop_status().set(Player::LoopStatus::none);
-    Parent::position().set(0);
-    Parent::duration().set(0);
-    Parent::audio_stream_role().set(Player::AudioStreamRole::multimedia);
-    d->engine->audio_stream_role().set(Player::AudioStreamRole::multimedia);
-    Parent::orientation().set(Player::Orientation::rotate0);
-    Parent::lifetime().set(Player::Lifetime::normal);
-    d->engine->lifetime().set(Player::Lifetime::normal);
+    m_engine->setAudioStreamRole(Player::AudioStreamRole::multimedia);
+    m_engine->setLifetime(Player::Lifetime::normal);
 
     // Make sure that the Position property gets updated from the Engine
     // every time the client requests position
-    std::function<uint64_t()> position_getter = [this]()
-    {
-        return d->engine->position().get();
-    };
-    Parent::position().install(position_getter);
-
-    d->engine->position().changed().connect([this](uint64_t position)
-    {
-        d->track_list->on_position_changed(position);
+    QObject::connect(m_engine.data(), &Engine::positionChanged,
+                     q, [this, q]() {
+        m_trackList->setCurrentPosition(m_engine->position());
+        Q_EMIT q->positionChanged();
     });
 
     // Make sure that the Duration property gets updated from the Engine
     // every time the client requests duration
-    std::function<uint64_t()> duration_getter = [this]()
-    {
-        return d->engine->duration().get();
-    };
-    Parent::duration().install(duration_getter);
-
-    std::function<bool()> video_type_getter = [this]()
-    {
-        return d->engine->is_video_source().get();
-    };
-    Parent::is_video_source().install(video_type_getter);
-
-    std::function<bool()> audio_type_getter = [this]()
-    {
-        return d->engine->is_audio_source().get();
-    };
-    Parent::is_audio_source().install(audio_type_getter);
-
-    std::function<bool()> can_go_next_getter = [this]()
-    {
-        // If LoopStatus == playlist, then there is always a next track
-        return d->track_list->has_next() or Parent::loop_status() != Player::LoopStatus::none;
-    };
-    Parent::can_go_next().install(can_go_next_getter);
-
-    std::function<bool()> can_go_previous_getter = [this]()
-    {
-        // If LoopStatus == playlist, then there is always a next previous
-        return d->track_list->has_previous() or Parent::loop_status() != Player::LoopStatus::none;
-    };
-    Parent::can_go_previous().install(can_go_previous_getter);
-
-    // When the client changes the loop status, make sure to update the TrackList
-    Parent::loop_status().changed().connect([this](media::Player::LoopStatus loop_status)
-    {
-        MH_INFO("LoopStatus: %s", loop_status);
-        d->track_list->on_loop_status_changed(loop_status);
-    });
-
-    // When the client changes the shuffle setting, make sure to update the TrackList
-    Parent::shuffle().changed().connect([this](bool shuffle)
-    {
-        d->track_list->on_shuffle_changed(shuffle);
-    });
-
-    // Make sure that the audio_stream_role property gets updated on the Engine side
-    // whenever the client side sets the role
-    Parent::audio_stream_role().changed().connect([this](media::Player::AudioStreamRole new_role)
-    {
-        d->engine->audio_stream_role().set(new_role);
-    });
+    QObject::connect(m_engine.data(), &Engine::durationChanged,
+                     q, &PlayerImplementation::durationChanged);
 
     // When the value of the orientation Property is changed in the Engine by playbin,
     // update the Player's cached value
-    d->engine->orientation().changed().connect([this](const Player::Orientation& o)
-    {
-        Parent::orientation().set(o);
+    QObject::connect(m_engine.data(), &Engine::orientationChanged,
+                     q, &PlayerImplementation::orientationChanged);
+
+    QObject::connect(m_engine.data(), &Engine::trackMetadataChanged,
+                     q, [this]() {
+        const auto md = m_engine->trackMetadata();
+        update_mpris_metadata(md.first, md.second);
     });
 
-    Parent::lifetime().changed().connect([this](media::Player::Lifetime lifetime)
+    QObject::connect(m_engine.data(), &Engine::endOfStream,
+                     q, [q, this]()
     {
-        d->engine->lifetime().set(lifetime);
-    });
-
-    d->engine->track_meta_data().changed().connect([this, config](
-           const std::tuple<media::Track::UriType, media::Track::MetaData>& md)
-    {
-        d->update_mpris_metadata(std::get<0>(md), std::get<1>(md));
-    });
-
-    d->engine->about_to_finish_signal().connect([this]()
-    {
-        if (d->doing_abandon)
+        if (doing_abandon)
             return;
 
         // Prevent on_go_to_track from executing as it's not needed in this case. on_go_to_track
         // (see the lambda below) is only needed when the client explicitly calls next() not during
         // the about_to_finish condition
-        d->doing_go_to_track.lock();
+        m_autoMovingToNextTrack = true;
 
-        Parent::about_to_finish()();
+        Q_EMIT q->endOfStream();
 
-        const media::Track::Id prev_track_id = d->track_list->current();
+        const media::Track::Id prev_track_id = m_trackList->current();
         // Make sure that the TrackList keeps advancing. The logic for what gets played next,
         // if anything at all, occurs in TrackListSkeleton::next()
-        const Track::UriType uri = d->track_list->query_uri_for_track(d->track_list->next());
-        if (prev_track_id != d->track_list->current() && !uri.empty())
+        const QUrl uri = m_trackList->query_uri_for_track(m_trackList->next());
+        if (prev_track_id != m_trackList->current() && !uri.isEmpty())
         {
-            MH_INFO("Advancing to next track on playbin: %s", uri);
+            MH_INFO("Advancing to next track on playbin: %s", qUtf8Printable(uri.toString()));
             static const bool do_pipeline_reset = false;
-            d->engine->open_resource_for_uri(uri, do_pipeline_reset);
+            m_engine->open_resource_for_uri(uri, do_pipeline_reset);
         }
 
-        d->doing_go_to_track.unlock();
+        m_autoMovingToNextTrack = false;
     });
 
-    d->engine->client_disconnected_signal().connect([this]()
+    QObject::connect(m_engine.data(), &Engine::clientDisconnected,
+                     q, [this]()
     {
-        // If the client disconnects, make sure both wakelock types
-        // are cleared
-        d->clear_wakelocks();
-        d->track_list->reset();
-
-        // This is not a fatal error but merely a warning that should
-        // be logged
-        if (d->is_multimedia_role() and d->is_current_player())
-        {
-            MH_DEBUG("==== Resetting current player");
-            if (not d->reset_current_player())
-                MH_WARNING("Failed to reset current player");
-        }
-
-        // And tell the outside world that the client has gone away
-        d->on_client_disconnected();
+        on_client_died();
     });
 
-    d->engine->seeked_to_signal().connect([this](uint64_t value)
-    {
-        Parent::seeked_to()(value);
-    });
+    QObject::connect(m_engine.data(), &Engine::seekedTo,
+                     q, &PlayerImplementation::seekedTo);
+    QObject::connect(m_engine.data(), &Engine::bufferingChanged,
+                     q, &PlayerImplementation::bufferingChanged);
+    QObject::connect(m_engine.data(), &Engine::playbackStatusChanged,
+                     q, &PlayerImplementation::playbackStatusChanged);
+    QObject::connect(m_engine.data(), &Engine::aboutToFinish,
+                     q, &PlayerImplementation::aboutToFinish);
+    QObject::connect(m_engine.data(), &Engine::videoDimensionChanged,
+                     q, &PlayerImplementation::videoDimensionChanged);
+    QObject::connect(m_engine.data(), &Engine::errorOccurred,
+                     q, &PlayerImplementation::errorOccurred);
 
-    d->engine->on_buffering_changed_signal().connect([this](int value)
+    QObject::connect(m_trackList.data(), &TrackListImplementation::endOfTrackList,
+                     q, [this]()
     {
-        Parent::buffering_changed()(value);
-    });
-
-    d->engine->end_of_stream_signal().connect([this]()
-    {
-        Parent::end_of_stream()();
-    });
-
-    d->engine->video_dimension_changed_signal().connect([this](const media::video::Dimensions& dimensions)
-    {
-        Parent::video_dimension_changed()(dimensions);
-    });
-
-    d->engine->error_signal().connect([this](const Player::Error& e)
-    {
-        Parent::error()(e);
-    });
-
-    d->track_list->on_end_of_tracklist().connect([this]()
-    {
-        if (d->engine->state() != gstreamer::Engine::State::ready
-                && d->engine->state() != gstreamer::Engine::State::stopped)
+        if (m_engine->state() != gstreamer::Engine::State::stopped)
         {
             MH_INFO("End of tracklist reached, stopping playback");
-            const constexpr bool use_main_thread = true;
-            d->engine->stop(use_main_thread);
+            m_engine->stop();
         }
     });
 
-    d->track_list->on_go_to_track().connect([this](const media::Track::Id& id)
+    QObject::connect(m_trackList.data(), &TrackListImplementation::onGoToTrack,
+                     q, [this](const media::Track::Id &id)
     {
-        // This lambda needs to be mutually exclusive with the about_to_finish lambda above
-        const bool locked = d->doing_go_to_track.try_lock();
-        // If the try_lock fails, it means that about_to_finish lambda above has it locked and it will
-        // call d->engine->open_resource_for_uri()
-        if (!locked)
-            return;
+        if (m_autoMovingToNextTrack) return;
 
         // Store whether we should restore the current playing state after loading the new uri
-        const bool auto_play = Parent::playback_status().get() == media::Player::playing;
+        const bool auto_play = m_engine->playbackStatus() == media::Player::playing;
 
-        const Track::UriType uri = d->track_list->query_uri_for_track(id);
-        if (!uri.empty())
+        const QUrl uri = m_trackList->query_uri_for_track(id);
+        if (!uri.isEmpty())
         {
-            MH_INFO("Setting next track on playbin (on_go_to_track signal): %s", uri);
-            MH_INFO("\twith a Track::Id: %s", id);
+            MH_INFO("Setting next track on playbin (on_go_to_track signal): %s",
+                    qUtf8Printable(uri.toString()));
+            MH_INFO("\twith a Track::Id: %s", qUtf8Printable(id));
             static const bool do_pipeline_reset = true;
-            d->engine->open_resource_for_uri(uri, do_pipeline_reset);
+            m_engine->open_resource_for_uri(uri, do_pipeline_reset);
         }
 
         if (auto_play)
         {
             MH_DEBUG("Restoring playing state");
-            d->engine->play();
+            m_engine->play();
         }
-
-        d->doing_go_to_track.unlock();
     });
 
-    d->track_list->on_track_added().connect([this](const media::Track::Id& id)
+    QObject::connect(m_trackList.data(), &TrackListImplementation::trackAdded,
+                     q, [this](const media::Track::Id &id)
     {
         MH_TRACE("** Track was added, handling in PlayerImplementation");
-        if (d->track_list->tracks()->size() == 1)
-            d->open_first_track_from_tracklist(id);
+        if (!m_doingOpenUri && m_trackList->tracks().count() == 1)
+            open_first_track_from_tracklist(id);
 
-        d->update_mpris_properties();
+        update_mpris_properties();
     });
 
-    d->track_list->on_tracks_added().connect([this](const media::TrackList::ContainerURI& tracks)
+    QObject::connect(m_trackList.data(), &TrackListImplementation::tracksAdded,
+                     q, [this](const QVector<QUrl> &tracks)
     {
         MH_TRACE("** Track was added, handling in PlayerImplementation");
         // If the two sizes are the same, that means the TrackList was previously empty and we need
         // to open the first track in the TrackList so that is_audio_source() and is_video_source()
         // will function correctly.
-        if (tracks.size() >= 1 and d->track_list->tracks()->size() == tracks.size())
-            d->open_first_track_from_tracklist(tracks.front());
+        /* FIXME: we are passing a URL to a method expecting a track ID, so
+         * this will not work; on the other hand, the code has always been like
+         * this, so let's fix it later. */
+        if (not tracks.isEmpty() and m_trackList->tracks().count() == tracks.count())
+            open_first_track_from_tracklist(tracks.front().toString());
 
-        d->update_mpris_properties();
+        update_mpris_properties();
     });
 
-    d->track_list->on_track_removed().connect([this](const media::Track::Id&)
-    {
-        d->update_mpris_properties();
-    });
+    QObject::connect(m_trackList.data(),
+                     &TrackListImplementation::trackRemoved,
+                     q, [this]() { update_mpris_properties(); });
 
-    d->track_list->on_track_list_reset().connect([this](void)
-    {
-        d->update_mpris_properties();
-    });
+    QObject::connect(m_trackList.data(),
+                     &TrackListImplementation::trackListReset,
+                     q, [this]() { update_mpris_properties(); });
 
-    d->track_list->on_track_changed().connect([this](const media::Track::Id&)
-    {
-        d->update_mpris_properties();
-    });
+    QObject::connect(m_trackList.data(),
+                     &TrackListImplementation::trackChanged,
+                     q, [this]() { update_mpris_properties(); });
 
-    d->track_list->on_track_list_replaced().connect(
-        [this](const media::TrackList::ContainerTrackIdTuple&)
-        {
-            d->update_mpris_properties();
-        }
-    );
+    QObject::connect(m_trackList.data(),
+                     &TrackListImplementation::trackListReplaced,
+                     q, [this]() { update_mpris_properties(); });
 
     // Everything is setup, we now subscribe to death notifications.
-    std::weak_ptr<Private> wp{d};
-
-    d->config.client_death_observer->register_for_death_notifications_with_key(config.key);
-    d->config.client_death_observer->on_client_with_key_died().connect([wp](const media::Player::PlayerKey& died)
+    m_clientDeathObserver->registerForDeathNotifications(m_client);
+    QObject::connect(m_clientDeathObserver.data(),
+                     &ClientDeathObserver::clientDied,
+                     q, [this](const media::Player::Client &died)
     {
-        if (auto sp = wp.lock())
-        {
-            if (sp->doing_abandon)
-                return;
+        if (doing_abandon)
+            return;
 
-            if (died != sp->config.key)
-                return;
+        if (died.key != m_client.key)
+            return;
 
-            static const std::chrono::milliseconds timeout{1000};
-            media::timeout(timeout.count(), true, [wp]()
-            {
-                if (auto sp = wp.lock())
-                    sp->on_client_died();
-            });
-        }
+        m_abandonTimer.start();
+    });
+
+    m_abandonTimer.setSingleShot(true);
+    m_abandonTimer.setInterval(1000);
+    m_abandonTimer.callOnTimeout(q, [this]() { on_client_died(); });
+
+    m_wakeLockTimer.setSingleShot(true);
+    int wakelockTimeout =
+        qEnvironmentVariableIsSet("MEDIA_HUB_WAKELOCK_TIMEOUT") ?
+        qEnvironmentVariableIntValue("MEDIA_HUB_WAKELOCK_TIMEOUT") : 4000;
+    m_wakeLockTimer.setInterval(wakelockTimeout);
+    m_wakeLockTimer.setTimerType(Qt::VeryCoarseTimer);
+    m_wakeLockTimer.callOnTimeout(q, [this]() {
+        auto wakelock_type = current_wakelock_type();
+        clear_wakelock(wakelock_type);
     });
 }
 
-template<typename Parent>
-media::PlayerImplementation<Parent>::~PlayerImplementation()
+PlayerImplementationPrivate::~PlayerImplementationPrivate()
 {
-    // Install null getters as these properties may be destroyed
-    // after the engine has been destroyed since they are owned by the
-    // base class.
-    std::function<uint64_t()> position_getter = [this]()
-    {
-        return static_cast<uint64_t>(0);
-    };
-    Parent::position().install(position_getter);
-
-    std::function<uint64_t()> duration_getter = [this]()
-    {
-        return static_cast<uint64_t>(0);
-    };
-    Parent::duration().install(duration_getter);
-
-    std::function<bool()> video_type_getter = [this]()
-    {
-        return false;
-    };
-    Parent::is_video_source().install(video_type_getter);
-
-    std::function<bool()> audio_type_getter = [this]()
-    {
-        return false;
-    };
-    Parent::is_audio_source().install(audio_type_getter);
+    // Make sure that we don't hold on to the wakelocks if media-hub-server
+    // ever gets restarted manually or automatically
+    clear_wakelocks();
 }
 
-template<typename Parent>
-std::string media::PlayerImplementation<Parent>::uuid() const
+PlayerImplementation::PlayerImplementation(const Configuration &config,
+                                           QObject *parent):
+    QObject(parent),
+    d_ptr(new media::PlayerImplementationPrivate(config, this))
 {
-    // No impl for now, as not needed internally.
-    return std::string{};
+    QObject::connect(this, &QObject::objectNameChanged,
+                     this, [this](const QString &name) {
+        Q_D(PlayerImplementation);
+        d->m_trackList->setObjectName(name + "/TrackList");
+    });
 }
 
-template<typename Parent>
-void media::PlayerImplementation<Parent>::reconnect()
+media::PlayerImplementation::~PlayerImplementation()
 {
-    d->config.client_death_observer->register_for_death_notifications_with_key(d->config.key);
 }
 
-template<typename Parent>
-void media::PlayerImplementation<Parent>::abandon()
+AVBackend::Backend PlayerImplementation::backend() const
 {
+    return media::AVBackend::get_backend_type();
+}
+
+const Player::Client &PlayerImplementation::client() const
+{
+    Q_D(const PlayerImplementation);
+    return d->m_client;
+}
+
+bool PlayerImplementation::canPlay() const
+{
+    Q_D(const PlayerImplementation);
+    return d->m_canPlay;
+}
+
+bool PlayerImplementation::canPause() const
+{
+    Q_D(const PlayerImplementation);
+    return d->m_canPause;
+}
+
+bool PlayerImplementation::canSeek() const
+{
+    Q_D(const PlayerImplementation);
+    return true;
+}
+
+bool PlayerImplementation::canGoPrevious() const
+{
+    Q_D(const PlayerImplementation);
+    return d->m_canGoPrevious;
+}
+
+bool PlayerImplementation::canGoNext() const
+{
+    Q_D(const PlayerImplementation);
+    return d->m_canGoNext;
+}
+
+void PlayerImplementation::setPlaybackRate(double rate)
+{
+    Q_UNUSED(rate);
+    MH_WARNING("Setting playback rate not implemented");
+}
+
+double PlayerImplementation::playbackRate() const
+{
+    return 1.0;
+}
+
+double PlayerImplementation::minimumRate() const
+{
+    return 1.0;
+}
+
+double PlayerImplementation::maximumRate() const
+{
+    return 1.0;
+}
+
+void PlayerImplementation::setLoopStatus(Player::LoopStatus status)
+{
+    Q_D(PlayerImplementation);
+    MH_INFO() << "LoopStatus:" << status;
+    d->m_trackList->setLoopStatus(status);
+}
+
+Player::LoopStatus PlayerImplementation::loopStatus() const
+{
+    Q_D(const PlayerImplementation);
+    return d->m_trackList->loopStatus();
+}
+
+void PlayerImplementation::setShuffle(bool shuffle)
+{
+    Q_D(PlayerImplementation);
+    d->m_trackList->setShuffle(shuffle);
+}
+
+bool PlayerImplementation::shuffle() const
+{
+    Q_D(const PlayerImplementation);
+    return d->m_trackList->shuffle();
+}
+
+void PlayerImplementation::setVolume(double volume)
+{
+    Q_D(PlayerImplementation);
+    d->m_engine->setVolume(volume);
+    Q_EMIT volumeChanged();
+}
+
+double PlayerImplementation::volume() const
+{
+    Q_D(const PlayerImplementation);
+    return d->m_engine->volume();
+}
+
+Player::PlaybackStatus PlayerImplementation::playbackStatus() const
+{
+    Q_D(const PlayerImplementation);
+    return d->m_engine->playbackStatus();
+}
+
+bool PlayerImplementation::isVideoSource() const
+{
+    Q_D(const PlayerImplementation);
+    return d->m_engine->isVideoSource();
+}
+
+bool PlayerImplementation::isAudioSource() const
+{
+    Q_D(const PlayerImplementation);
+    return d->m_engine->isAudioSource();
+}
+
+QSize PlayerImplementation::videoDimension() const
+{
+    Q_D(const PlayerImplementation);
+    return d->m_engine->videoDimension();
+}
+
+Player::Orientation PlayerImplementation::orientation() const
+{
+    Q_D(const PlayerImplementation);
+    return d->m_engine->orientation();
+}
+
+Track::MetaData PlayerImplementation::metadataForCurrentTrack() const
+{
+    Q_D(const PlayerImplementation);
+    return d->m_metadataForCurrentTrack;
+}
+
+uint64_t PlayerImplementation::position() const
+{
+    Q_D(const PlayerImplementation);
+    return d->m_engine->position();
+}
+
+uint64_t PlayerImplementation::duration() const
+{
+    Q_D(const PlayerImplementation);
+    return d->m_engine->duration();
+}
+
+void PlayerImplementation::setAudioStreamRole(Player::AudioStreamRole role)
+{
+    Q_D(PlayerImplementation);
+    d->m_engine->setAudioStreamRole(role);
+}
+
+Player::AudioStreamRole PlayerImplementation::audioStreamRole() const
+{
+    Q_D(const PlayerImplementation);
+    return d->m_engine->audioStreamRole();
+}
+
+void PlayerImplementation::setLifetime(Player::Lifetime lifetime)
+{
+    Q_D(PlayerImplementation);
+    d->m_engine->setLifetime(lifetime);
+}
+
+Player::Lifetime PlayerImplementation::lifetime() const
+{
+    Q_D(const PlayerImplementation);
+    return d->m_engine->lifetime();
+}
+
+void media::PlayerImplementation::reconnect()
+{
+    Q_D(PlayerImplementation);
+    d->m_clientDeathObserver->registerForDeathNotifications(d->m_client);
+}
+
+void media::PlayerImplementation::abandon()
+{
+    Q_D(PlayerImplementation);
     // Signal client disconnection due to abandonment of player
     d->doing_abandon = true;
     d->on_client_died();
 }
 
-template<typename Parent>
-std::shared_ptr<media::TrackList> media::PlayerImplementation<Parent>::track_list()
+QSharedPointer<TrackListImplementation> media::PlayerImplementation::trackList()
 {
-    return d->track_list;
+    Q_D(PlayerImplementation);
+    return d->m_trackList;
 }
 
-// TODO: Convert this to be a property instead of sync call
-template<typename Parent>
-media::Player::PlayerKey media::PlayerImplementation<Parent>::key() const
+media::Player::PlayerKey media::PlayerImplementation::key() const
 {
-    return d->config.key;
+    Q_D(const PlayerImplementation);
+    return d->m_client.key;
 }
 
-template<typename Parent>
-media::video::Sink::Ptr media::PlayerImplementation<Parent>::create_gl_texture_video_sink(std::uint32_t texture_id)
+void media::PlayerImplementation::create_gl_texture_video_sink(std::uint32_t texture_id)
 {
-    d->engine->create_video_sink(texture_id);
-    return media::video::Sink::Ptr{};
+    Q_D(PlayerImplementation);
+    d->m_engine->create_video_sink(texture_id);
 }
 
-template<typename Parent>
-bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri)
+bool PlayerImplementation::open_uri(const QUrl &uri)
 {
-    d->track_list->reset();
+    return open_uri(uri, Headers());
+}
+
+bool PlayerImplementation::open_uri(const QUrl &uri, const Headers &headers)
+{
+    Q_D(PlayerImplementation);
+    d->m_doingOpenUri = true;
+    d->m_trackList->reset();
 
     // If empty uri, give the same meaning as QMediaPlayer::setMedia("")
-    if (uri.empty())
+    if (uri.isEmpty())
     {
         MH_DEBUG("Resetting current media");
         return true;
     }
 
-    static const bool do_pipeline_reset = false;
-    const bool ret = d->engine->open_resource_for_uri(uri, do_pipeline_reset);
+    const bool ret = d->m_engine->open_resource_for_uri(uri, headers);
     // Don't set new track as the current track to play since we're calling open_resource_for_uri above
     static const bool make_current = false;
-    d->track_list->add_track_with_uri_at(uri, media::TrackList::after_empty_track(), make_current);
+    d->m_trackList->add_track_with_uri_at(uri, TrackListImplementation::afterEmptyTrack(), make_current);
+    d->m_doingOpenUri = false;
 
     return ret;
 }
 
-template<typename Parent>
-bool media::PlayerImplementation<Parent>::open_uri(const Track::UriType& uri, const Player::HeadersType& headers)
+void PlayerImplementation::next()
 {
-    return d->engine->open_resource_for_uri(uri, headers);
+    Q_D(PlayerImplementation);
+    d->m_trackList->next();
 }
 
-template<typename Parent>
-void media::PlayerImplementation<Parent>::next()
+void PlayerImplementation::previous()
 {
-    d->track_list->next();
+    Q_D(PlayerImplementation);
+    d->m_trackList->previous();
 }
 
-template<typename Parent>
-void media::PlayerImplementation<Parent>::previous()
-{
-    d->track_list->previous();
-}
-
-template<typename Parent>
-void media::PlayerImplementation<Parent>::play()
+void PlayerImplementation::play()
 {
     MH_TRACE("");
+    Q_D(PlayerImplementation);
     if (d->is_multimedia_role())
     {
-        MH_DEBUG("==== Pausing all other multimedia player sessions");
-        if (not d->pause_other_players(d->config.key))
-            MH_WARNING("Failed to pause other player sessions");
-
-        MH_DEBUG("==== Updating the current player");
-        // This player will begin playing so make sure it's the current player. If
-        // this operation fails it is not a fatal condition but should be logged
-        if (not d->update_current_player(d->config.key))
-            MH_WARNING("Failed to update current player");
+        Q_EMIT playbackRequested();
     }
 
-    d->engine->play();
+    d->m_engine->play();
 }
 
-template<typename Parent>
-void media::PlayerImplementation<Parent>::pause()
+void PlayerImplementation::pause()
 {
     MH_TRACE("");
-    d->engine->pause();
+    Q_D(PlayerImplementation);
+    d->m_engine->pause();
 }
 
-template<typename Parent>
-void media::PlayerImplementation<Parent>::stop()
+void PlayerImplementation::stop()
 {
     MH_TRACE("");
-    d->engine->stop();
+    Q_D(PlayerImplementation);
+    d->m_engine->stop();
 }
 
-template<typename Parent>
-void media::PlayerImplementation<Parent>::seek_to(const std::chrono::microseconds& ms)
+void PlayerImplementation::seek_to(const std::chrono::microseconds& ms)
 {
-    d->engine->seek_to(ms);
+    Q_D(PlayerImplementation);
+    d->m_engine->seek_to(ms);
 }
-
-template<typename Parent>
-const core::Signal<>& media::PlayerImplementation<Parent>::on_client_disconnected() const
-{
-    return d->on_client_disconnected;
-}
-
-template<typename Parent>
-void media::PlayerImplementation<Parent>::emit_playback_status_changed(const media::Player::PlaybackStatus &status)
-{
-    Parent::playback_status_changed()(status);
-}
-
-#include <core/media/player_skeleton.h>
-
-// For linking purposes, we have to make sure that we have all symbols included within the dso.
-template class media::PlayerImplementation<media::PlayerSkeleton>;

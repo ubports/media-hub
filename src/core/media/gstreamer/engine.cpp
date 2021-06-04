@@ -26,7 +26,7 @@
 #include "meta_data_extractor.h"
 #include "playbin.h"
 
-#include "core/media/logger/logger.h"
+#include "core/media/logging.h"
 
 #include <cassert>
 
@@ -48,10 +48,12 @@ struct Init
         gst_deinit();
     }
 } init;
-}
 
-struct gstreamer::Engine::Private
+class EnginePrivate
 {
+    Q_DECLARE_PUBLIC(Engine)
+
+public:
     media::Player::PlaybackStatus gst_state_to_player_status(const gstreamer::Bus::Message::Detail::StateChanged& state)
     {
         if (state.new_state == GST_STATE_PLAYING)
@@ -66,13 +68,16 @@ struct gstreamer::Engine::Private
             return media::Player::PlaybackStatus::stopped;
     }
 
-    void on_playbin_state_changed(const std::pair<gstreamer::Bus::Message::Detail::StateChanged,std::string>& p)
+    void on_playbin_state_changed(const gstreamer::Bus::Message::Detail::StateChanged &state,
+                                  const QByteArray &source)
     {
-        if (p.second == "playbin")
+        Q_Q(Engine);
+
+        if (source == "playbin")
         {
             MH_INFO("State changed on playbin: %s",
-                      gst_element_state_get_name(p.first.new_state));
-            const auto status = gst_state_to_player_status(p.first);
+                      gst_element_state_get_name(state.new_state));
+            const auto status = gst_state_to_player_status(state);
             /*
              * When state moves to "paused" the pipeline is already set. We check that we
              * have streams to play.
@@ -82,9 +87,13 @@ struct gstreamer::Engine::Private
                 MH_ERROR("** Cannot play: some codecs are missing");
                 playbin.reset();
                 const media::Player::Error e = media::Player::Error::format_error;
-                error(e);
+                Q_EMIT q->errorOccurred(e);
+            } else if (status == media::Player::PlaybackStatus::paused &&
+                       q->state() == Engine::State::playing) {
+                /* This is a spontaneus state change happening during the
+                 * playbin initialization; we can ignore it. */
             } else {
-                playback_status_changed(status);
+                q->setPlaybackStatus(status);
             }
         }
     }
@@ -182,7 +191,7 @@ struct gstreamer::Engine::Private
         }
 
         if (ret_error != media::Player::Error::no_error) {
-            MH_ERROR("Resetting playbin pipeline after unrecoverable error");
+            MH_ERROR("Resetting playbin pipeline after unrecoverable error: %s", ewi.debug);
             playbin.reset();
         }
         return ret_error;
@@ -190,16 +199,18 @@ struct gstreamer::Engine::Private
 
     void on_playbin_error(const gstreamer::Bus::Message::Detail::ErrorWarningInfo& ewi)
     {
+        Q_Q(Engine);
         const media::Player::Error e = from_gst_errorwarning(ewi);
         if (e != media::Player::Error::no_error)
-            error(e);
+            Q_EMIT q->errorOccurred(e);
     }
 
     void on_playbin_warning(const gstreamer::Bus::Message::Detail::ErrorWarningInfo& ewi)
     {
+        Q_Q(Engine);
         const media::Player::Error e = from_gst_errorwarning(ewi);
         if (e != media::Player::Error::no_error)
-            error(e);
+            Q_EMIT q->errorOccurred(e);
     }
 
     void on_playbin_info(const gstreamer::Bus::Message::Detail::ErrorWarningInfo& ewi)
@@ -209,280 +220,153 @@ struct gstreamer::Engine::Private
 
     void on_tag_available(const gstreamer::Bus::Message::Detail::Tag& tag)
     {
+        Q_Q(Engine);
         media::Track::MetaData md;
 
         // We update instead of creating from scratch if same uri
-        auto &tuple = track_meta_data.get();
-        if (playbin.uri() == std::get<0>(tuple))
-            md = std::get<1>(tuple);
+        auto pair = q->trackMetadata();
+        if (playbin.uri() == pair.first)
+            md = pair.second;
 
-        gstreamer::MetaDataExtractor::on_tag_available(tag, md);
-        track_meta_data.set(std::make_tuple(playbin.uri(), md));
+        gstreamer::MetaDataExtractor::on_tag_available(tag, &md);
+        q->setTrackMetadata(qMakePair(playbin.uri(), md));
     }
 
-    void on_volume_changed(const media::Engine::Volume& new_volume)
-    {
-        playbin.set_volume(new_volume.value);
-    }
-
-    void on_audio_stream_role_changed(const media::Player::AudioStreamRole& new_audio_role)
-    {
-        playbin.set_audio_stream_role(new_audio_role);
-    }
-
-    void on_orientation_changed(const media::Player::Orientation& o)
-    {
-        // Update the local orientation Property, which should then update the Player
-        // orientation Property
-        orientation.set(o);
-    }
-
-    void on_lifetime_changed(const media::Player::Lifetime& lifetime)
-    {
-        playbin.set_lifetime(lifetime);
-    }
-
-    void on_about_to_finish()
-    {
-        state = Engine::State::ready;
-        about_to_finish();
-    }
-
-    void on_seeked_to(uint64_t value)
-    {
-        seeked_to(value);
-    }
-
-    void on_client_disconnected()
-    {
-        client_disconnected();
-    }
-
-    void on_end_of_stream()
-    {
-        end_of_stream();
-    }
-
-    void on_video_dimension_changed(const media::video::Dimensions& dimensions)
-    {
-        video_dimension_changed(dimensions);
-    }
-
-    void on_buffering_changed(int value)
-    {
-        buffering_changed(value);
-    }
-
-    Private(const core::ubuntu::media::Player::PlayerKey key)
+    EnginePrivate(const core::ubuntu::media::Player::PlayerKey key,
+            Engine *q)
         : playbin(key),
-          meta_data_extractor(new gstreamer::MetaDataExtractor()),
-          volume(media::Engine::Volume(1.)),
-          orientation(media::Player::Orientation::rotate0),
-          is_video_source(false),
-          is_audio_source(false),
-          about_to_finish_connection(
-              playbin.signals.about_to_finish.connect(
-                  std::bind(
-                      &Private::on_about_to_finish,
-                      this))),
-          on_state_changed_connection(
-              playbin.signals.on_state_changed.connect(
-                  std::bind(
-                      &Private::on_playbin_state_changed,
-                      this,
-                      std::placeholders::_1))),
-          on_error_connection(
-              playbin.signals.on_error.connect(
-                  std::bind(
-                      &Private::on_playbin_error,
-                      this,
-                      std::placeholders::_1))),
-          on_warning_connection(
-              playbin.signals.on_warning.connect(
-                  std::bind(
-                      &Private::on_playbin_warning,
-                      this,
-                      std::placeholders::_1))),
-          on_info_connection(
-              playbin.signals.on_info.connect(
-                  std::bind(
-                      &Private::on_playbin_info,
-                      this,
-                      std::placeholders::_1))),
-          on_tag_available_connection(
-              playbin.signals.on_tag_available.connect(
-                  std::bind(
-                      &Private::on_tag_available,
-                      this,
-                      std::placeholders::_1))),
-          on_volume_changed_connection(
-              volume.changed().connect(
-                  std::bind(
-                      &Private::on_volume_changed,
-                      this,
-                      std::placeholders::_1))),
-          on_audio_stream_role_changed_connection(
-              audio_role.changed().connect(
-                  std::bind(
-                      &Private::on_audio_stream_role_changed,
-                      this,
-                      std::placeholders::_1))),
-          on_orientation_changed_connection(
-              playbin.signals.on_orientation_changed.connect(
-                  std::bind(
-                      &Private::on_orientation_changed,
-                      this,
-                      std::placeholders::_1))),
-          on_lifetime_changed_connection(
-              lifetime.changed().connect(
-                  std::bind(
-                      &Private::on_lifetime_changed,
-                      this,
-                      std::placeholders::_1))),
-          on_seeked_to_connection(
-              playbin.signals.on_seeked_to.connect(
-                  std::bind(
-                      &Private::on_seeked_to,
-                      this,
-                      std::placeholders::_1))),
-          client_disconnected_connection(
-              playbin.signals.client_disconnected.connect(
-                  std::bind(
-                      &Private::on_client_disconnected,
-                      this))),
-          on_end_of_stream_connection(
-              playbin.signals.on_end_of_stream.connect(
-                  std::bind(
-                      &Private::on_end_of_stream,
-                      this))),
-          on_video_dimension_changed_connection(
-              playbin.signals.on_video_dimensions_changed.connect(
-                  std::bind(
-                      &Private::on_video_dimension_changed,
-                      this,
-                      std::placeholders::_1))),
-          on_buffering_changed_connection(
-              playbin.signals.on_buffering_changed.connect(
-                  std::bind(
-                      &Private::on_buffering_changed,
-                      this,
-                      std::placeholders::_1)))
+          q_ptr(q)
     {
+        QObject::connect(&playbin, &Playbin::errorOccurred,
+                         q, [this](const Bus::Message::Detail::ErrorWarningInfo &ewi) {
+            on_playbin_error(ewi);
+        });
+        QObject::connect(&playbin, &Playbin::warningOccurred,
+                         q, [this](const Bus::Message::Detail::ErrorWarningInfo &ewi) {
+            on_playbin_warning(ewi);
+        });
+        QObject::connect(&playbin, &Playbin::infoOccurred,
+                         q, [this](const Bus::Message::Detail::ErrorWarningInfo &ewi) {
+            on_playbin_info(ewi);
+        });
+
+        QObject::connect(&playbin, &Playbin::aboutToFinish,
+                         q, [this, q]() {
+            q->setState(Engine::State::ready);
+            Q_EMIT q->aboutToFinish();
+        });
+        QObject::connect(&playbin, &Playbin::seekedTo,
+                         q, &Engine::seekedTo);
+        QObject::connect(&playbin, &Playbin::bufferingChanged,
+                         q, &Engine::bufferingChanged);
+        QObject::connect(&playbin, &Playbin::clientDisconnected,
+                         q, &Engine::clientDisconnected);
+        QObject::connect(&playbin, &Playbin::endOfStream,
+                         q, &Engine::endOfStream);
+
+        QObject::connect(&playbin, &Playbin::stateChanged,
+                         q, [this](const Bus::Message::Detail::StateChanged &state,
+                                   const QByteArray &source) {
+            on_playbin_state_changed(state, source);
+        });
+
+        QObject::connect(&playbin, &Playbin::tagAvailable,
+                         q, [this](const Bus::Message::Detail::Tag &tag) {
+            on_tag_available(tag);
+        });
+        QObject::connect(&playbin, &Playbin::orientationChanged,
+                         q, [q](media::Player::Orientation o) {
+            q->setOrientation(o);
+        });
+        QObject::connect(&playbin, &Playbin::videoDimensionChanged,
+                         q, [q](const QSize &size) {
+            q->setVideoDimension(size);
+        });
     }
 
-    // Ensure the playbin is the last item destroyed
-    // otherwise properties could try to access a dead playbin object
     gstreamer::Playbin playbin;
-
-    std::shared_ptr<Engine::MetaDataExtractor> meta_data_extractor;
-    core::Property<Engine::State> state;
-    core::Property<std::tuple<media::Track::UriType, media::Track::MetaData>> track_meta_data;
-    core::Property<uint64_t> position;
-    core::Property<uint64_t> duration;
-    core::Property<media::Engine::Volume> volume;
-    core::Property<media::Player::AudioStreamRole> audio_role;
-    core::Property<media::Player::Orientation> orientation;
-    core::Property<media::Player::Lifetime> lifetime;
-    core::Property<bool> is_video_source;
-    core::Property<bool> is_audio_source;
-
-    core::ScopedConnection about_to_finish_connection;
-    core::ScopedConnection on_state_changed_connection;
-    core::ScopedConnection on_error_connection;
-    core::ScopedConnection on_warning_connection;
-    core::ScopedConnection on_info_connection;
-    core::ScopedConnection on_tag_available_connection;
-    core::ScopedConnection on_volume_changed_connection;
-    core::ScopedConnection on_audio_stream_role_changed_connection;
-    core::ScopedConnection on_orientation_changed_connection;
-    core::ScopedConnection on_lifetime_changed_connection;
-    core::ScopedConnection on_seeked_to_connection;
-    core::ScopedConnection client_disconnected_connection;
-    core::ScopedConnection on_end_of_stream_connection;
-    core::ScopedConnection on_video_dimension_changed_connection;
-    core::ScopedConnection on_buffering_changed_connection;
-
-    core::Signal<void> about_to_finish;
-    core::Signal<uint64_t> seeked_to;
-    core::Signal<void> client_disconnected;
-    core::Signal<void> end_of_stream;
-    core::Signal<media::Player::PlaybackStatus> playback_status_changed;
-    core::Signal<core::ubuntu::media::video::Dimensions> video_dimension_changed;
-    core::Signal<media::Player::Error> error;
-    core::Signal<int> buffering_changed;
+    Engine *q_ptr;
 };
 
+} // namespace
+
 gstreamer::Engine::Engine(const core::ubuntu::media::Player::PlayerKey key)
-    : d(new Private{key})
+    : d_ptr(new EnginePrivate(key, this))
 {
-    d->state = media::Engine::State::no_media;
+    Q_D(Engine);
+
+    setMetadataExtractor(QSharedPointer<gstreamer::MetaDataExtractor>::create());
+
+    doSetAudioStreamRole(audioStreamRole());
+    doSetLifetime(lifetime());
+
+    QObject::connect(&d->playbin, &Playbin::mediaFileTypeChanged,
+                     this, [this, d]() {
+        const auto fileType = d->playbin.mediaFileType();
+        using ft = Playbin::MediaFileType;
+        setIsVideoSource(fileType == ft::MEDIA_FILE_TYPE_VIDEO);
+        setIsAudioSource(fileType == ft::MEDIA_FILE_TYPE_AUDIO);
+    });
 }
 
 gstreamer::Engine::~Engine()
 {
     stop();
-    d->state = media::Engine::State::no_media;
+    setState(media::Engine::State::no_media);
 }
 
-const std::shared_ptr<media::Engine::MetaDataExtractor>&
-        gstreamer::Engine::meta_data_extractor() const
-{
-    return d->meta_data_extractor;
-}
-
-const core::Property<media::Engine::State>& gstreamer::Engine::state() const
-{
-    return d->state;
-}
-
-bool gstreamer::Engine::open_resource_for_uri(const media::Track::UriType& uri,
+bool gstreamer::Engine::open_resource_for_uri(const QUrl &uri,
                                               bool do_pipeline_reset)
 {
-    d->playbin.set_uri(uri, core::ubuntu::media::Player::HeadersType{}, do_pipeline_reset);
+    Q_D(Engine);
+    d->playbin.set_uri(uri, media::Player::HeadersType{}, do_pipeline_reset);
     return true;
 }
 
-bool gstreamer::Engine::open_resource_for_uri(const media::Track::UriType& uri,
+bool gstreamer::Engine::open_resource_for_uri(const QUrl &uri,
                                               const core::ubuntu::media::Player::HeadersType& headers)
 {
+    Q_D(Engine);
     d->playbin.set_uri(uri, headers);
     return true;
 }
 
 void gstreamer::Engine::create_video_sink(uint32_t texture_id)
 {
+    Q_D(Engine);
     d->playbin.create_video_sink(texture_id);
 }
 
-bool gstreamer::Engine::play(bool use_main_thread /* = false */)
+bool gstreamer::Engine::play()
 {
-    const auto result = d->playbin.set_state_and_wait(GST_STATE_PLAYING, use_main_thread);
+    Q_D(Engine);
+    const auto result = d->playbin.set_state(GST_STATE_PLAYING);
 
     if (result)
     {
-        d->state = media::Engine::State::playing;
-        MH_INFO("Engine: playing uri: %s", d->playbin.uri());
-        d->playback_status_changed(media::Player::PlaybackStatus::playing);
+        setState(media::Engine::State::playing);
+        MH_INFO("Engine: playing uri: %s", qUtf8Printable(d->playbin.uri().toString()));
     }
 
     return result;
 }
 
-bool gstreamer::Engine::stop(bool use_main_thread /* = false */)
+bool gstreamer::Engine::stop()
 {
+    Q_D(Engine);
     // No need to wait, and we can immediately return.
-    if (d->state == media::Engine::State::stopped)
+    if (state() == media::Engine::State::stopped)
     {
         MH_DEBUG("Current player state is already stopped - no need to change state to stopped");
         return true;
     }
 
-    const auto result = d->playbin.set_state_and_wait(GST_STATE_NULL, use_main_thread);
+    const auto result = d->playbin.set_state(GST_STATE_NULL);
     if (result)
     {
-        d->state = media::Engine::State::stopped;
+        setState(media::Engine::State::stopped);
         MH_TRACE("");
-        d->playback_status_changed(media::Player::PlaybackStatus::stopped);
+        setPlaybackStatus(media::Player::stopped);
     }
 
     return result;
@@ -490,13 +374,13 @@ bool gstreamer::Engine::stop(bool use_main_thread /* = false */)
 
 bool gstreamer::Engine::pause()
 {
-    const auto result = d->playbin.set_state_and_wait(GST_STATE_PAUSED);
+    Q_D(Engine);
+    const auto result = d->playbin.set_state(GST_STATE_PAUSED);
 
     if (result)
     {
-        d->state = media::Engine::State::paused;
+        setState(media::Engine::State::paused);
         MH_TRACE("");
-        d->playback_status_changed(media::Player::PlaybackStatus::paused);
     }
 
     return result;
@@ -504,125 +388,42 @@ bool gstreamer::Engine::pause()
 
 bool gstreamer::Engine::seek_to(const std::chrono::microseconds& ts)
 {
+    Q_D(Engine);
     return d->playbin.seek(ts);
 }
 
-const core::Property<bool>& gstreamer::Engine::is_video_source() const
+uint64_t gstreamer::Engine::position() const
 {
-    gstreamer::Playbin::MediaFileType type = d->playbin.media_file_type();
-    if (type == gstreamer::Playbin::MediaFileType::MEDIA_FILE_TYPE_VIDEO)
-        d->is_video_source.set(true);
-    else
-        d->is_video_source.set(false);
-
-    return d->is_video_source;
+    Q_D(const Engine);
+    return d->playbin.position();
 }
 
-const core::Property<bool>& gstreamer::Engine::is_audio_source() const
+uint64_t gstreamer::Engine::duration() const
 {
-    gstreamer::Playbin::MediaFileType type = d->playbin.media_file_type();
-    if (type == gstreamer::Playbin::MediaFileType::MEDIA_FILE_TYPE_AUDIO)
-        d->is_audio_source.set(true);
-    else
-        d->is_audio_source.set(false);
-
-    return d->is_audio_source;
-}
-
-const core::Property<uint64_t>& gstreamer::Engine::position() const
-{
-    d->position.set(d->playbin.position());
-    return d->position;
-}
-
-const core::Property<uint64_t>& gstreamer::Engine::duration() const
-{
-    d->duration.set(d->playbin.duration());
-    return d->duration;
-}
-
-const core::Property<core::ubuntu::media::Engine::Volume>& gstreamer::Engine::volume() const
-{
-    return d->volume;
-}
-
-core::Property<core::ubuntu::media::Engine::Volume>& gstreamer::Engine::volume()
-{
-    return d->volume;
-}
-
-const core::Property<core::ubuntu::media::Player::AudioStreamRole>& gstreamer::Engine::audio_stream_role() const
-{
-    return d->audio_role;
-}
-
-const core::Property<core::ubuntu::media::Player::Lifetime>& gstreamer::Engine::lifetime() const
-{
-    return d->lifetime;
-}
-
-core::Property<core::ubuntu::media::Player::AudioStreamRole>& gstreamer::Engine::audio_stream_role()
-{
-    return d->audio_role;
-}
-
-const core::Property<core::ubuntu::media::Player::Orientation>& gstreamer::Engine::orientation() const
-{
-    return d->orientation;
-}
-
-core::Property<core::ubuntu::media::Player::Lifetime>& gstreamer::Engine::lifetime()
-{
-    return d->lifetime;
-}
-
-const core::Property<std::tuple<media::Track::UriType, media::Track::MetaData>>&
-gstreamer::Engine::track_meta_data() const
-{
-    return d->track_meta_data;
-}
-
-const core::Signal<void>& gstreamer::Engine::about_to_finish_signal() const
-{
-    return d->about_to_finish;
-}
-
-const core::Signal<uint64_t>& gstreamer::Engine::seeked_to_signal() const
-{
-    return d->seeked_to;
-}
-
-const core::Signal<void>& gstreamer::Engine::client_disconnected_signal() const
-{
-    return d->client_disconnected;
-}
-
-const core::Signal<void>& gstreamer::Engine::end_of_stream_signal() const
-{
-    return d->end_of_stream;
-}
-
-const core::Signal<media::Player::PlaybackStatus>& gstreamer::Engine::playback_status_changed_signal() const
-{
-    return d->playback_status_changed;
-}
-
-const core::Signal<core::ubuntu::media::video::Dimensions>& gstreamer::Engine::video_dimension_changed_signal() const
-{
-    return d->video_dimension_changed;
-}
-
-const core::Signal<core::ubuntu::media::Player::Error>& gstreamer::Engine::error_signal() const
-{
-    return d->error;
-}
-
-const core::Signal<int>& gstreamer::Engine::on_buffering_changed_signal() const
-{
-    return d->buffering_changed;
+    Q_D(const Engine);
+    return d->playbin.duration();
 }
 
 void gstreamer::Engine::reset()
 {
+    Q_D(Engine);
     d->playbin.reset();
+}
+
+void gstreamer::Engine::doSetAudioStreamRole(media::Player::AudioStreamRole role)
+{
+    Q_D(Engine);
+    d->playbin.set_audio_stream_role(role);
+}
+
+void gstreamer::Engine::doSetLifetime(media::Player::Lifetime lifetime)
+{
+    Q_D(Engine);
+    d->playbin.set_lifetime(lifetime);
+}
+
+void gstreamer::Engine::doSetVolume(double volume)
+{
+    Q_D(Engine);
+    d->playbin.set_volume(volume);
 }

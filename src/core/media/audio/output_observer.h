@@ -18,10 +18,9 @@
 #ifndef CORE_UBUNTU_MEDIA_AUDIO_OUTPUT_OBSERVER_H_
 #define CORE_UBUNTU_MEDIA_AUDIO_OUTPUT_OBSERVER_H_
 
-#include <core/property.h>
+#include <QObject>
 
 #include <iosfwd>
-#include <memory>
 
 namespace core
 {
@@ -46,28 +45,32 @@ enum class OutputState
 // Right now, we are only interested in monitoring the
 // state of external outputs to react accordingly if
 // wired or bluetooth outputs are connected/disconnected.
-class OutputObserver
+class OutputObserverPrivate;
+class OutputObserver: public QObject
 {
+    Q_OBJECT
+
 public:
-    // Save us some typing.
-    typedef std::shared_ptr<OutputObserver> Ptr;
+    OutputObserver(QObject *parent = nullptr);
+    virtual ~OutputObserver();
 
-    virtual ~OutputObserver() = default;
+    OutputState outputState() const;
 
-    // Getable/observable property holding the state of external outputs.
-    virtual const core::Property<OutputState>& external_output_state() const = 0;
+Q_SIGNALS:
+    void outputStateChanged();
 
 protected:
-    OutputObserver() = default;
     OutputObserver(const OutputObserver&) = delete;
     OutputObserver& operator=(const OutputObserver&) = delete;
+
+private:
+    Q_DECLARE_PRIVATE(OutputObserver)
+    QScopedPointer<OutputObserverPrivate> d_ptr;
 };
 
 // Pretty prints the given state to the given output stream.
 std::ostream& operator<<(std::ostream&, OutputState);
 
-// Creats a platform default instance for observing audio outputs.
-OutputObserver::Ptr make_platform_default_output_observer();
 }
 }
 }

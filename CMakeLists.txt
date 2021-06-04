@@ -32,8 +32,9 @@ if (NOT DEFINED UBUNTU_MEDIA_HUB_VERSION_MAJOR)
   endif()
 endif()
 
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -fPIC -pthread")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -fno-strict-aliasing -Wextra -fPIC -pthread")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -fno-strict-aliasing -Wextra -fPIC -pthread")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
@@ -48,11 +49,11 @@ include(GNUInstallDirs)
 find_package(PkgConfig)
 find_package(Boost COMPONENTS filesystem log system thread program_options REQUIRED)
 find_package(GLog)
+find_package(Qt5Core REQUIRED)
+find_package(Qt5DBus REQUIRED)
 pkg_check_modules(DBUS dbus-1 REQUIRED)
 pkg_check_modules(DBUS_CPP dbus-cpp REQUIRED)
-pkg_check_modules(PROCESS_CPP process-cpp REQUIRED)
 pkg_check_modules(PROPERTIES_CPP properties-cpp REQUIRED)
-pkg_check_modules(PROCESS_CPP process-cpp REQUIRED)
 pkg_check_modules(GIO gio-2.0 REQUIRED)
 pkg_check_modules(HYBRIS_MEDIA libmedia REQUIRED)
 pkg_check_modules(EGL egl REQUIRED)
@@ -78,15 +79,8 @@ if (DISABLE_ERROR_ON_LOCAL_TYPEDEFS_WARNINGS)
     SET (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=unused-local-typedefs")
 endif (DISABLE_ERROR_ON_LOCAL_TYPEDEFS_WARNINGS)
 
-include_directories(
-  ${Boost_INCLUDE_DIRS}
-  ${DBUS_INCLUDE_DIRS}
-  ${DBUS_CPP_INCLUDE_DIRS}
-  ${GLog_INCLUDE_DIR}
-  ${PROCESS_CPP_INCLUDE_DIRS}
-  ${PROPERTIES_CPP_INCLUDE_DIRS}
-
-  include/
+add_definitions(
+  -DQT_NO_KEYWORDS
 )
 
 add_subdirectory(include)

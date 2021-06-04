@@ -20,6 +20,10 @@ major=$(shell echo $(full_version) | cut -d'.' -f1)
 minor=$(shell echo $(full_version) | cut -d'.' -f2)
 patch=$(shell echo $(full_version) | cut -d'.' -f3)
 
+ifneq (,$(findstring coverage,$(DEB_BUILD_OPTIONS)))
+CONFIGURE_FLAGS += -DCMAKE_BUILD_TYPE=Coverage
+endif
+
 ifneq (,$(findstring nocheck,$(DEB_BUILD_OPTIONS)))
 CONFIGURE_FLAGS += -DENABLE_TESTS=OFF
 endif

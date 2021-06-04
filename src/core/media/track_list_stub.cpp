@@ -22,7 +22,6 @@
 #include <core/media/track_list.h>
 
 #include "property_stub.h"
-#include "track_list_traits.h"
 #include "the_session_bus.h"
 
 #include "mpris/player.h"

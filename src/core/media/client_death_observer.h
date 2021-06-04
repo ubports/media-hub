@@ -19,11 +19,11 @@
 #ifndef CORE_UBUNTU_MEDIA_CLIENT_DEATH_OBSERVER_H_
 #define CORE_UBUNTU_MEDIA_CLIENT_DEATH_OBSERVER_H_
 
-#include <core/media/player.h>
+#include "player.h"
 
-#include <core/signal.h>
-
-#include <memory>
+#include <QObject>
+#include <QScopedPointer>
+#include <QSharedPointer>
 
 namespace core
 {
@@ -34,27 +34,34 @@ namespace media
 // Models functionality to be notified whenever a client
 // of the service goes away, and thus allows us to clean
 // up in that case.
-struct ClientDeathObserver
+class ClientDeathObserverPrivate;
+class ClientDeathObserver: public QObject
 {
-    // To save us some typing.
-    typedef std::shared_ptr<ClientDeathObserver> Ptr;
+    Q_OBJECT
 
-    ClientDeathObserver() = default;
+public:
+    // To save us some typing.
+    typedef QSharedPointer<ClientDeathObserver> Ptr;
+
+    ClientDeathObserver(QObject *parent = nullptr);
     ClientDeathObserver(const ClientDeathObserver&) = delete;
-    virtual ~ClientDeathObserver() = default;
+    virtual ~ClientDeathObserver();
 
     ClientDeathObserver& operator=(const ClientDeathObserver&) = delete;
 
-    // Registers the client with the given key for death notifications.
-    virtual void register_for_death_notifications_with_key(const Player::PlayerKey&) = 0;
+    // Registers the given client for death notifications.
+    void registerForDeathNotifications(const Player::Client &client);
 
+Q_SIGNALS:
     // Emitted whenever a client dies, reporting the key under which the
     // respective client was known.
-    virtual const core::Signal<Player::PlayerKey>& on_client_with_key_died() const = 0;
+    void clientDied(const Player::Client &client);
+
+private:
+    Q_DECLARE_PRIVATE(ClientDeathObserver);
+    QScopedPointer<ClientDeathObserverPrivate> d_ptr;
 };
 
-// Accesses the default client death observer implementation for the platform.
-ClientDeathObserver::Ptr platform_default_client_death_observer();
 }
 }
 }

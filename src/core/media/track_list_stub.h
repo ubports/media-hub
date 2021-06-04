@@ -21,8 +21,6 @@
 
 #include <core/media/track_list.h>
 
-#include "track_list_traits.h"
-
 #include <core/dbus/stub.h>
 
 #include <memory>

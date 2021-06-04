@@ -20,21 +20,11 @@
 
 namespace media = core::ubuntu::media;
 
-media::StubRecorderObserver::StubRecorderObserver()
- : current_recording_state(media::RecordingState::stopped)
+media::StubRecorderObserver::StubRecorderObserver(RecorderObserver *q):
+    RecorderObserverPrivate(q)
 {
 }
 
 media::StubRecorderObserver::~StubRecorderObserver()
 {
-}
-
-const core::Property<media::RecordingState>& media::StubRecorderObserver::recording_state() const
-{
-    return current_recording_state;
-}
-
-media::RecorderObserver::Ptr media::StubRecorderObserver::create()
-{
-    return media::RecorderObserver::Ptr{new media::StubRecorderObserver{}};
 }

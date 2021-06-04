@@ -19,9 +19,8 @@
 #ifndef CORE_UBUNTU_MEDIA_RECORDER_OBSERVER_H_
 #define CORE_UBUNTU_MEDIA_RECORDER_OBSERVER_H_
 
-#include <core/property.h>
-
-#include <memory>
+#include <QObject>
+#include <QScopedPointer>
 
 namespace core
 {
@@ -40,23 +39,27 @@ enum class RecordingState
 
 // A RecorderObserver allows for monitoring the recording state
 // of the service.
-struct RecorderObserver
+class RecorderObserverPrivate;
+class RecorderObserver: public QObject
 {
-    // To save us some typing.
-    typedef std::shared_ptr<RecorderObserver> Ptr;
+    Q_OBJECT
 
-    RecorderObserver() = default;
+public:
+    RecorderObserver(QObject *parent = nullptr);
     RecorderObserver(const RecorderObserver&) = delete;
-    virtual ~RecorderObserver() = default;
+    virtual ~RecorderObserver();
     RecorderObserver& operator=(const RecorderObserver&) = delete;
 
-    // Getable/observable property describing the recording state of the system.
-    virtual const core::Property<RecordingState>& recording_state() const = 0;
+    RecordingState recordingState() const;
+
+Q_SIGNALS:
+    void recordingStateChanged();
+
+private:
+    Q_DECLARE_PRIVATE(RecorderObserver);
+    QScopedPointer<RecorderObserverPrivate> d_ptr;
 };
 
-// Creates an instance of interface RecorderObserver relying on
-// default services offered by the platform we are currently running on.
-RecorderObserver::Ptr make_platform_default_recorder_observer();
 }
 }
 }

@@ -21,61 +21,44 @@
 
 #include "../engine.h"
 
+#include <QScopedPointer>
+
+class QUrl;
+
 namespace gstreamer
 {
+class EnginePrivate;
 class Engine : public core::ubuntu::media::Engine
 {
 public:
     Engine(const core::ubuntu::media::Player::PlayerKey key);
     ~Engine();
 
-    const std::shared_ptr<MetaDataExtractor>& meta_data_extractor() const;
+    const QSharedPointer<MetaDataExtractor>& metaDataExtractor() const;
 
-    const core::Property<State>& state() const;
-
-    bool open_resource_for_uri(const core::ubuntu::media::Track::UriType& uri, bool do_pipeline_reset);
-    bool open_resource_for_uri(const core::ubuntu::media::Track::UriType& uri, const core::ubuntu::media::Player::HeadersType& headers);
+    bool open_resource_for_uri(const QUrl &uri, bool do_pipeline_reset);
+    bool open_resource_for_uri(const QUrl &uri, const core::ubuntu::media::Player::HeadersType& headers);
     void create_video_sink(uint32_t texture_id);
 
     // use_main_thread will set the pipeline's new state in the main thread context
-    bool play(bool use_main_thread = false);
-    bool stop(bool use_main_thread = false);
+    bool play();
+    bool stop();
     bool pause();
     bool seek_to(const std::chrono::microseconds& ts);
 
-    const core::Property<bool>& is_video_source() const;
-    const core::Property<bool>& is_audio_source() const;
-
-    const core::Property<uint64_t>& position() const;
-    const core::Property<uint64_t>& duration() const;
-
-    const core::Property<core::ubuntu::media::Engine::Volume>& volume() const;
-    core::Property<core::ubuntu::media::Engine::Volume>& volume();
-
-    const core::Property<core::ubuntu::media::Player::AudioStreamRole>& audio_stream_role() const;
-    core::Property<core::ubuntu::media::Player::AudioStreamRole>& audio_stream_role();
-
-    const core::Property<core::ubuntu::media::Player::Orientation>& orientation() const;
-
-    const core::Property<core::ubuntu::media::Player::Lifetime>& lifetime() const;
-    core::Property<core::ubuntu::media::Player::Lifetime>& lifetime();
-
-    const core::Property<std::tuple<core::ubuntu::media::Track::UriType, core::ubuntu::media::Track::MetaData>>& track_meta_data() const;
-
-    const core::Signal<void>& about_to_finish_signal() const;
-    const core::Signal<uint64_t>& seeked_to_signal() const;
-    const core::Signal<void>& client_disconnected_signal() const;
-    const core::Signal<void>& end_of_stream_signal() const;
-    const core::Signal<core::ubuntu::media::Player::PlaybackStatus>& playback_status_changed_signal() const;
-    const core::Signal<core::ubuntu::media::video::Dimensions>& video_dimension_changed_signal() const;
-    const core::Signal<core::ubuntu::media::Player::Error>& error_signal() const;
-    const core::Signal<int>& on_buffering_changed_signal() const;
+    uint64_t position() const;
+    uint64_t duration() const;
 
     void reset();
 
+protected:
+    void doSetAudioStreamRole(core::ubuntu::media::Player::AudioStreamRole role) override;
+    void doSetLifetime(core::ubuntu::media::Player::Lifetime lifetime) override;
+    void doSetVolume(double volume) override;
+
 private:
-    struct Private;
-    std::unique_ptr<Private> d;
+    Q_DECLARE_PRIVATE(Engine)
+    QScopedPointer<EnginePrivate> d_ptr;
 };
 }
 

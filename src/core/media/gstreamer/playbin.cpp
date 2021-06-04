@@ -19,6 +19,7 @@
 
 #include <core/media/gstreamer/playbin.h>
 #include <core/media/gstreamer/engine.h>
+#include <core/media/logging.h>
 #include <core/media/video/socket_types.h>
 
 #include <gst/pbutils/missing-plugins.h>
@@ -26,12 +27,16 @@
 #include <hybris/media/surface_texture_client_hybris.h>
 #include <hybris/media/media_codec_layer.h>
 
-#include "core/media/logger/logger.h"
 #include "core/media/util/uri_check.h"
+
+#include <QMimeDatabase>
+#include <QMimeType>
+#include <QSize>
 
 #include <sys/socket.h>
 #include <sys/un.h>
 
+#include <sstream>
 #include <utility>
 #include <cstring>
 
@@ -39,7 +44,8 @@ static const char *PULSE_SINK = "pulsesink";
 static const char *HYBRIS_SINK = "hybrissink";
 static const char *MIR_SINK = "mirsink";
 
-using namespace std;
+namespace media = core::ubuntu::media;
+namespace video = core::ubuntu::media::video;
 
 void gstreamer::Playbin::setup_video_sink_for_buffer_streaming()
 {
@@ -93,9 +99,6 @@ bool gstreamer::Playbin::is_supported_video_sink(void) const
 // other image format, use: dot pipeline.dot -Tpng -o pipeline.png
 //#define DEBUG_GST_PIPELINE
 
-namespace media = core::ubuntu::media;
-namespace video = core::ubuntu::media::video;
-
 const std::string& gstreamer::Playbin::pipeline_name()
 {
     static const std::string s{"playbin"};
@@ -105,7 +108,7 @@ const std::string& gstreamer::Playbin::pipeline_name()
 void gstreamer::Playbin::about_to_finish(GstElement*, gpointer user_data)
 {
     auto thiz = static_cast<Playbin*>(user_data);
-    thiz->signals.about_to_finish();
+    Q_EMIT thiz->aboutToFinish();
 }
 
 void gstreamer::Playbin::source_setup(GstElement*,
@@ -118,23 +121,24 @@ void gstreamer::Playbin::source_setup(GstElement*,
     static_cast<Playbin*>(user_data)->setup_source(source);
 }
 
+void gstreamer::Playbin::streams_changed(GstElement *pipeline,
+                                         gpointer /*user_data*/)
+{
+    /* We are possibly in a GStreamer working thread, so we notify the main
+     * thread of this event through a message in the bus */
+    gst_element_post_message(pipeline,
+        gst_message_new_application(GST_OBJECT(pipeline),
+            gst_structure_new_empty("streams-changed")));
+}
+
 gstreamer::Playbin::Playbin(const core::ubuntu::media::Player::PlayerKey key_in)
     : pipeline(gst_element_factory_make("playbin", pipeline_name().c_str())),
       bus{gst_element_get_bus(pipeline)},
-      file_type(MEDIA_FILE_TYPE_NONE),
+      m_fileType(MEDIA_FILE_TYPE_NONE),
       video_sink(nullptr),
       audio_sink(nullptr),
-      on_new_message_connection_async(
-          bus.on_new_message_async.connect(
-              std::bind(
-                  &Playbin::on_new_message_async,
-                  this,
-                  std::placeholders::_1))),
       is_seeking(false),
       previous_position(0),
-      cached_video_dimensions{
-        core::ubuntu::media::video::Height{0},
-        core::ubuntu::media::video::Width{0}},
       player_lifetime(media::Player::Lifetime::normal),
       about_to_finish_handler_id(0),
       source_setup_handler_id(0),
@@ -149,6 +153,10 @@ gstreamer::Playbin::Playbin(const core::ubuntu::media::Player::PlayerKey key_in)
 {
     if (!pipeline)
         throw std::runtime_error("Could not create pipeline for playbin.");
+
+    bus.onNewMessage([this](const Bus::Message &msg) {
+        on_new_message(msg);
+    });
 
     // Add audio and/or video sink elements depending on environment variables
     // being set or not set
@@ -167,6 +175,14 @@ gstreamer::Playbin::Playbin(const core::ubuntu::media::Player::PlayerKey key_in)
         G_CALLBACK(source_setup),
         this
         );
+
+    m_audioChangedHandlerId = g_signal_connect(
+        pipeline, "audio-changed",
+        G_CALLBACK(streams_changed), this);
+
+    m_videoChangedHandlerId = g_signal_connect(
+        pipeline, "video-changed",
+        G_CALLBACK(streams_changed), this);
 }
 
 // Note that we might be accessing freed memory here, so activate DEBUG_REFS
@@ -195,6 +211,8 @@ gstreamer::Playbin::~Playbin()
 
     g_signal_handler_disconnect(pipeline, about_to_finish_handler_id);
     g_signal_handler_disconnect(pipeline, source_setup_handler_id);
+    g_signal_handler_disconnect(pipeline, m_audioChangedHandlerId);
+    g_signal_handler_disconnect(pipeline, m_videoChangedHandlerId);
 
     if (pipeline)
         gst_object_unref(pipeline);
@@ -211,8 +229,8 @@ gstreamer::Playbin::~Playbin()
 
 void gstreamer::Playbin::reset()
 {
-    MH_INFO("Client died, resetting pipeline");
-    // When the client dies, tear down the current pipeline and get it
+    MH_INFO("Resetting pipeline");
+    // Tear down the current pipeline and get it
     // in a state that is ready for the next client that connects to the
     // service
 
@@ -220,8 +238,6 @@ void gstreamer::Playbin::reset()
     if (player_lifetime != media::Player::Lifetime::resumable) {
         reset_pipeline();
     }
-    // Signal to the Player class that the client side has disconnected
-    signals.client_disconnected();
 }
 
 void gstreamer::Playbin::reset_pipeline()
@@ -240,7 +256,7 @@ void gstreamer::Playbin::reset_pipeline()
     default:
         MH_WARNING("Failed to reset the pipeline state. Client reconnect may not function properly.");
     }
-    file_type = MEDIA_FILE_TYPE_NONE;
+    setMediaFileType(MEDIA_FILE_TYPE_NONE);
     is_missing_audio_codec = false;
     is_missing_video_codec = false;
     audio_stream_id = -1;
@@ -282,6 +298,28 @@ void gstreamer::Playbin::process_missing_plugin_message(GstMessage *message)
     MH_ERROR("Missing decoder for %s", mime);
 }
 
+void gstreamer::Playbin::processVideoSinkStateChanged(
+        const Bus::Message::Detail::StateChanged &state)
+{
+    if (state.new_state == GST_STATE_PAUSED ||
+        state.new_state == GST_STATE_PLAYING) {
+        // Get the video height/width from the video sink
+        try
+        {
+            const QSize new_dimensions = get_video_dimensions();
+            Q_EMIT videoDimensionChanged(new_dimensions);
+        }
+        catch (const std::exception& e)
+        {
+            MH_WARNING("Problem querying video dimensions: %s", e.what());
+        }
+        catch (...)
+        {
+            MH_WARNING("Problem querying video dimensions.");
+        }
+    }
+}
+
 void gstreamer::Playbin::process_message_element(GstMessage *message)
 {
     const GstStructure *msg_data = gst_message_get_structure(message);
@@ -310,32 +348,46 @@ void gstreamer::Playbin::process_message_element(GstMessage *message)
     {
         send_frame_ready();
     }
+    else if (g_strcmp0("streams-changed", struct_name) == 0)
+    {
+        updateMediaFileType();
+    }
     else
     {
         MH_ERROR("Unknown GST_MESSAGE_ELEMENT with struct %s", struct_name);
     }
 }
 
-void gstreamer::Playbin::on_new_message_async(const Bus::Message& message)
+void gstreamer::Playbin::on_new_message(const Bus::Message& message)
 {
     switch (message.type)
     {
     case GST_MESSAGE_ERROR:
-        signals.on_error(message.detail.error_warning_info);
+        Q_EMIT errorOccurred(message.detail.error_warning_info);
         break;
     case GST_MESSAGE_WARNING:
-        signals.on_warning(message.detail.error_warning_info);
+        Q_EMIT warningOccurred(message.detail.error_warning_info);
         break;
     case GST_MESSAGE_INFO:
-        signals.on_info(message.detail.error_warning_info);
+        Q_EMIT infoOccurred(message.detail.error_warning_info);
         break;
     case GST_MESSAGE_STATE_CHANGED:
         if (message.source == "playbin") {
             g_object_get(G_OBJECT(pipeline), "current-audio", &audio_stream_id, NULL);
             g_object_get(G_OBJECT(pipeline), "current-video", &video_stream_id, NULL);
+#ifdef DEBUG_GST_PIPELINE
+            MH_DEBUG("Dumping pipeline dot file");
+            GST_DEBUG_BIN_TO_DOT_FILE((GstBin*)pipeline, GST_DEBUG_GRAPH_SHOW_ALL, "pipeline");
+#endif
+
+            // TODO: move here the stateChange() signal handling
+            // from gstreamer::Engine
+        } else if (message.source == "video-sink") {
+            processVideoSinkStateChanged(message.detail.state_changed);
         }
-        signals.on_state_changed(std::make_pair(message.detail.state_changed, message.source));
+        Q_EMIT stateChanged(message.detail.state_changed, message.source);
         break;
+    case GST_MESSAGE_APPLICATION:
     case GST_MESSAGE_ELEMENT:
         if (gst_is_missing_plugin_message(message.message))
             process_missing_plugin_message(message.message);
@@ -348,26 +400,26 @@ void gstreamer::Playbin::on_new_message_async(const Bus::Message& message)
             if (gst_tag_list_get_string(message.detail.tag.tag_list, "image-orientation", &orientation))
             {
                 // If the image-orientation tag is in the GstTagList, signal the Engine
-                signals.on_orientation_changed(orientation_lut(orientation));
+                Q_EMIT orientationChanged(orientation_lut(orientation));
                 g_free (orientation);
             }
 
-            signals.on_tag_available(message.detail.tag);
+            Q_EMIT tagAvailable(message.detail.tag);
         }
         break;
     case GST_MESSAGE_ASYNC_DONE:
         if (is_seeking)
         {
             // FIXME: Pass the actual playback time position to the signal call
-            signals.on_seeked_to(0);
+            Q_EMIT seekedTo(0);
             is_seeking = false;
         }
         break;
     case GST_MESSAGE_EOS:
-        signals.on_end_of_stream();
+        Q_EMIT endOfStream();
         break;
     case GST_MESSAGE_BUFFERING:
-        signals.on_buffering_changed(message.detail.buffering.percent);
+        Q_EMIT bufferingChanged(message.detail.buffering.percent);
         break;
     default:
         break;
@@ -394,10 +446,14 @@ void gstreamer::Playbin::setup_pipeline_for_audio_video()
         asink_name = PULSE_SINK;
 
     audio_sink = gst_element_factory_make (asink_name, "audio-sink");
-    if (audio_sink)
+    if (audio_sink) {
         g_object_set (pipeline, "audio-sink", audio_sink, NULL);
-    else
+        if (strcmp(asink_name, "fakesink") == 0) {
+            g_object_set(audio_sink, "sync", TRUE, NULL);
+        }
+    } else {
         MH_ERROR("Error trying to create audio sink %s", asink_name);
+    }
 
     const char *vsink_name = ::getenv("CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME");
 
@@ -474,7 +530,7 @@ media::Player::Orientation gstreamer::Playbin::orientation_lut(const gchar *orie
 void gstreamer::Playbin::set_audio_stream_role(media::Player::AudioStreamRole new_audio_role)
 {
     const std::string role_str("props,media.role=" + get_audio_role_str(new_audio_role));
-    MH_INFO("Audio stream role: %s", role_str);
+    MH_INFO("Audio stream role: %s", role_str.c_str());
 
     GstStructure *props = gst_structure_from_string (role_str.c_str(), NULL);
     if (audio_sink != nullptr && props != nullptr)
@@ -524,8 +580,8 @@ uint64_t gstreamer::Playbin::duration() const
 }
 
 void gstreamer::Playbin::set_uri(
-    const std::string& uri,
-    const core::ubuntu::media::Player::HeadersType& headers = core::ubuntu::media::Player::HeadersType(),
+    const QUrl &uri,
+    const media::Player::HeadersType &headers,
     bool do_pipeline_reset)
 {
     gchar *current_uri = nullptr;
@@ -537,24 +593,12 @@ void gstreamer::Playbin::set_uri(
     if (current_uri and do_pipeline_reset)
         reset_pipeline();
 
-    std::string tmp_uri{uri};
-    media::UriCheck::Ptr uri_check{std::make_shared<media::UriCheck>(uri)};
-    if (uri_check->is_local_file())
-    {
-        if (uri_check->is_encoded())
-        {
-            // First decode the URI just in case it's partially encoded already
-            tmp_uri = decode_uri(uri);
-            MH_DEBUG("File URI was encoded, now decoded: %s", tmp_uri);
-        }
-        tmp_uri = encode_uri(tmp_uri);
-    }
-
-    g_object_set(pipeline, "uri", tmp_uri.c_str(), NULL);
-    if (is_video_file(tmp_uri))
-        file_type = MEDIA_FILE_TYPE_VIDEO;
-    else if (is_audio_file(tmp_uri))
-        file_type = MEDIA_FILE_TYPE_AUDIO;
+    QString tmp_uri{uri.toString(QUrl::FullyEncoded)};
+    g_object_set(pipeline, "uri", qUtf8Printable(tmp_uri), NULL);
+    if (is_video_file(uri))
+        setMediaFileType(MEDIA_FILE_TYPE_VIDEO);
+    else if (is_audio_file(uri))
+        setMediaFileType(MEDIA_FILE_TYPE_AUDIO);
 
     request_headers = headers;
 
@@ -563,13 +607,14 @@ void gstreamer::Playbin::set_uri(
 
 void gstreamer::Playbin::setup_source(GstElement *source)
 {
-    if (source == NULL || request_headers.empty())
+    if (source == NULL || request_headers.isEmpty())
         return;
 
     if (request_headers.find("Cookie") != request_headers.end()) {
         if (g_object_class_find_property(G_OBJECT_GET_CLASS(source),
                                          "cookies") != NULL) {
-            gchar ** cookies = g_strsplit(request_headers["Cookie"].c_str(), ";", 0);
+            gchar ** cookies =
+                g_strsplit(qUtf8Printable(request_headers["Cookie"]), ";", 0);
             g_object_set(source, "cookies", cookies, NULL);
             g_strfreev(cookies);
         }
@@ -578,106 +623,75 @@ void gstreamer::Playbin::setup_source(GstElement *source)
     if (request_headers.find("User-Agent") != request_headers.end()) {
         if (g_object_class_find_property(G_OBJECT_GET_CLASS(source),
                                          "user-agent") != NULL) {
-            g_object_set(source, "user-agent", request_headers["User-Agent"].c_str(), NULL);
+            g_object_set(source, "user-agent",
+                         qUtf8Printable(request_headers["User-Agent"]), NULL);
+        }
+    }
+
+    // Re-interpret "Authorization" header into user and password properties
+    if (request_headers.find("Authorization") != request_headers.end()) {
+        QString authString = request_headers["Authorization"];
+
+        if (authString.startsWith("Basic ")) {
+            authString = authString.mid(6);
+        }
+
+        QByteArray decodedAuth = QByteArray::fromBase64(authString.toUtf8());
+        int colonPos = decodedAuth.indexOf(':');
+        if (colonPos >= 0) {
+            const QByteArray user = decodedAuth.left(colonPos);
+            const QByteArray pass = decodedAuth.mid(colonPos + 1);
+
+            if (g_object_class_find_property(G_OBJECT_GET_CLASS(source), "user-id") != NULL) {
+                g_object_set(source, "user-id", user.constData(), NULL);
+            }
+            if (g_object_class_find_property(G_OBJECT_GET_CLASS(source), "user-pw") != NULL) {
+                g_object_set(source, "user-pw", pass.constData(), NULL);
+            }
         }
     }
 }
 
-std::string gstreamer::Playbin::uri() const
+void gstreamer::Playbin::updateMediaFileType()
+{
+    int videoStreamCount = 0, audioStreamCount = 0;
+    g_object_get(pipeline, "n-video", &videoStreamCount, NULL);
+    g_object_get(pipeline, "n-audio", &audioStreamCount, NULL);
+    MH_DEBUG("streams changed: file has %d video streams and %d audio streams",
+             videoStreamCount, audioStreamCount);
+
+    if (videoStreamCount > 0)
+        setMediaFileType(MEDIA_FILE_TYPE_VIDEO);
+    else if (audioStreamCount > 0)
+        setMediaFileType(MEDIA_FILE_TYPE_AUDIO);
+}
+
+QUrl gstreamer::Playbin::uri() const
 {
     gchar* data = nullptr;
     g_object_get(pipeline, "current-uri", &data, nullptr);
 
-    std::string result((data == nullptr ? "" : data));
+    QUrl result = QUrl::fromEncoded((data == nullptr ? "" : data));
     g_free(data);
 
     return result;
 }
 
-gboolean gstreamer::Playbin::set_state_in_main_thread(gpointer user_data)
+bool gstreamer::Playbin::set_state(GstState new_state)
 {
-    MH_TRACE("");
-    auto thiz = static_cast<Playbin*>(user_data);
-    if (thiz and thiz->pipeline)
-        gst_element_set_state(thiz->pipeline, thiz->current_new_state);
-
-    // Always return false so this is a single shot function call
-    return false;
-}
-bool gstreamer::Playbin::set_state_and_wait(GstState new_state, bool use_main_thread)
-{
-    static const std::chrono::nanoseconds state_change_timeout
-    {
-        // We choose a quite high value here as tests are run under valgrind
-        // and gstreamer pipeline setup/state changes take longer in that scenario.
-        // The value does not negatively impact runtime performance.
-        std::chrono::milliseconds{5000}
-    };
-
     bool result = false;
-    GstState current, pending;
-    if (use_main_thread)
+    const auto ret = gst_element_set_state(pipeline, new_state);
+
+    MH_DEBUG("Requested state change.");
+
+    switch (ret)
     {
-        // Cache this value for the static g_idle_add handler function
-        current_new_state = new_state;
-        g_idle_add((GSourceFunc) gstreamer::Playbin::set_state_in_main_thread, (gpointer) this);
-
-        MH_DEBUG("Requested state change in main thread context.");
-
-        GstState current, pending;
-        result = GST_STATE_CHANGE_SUCCESS == gst_element_get_state(
-                pipeline,
-                &current,
-                &pending,
-                state_change_timeout.count());
-    }
-    else
-    {
-        const auto ret = gst_element_set_state(pipeline, new_state);
-
-        MH_DEBUG("Requested state change not using main thread context.");
-
-        switch (ret)
-        {
-            case GST_STATE_CHANGE_FAILURE:
-                result = false; break;
-            case GST_STATE_CHANGE_NO_PREROLL:
-            case GST_STATE_CHANGE_SUCCESS:
-                result = true; break;
-            case GST_STATE_CHANGE_ASYNC:
-                result = GST_STATE_CHANGE_SUCCESS == gst_element_get_state(
-                        pipeline,
-                        &current,
-                        &pending,
-                        state_change_timeout.count());
-                break;
-        }
-    }
-
-    // We only should query the pipeline if we actually succeeded in
-    // setting the requested state.
-    if (result && new_state == GST_STATE_PLAYING)
-    {
-        // Get the video height/width from the video sink
-        try
-        {
-            const core::ubuntu::media::video::Dimensions new_dimensions = get_video_dimensions();
-            emit_video_dimensions_changed_if_changed(new_dimensions);
-            cached_video_dimensions = new_dimensions;
-        }
-        catch (const std::exception& e)
-        {
-            MH_WARNING("Problem querying video dimensions: %s", e.what());
-        }
-        catch (...)
-        {
-            MH_WARNING("Problem querying video dimensions.");
-        }
-
-#ifdef DEBUG_GST_PIPELINE
-        MH_DEBUG("Dumping pipeline dot file");
-        GST_DEBUG_BIN_TO_DOT_FILE((GstBin*)pipeline, GST_DEBUG_GRAPH_SHOW_ALL, "pipeline");
-#endif
+    case GST_STATE_CHANGE_FAILURE:
+        result = false; break;
+    case GST_STATE_CHANGE_NO_PREROLL:
+    case GST_STATE_CHANGE_SUCCESS:
+    case GST_STATE_CHANGE_ASYNC:
+        result = true; break;
     }
 
     return result;
@@ -693,7 +707,7 @@ bool gstreamer::Playbin::seek(const std::chrono::microseconds& ms)
                 ms.count() * 1000);
 }
 
-core::ubuntu::media::video::Dimensions gstreamer::Playbin::get_video_dimensions() const
+QSize gstreamer::Playbin::get_video_dimensions() const
 {
     if (not video_sink || not is_supported_video_sink())
         throw std::runtime_error
@@ -725,165 +739,44 @@ core::ubuntu::media::video::Dimensions gstreamer::Playbin::get_video_dimensions(
     gst_iterator_free(iter);
 
     // TODO(tvoss): We should probably check here if width and height are valid.
-    return core::ubuntu::media::video::Dimensions
-    {
-        core::ubuntu::media::video::Height{video_height},
-        core::ubuntu::media::video::Width{video_width}
-    };
+    return QSize(video_width, video_height);
 }
 
-void gstreamer::Playbin::emit_video_dimensions_changed_if_changed(const core::ubuntu::media::video::Dimensions &new_dimensions)
+QString gstreamer::Playbin::file_info_from_uri(const QUrl &uri) const
 {
-    // Only signal the application layer if the dimensions have in fact changed. This might happen
-    // if reusing the same media-hub session to play two different video sources.
-    if (new_dimensions != cached_video_dimensions)
-        signals.on_video_dimensions_changed(new_dimensions);
+    QMimeType mimeType = QMimeDatabase().mimeTypeForUrl(uri);
+    return mimeType.name();
 }
 
-std::string gstreamer::Playbin::file_info_from_uri(const std::string& uri) const
+QString gstreamer::Playbin::get_file_content_type(const QUrl &uri) const
 {
-    GError *error = nullptr;
-    // Open the URI and get the mime type from it. This will currently only work for
-    // a local file
-    std::unique_ptr<GFile, void(*)(void *)> file(
-            g_file_new_for_uri(uri.c_str()), g_object_unref);
-    std::unique_ptr<GFileInfo, void(*)(void *)> info(
-            g_file_query_info(
-                file.get(), G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE ","
-                G_FILE_ATTRIBUTE_ETAG_VALUE, G_FILE_QUERY_INFO_NONE,
-                /* cancellable */ NULL, &error),
-            g_object_unref);
-    if (!info)
-        return std::string();
+    if (uri.isEmpty())
+        return QString();
 
-    std::string content_type = g_file_info_get_attribute_string(
-                info.get(), G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE);
-    if (content_type.empty())
-        return std::string();
-
-    if (content_type == "application/octet-stream")
-    {
-        std::unique_ptr<GFileInfo, void(*)(void *)> full_info(
-                    g_file_query_info(file.get(), G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE,
-                                      G_FILE_QUERY_INFO_NONE,
-                                      /* cancellable */ NULL, &error),g_object_unref);
-
-        if (!full_info)
-            return std::string();
-
-        content_type = g_file_info_get_attribute_string(
-                    full_info.get(), G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE);
-        if (content_type.empty())
-            return std::string();
-    }
-    return content_type;
-}
-
-std::string gstreamer::Playbin::encode_uri(const std::string& uri) const
-{
-    if (uri.empty())
-        return std::string();
-
-    std::string encoded_uri;
-    media::UriCheck::Ptr uri_check{std::make_shared<media::UriCheck>(uri)};
-    gchar *uri_scheme = g_uri_parse_scheme(uri.c_str());
-    // We have a URI and it is already percent encoded
-    if (uri_scheme and strlen(uri_scheme) > 0 and uri_check->is_encoded())
-    {
-        MH_DEBUG("Is a URI and is already percent encoded");
-        encoded_uri = uri;
-    }
-    // We have a URI but it's not already percent encoded
-    else if (uri_scheme and strlen(uri_scheme) > 0 and !uri_check->is_encoded())
-    {
-        MH_DEBUG("Is a URI and is not already percent encoded");
-        gchar *encoded = g_uri_escape_string(uri.c_str(),
-                                                   "!$&'()*+,;=:/?[]@", // reserved chars
-                                                   TRUE); // Allow UTF-8 chars
-        if (!encoded)
-        {
-            g_free(uri_scheme);
-            return std::string();
-        }
-        encoded_uri.assign(encoded);
-        g_free(encoded);
-    }
-    else // We have a path and not a URI. Turn it into a full URI and encode it
-    {
-        GError *error = nullptr;
-        MH_DEBUG("Is a path and is not already percent encoded");
-        gchar *str = g_filename_to_uri(uri.c_str(), nullptr, &error);
-        if (!str)
-        {
-            g_free(uri_scheme);
-            return std::string();
-        }
-        encoded_uri.assign(str);
-        g_free(str);
-        if (error != nullptr)
-        {
-            MH_WARNING("Failed to get actual track content type: %s", error->message);
-            g_error_free(error);
-            g_free(str);
-            g_free(uri_scheme);
-            return std::string("audio/video/");
-        }
-        gchar *escaped = g_uri_escape_string(encoded_uri.c_str(),
-                                         "!$&'()*+,;=:/?[]@", // reserved chars
-                                         TRUE); // Allow UTF-8 chars
-        if (!escaped)
-        {
-            g_free(uri_scheme);
-            return std::string();
-        }
-        encoded_uri.assign(escaped);
-        g_free(escaped);
-    }
-
-    g_free(uri_scheme);
-
-    return encoded_uri;
-}
-
-std::string gstreamer::Playbin::decode_uri(const std::string& uri) const
-{
-    if (uri.empty())
-        return std::string();
-
-    gchar *decoded_gchar = g_uri_unescape_string(uri.c_str(), nullptr);
-    if (!decoded_gchar)
-        return std::string();
-
-    const std::string decoded{decoded_gchar};
-    g_free(decoded_gchar);
-    return decoded;
-}
-
-std::string gstreamer::Playbin::get_file_content_type(const std::string& uri) const
-{
-    if (uri.empty())
-        return std::string();
-
-    const std::string encoded_uri{encode_uri(uri)};
-
-    const std::string content_type {file_info_from_uri(encoded_uri)};
-    if (content_type.empty())
+    QString content_type {file_info_from_uri(uri)};
+    if (content_type.isEmpty())
     {
         MH_WARNING("Failed to get actual track content type");
-        return std::string("audio/video/");
+        return QString("audio/video/");
     }
 
-    MH_INFO("Found content type: %s", content_type);
+    MH_INFO("Found content type: %s", qUtf8Printable(content_type));
 
+    if (content_type == "video/3gpp") {
+        /* ogg files recorded by messaging app as detected as video/3gpp,
+         * which causes the playback to fail. Hack around it: */
+        MH_INFO("Hack: remapping to audio/3gpp");
+        content_type = "audio/3gpp";
+    }
     return content_type;
 }
 
-bool gstreamer::Playbin::is_audio_file(const std::string& uri) const
+bool gstreamer::Playbin::is_audio_file(const QUrl &uri) const
 {
-    if (uri.empty())
+    if (uri.isEmpty())
         return false;
 
-    if (get_file_content_type(uri).find("audio/") == 0)
+    if (get_file_content_type(uri).startsWith("audio/"))
     {
         MH_INFO("Found audio content");
         return true;
@@ -892,12 +785,12 @@ bool gstreamer::Playbin::is_audio_file(const std::string& uri) const
     return false;
 }
 
-bool gstreamer::Playbin::is_video_file(const std::string& uri) const
+bool gstreamer::Playbin::is_video_file(const QUrl &uri) const
 {
-    if (uri.empty())
+    if (uri.isEmpty())
         return false;
 
-    if (get_file_content_type(uri).find("video/") == 0)
+    if (get_file_content_type(uri).startsWith("video/"))
     {
         MH_INFO("Found video content");
         return true;
@@ -906,9 +799,9 @@ bool gstreamer::Playbin::is_video_file(const std::string& uri) const
     return false;
 }
 
-gstreamer::Playbin::MediaFileType gstreamer::Playbin::media_file_type() const
+gstreamer::Playbin::MediaFileType gstreamer::Playbin::mediaFileType() const
 {
-    return file_type;
+    return m_fileType;
 }
 
 bool gstreamer::Playbin::can_play_streams() const
@@ -934,6 +827,8 @@ bool gstreamer::Playbin::connect_to_consumer(void)
 {
     static const char *local_socket = "media-hub-server";
     static const char *consumer_socket = "media-consumer";
+
+    using namespace std;
 
     int len;
     struct sockaddr_un local, remote;
@@ -971,7 +866,7 @@ bool gstreamer::Playbin::connect_to_consumer(void)
     remote.sun_path[0] = '\0';
     strcpy(remote.sun_path + 1, remote_ss.str().c_str());
     len = sizeof(remote.sun_family) + remote_ss.str().length() + 1;
-    if (connect(sock_consumer, (struct sockaddr *) &remote, len) == -1)
+    if (::connect(sock_consumer, (struct sockaddr *) &remote, len) == -1)
     {
         MH_ERROR("Cannot connect to consumer: %s (%d)", strerror(errno), errno);
         close(sock_consumer);
@@ -1017,4 +912,11 @@ void gstreamer::Playbin::send_frame_ready(void)
     if (send (sock_consumer, &ready, sizeof ready, 0) == -1)
         MH_ERROR("Error when sending frame ready flag to client: %s (%d)",
                  strerror(errno), errno);
+}
+
+void gstreamer::Playbin::setMediaFileType(MediaFileType fileType)
+{
+    if (fileType == m_fileType) return;
+    m_fileType = fileType;
+    Q_EMIT mediaFileTypeChanged();
 }
