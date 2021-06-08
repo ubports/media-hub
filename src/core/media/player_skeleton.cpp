@@ -85,7 +85,15 @@ PlayerSkeletonPrivate::PlayerSkeletonPrivate(
     QObject::connect(impl, &PlayerImplementation::aboutToFinish,
                      q, &PlayerSkeleton::AboutToFinish);
     QObject::connect(impl, &PlayerImplementation::endOfStream,
-                     q, &PlayerSkeleton::EndOfStream);
+                     q, [q, impl]() {
+        /* For compatibility with the old media-hub (and the music
+         * app), do not emit the signal unless this is the very
+         * last track of the playlist.
+         */
+        if (!impl->canGoNext()) {
+            Q_EMIT q->EndOfStream();
+        }
+    });
     QObject::connect(impl, &PlayerImplementation::playbackStatusChanged,
                      q, [q,impl]() {
         Q_EMIT q->PlaybackStatusChanged(impl->playbackStatus());

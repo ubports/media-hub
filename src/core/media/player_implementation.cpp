@@ -449,7 +449,7 @@ PlayerImplementationPrivate::PlayerImplementationPrivate(
         if (prev_track_id != m_trackList->current() && !uri.isEmpty())
         {
             MH_INFO("Advancing to next track on playbin: %s", qUtf8Printable(uri.toString()));
-            static const bool do_pipeline_reset = false;
+            static const bool do_pipeline_reset = true;
             m_engine->open_resource_for_uri(uri, do_pipeline_reset);
         }
 
