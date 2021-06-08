@@ -61,6 +61,7 @@ class TestMediaHub:
 
         assert player.wait_for_prop('PlaybackStatus', 'Playing')
         assert player.wait_for_prop('PlaybackStatus', 'Stopped')
+        assert player.wait_for_signal('EndOfStream')
 
         # Check that powerd was invoked
         powerd = media_hub_service_full.powerd
@@ -243,3 +244,29 @@ class TestMediaHub:
         assert player.get_prop('IsAudioSource') == expected_is_audio
         assert player.get_prop('IsVideoSource') == expected_is_video
         httpd.server_close()
+
+    def test_play_track_list(
+            self, bus_obj, media_hub_service_full, current_path,
+            data_path, dbus_monitor):
+        media_hub = MediaHub.Service(bus_obj)
+        (object_path, uuid) = media_hub.create_session()
+        player = MediaHub.Player(bus_obj, object_path)
+        track_list = MediaHub.TrackList(player)
+
+        audio_file1 = 'file://' + str(data_path.joinpath('test-audio.ogg'))
+        track_list.add_track(audio_file1)
+        audio_file2 = 'file://' + str(data_path.joinpath('test-audio-1.ogg'))
+        track_list.add_track(audio_file2)
+
+        assert player.wait_for_prop('CanGoNext', True)
+        assert player.wait_for_prop('CanGoPrevious', False)
+        assert player.get_prop('IsAudioSource') == True
+
+        player.play()
+
+        assert player.wait_for_prop('PlaybackStatus', 'Playing')
+        # The first track will finish soon
+        assert player.wait_for_signal('AboutToFinish')
+        # Next/Prev properties will swap:
+        assert player.wait_for_prop('CanGoNext', False)
+        assert player.wait_for_prop('CanGoPrevious', True)
