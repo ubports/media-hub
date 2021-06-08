@@ -602,6 +602,13 @@ void gstreamer::Playbin::set_uri(
 
     request_headers = headers;
 
+    if (!tmp_uri.isEmpty()) {
+        /* Setting the pipeline to "paused" to let GStreamer inspect the media
+         * and report the number of audio and video streams
+         */
+        gst_element_set_state(pipeline, GST_STATE_PAUSED);
+    }
+
     g_free(current_uri);
 }
 
