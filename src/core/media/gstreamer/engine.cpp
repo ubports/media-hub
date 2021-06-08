@@ -89,7 +89,8 @@ public:
                 const media::Player::Error e = media::Player::Error::format_error;
                 Q_EMIT q->errorOccurred(e);
             } else if (status == media::Player::PlaybackStatus::paused &&
-                       q->state() == Engine::State::playing) {
+                       (q->state() == Engine::State::ready ||
+                        q->state() == Engine::State::playing)) {
                 /* This is a spontaneus state change happening during the
                  * playbin initialization; we can ignore it. */
             } else {
