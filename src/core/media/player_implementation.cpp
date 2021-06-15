@@ -329,7 +329,6 @@ public:
     std::atomic<int> system_wakelock_count;
     std::atomic<int> display_wakelock_count;
     Engine::State previous_state;
-    bool m_autoMovingToNextTrack = false;
     std::atomic<bool> doing_abandon;
     // Initialize default values for Player interface properties
     bool m_canPlay = false;
@@ -435,25 +434,11 @@ PlayerImplementationPrivate::PlayerImplementationPrivate(
         if (doing_abandon)
             return;
 
-        // Prevent on_go_to_track from executing as it's not needed in this case. on_go_to_track
-        // (see the lambda below) is only needed when the client explicitly calls next() not during
-        // the about_to_finish condition
-        m_autoMovingToNextTrack = true;
-
         Q_EMIT q->endOfStream();
 
-        const media::Track::Id prev_track_id = m_trackList->current();
         // Make sure that the TrackList keeps advancing. The logic for what gets played next,
         // if anything at all, occurs in TrackListSkeleton::next()
-        const QUrl uri = m_trackList->query_uri_for_track(m_trackList->next());
-        if (prev_track_id != m_trackList->current() && !uri.isEmpty())
-        {
-            MH_INFO("Advancing to next track on playbin: %s", qUtf8Printable(uri.toString()));
-            static const bool do_pipeline_reset = true;
-            m_engine->open_resource_for_uri(uri, do_pipeline_reset);
-        }
-
-        m_autoMovingToNextTrack = false;
+        m_trackList->next();
     });
 
     QObject::connect(m_engine.data(), &Engine::clientDisconnected,
@@ -488,8 +473,6 @@ PlayerImplementationPrivate::PlayerImplementationPrivate(
     QObject::connect(m_trackList.data(), &TrackListImplementation::onGoToTrack,
                      q, [this](const media::Track::Id &id)
     {
-        if (m_autoMovingToNextTrack) return;
-
         // Store whether we should restore the current playing state after loading the new uri
         const bool auto_play = m_engine->playbackStatus() == media::Player::playing;
 

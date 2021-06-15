@@ -97,6 +97,9 @@ class Player(object):
         for cb in self.__signal_callbacks:
             cb(signal_name, *args)
 
+    def clear_signals(self):
+        self.signals = []
+
     def wait_for_signal(self, name, *args, timeout=3000):
         match = [name, *args]
         if match in self.signals:
@@ -124,6 +127,9 @@ class Player(object):
         self.loop.run()
         self.unsubscribe_properties_changed(check_value)
         return True if self.props.get(name) == value else False
+
+    def set_prop(self, name, value):
+        return self.__properties.Set(self.interface_name, name, value)
 
     def get_prop(self, name):
         return self.__properties.Get(self.interface_name, name)
