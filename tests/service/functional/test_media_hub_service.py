@@ -270,3 +270,24 @@ class TestMediaHub:
         # Next/Prev properties will swap:
         assert player.wait_for_prop('CanGoNext', False)
         assert player.wait_for_prop('CanGoPrevious', True)
+
+    def test_loop(self, bus_obj, media_hub_service_full, data_path):
+        media_hub = MediaHub.Service(bus_obj)
+        (object_path, uuid) = media_hub.create_session()
+        player = MediaHub.Player(bus_obj, object_path)
+
+        player.set_prop('LoopStatus', dbus.String('Track', variant_level=1))
+        assert player.get_prop('LoopStatus') == 'Track'
+        assert player.get_prop('TypedLoopStatus') == 1
+
+        audio_file = 'file://' + str(data_path.joinpath('test-audio.ogg'))
+        player.open_uri(audio_file)
+
+        player.play()
+        assert player.wait_for_prop('PlaybackStatus', 'Playing')
+        assert player.wait_for_signal('AboutToFinish')
+        assert player.wait_for_prop('PlaybackStatus', 'Stopped')
+        player.clear_signals()
+        assert player.wait_for_prop('PlaybackStatus', 'Playing')
+        assert player.wait_for_signal('AboutToFinish')
+        assert player.wait_for_prop('PlaybackStatus', 'Stopped')
