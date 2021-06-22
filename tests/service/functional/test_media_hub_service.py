@@ -291,3 +291,30 @@ class TestMediaHub:
         assert player.wait_for_prop('PlaybackStatus', 'Playing')
         assert player.wait_for_signal('AboutToFinish')
         assert player.wait_for_prop('PlaybackStatus', 'Stopped')
+
+    def test_track_reset(self, bus_obj, media_hub_service_full, data_path):
+        """ Check that if the track list gets reset while a track is paused
+        and a new track is added, when the playback starts again we are
+        playing the new track, and not the old one. """
+        media_hub = MediaHub.Service(bus_obj)
+        (object_path, uuid) = media_hub.create_session()
+        player = MediaHub.Player(bus_obj, object_path)
+        track_list = MediaHub.TrackList(player)
+
+        audio_file1 = 'file://' + str(data_path.joinpath('test-audio-1.ogg'))
+        track_list.add_track(audio_file1)
+
+        player.play()
+        assert player.wait_for_prop('PlaybackStatus', 'Playing')
+
+        # pause it, reset the track list, and add a new file
+        player.pause()
+        track_list.reset()
+        audio_file2 = 'file://' + str(data_path.joinpath('test-audio.ogg'))
+        track_list.add_track(audio_file2)
+
+        player.play()
+        assert player.wait_for_prop('PlaybackStatus', 'Playing')
+        metadata = player.get_prop('Metadata')
+        # The artist for the first track would be "Ezwa"
+        assert metadata['xesam:artist'] == 'Test'
