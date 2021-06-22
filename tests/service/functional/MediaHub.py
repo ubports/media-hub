@@ -116,7 +116,7 @@ class Player(object):
         return True if match in self.signals else False
 
     def wait_for_prop(self, name, value, timeout=3000):
-        if self.props.get(name) == value:
+        if self.get_prop(name) == value:
             return True
         timer_id = GLib.timeout_add(timeout, self.loop.quit)
         def check_value(interface, changed, invalidated):
