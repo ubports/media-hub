@@ -143,6 +143,9 @@ class Player(object):
     def play(self):
         self.__player.Play()
 
+    def pause(self):
+        self.__player.Pause()
+
     def on_properties_changed(self, callback):
         self.__prop_callbacks.append(callback)
 
@@ -168,6 +171,9 @@ class TrackList(object):
 
     def add_track(self, track_uri, position=End, set_as_current=False):
         self.__track_list.AddTrack(track_uri, position, set_as_current)
+
+    def reset(self):
+        self.__track_list.Reset()
 
 
 class MprisPlayer(Player):
