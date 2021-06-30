@@ -221,7 +221,7 @@ public:
             MH_INFO("Calling d->m_engine->open_resource_for_uri() for first track added only: %s",
                     qUtf8Printable(uri.toString()));
             MH_INFO("\twith a Track::Id: %s", qUtf8Printable(id));
-            static const bool do_pipeline_reset = false;
+            static const bool do_pipeline_reset = true;
             m_engine->open_resource_for_uri(uri, do_pipeline_reset);
         }
     }
