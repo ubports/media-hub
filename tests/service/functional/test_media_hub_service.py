@@ -267,6 +267,7 @@ class TestMediaHub:
         assert player.wait_for_prop('PlaybackStatus', 'Playing')
         # The first track will finish soon
         assert player.wait_for_signal('AboutToFinish')
+        assert player.wait_for_prop('PlaybackStatus', 'Stopped', timeout=5000)
         # Next/Prev properties will swap:
         assert player.wait_for_prop('CanGoNext', False)
         assert player.wait_for_prop('CanGoPrevious', True)
