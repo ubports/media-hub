@@ -128,20 +128,18 @@ public:
         MH_TRACE("");
         if (q->isVideoSource())
         {
-            if (++display_wakelock_count == 1)
-            {
-                MH_INFO("Requesting new display wakelock.");
+            MH_INFO("Request display on.");
+            if (!m_holdsDisplayOn) {
                 power_state_controller->requestDisplayOn();
-                MH_INFO("Requested new display wakelock.");
+                m_holdsDisplayOn = true;
             }
         }
         else
         {
-            if (++system_wakelock_count == 1)
-            {
-                MH_INFO("Requesting new system wakelock.");
+            MH_INFO("Request system state active.");
+            if (!m_holdsSystemActive) {
                 power_state_controller->requestSystemState(media::power::SystemState::active);
-                MH_INFO("Requested new system wakelock.");
+                m_holdsSystemActive = true;
             }
         }
     }
@@ -154,19 +152,17 @@ public:
             case wakelock_clear_t::WAKELOCK_CLEAR_INACTIVE:
                 break;
             case wakelock_clear_t::WAKELOCK_CLEAR_SYSTEM:
-                // Only actually clear the system wakelock once the count reaches zero
-                if (--system_wakelock_count == 0)
-                {
-                    MH_INFO("Clearing system wakelock.");
+                MH_INFO("Release system state active.");
+                if (m_holdsSystemActive) {
                     power_state_controller->releaseSystemState(media::power::SystemState::active);
+                    m_holdsSystemActive = false;
                 }
                 break;
             case wakelock_clear_t::WAKELOCK_CLEAR_DISPLAY:
-                // Only actually clear the display wakelock once the count reaches zero
-                if (--display_wakelock_count == 0)
-                {
-                    MH_INFO("Clearing display wakelock.");
+                MH_INFO("Release display on.");
+                if (m_holdsDisplayOn) {
                     power_state_controller->releaseDisplayOn();
+                    m_holdsDisplayOn = false;
                 }
                 break;
             case wakelock_clear_t::WAKELOCK_CLEAR_INVALID:
@@ -185,16 +181,8 @@ public:
     void clear_wakelocks()
     {
         // Clear both types of wakelocks (display and system)
-        if (system_wakelock_count.load() > 0)
-        {
-            system_wakelock_count = 1;
-            clear_wakelock(wakelock_clear_t::WAKELOCK_CLEAR_SYSTEM);
-        }
-        if (display_wakelock_count.load() > 0)
-        {
-            display_wakelock_count = 1;
-            clear_wakelock(wakelock_clear_t::WAKELOCK_CLEAR_DISPLAY);
-        }
+        clear_wakelock(wakelock_clear_t::WAKELOCK_CLEAR_SYSTEM);
+        clear_wakelock(wakelock_clear_t::WAKELOCK_CLEAR_DISPLAY);
     }
 
     void on_client_died()
@@ -326,8 +314,8 @@ public:
 
     QScopedPointer<Engine> m_engine;
     QSharedPointer<TrackListImplementation> m_trackList;
-    std::atomic<int> system_wakelock_count;
-    std::atomic<int> display_wakelock_count;
+    bool m_holdsSystemActive = false;
+    bool m_holdsDisplayOn = false;
     Engine::State previous_state;
     std::atomic<bool> doing_abandon;
     // Initialize default values for Player interface properties
@@ -362,8 +350,6 @@ PlayerImplementationPrivate::PlayerImplementationPrivate(
     // dbus::types::ObjectPath(config.parent.session->path().as_string() + "/TrackList")),
     m_trackList(QSharedPointer<TrackListImplementation>::create(
         m_engine->metadataExtractor())),
-    system_wakelock_count(0),
-    display_wakelock_count(0),
     previous_state(Engine::State::stopped),
     doing_abandon(false),
     q_ptr(q)
