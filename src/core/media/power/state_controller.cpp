@@ -182,7 +182,9 @@ public:
 private:
     friend class StateController;
     DisplayInterface m_display;
+    int m_displayLockCount = 0;
     SystemStateInterface m_system;
+    int m_systemLockCount = 0;
     QTimer m_displayReleaseTimer;
 };
 
@@ -229,29 +231,41 @@ QSharedPointer<StateController> StateController::instance()
 void StateController::requestDisplayOn()
 {
     Q_D(StateController);
-    d->m_display.requestDisplayOn([this]() {
-        Q_EMIT displayOnAcquired();
-    });
+    if (++d->m_displayLockCount == 1) {
+        MH_INFO("Requesting new display wakelock.");
+        d->m_display.requestDisplayOn([this]() {
+            Q_EMIT displayOnAcquired();
+        });
+    }
 }
 
 void StateController::releaseDisplayOn()
 {
     Q_D(StateController);
-    d->m_displayReleaseTimer.start();
+    if (--d->m_displayLockCount == 0) {
+        MH_INFO("Clearing display wakelock.");
+        d->m_displayReleaseTimer.start();
+    }
 }
 
 void StateController::requestSystemState(SystemState state)
 {
     Q_D(StateController);
-    d->m_system.requestSystemState(state, [this](SystemState state) {
-        Q_EMIT systemStateAcquired(state);
-    });
+    if (++d->m_systemLockCount == 1) {
+        MH_INFO("Requesting new system wakelock.");
+        d->m_system.requestSystemState(state, [this](SystemState state) {
+            Q_EMIT systemStateAcquired(state);
+        });
+    }
 }
 
 void StateController::releaseSystemState(SystemState state)
 {
     Q_D(StateController);
-    d->m_system.releaseSystemState(state, [this](SystemState state) {
-        Q_EMIT systemStateReleased(state);
-    });
+    if (--d->m_systemLockCount == 0) {
+        MH_INFO("Clearing system wakelock.");
+        d->m_system.releaseSystemState(state, [this](SystemState state) {
+            Q_EMIT systemStateReleased(state);
+        });
+    }
 }
