@@ -320,7 +320,7 @@ struct audio::PulseAudioOutputObserver::Private
             const bool available = pa::is_port_available_on_sink(info, std::get<0>(element));
             if (available)
             {
-                std::get<1>(element) = audio::OutputState::Earpiece;
+                setOutputState(element, audio::OutputState::Earpiece);
                 continue;
             }
 
