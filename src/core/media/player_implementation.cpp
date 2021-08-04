@@ -379,6 +379,19 @@ PlayerImplementationPrivate::PlayerImplementationPrivate(
         onStateChanged(m_engine->state());
     });
 
+    QObject::connect(m_engine.data(), &Engine::isVideoSourceChanged,
+                     q, [this]() {
+        // Video streams on remote media are detected only after the playback
+        // has started; in that case, when the playback started we only
+        // requested the system wakelock, and now (if we are in "playing" state
+        // and the media has a video stream) we need to request the display
+        // lock too.
+        if (m_engine->state() == Engine::State::playing) {
+            MH_INFO("Streams changed, updating power/display locks");
+            request_power_state();
+        }
+    });
+
     // Initialize default values for Player interface properties
     m_engine->setAudioStreamRole(Player::AudioStreamRole::multimedia);
     m_engine->setLifetime(Player::Lifetime::normal);
