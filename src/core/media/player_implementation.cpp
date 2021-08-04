@@ -171,13 +171,6 @@ public:
         }
     }
 
-    wakelock_clear_t current_wakelock_type() const
-    {
-        Q_Q(const PlayerImplementation);
-        return q->isVideoSource() ?
-            wakelock_clear_t::WAKELOCK_CLEAR_DISPLAY : wakelock_clear_t::WAKELOCK_CLEAR_SYSTEM;
-    }
-
     void clear_wakelocks()
     {
         // Clear both types of wakelocks (display and system)
@@ -547,8 +540,7 @@ PlayerImplementationPrivate::PlayerImplementationPrivate(
     m_wakeLockTimer.setInterval(wakelockTimeout);
     m_wakeLockTimer.setTimerType(Qt::VeryCoarseTimer);
     m_wakeLockTimer.callOnTimeout(q, [this]() {
-        auto wakelock_type = current_wakelock_type();
-        clear_wakelock(wakelock_type);
+        clear_wakelocks();
     });
 }
 
