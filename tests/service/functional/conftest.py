@@ -181,6 +181,31 @@ def powerd(request, bus_obj):
 
 
 @pytest.fixture(scope="function")
+def unityScreen(request, bus_obj):
+    """Mocks the com.canonical.Unity.Screen service"""
+    bus_name = interface_name = 'com.canonical.Unity.Screen'
+    object_path = '/com/canonical/Unity/Screen'
+    mock = dbusmock.DBusTestCase.spawn_server(bus_name,
+                                              object_path,
+                                              interface_name,
+                                              system_bus=True)
+    mock_iface = dbus.Interface(bus_obj.get_object(bus_name, object_path),
+                                dbusmock.MOCK_IFACE)
+    mock_iface.AddMethod(interface_name,
+                         'keepDisplayOn', '', 'i',
+                         'ret = 42')
+    mock_iface.AddMethod(interface_name,
+                         'removeDisplayOnRequest', 'i', '', '')
+
+    def teardown():
+        mock.terminate()
+        mock.wait()
+    request.addfinalizer(teardown)
+
+    return mock_iface
+
+
+@pytest.fixture(scope="function")
 def battery(request, bus_obj):
     """Mocks the power indicator"""
     bus_name = 'com.canonical.indicator.power'
@@ -217,16 +242,18 @@ def battery(request, bus_obj):
 
 @pytest.fixture(scope="function")
 def media_hub_service_full(request, dbus_apparmor, powerd, telepathy,
-                           battery, media_hub_service):
+                           unityScreen, battery, media_hub_service):
     class Services:
         def __init__(self, media_hub_service, dbus_apparmor, powerd,
-                     telepathy, battery):
+                     telepathy, unityScreen, battery):
             self.media_hub_service = media_hub_service
             self.dbus_apparmor = dbus_apparmor
             self.powerd = powerd
             self.telepathy = telepathy
+            self.unityScreen = unityScreen
             self.battery = battery
-    return Services(media_hub_service, dbus_apparmor, powerd, telepathy, battery)
+    return Services(media_hub_service, dbus_apparmor, powerd, telepathy,
+                    unityScreen, battery)
 
 
 @pytest.fixture(scope="session")
