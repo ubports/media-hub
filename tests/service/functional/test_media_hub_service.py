@@ -245,6 +245,54 @@ class TestMediaHub:
         assert player.get_prop('IsVideoSource') == expected_is_video
         httpd.server_close()
 
+    def test_display_lock_on_remote_media(self, bus_obj,
+                                          media_hub_service_full,
+                                          data_path):
+        request = None
+
+        class HttpHandler(HttpServer.HttpRequestHandler):
+            def do_GET(self):
+                print('HTTP server captured request!')
+                self.send_response(200)
+                self.send_header('Content-type', 'application/octet-stream')
+                self.send_header('Content-Disposition', 'attachment; filename="small.ogv"')
+                self.end_headers()
+
+                audio_file = data_path.joinpath(self.path[1:])
+                with audio_file.open('rb') as f:
+                    self.wfile.write(f.read())
+
+        httpd = HttpServer.HttpServer(HttpHandler)
+
+        media_hub = MediaHub.Service(bus_obj)
+        (object_path, uuid) = media_hub.create_session()
+        player = MediaHub.Player(bus_obj, object_path)
+
+        file_name = 'small.ogv'
+        audio_file = 'http://127.0.0.1:8000/' + file_name
+        player.open_uri(audio_file)
+        player.play()
+        httpd.handle_request()
+        assert player.wait_for_prop('PlaybackStatus', 'Playing')
+        assert player.wait_for_prop('IsVideoSource', True)
+
+        # Check that powerd was invoked
+        unityScreen = media_hub_service_full.unityScreen
+        calls = unityScreen.GetMethodCalls('keepDisplayOn')
+        assert len(calls) == 1
+
+        # Stop the playback, and expect the display lock to be removed
+        player.stop()
+        for i in range(0, 50):
+            calls = unityScreen.GetMethodCalls('removeDisplayOnRequest')
+            if calls: break
+            sleep(0.1)
+        assert len(calls) == 1
+        args = calls[0][1]
+        assert args[0] == 42
+
+        httpd.server_close()
+
     def test_play_track_list(
             self, bus_obj, media_hub_service_full, current_path,
             data_path, dbus_monitor):

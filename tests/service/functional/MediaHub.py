@@ -146,6 +146,9 @@ class Player(object):
     def pause(self):
         self.__player.Pause()
 
+    def stop(self):
+        self.__player.Stop()
+
     def on_properties_changed(self, callback):
         self.__prop_callbacks.append(callback)
 
