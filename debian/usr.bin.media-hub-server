@@ -104,6 +104,7 @@
   /**/ r,
 
   # camera click
+  /{,android/}product/media/audio/ui/camera_click.ogg r,
   /{,android/}system/media/audio/ui/camera_click.ogg r,
 
   # custom sounds
