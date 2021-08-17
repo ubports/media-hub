@@ -16,7 +16,12 @@ dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
 
 @pytest.fixture(scope="function")
-def media_hub_service(request):
+def media_hub_wakelock_timeout(request):
+    return '0'  # milliseconds
+
+
+@pytest.fixture(scope="function")
+def media_hub_service(request, media_hub_wakelock_timeout):
     """ Spawn a new media-hub service instance
     """
     service_name = "core.ubuntu.media.Service"
@@ -33,7 +38,7 @@ def media_hub_service(request):
         "mock.org.freedesktop.dbus"
     environment['CORE_UBUNTU_MEDIA_SERVICE_AUDIO_SINK_NAME'] = 'fakesink'
     environment['CORE_UBUNTU_MEDIA_SERVICE_VIDEO_SINK_NAME'] = 'fakesink'
-    environment['MEDIA_HUB_WAKELOCK_TIMEOUT'] = '0'  # milliseconds
+    environment['MEDIA_HUB_WAKELOCK_TIMEOUT'] = media_hub_wakelock_timeout
 
     # Spawn the service, and wait for it to appear on the bus
     args = [os.environ['SERVICE_BINARY']]

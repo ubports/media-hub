@@ -293,9 +293,13 @@ class TestMediaHub:
 
         httpd.server_close()
 
+    @pytest.mark.parametrize('media_hub_wakelock_timeout',
+        [
+            ('2000'),
+        ])
     def test_play_track_list(
             self, bus_obj, media_hub_service_full, current_path,
-            data_path, dbus_monitor):
+            data_path, media_hub_wakelock_timeout):
         media_hub = MediaHub.Service(bus_obj)
         (object_path, uuid) = media_hub.create_session()
         player = MediaHub.Player(bus_obj, object_path)
@@ -319,6 +323,13 @@ class TestMediaHub:
         # Next/Prev properties will swap:
         assert player.wait_for_prop('CanGoNext', False)
         assert player.wait_for_prop('CanGoPrevious', True)
+
+        # Check that the wakelock was not released between tracks
+        powerd = media_hub_service_full.powerd
+        calls = powerd.GetMethodCalls('requestSysState')
+        assert len(calls) == 1
+        calls = powerd.GetMethodCalls('clearSysState')
+        assert len(calls) == 0
 
     def test_loop(self, bus_obj, media_hub_service_full, data_path):
         media_hub = MediaHub.Service(bus_obj)
