@@ -96,6 +96,10 @@ public:
 
             MH_INFO("Requesting power state");
             request_power_state();
+            /* If this is part of a playlist, the wakelock timer was started
+             * when the previous track completed. So, we must stop it now or it
+             * will release the power state while we are playing. */
+            m_wakeLockTimer.stop();
             break;
         }
         case Engine::State::stopped:
