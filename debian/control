@@ -29,6 +29,9 @@ Build-Depends: cmake,
                libtelepathy-qt5-dev,
                libegl1-mesa-dev,
                libgl1-mesa-dev,
+               lcov <!nocheck>,
+               libqtdbusmock1-dev <!nocheck>,
+               libqtdbustest1-dev <!nocheck>,
                python3-dbus <!nocheck>,
                python3-dbusmock <!nocheck>,
                python3-gi <!nocheck>,
@@ -99,3 +102,27 @@ Description: Simple and lightweight media playback service - documentation
  DBus.
  .
  This package contains the documentation.
+
+Package: libmedia-hub-qt-dev
+Section: libdevel
+Architecture: any
+Multi-Arch: same
+Depends: libmedia-hub-qt (= ${binary:Version}),
+         ${misc:Depends},
+         qtbase5-dev,
+Description: Simple and lightweight media playback service - development files
+ Media Hub is a simple and lightweight service for media playback using
+ DBus.
+ .
+ This package contains the development files.
+
+Package: libmedia-hub-qt
+Architecture: any
+Multi-Arch: same
+Depends: ${misc:Depends},
+         ${shlibs:Depends},
+Description: Simple and lightweight media playback service
+ Media Hub is a simple and lightweight service for media playback using
+ DBus.
+ .
+ This package contains the client libraries.

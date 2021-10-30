@@ -35,6 +35,7 @@ endif()
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -fPIC -pthread")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -fno-strict-aliasing -Wextra -fPIC -pthread")
+set(CMAKE_AUTOMOC ON)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
@@ -51,6 +52,8 @@ find_package(Boost COMPONENTS filesystem log system thread program_options REQUI
 find_package(GLog)
 find_package(Qt5Core REQUIRED)
 find_package(Qt5DBus REQUIRED)
+find_package(Qt5Gui REQUIRED)
+find_package(Qt5Test REQUIRED)
 pkg_check_modules(DBUS dbus-1 REQUIRED)
 pkg_check_modules(DBUS_CPP dbus-cpp REQUIRED)
 pkg_check_modules(PROPERTIES_CPP properties-cpp REQUIRED)
@@ -90,6 +93,10 @@ endif (ENABLE_DOC)
 add_subdirectory(src)
 if (ENABLE_TESTS)
   add_subdirectory(tests)
+  enable_coverage_report(
+    TARGETS media-hub-server media-hub-service MediaHub
+    FILTER tests/* build/*
+  )
 endif (ENABLE_TESTS)
 
 # There's no nice way to format this. Thanks CMake.
