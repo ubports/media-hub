@@ -1,2 +1,2 @@
-usr/include
-usr/lib/*/lib*.so
+usr/include/core
+usr/lib/*/libmedia-hub-*.so
