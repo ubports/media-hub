@@ -54,7 +54,7 @@ FUNCTION(ENABLE_COVERAGE_REPORT)
     IF(NOT TOOL_FOUND)
         MESSAGE(STATUS "Cannot enable coverage targets because neither lcov nor gcovr are found.")
     ENDIF()
-    
+
     STRING(TOLOWER "${CMAKE_BUILD_TYPE}" COVERAGE_BUILD_TYPE)
     IF(CMAKE_COMPILER_IS_GNUCXX AND TOOL_FOUND AND "${COVERAGE_BUILD_TYPE}" MATCHES "coverage")
     
@@ -148,6 +148,10 @@ FUNCTION(ENABLE_COVERAGE_REPORT)
                               DEPENDS ${GLOBAL_DEPENDS})
         ENDIF()
                           
+        ADD_CUSTOM_TARGET(clean-coverage
+            COMMAND find ${CMAKE_BINARY_DIR} -name '*.gcda' | xargs rm -f
+        )
+
     ENDIF()
 
 ENDFUNCTION()   
