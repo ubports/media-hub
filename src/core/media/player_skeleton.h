@@ -143,7 +143,7 @@ public Q_SLOTS:
     void SetPosition(const QDBusObjectPath &trackObject,
                      quint64 microSeconds);
     void CreateVideoSink(quint32 textureId);
-    quint32 Key() const;
+    quint32 Key() const; // TODO: make this into a property
     /* The OpenUri should not return anything, but since the previous
      * implementation was returning a boolean, let's keep doing that. */
     void OpenUri(const QDBusMessage &);
