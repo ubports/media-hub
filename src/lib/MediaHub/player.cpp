@@ -31,6 +31,7 @@
 #include <QDBusPendingReply>
 #include <QDBusReply>
 #include <QDBusServiceWatcher>
+#include <QDBusVariant>
 #include <QHash>
 #include <QMetaEnum>
 #include <QVariantMap>
@@ -394,7 +395,7 @@ void PlayerPrivate::setProperty(const QString &name, const QVariant &value,
     msg.setArguments({
         QStringLiteral(MPRIS_PLAYER_INTERFACE),
         name,
-        value,
+        QVariant::fromValue(QDBusVariant(value)),
     });
     QDBusPendingCall call = m_proxy->connection().asyncCall(msg);
     onSuccessfulCompletion(call, [callback](const QDBusMessage &) {
