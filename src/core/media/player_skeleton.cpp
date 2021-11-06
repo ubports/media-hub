@@ -140,6 +140,10 @@ PlayerSkeletonPrivate::PlayerSkeletonPrivate(
                      q, &PlayerSkeleton::canGoPreviousChanged);
     QObject::connect(impl, &PlayerImplementation::mprisPropertiesChanged,
                      q, &PlayerSkeleton::canGoNextChanged);
+    QObject::connect(impl, &PlayerImplementation::isVideoSourceChanged,
+                     q, &PlayerSkeleton::isVideoSourceChanged);
+    QObject::connect(impl, &PlayerImplementation::isAudioSourceChanged,
+                     q, &PlayerSkeleton::isAudioSourceChanged);
     QObject::connect(impl, &PlayerImplementation::metadataForCurrentTrackChanged,
                      q, &PlayerSkeleton::metadataChanged);
     QObject::connect(impl, &PlayerImplementation::orientationChanged,
