@@ -54,8 +54,10 @@ class PlayerSkeleton: public QObject, protected QDBusContext
     Q_PROPERTY(bool CanGoPrevious READ canGoPrevious
                NOTIFY canGoPreviousChanged)
     Q_PROPERTY(bool CanGoNext READ canGoNext NOTIFY canGoNextChanged)
-    Q_PROPERTY(bool IsVideoSource READ isVideoSource)
-    Q_PROPERTY(bool IsAudioSource READ isAudioSource)
+    Q_PROPERTY(bool IsVideoSource READ isVideoSource
+               NOTIFY isVideoSourceChanged)
+    Q_PROPERTY(bool IsAudioSource READ isAudioSource
+               NOTIFY isAudioSourceChanged)
     Q_PROPERTY(QString PlaybackStatus READ playbackStatus
                NOTIFY PlaybackStatusChanged)
     Q_PROPERTY(QString LoopStatus READ loopStatus WRITE setLoopStatus)
@@ -162,6 +164,8 @@ Q_SIGNALS:
     void canPauseChanged();
     void canGoPreviousChanged();
     void canGoNextChanged();
+    void isVideoSourceChanged();
+    void isAudioSourceChanged();
     void metadataChanged();
     void volumeChanged();
     void orientationChanged();
