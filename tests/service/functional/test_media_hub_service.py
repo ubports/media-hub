@@ -319,7 +319,7 @@ class TestMediaHub:
         assert player.wait_for_prop('PlaybackStatus', 'Playing')
         # The first track will finish soon
         assert player.wait_for_signal('AboutToFinish')
-        assert player.wait_for_prop('PlaybackStatus', 'Stopped', timeout=5000)
+        assert player.wait_for_prop('PlaybackStatus', 'Paused', timeout=5000)
         # Next/Prev properties will swap:
         assert player.wait_for_prop('CanGoNext', False)
         assert player.wait_for_prop('CanGoPrevious', True)
@@ -346,11 +346,11 @@ class TestMediaHub:
         player.play()
         assert player.wait_for_prop('PlaybackStatus', 'Playing')
         assert player.wait_for_signal('AboutToFinish')
-        assert player.wait_for_prop('PlaybackStatus', 'Stopped')
+        assert player.wait_for_prop('PlaybackStatus', 'Paused')
         player.clear_signals()
         assert player.wait_for_prop('PlaybackStatus', 'Playing')
         assert player.wait_for_signal('AboutToFinish')
-        assert player.wait_for_prop('PlaybackStatus', 'Stopped')
+        assert player.wait_for_prop('PlaybackStatus', 'Paused')
 
     def test_track_reset(self, bus_obj, media_hub_service_full, data_path):
         """ Check that if the track list gets reset while a track is paused

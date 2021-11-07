@@ -278,6 +278,7 @@ QString PlayerSkeleton::playbackStatus() const
     case Player::PlaybackStatus::playing:
         return QStringLiteral("Playing");
     case Player::PlaybackStatus::paused:
+    case Player::PlaybackStatus::ready:
         return QStringLiteral("Paused");
     default:
         return QStringLiteral("Stopped");
