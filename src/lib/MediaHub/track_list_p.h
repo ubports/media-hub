@@ -40,7 +40,6 @@ public:
     bool ensureProxy() const;
     // TODO: change to return QDBusObjectPath
     QString remotePos(int index) const;
-    void watchErrors(const QDBusPendingCall &call);
 
     void initialize(const QVariantMap &properties);
 

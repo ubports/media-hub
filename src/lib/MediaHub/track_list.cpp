@@ -19,6 +19,7 @@
 #include "track_list_p.h"
 
 #include "dbus_constants.h"
+#include "dbus_utils.h"
 
 #include <QDBusAbstractInterface>
 #include <QDBusPendingCall>
@@ -120,21 +121,6 @@ QString TrackListPrivate::remotePos(int index) const
         QStringLiteral("/org/mpris/MediaPlayer2/TrackList/NoTrack");
 }
 
-void TrackListPrivate::watchErrors(const QDBusPendingCall &call)
-{
-    Q_Q(TrackList);
-    auto watcher = new QDBusPendingCallWatcher(call);
-    QObject::connect(watcher, &QDBusPendingCallWatcher::finished,
-                     q, [this](QDBusPendingCallWatcher *call) {
-        call->deleteLater();
-        QDBusPendingReply<void> reply(*call);
-        if (reply.isError()) {
-            qWarning() << Q_FUNC_INFO << reply.error();
-            // TODO: signal error to the client
-        }
-    });
-}
-
 void TrackListPrivate::initialize(const QVariantMap &properties)
 {
     m_canEditTracks =
@@ -150,9 +136,9 @@ void TrackListPrivate::addTrackWithUriAt(const QUrl &uri, int position,
     QDBusPendingCall call =
         m_proxy->asyncCall(QStringLiteral("AddTrack"),
                            uri.toString(), remotePos(position), makeCurrent);
-    watchErrors(call);
     m_indexForNextAddition = position;
     m_urisForNextAddition = { uri };
+    DBusUtils::waitForFinished(call);
 }
 
 void TrackListPrivate::addTracksWithUriAt(const QVector<QUrl> &uris,
@@ -167,9 +153,9 @@ void TrackListPrivate::addTracksWithUriAt(const QVector<QUrl> &uris,
     QDBusPendingCall call =
         m_proxy->asyncCall(QStringLiteral("AddTracks"),
                            urisAsStrings, remotePos(position));
-    watchErrors(call);
     m_indexForNextAddition = position;
     m_urisForNextAddition = uris;
+    DBusUtils::waitForFinished(call);
 }
 
 void TrackListPrivate::moveTrack(int index, int to)
@@ -179,7 +165,7 @@ void TrackListPrivate::moveTrack(int index, int to)
     QDBusPendingCall call =
         m_proxy->asyncCall(QStringLiteral("MoveTrack"),
                            remotePos(index), remotePos(to));
-    watchErrors(call);
+    DBusUtils::waitForFinished(call);
 }
 
 void TrackListPrivate::removeTrack(int index)
@@ -188,7 +174,7 @@ void TrackListPrivate::removeTrack(int index)
 
     QDBusPendingCall call =
         m_proxy->asyncCall(QStringLiteral("RemoveTrack"), remotePos(index));
-    watchErrors(call);
+    DBusUtils::waitForFinished(call);
 }
 
 void TrackListPrivate::goTo(int index)
@@ -197,16 +183,15 @@ void TrackListPrivate::goTo(int index)
 
     QDBusPendingCall call =
         m_proxy->asyncCall(QStringLiteral("GoTo"), remotePos(index));
-    watchErrors(call);
+    DBusUtils::waitForFinished(call);
 }
 
 void TrackListPrivate::reset()
 {
     if (!ensureProxy()) return;
 
-    QDBusPendingCall call =
-        m_proxy->asyncCall(QStringLiteral("Reset"));
-    watchErrors(call);
+    QDBusPendingCall call = m_proxy->asyncCall(QStringLiteral("Reset"));
+    DBusUtils::waitForFinished(call);
 }
 
 void TrackListPrivate::onTrackAdded(const QString &id)
