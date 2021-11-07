@@ -20,6 +20,8 @@ add_library(${CLIENT_LIB} SHARED
     ${PUBLIC_HEADERS}
 
     dbus_constants.h
+    dbus_utils.cpp
+    dbus_utils.h
     egl_video_sink.cpp
     egl_video_sink.h
     error.cpp

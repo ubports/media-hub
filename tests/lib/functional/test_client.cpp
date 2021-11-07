@@ -776,7 +776,6 @@ void TestClient::testCurrentTrack()
     QCOMPARE(calls.count(), 1);
     QCOMPARE(calls[0].args(), QVariantList { "/track/id/1" });
 
-    QVERIFY(currentTrackChanged.wait());
     QCOMPARE(currentTrackChanged.count(), 1);
     QCOMPARE(trackList.currentTrack(), 1);
 
