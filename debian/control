@@ -9,16 +9,7 @@ Build-Depends: cmake,
                graphviz <!nodoc>,
                gstreamer1.0-plugins-good,
                libapparmor-dev,
-               libboost-dev (>=1.53),
-               libboost-filesystem-dev (>=1.53),
-               libboost-log-dev (>=1.53),
-               libboost-program-options-dev (>=1.53),
-               libboost-system-dev (>=1.53),
-               libdbus-1-dev,
-               libdbus-cpp-dev (>= 4.3.0),
-               libgoogle-glog-dev,
                libhybris-dev (>=0.1.0+git20131207+e452e83-0ubuntu30),
-               libproperties-cpp-dev,
                libgstreamer1.0-dev,
                libgstreamer-plugins-base1.0-dev,
                lsb-release,
@@ -42,21 +33,6 @@ Homepage: https://launchpad.net/media-hub
 # just go ahead.  ~phablet-team will notice and sync up the code again.
 Vcs-Bzr: https://code.launchpad.net/~phablet-team/media-hub/trunk
 
-Package: libmedia-hub-dev
-Section: libdevel
-Architecture: any
-Multi-Arch: same
-Depends: libmedia-hub-common5 (= ${binary:Version}),
-         libmedia-hub-client5 (= ${binary:Version}),
-         ${misc:Depends},
-         libproperties-cpp-dev,
-Suggests: libmedia-hub-doc
-Description: Simple and lightweight media playback service - development files
- Media Hub is a simple and lightweight service for media playback using
- DBus.
- .
- This package contains the development files.
-
 Package: media-hub
 Architecture: any
 Depends: ${misc:Depends},
@@ -67,28 +43,6 @@ Description: Simple and lightweight media playback service
  DBus.
  .
  This package contains the runtime.
-
-Package: libmedia-hub-common5
-Architecture: any
-Multi-Arch: same
-Depends: ${misc:Depends},
-         ${shlibs:Depends},
-Description: Simple and lightweight media playback service
- Media Hub is a simple and lightweight service for media playback using
- DBus.
- .
- This package contains the common libraries.
-
-Package: libmedia-hub-client5
-Architecture: any
-Multi-Arch: same
-Depends: ${misc:Depends},
-         ${shlibs:Depends},
-Description: Simple and lightweight media playback service
- Media Hub is a simple and lightweight service for media playback using
- DBus.
- .
- This package contains the client libraries.
 
 Package: libmedia-hub-doc
 Section: doc
