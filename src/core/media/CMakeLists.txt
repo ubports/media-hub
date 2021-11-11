@@ -4,116 +4,12 @@ pkg_check_modules(PC_PULSE_AUDIO REQUIRED libpulse libpulse-mainloop-glib)
 pkg_check_modules(APPARMOR REQUIRED libapparmor)
 include_directories(${PC_GSTREAMER_1_0_INCLUDE_DIRS} ${HYBRIS_MEDIA_CFLAGS} ${PC_PULSE_AUDIO_INCLUDE_DIRS})
 
-# We compile with all symbols visible by default. For the shipping library, we strip
-# out all symbols that are not in core::ubuntu::media*
-set(symbol_map "${CMAKE_SOURCE_DIR}/symbols.map")
-
-file(GLOB_RECURSE MEDIA_HUB_HEADERS ${CMAKE_SOURCE_DIR}/include/*.h)
 file(GLOB MPRIS_HEADERS mpris/*.h)
-
-message(STATUS ${MEDIA_HUB_HEADERS})
 
 SET (CMAKE_INCLUDE_CURRENT_DIR ON)
 SET (CMAKE_AUTOMOC ON)
 
 add_subdirectory(telephony)
-
-add_library(
-  media-hub-common SHARED
-
-  backend.cpp
-  the_session_bus.cpp
-  util/utils.cpp
-)
-
-target_link_libraries(
-  media-hub-common
-
-  ${Boost_LIBRARIES}
-  ${DBUS_LIBRARIES}
-  ${DBUS_CPP_LDFLAGS}
-  ${PC_GSTREAMER_1_0_LIBRARIES}
-  Qt5::Core
-)
-
-target_include_directories(media-hub-common PUBLIC
-  ${Boost_INCLUDE_DIRS}
-  ${DBUS_INCLUDE_DIRS}
-  ${DBUS_CPP_INCLUDE_DIRS}
-  ${GLog_INCLUDE_DIR}
-  ${PROCESS_CPP_INCLUDE_DIRS}
-  ${PROPERTIES_CPP_INCLUDE_DIRS}
-
-  ${PROJECT_SOURCE_DIR}/include/
-)
-
-set_target_properties(
-  media-hub-common
-
-  PROPERTIES
-  VERSION ${UBUNTU_MEDIA_HUB_VERSION_MAJOR}.${UBUNTU_MEDIA_HUB_VERSION_MINOR}.${UBUNTU_MEDIA_HUB_VERSION_PATCH}
-  SOVERSION ${UBUNTU_MEDIA_HUB_VERSION_MAJOR}
-  LINK_FLAGS "${ldflags} -Wl,--version-script,${symbol_map}"
-  LINK_DEPENDS ${symbol_map}
-)
-
-add_library(
-  media-hub-client SHARED
-
-  ${MEDIA_HUB_HEADERS}
-
-  logger/logger.cpp
-
-  player.cpp
-  service.cpp
-  track.cpp
-  track_list.cpp
-  metadata.cpp
-
-  player_stub.cpp
-  service_stub.cpp
-  track_list_stub.cpp
-
-  video/hybris_gl_sink.cpp
-  video/egl_sink.cpp
-  video/platform_default_sink.cpp
-)
-
-target_include_directories(media-hub-client PUBLIC
-  ${PROJECT_SOURCE_DIR}/include/
-  ${PROJECT_SOURCE_DIR}/src/
-)
-
-set_target_properties(
-  media-hub-client
-
-  PROPERTIES
-  VERSION ${UBUNTU_MEDIA_HUB_VERSION_MAJOR}.${UBUNTU_MEDIA_HUB_VERSION_MINOR}.${UBUNTU_MEDIA_HUB_VERSION_PATCH}
-  SOVERSION ${UBUNTU_MEDIA_HUB_VERSION_MAJOR}
-  LINK_FLAGS "${ldflags} -Wl,--version-script,${symbol_map}"
-  LINK_DEPENDS ${symbol_map}
-)
-
-target_link_libraries(
-  media-hub-client
-
-  media-hub-common
-
-  ${Boost_LDFLAGS}
-  ${Boost_LIBRARIES}
-  ${DBUS_LIBRARIES}
-  ${DBUS_CPP_LDFLAGS}
-  ${GLog_LIBRARY}
-  ${GIO_LIBRARIES}
-  ${HYBRIS_MEDIA_LIBRARIES}
-  ${EGL_LIBRARIES}
-  ${GL_LIBRARIES}
-)
-
-install(
-  TARGETS media-hub-client media-hub-common
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}
-)
 
 add_library(
   media-hub-service

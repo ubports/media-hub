@@ -35,7 +35,7 @@ CONFIGURE_FLAGS += -DENABLE_DOC=OFF
 endif
 
 %:
-	dh $@ --fail-missing --parallel -Xusr/lib/libgtest -Xusr/lib/libgmock -- -B build
+	dh $@ --fail-missing --parallel -- -B build
 
 override_dh_auto_configure:
 	dh_auto_configure -- -DUBUNTU_MEDIA_HUB_VERSION_MAJOR=$(major) -DUBUNTU_MEDIA_HUB_VERSION_MINOR=$(minor) -DUBUNTU_MEDIA_HUB_VERSION_PATCH=$(patch) $(CONFIGURE_FLAGS)
