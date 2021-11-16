@@ -152,19 +152,23 @@ void DBusPropertyNotifierPrivate::deliverNotifySignal()
     for (int propertyIndex: m_changedPropertyIndexes) {
         const QMetaProperty &p = m_properties[propertyIndex];
         const QVariant value = p.read(m_target);
-        changedProperties.insert(p.name(), value);
-        m_lastValues.insert(p.name(), value);
+        if (m_lastValues.value(p.name()) != value) {
+            changedProperties.insert(p.name(), value);
+            m_lastValues.insert(p.name(), value);
+        }
     }
 
-    QDBusMessage msg = QDBusMessage::createSignal(m_objectPath,
-            QStringLiteral("org.freedesktop.DBus.Properties"),
-            QStringLiteral("PropertiesChanged"));
-    msg.setArguments({
-        m_interface,
-        changedProperties,
-        QStringList {},
-    });
-    m_connection.send(msg);
+    if (!changedProperties.isEmpty()) {
+        QDBusMessage msg = QDBusMessage::createSignal(m_objectPath,
+                QStringLiteral("org.freedesktop.DBus.Properties"),
+                QStringLiteral("PropertiesChanged"));
+        msg.setArguments({
+            m_interface,
+            changedProperties,
+            QStringList {},
+        });
+        m_connection.send(msg);
+    }
 
     m_changedPropertyIndexes.clear();
 }
