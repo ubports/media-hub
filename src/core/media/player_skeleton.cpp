@@ -59,6 +59,7 @@ public:
 private:
     friend class PlayerSkeleton;
     PlayerImplementation *m_player;
+    QScopedPointer<DBusPropertyNotifier> m_propertyNotifier;
     QDBusConnection m_connection;
     media::apparmor::ubuntu::RequestContextResolver::Ptr request_context_resolver;
     media::apparmor::ubuntu::RequestAuthenticator::Ptr request_authenticator;
@@ -201,6 +202,11 @@ void PlayerSkeletonPrivate::openUri(const QDBusMessage &in,
             }
         }
 
+        /* Before sending the reply, emit any pending property notifications;
+         * in this way, by the time the client gets the reply, it will also
+         * have all the properties up to date.
+         */
+        m_propertyNotifier->notify();
         bus.send(reply);
     });
 }
@@ -227,7 +233,8 @@ const PlayerImplementation *PlayerSkeleton::player() const {
 bool PlayerSkeleton::registerAt(const QString &objectPath)
 {
     Q_D(PlayerSkeleton);
-    new DBusPropertyNotifier(d->m_connection, objectPath, this);
+    d->m_propertyNotifier.reset(new DBusPropertyNotifier(d->m_connection,
+                                                         objectPath, this));
     return d->m_connection.registerObject(
             objectPath,
             this,
