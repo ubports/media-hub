@@ -478,8 +478,7 @@ void TestClient::testOpenUri()
     QVERIFY(dbusHeaders.isEmpty());
 
     if (!errorName.isEmpty()) {
-        QVERIFY(errorOccurred.wait());
-        QCOMPARE(errorOccurred.count(), 1);
+        QTRY_COMPARE(errorOccurred.count(), 1);
         const Error error = errorOccurred.at(0).at(0).value<Error>();
         QVERIFY(error.isError());
         QCOMPARE(int(error.code()), expectedCode);

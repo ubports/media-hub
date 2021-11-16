@@ -19,6 +19,7 @@
 #include "player.h"
 
 #include "dbus_constants.h"
+#include "dbus_utils.h"
 #include "error_p.h"
 #include "track_list_p.h"
 #include "video_sink_p.h"
@@ -100,6 +101,9 @@ public:
     void call(const QString &method,
               const QVariant &arg1 = QVariant(),
               const QVariant &arg2 = QVariant());
+    void blockingCall(const QString &method,
+                      const QVariant &arg1 = QVariant(),
+                      const QVariant &arg2 = QVariant());
     VideoSink &createGLTextureVideoSink(uint32_t textureId);
 
 private:
@@ -443,6 +447,17 @@ void PlayerPrivate::call(const QString &method,
     watchErrors(call);
 }
 
+void PlayerPrivate::blockingCall(const QString &method,
+                                 const QVariant &arg1, const QVariant &arg2)
+{
+    Q_Q(Player);
+    QDBusPendingCall call = m_proxy->asyncCall(method, arg1, arg2);
+    bool ok = DBusUtils::waitForFinished(call);
+    if (Q_UNLIKELY(!ok)) {
+        Q_EMIT q->errorOccurred(errorFromDBus(call.reply()));
+    }
+}
+
 VideoSink &PlayerPrivate::createGLTextureVideoSink(uint32_t textureId)
 {
     Q_Q(Player);
@@ -501,8 +516,8 @@ VideoSink &Player::createGLTextureVideoSink(uint32_t textureId)
 void Player::openUri(const QUrl &uri, const Headers &headers)
 {
     Q_D(Player);
-    d->call(QStringLiteral("OpenUriExtended"),
-            uri.toString(), QVariant::fromValue(headers));
+    d->blockingCall(QStringLiteral("OpenUriExtended"),
+                    uri.toString(), QVariant::fromValue(headers));
 }
 
 void Player::goToNext()
