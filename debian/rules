@@ -22,6 +22,8 @@ patch=$(shell echo $(full_version) | cut -d'.' -f3)
 
 ifneq (,$(findstring coverage,$(DEB_BUILD_OPTIONS)))
 CONFIGURE_FLAGS += -DCMAKE_BUILD_TYPE=Coverage
+else ifneq (,$(findstring debug,$(DEB_BUILD_OPTIONS)))
+CONFIGURE_FLAGS += -DCMAKE_BUILD_TYPE=Debug
 endif
 
 ifneq (,$(findstring nocheck,$(DEB_BUILD_OPTIONS)))
