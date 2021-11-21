@@ -599,7 +599,17 @@ media::Track::Id media::TrackListImplementation::next()
 
         if (shuffle())
         {
-            const auto id = *d->shuffled_tracks.begin();
+            /* Re-shuffle the tracks, but make sure that the new first track
+             * is not the same as the current one */
+            const auto currentId = d->get_current_track();
+            std::random_shuffle(d->shuffled_tracks.begin(),
+                                d->shuffled_tracks.end());
+            auto id = *d->shuffled_tracks.begin();
+            if (id == currentId) {
+                std::iter_swap(d->shuffled_tracks.begin(),
+                               d->shuffled_tracks.end() - 1);
+                id = *d->shuffled_tracks.begin();
+            }
             d->set_current_track(id);
         }
         else
