@@ -49,6 +49,8 @@ VideoSinkFactory createVideoSinkFactory(PlayerKey key,
 class VideoSinkPrivate
 {
 public:
+    virtual ~VideoSinkPrivate() = default;
+
     QMatrix4x4 m_transformationMatrix;
 };
 
