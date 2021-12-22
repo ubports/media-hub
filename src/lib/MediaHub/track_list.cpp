@@ -88,7 +88,8 @@ DBusTrackList::DBusTrackList(const QDBusConnection &conn,
         qWarning() << "Cannot get tracklist properties:" <<
             reply.errorMessage();
     } else {
-        d->initialize(reply.arguments().first().toMap());
+        QDBusArgument arg = reply.arguments().first().value<QDBusArgument>();
+        d->initialize(qdbus_cast<QVariantMap>(arg));
     }
 }
 
