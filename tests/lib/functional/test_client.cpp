@@ -643,6 +643,8 @@ void TestClient::testTracklistEditing()
     player.setTrackList(&trackList);
     QCOMPARE(player.trackList(), &trackList);
 
+    QCOMPARE(trackList.canEditTracks(), true);
+
     trackList.addTracksWithUriAt({
         QUrl("http://me.com/song1.mp3"),
         QUrl("http://me.com/song2.mp3"),

@@ -93,6 +93,7 @@ def create_session(self):
 def create_track_list(self, player_path):
     track_list_path = player_path + '/TrackList'
     props = {
+        'CanEditTracks': True,
     }
     methods = [
         ('AddTrack', 'ssb', '', ''),
