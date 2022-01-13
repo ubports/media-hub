@@ -54,7 +54,6 @@ static QVariant transform(const QDBusArgument & value) {
 		}
 		value.endStructure();
 		return list;
-		break;
 	}
 	default:
 		qDebug() << "Unhandled type" << value.currentType()
